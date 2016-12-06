@@ -9895,7 +9895,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
     int th_count = 20;
     //printf("th_count %d\n",th_count);
     
-    #pragma omp parallel for schedule(guided)
+    //#pragma omp parallel for schedule(guided)
 	for(int count_height = 0 ; count_height < NumOfHeights ; count_height++)
 	{
 		double TriP1[3];
@@ -10170,7 +10170,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 			ncc = (ncc_1 + ncc_2)/2.0;
 			if(ncc > 0.5)
 			{
-				#pragma omp critical
+				//#pragma omp critical
 				{
 					check_ncc = true;
 					if(F_NCC < ncc)
@@ -10205,7 +10205,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 			ncc = (ncc_1 + ncc_2)/2.0;
 			if(ncc > 0.7)// && GridPT3[ref1_index].anchor_flag == 1 && GridPT3[ref2_index].anchor_flag == 1 )
 			{ 
-				#pragma omp critical
+				//#pragma omp critical
 				{
 					check_ncc = true;
 					//if(F_NCC < ncc)
@@ -13821,7 +13821,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
                                     
                                 }
                                 
-                                if(GridPT3[Index].ortho_ncc < ortho_ncc_th)
+                                /*if(GridPT3[Index].ortho_ncc < ortho_ncc_th)
                                 {
                                     if(GridPT3[Index].minHeight > Z - BF*2)
                                         GridPT3[Index].minHeight = (Z - BF*2);
@@ -13861,7 +13861,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
                                         
                                         //free(temp_z);
                                      }
-                                     */
+                                     
                                 }
                                 else
                                 {
@@ -13870,8 +13870,8 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
                                         GridPT3[Index].false_h_count = 0;
                                         free(GridPT3[Index].false_h);
                                     }
-                                     */
-                                }
+                                     
+                                }*/
                                 
                                 
 							}
