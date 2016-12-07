@@ -85,6 +85,12 @@ typedef struct tagTransParam
 	float phi_c, lambda_0;
 	double t_c, m_c;
 	int pm;
+    
+    //UTM param
+    double sa, sb, e2, e2cuadrada, c;
+    int zone;
+    char direction[10];
+    int projection;
 } TransParam;
 
 typedef struct tagCSize
@@ -109,25 +115,36 @@ typedef struct tagNCCresult
 	float result2;
 	float result3;
 	float result4;
+    int roh_count;
 	uint8 mag_tag;
+    float INCC;
+    float GNCC;
 } NCCresult;
 
 typedef struct UpdateGrid{
-	int16 minHeight;
-	int16 maxHeight;
+	float minHeight;
+	float maxHeight;
+    
+    float t_minHeight;
+    float t_maxHeight;
+    
 	float Height; //after blunder detection
 	uint8 Matched_flag;
 	float roh;
 	uint8 anchor_flag;
 	float Matched_height;//before blunder detection
 	float ortho_ncc;
+    float angle;
+    uint16 false_h_count;
+    float *false_h;
+    
 }UGRID;
 
 //typedef struct BlunderIP BL;
 typedef struct BlunderIP{
 	uint8 Pyramid_step;
 	CSize Size_Grid2D;
-	float* Boundary;
+	int* Boundary;
 	float gridspace;
 	uint8 iteration;
 	float Hinterval;
@@ -140,6 +157,7 @@ typedef struct ProjectInfo{
 	char LeftRPCfilename[400];
 	char RightRPCfilename[400];
 	char save_filepath[400];
+    char Outputpath_name[400];
 	char tmpdir[400];
 	char tile_info[400];
 	char priori_DEM_tif[400];
@@ -198,6 +216,7 @@ typedef struct ArgumentInfo{
 	char Image1[400];
 	char Image2[400];
 	char Outputpath[400];
+    char Outputpath_name[400];
 	int Threads_num;
 	float DEM_space;
 	char seedDEMfilename[400];
@@ -216,6 +235,8 @@ typedef struct ArgumentInfo{
 	int tilesize;
 	int Min_X, Max_X, Min_Y, Max_Y;
 	
+    int projection;
+    
 } ARGINFO;
 
 #endif
@@ -345,7 +366,7 @@ void plotinit(void) ;
 void clip_line(Edge *) ;
 
 /* voronoi.c */
-void voronoi(Site *(*)()) ;
+void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
 
 #endif  
 
