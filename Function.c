@@ -103,26 +103,29 @@ int main(int argc,char *argv[])
 	{
 		if (strcmp("-help",argv[1]) == 0) 
 		{
-			printf("Usage:./setsm [-help] : general explanation\n");
-			printf("\texecution 1 : ./setsm : execute setsm with default.txt\n");
-			printf("\t\texample usage : ./setsm\n");
-			printf("\texecution 2 : ./setsm [image1] [image2] [output_directory]\n");
-			printf("\t\t(execute setsm with image1, image2, and output directory for saving the results)\n");
-			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output\n");
-			printf("\t\t\t or ./setsm /home/image1.bin /home/image2.bin /home/output\n");
-			printf("\texecution 3 : ./setsm [image1] [image2] [output_directory] [-options]\n");
-			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
-			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
-			
-			printf("setsm verion : 2.06282016\n");
-			printf("supported image format : tif and binary with envi header file\n");
-			printf("options\n");
-			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
-			printf("\t[-seed filepath sigma]\t: Seed DEM(binary format with envi header file for reducing computation loads with a height accuracy[m] of seed dem\n");
-			printf("\t\t(if this option is set, setsm defines serach-spaces between + 1.96*sigma and - 1.96*sigma for calculating a height of grid position.\n");
-			printf("\t\tThis option is not recommended on very changeable area. setsm can reconstruct 3D surface information without any seed dem\n");
-			printf("\t[-threads value]\t : Total number of threads for utilizing openmp parallel codes\n");
-			printf("\t\t(if you don't know about this value, input '0'. Openmp can automatically detect a best value of your system)\n");
+            printf("Usage:./setsm [-help] : general explanation\n");
+            printf("\texecution 1 : ./setsm : execute setsm with default.txt\n");
+            printf("\t\texample usage : ./setsm\n");
+            printf("\texecution 2 : ./setsm [image1] [image2] [output_directory]\n");
+            printf("\t\t(execute setsm with image1, image2, and output directory for saving the results)\n");
+            printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output\n");
+            printf("\t\t\t or ./setsm /home/image1.bin /home/image2.bin /home/output\n");
+            printf("\texecution 3 : ./setsm [image1] [image2] [output_directory] [-options]\n");
+            printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
+            printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
+            
+            printf("setsm verion : 3.0.0\n");
+            printf("supported image format : tif with xml, and binary with envi header file\n");
+            printf("options\n");
+            printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
+            printf("\t[-seed filepath sigma]\t: Seed DEM(tif or binary format with envi header file for reducing computation loads with a height accuracy[m] of seed dem\n");
+            printf("\t\t(if this option is set, setsm defines serach-spaces between + 1*sigma and - 1*sigma for calculating a height of grid position.\n");
+            printf("\t\tThis option is not recommended on very changeable area. setsm can reconstruct 3D surface information without any seed dem\n");
+            printf("\t[-boundary_min_X value1 -boundary_min_Y value2 -boundary_max_X value3 -boundary_max_Y value4]\t: Define specific DEM area to generate. The X and Y coordinate values should be Polar Stereographic or UTM\n");
+            printf("\t[-tilesize value]\t: Set a tilesize for one time processing. Default is 8,000 pixels\n");
+            printf("\t[-projection value]\t: Set planemetric coordinate projection. The value is 'ps' or 'utm'. Default projection is automatically defined by latitude of the input information of xml (between 60N and 60S is utm, and other is ps\n");
+            printf("\t[-threads value]\t : Total number of threads for utilizing openmp parallel codes\n");
+            printf("\t\t(if you don't know about this value, input '0'. Openmp can automatically detect a best value of your system)\n");
 		}
 	}
 	else if(argc == 3)
@@ -791,7 +794,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             {
                 pMetafile	= fopen(metafilename,"w");
 			
-                fprintf(pMetafile,"SETSM Version=3.11042016\n");
+                fprintf(pMetafile,"SETSM Version=3.0.0\n");
             }
             
 			time_t current_time;
@@ -1063,11 +1066,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
 
                         sprintf(str_rafile_2, "%s/txt/RAinfo.txt", RAfile_raw);
-                        sprintf(args.metafilename, "%smeta.txt", RAfile);
-                        sprintf(proinfo.metafilename, "%smeta.txt", RAfile);
+                        //sprintf(args.metafilename, "%smeta.txt", RAfile);
+                        //sprintf(proinfo.metafilename, "%smeta.txt", RAfile);
                         printf("Meta file %s\n", args.metafilename);
+                        printf("Meta file %s\n", proinfo.metafilename);
                         printf("RA file %s\n", str_rafile_2);
-
 
 						if(!check_load_RA)
 						{
@@ -6871,7 +6874,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                 }
                 */
                 
-                if ( Pyramid_step >= 3)
+                if ( Pyramid_step >= 2)
                     check_blunder_cell = false;
                 else if(GridPT3[pt_index].Matched_flag == 0)
                     check_blunder_cell = true;
@@ -9895,7 +9898,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
     int th_count = 20;
     //printf("th_count %d\n",th_count);
     
-    //#pragma omp parallel for schedule(guided)
+//    #pragma omp parallel for schedule(guided)
 	for(int count_height = 0 ; count_height < NumOfHeights ; count_height++)
 	{
 		double TriP1[3];
@@ -10170,7 +10173,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 			ncc = (ncc_1 + ncc_2)/2.0;
 			if(ncc > 0.5)
 			{
-				//#pragma omp critical
+//				#pragma omp critical
 				{
 					check_ncc = true;
 					if(F_NCC < ncc)
@@ -10205,7 +10208,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 			ncc = (ncc_1 + ncc_2)/2.0;
 			if(ncc > 0.7)// && GridPT3[ref1_index].anchor_flag == 1 && GridPT3[ref2_index].anchor_flag == 1 )
 			{ 
-				//#pragma omp critical
+//				#pragma omp critical
 				{
 					check_ncc = true;
 					//if(F_NCC < ncc)
@@ -13821,7 +13824,8 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
                                     
                                 }
                                 
-                                /*if(GridPT3[Index].ortho_ncc < ortho_ncc_th)
+                                /*
+                                if(GridPT3[Index].ortho_ncc < ortho_ncc_th)
                                 {
                                     if(GridPT3[Index].minHeight > Z - BF*2)
                                         GridPT3[Index].minHeight = (Z - BF*2);
@@ -13829,51 +13833,13 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
                                         GridPT3[Index].maxHeight = (Z + BF*2);
                                     
                                     
-                                    /*
-                                    if(GridPT3[Index].false_h_count == 0)
-                                    {
-                                        GridPT3[Index].false_h_count++;
-                                        GridPT3[Index].false_h = (float*)calloc(sizeof(float),GridPT3[Index].false_h_count);
-                                        GridPT3[Index].false_h[0] = Z;
-                                        
-                                        //printf("Index %d\tfalse h count %d\tGridPT3[Index].false_h %f\n",Index,GridPT3[Index].false_h_count,GridPT3[Index].false_h[0]);
-
-                                    }
-                                    else
-                                    {
-                                        //for(int k=0;k<GridPT3[Index].false_h_count;k++)
-                                        //    printf("start Index %d\tfalse h count %d\tGridPT3[Index].false_h %f\n",Index,GridPT3[Index].false_h_count,GridPT3[Index].false_h[k]);
-                                        if(GridPT3[Index].false_h_count > 0)
-                                        {
-                                            float temp_z[GridPT3[Index].false_h_count];
-                                            for(int k=0;k<GridPT3[Index].false_h_count;k++)
-                                                temp_z[k] = GridPT3[Index].false_h[k];
-                                            free(GridPT3[Index].false_h);
-                                            
-                                            GridPT3[Index].false_h_count++;
-                                            GridPT3[Index].false_h = (float*)calloc(sizeof(float),GridPT3[Index].false_h_count);
-                                            
-                                            for(int k=0;k<GridPT3[Index].false_h_count-1;k++)
-                                                GridPT3[Index].false_h[k] = temp_z[k];
-                                            
-                                            GridPT3[Index].false_h[GridPT3[Index].false_h_count-1] = Z;
-                                        }
-                                        
-                                        //free(temp_z);
-                                     }
-                                     
                                 }
                                 else
                                 {
-                                    /*if(GridPT3[Index].false_h_count > 0)
-                                    {
-                                        GridPT3[Index].false_h_count = 0;
-                                        free(GridPT3[Index].false_h);
-                                    }
-                                     
-                                }*/
+                                    
+                                }
                                 
-                                
+                                */
 							}
 							else
 							{
