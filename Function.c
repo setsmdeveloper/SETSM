@@ -114,7 +114,7 @@ int main(int argc,char *argv[])
             printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
             printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
             
-            printf("setsm verion : 3.0.0\n");
+            printf("setsm verion : 3.0.1\n");
             printf("supported image format : tif with xml, and binary with envi header file\n");
             printf("options\n");
             printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -794,7 +794,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             {
                 pMetafile	= fopen(metafilename,"w");
 			
-                fprintf(pMetafile,"SETSM Version=3.0.0\n");
+                fprintf(pMetafile,"SETSM Version=3.0.1\n");
             }
             
 			time_t current_time;
@@ -2937,12 +2937,55 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				sscanf(bufstr,"Image1 %s\n",&info->LeftImagefilename);
 				tmp_chr = remove_ext(info->LeftImagefilename);
 				sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
+                
+                FILE *temp_pFile;
+                temp_pFile           = fopen(info->LeftRPCfilename,"r");
+                printf("xml file %s\n",info->LeftRPCfilename);
+                if(temp_pFile)
+                    printf("image1 xml load completed!\n");
+                else
+                {
+                    sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
+                    printf("xml file %s\n",info->LeftRPCfilename);
+                    temp_pFile           = fopen(info->LeftRPCfilename,"r");
+                    if(temp_pFile)
+                        printf("image1 XML load completed!\n");
+                    else
+                    {
+                        printf("image1 xml/XML load failed!\n");
+                        exit(0);
+                    }
+                }
+                
+
+                
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"Image2")!=NULL)
 			{
 				sscanf(bufstr,"Image2 %s\n",&info->RightImagefilename);
 				tmp_chr = remove_ext(info->RightImagefilename);
 				sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
+                
+                FILE *temp_pFile;
+                temp_pFile           = fopen(info->RightRPCfilename,"r");
+                printf("xml file %s\n",info->RightRPCfilename);
+                if(temp_pFile)
+                    printf("image2 xml load completed!\n");
+                else
+                {
+                    sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
+                    printf("xml file %s\n",info->RightRPCfilename);
+                    temp_pFile           = fopen(info->RightRPCfilename,"r");
+                    if(temp_pFile)
+                        printf("image2 XML load completed!\n");
+                    else
+                    {
+                        printf("image2 xml/XML load failed!\n");
+                        exit(0);
+                    }
+                        
+                }
+                
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
 			{
@@ -3005,10 +3048,50 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			sprintf(info->tmpdir,"%s/tmp",args.Outputpath);
 			sprintf(info->LeftImagefilename,"%s", args.Image1);
 			sprintf(info->RightImagefilename,"%s",args.Image2);
+            
 			tmp_chr = remove_ext(args.Image1);
 			sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
+            
+            FILE *temp_pFile;
+            temp_pFile           = fopen(info->LeftRPCfilename,"r");
+            printf("xml file %s\n",info->LeftRPCfilename);
+            if(temp_pFile)
+                printf("image1 xml load completed!\n");
+            else
+            {
+                sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
+                printf("xml file %s\n",info->LeftRPCfilename);
+                temp_pFile           = fopen(info->LeftRPCfilename,"r");
+                if(temp_pFile)
+                    printf("image1 XML load completed!\n");
+                else
+                {
+                    printf("image1 xml/XML load failed!\n");
+                    exit(0);
+                }
+            }
+            
 			tmp_chr = remove_ext(args.Image2);
 			sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
+            
+            temp_pFile           = fopen(info->RightRPCfilename,"r");
+            printf("xml file %s\n",info->RightRPCfilename);
+            if(temp_pFile)
+                printf("image2 xml load completed!\n");
+            else
+            {
+                sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
+                printf("xml file %s\n",info->RightRPCfilename);
+                temp_pFile           = fopen(info->RightRPCfilename,"r");
+                if(temp_pFile)
+                    printf("image2 XML load completed!\n");
+                else
+                {
+                    printf("image2 xml/XML load failed!\n");
+                    exit(0);
+                }
+            }
+            
 			sprintf(info->save_filepath,"%s",args.Outputpath);
             sprintf(info->Outputpath_name, "%s", args.Outputpath_name);
 		}
