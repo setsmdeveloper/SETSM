@@ -2950,7 +2950,13 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                     temp_pFile           = fopen(info->LeftRPCfilename,"r");
                     if(temp_pFile)
                         printf("image1 XML load completed!\n");
+                    else
+                    {
+                        printf("image1 xml/XML load failed!\n");
+                        exit(0);
+                    }
                 }
+                
 
                 
 			}
@@ -2964,7 +2970,6 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 temp_pFile           = fopen(info->RightRPCfilename,"r");
                 printf("xml file %s\n",info->RightRPCfilename);
                 if(temp_pFile)
-                if(pFile)
                     printf("image2 xml load completed!\n");
                 else
                 {
@@ -2973,6 +2978,12 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                     temp_pFile           = fopen(info->RightRPCfilename,"r");
                     if(temp_pFile)
                         printf("image2 XML load completed!\n");
+                    else
+                    {
+                        printf("image2 xml/XML load failed!\n");
+                        exit(0);
+                    }
+                        
                 }
                 
 			}
@@ -3053,6 +3064,11 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 temp_pFile           = fopen(info->LeftRPCfilename,"r");
                 if(temp_pFile)
                     printf("image1 XML load completed!\n");
+                else
+                {
+                    printf("image1 xml/XML load failed!\n");
+                    exit(0);
+                }
             }
             
 			tmp_chr = remove_ext(args.Image2);
@@ -3069,6 +3085,11 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 temp_pFile           = fopen(info->RightRPCfilename,"r");
                 if(temp_pFile)
                     printf("image2 XML load completed!\n");
+                else
+                {
+                    printf("image2 xml/XML load failed!\n");
+                    exit(0);
+                }
             }
             
 			sprintf(info->save_filepath,"%s",args.Outputpath);
