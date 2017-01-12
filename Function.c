@@ -1,3 +1,29 @@
+/*
+ * Copyright 2017 Myoung-Jong Noh
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+/*
+ * Includes code derived from the voronoi algorithm by Steven Fortune 
+ * (http://ect.bell-labs.com/who/sjf/) 
+ * as modified by Derek Bradley 
+ * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
+ *
+ * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams, 
+ * Algorithmica 2, 153-174.
+*/
+
 #include "Function.h"
 #include "math.h"
 #include <omp.h>
