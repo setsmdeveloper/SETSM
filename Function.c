@@ -671,7 +671,6 @@ int main(int argc,char *argv[])
 			
 		}
         
-		
 	}
 	
 	printf("# of allocated threads = %d\n",omp_get_max_threads());
@@ -702,7 +701,7 @@ char* SetOutpathName(char *_path)
         //printf("%d\t%d\n",start,end);
         int lenth = end  - start+1;
         //printf("lenth = %d\n",lenth);
-        t_name = (char*)(malloc(sizeof(char)*(lenth)));
+        t_name = (char*)(malloc(sizeof(char)*(lenth+1)));
         int path_size = strlen(t_name);
         //printf("path_size %d\n",path_size);
         //t_name = new char[lenth];
@@ -784,7 +783,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		printf("# of allocated threads = %d\n",omp_get_max_threads());
 		
         if(Maketmpfolders(proinfo))
-		{
+        {
 			char metafilename[500];
             
             FILE *pMetafile;
@@ -2789,6 +2788,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				fclose(fid);
 				fclose(fid_header);
 
+                RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
+                
 				if(proinfo.IsRA)
 				{
 					if(t_Rimageparam[0] != 0 && t_Rimageparam[1] != 0)
@@ -3164,28 +3165,37 @@ int Maketmpfolders(ProInfo info)
     
     if(!info.check_checktiff)
     {
-	if (opendir(info.save_filepath) == NULL) {
-		if(mkdir(info.save_filepath,0777) != 0)
-			check_folder = 0;
-	}
-	
-	sprintf(temp_filepath,"%s/txt",info.save_filepath);
-	if (opendir(temp_filepath) == NULL) {
-		if(mkdir(temp_filepath,0777) != 0)
-			check_folder = 0;
-	}
-	
-	sprintf(temp_filepath,"%s/tif",info.save_filepath);
-	if (opendir(temp_filepath) == NULL) {
-		if(mkdir(temp_filepath,0777) != 0 )
-			check_folder = 0;
-	}
-	
-	sprintf(temp_filepath,"%s/tmp",info.save_filepath);
-	if (opendir(temp_filepath) == NULL) {
-		if(mkdir(temp_filepath,0777) != 0)
-			check_folder = 0;
-	}
+        mkdir(info.save_filepath,0777);
+        sprintf(temp_filepath,"%s/txt",info.save_filepath);
+        mkdir(temp_filepath,0777);
+        sprintf(temp_filepath,"%s/tif",info.save_filepath);
+        mkdir(temp_filepath,0777);
+        sprintf(temp_filepath,"%s/tmp",info.save_filepath);
+        mkdir(temp_filepath,0777);
+        
+        /*if (opendir(info.save_filepath) == NULL) {
+            if(mkdir(info.save_filepath,0777) != 0)
+                check_folder = 0;
+        }
+        
+        sprintf(temp_filepath,"%s/txt",info.save_filepath);
+        if (opendir(temp_filepath) == NULL) {
+            if(mkdir(temp_filepath,0777) != 0)
+                check_folder = 0;
+        }
+        
+        sprintf(temp_filepath,"%s/tif",info.save_filepath);
+        if (opendir(temp_filepath) == NULL) {
+            if(mkdir(temp_filepath,0777) != 0 )
+                check_folder = 0;
+        }
+        
+        sprintf(temp_filepath,"%s/tmp",info.save_filepath);
+        if (opendir(temp_filepath) == NULL) {
+            if(mkdir(temp_filepath,0777) != 0)
+                check_folder = 0;
+        }
+         */
     }
 	return check_folder;
 }
@@ -4121,7 +4131,6 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 	
 	if(!strcmp("tif",ext+1))
 	{
-	
 		TIFF *tif  = TIFFOpen(filename,"r");
 
 		if(tif)
@@ -15324,11 +15333,11 @@ void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level
         end_lv      = -2;
     }
 
-    for(count = start_lv ; count > end_lv ; count--)
+    for(count = 4 ; count >= 0 ; count--)
     {
         bool bfile = false;
 
-        if(count >= 0)
+        //if(count >= 0)
         {
 	        filename_py		= GetFileName(lfilename);
 	        filename_py		= remove_ext(filename_py);
@@ -15407,10 +15416,10 @@ void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level
 			 //perror("Error");
 			 }
 			 */
-        }
+        /*}
         else
         {
-            filename_py		= GetFileName(lfilename);
+        */  filename_py		= GetFileName(lfilename);
 	        filename_py		= remove_ext(filename_py);
 
 	        sprintf(t_str,"%s/%s.raw",save_path,filename_py);
