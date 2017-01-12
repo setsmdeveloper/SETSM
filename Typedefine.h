@@ -152,16 +152,16 @@ typedef struct BlunderIP{
 }BL;
 
 typedef struct ProjectInfo{
-	char LeftImagefilename[400];
-	char RightImagefilename[400];
-	char LeftRPCfilename[400];
-	char RightRPCfilename[400];
-	char save_filepath[400];
-    char Outputpath_name[400];
-	char tmpdir[400];
-	char tile_info[400];
-	char priori_DEM_tif[400];
-	char metafilename[400];
+	char LeftImagefilename[500];
+	char RightImagefilename[500];
+	char LeftRPCfilename[500];
+	char RightRPCfilename[500];
+	char save_filepath[500];
+    char Outputpath_name[500];
+	char tmpdir[500];
+	char tile_info[500];
+	char priori_DEM_tif[500];
+	char metafilename[500];
 	
 	float resolution;
 	float DEM_resolution;
@@ -213,14 +213,14 @@ typedef struct ArgumentInfo{
 	bool check_boundary;
     bool check_checktiff;
     
-	char Image1[400];
-	char Image2[400];
-	char Outputpath[400];
-    char Outputpath_name[400];
+	char Image1[500];
+	char Image2[500];
+	char Outputpath[500];
+    char Outputpath_name[500];
 	int Threads_num;
 	float DEM_space;
-	char seedDEMfilename[400];
-	char metafilename[400];
+	char seedDEMfilename[500];
+	char metafilename[500];
 	float seedDEMsigma;
 	float minHeight;
 	float maxHeight;
