@@ -2006,7 +2006,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									
 									if(proinfo.IsRA)
                                     {
-                                        TIN_split_level = 5;
+                                        TIN_split_level = 4;
                                     }
 									
 									if(level == 0 && iteration == 3)
@@ -3505,7 +3505,7 @@ void SetTiles_RA(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, 
     *subY = floor((ceil(ceil(lengthOfY / division_Y) / info.DEM_resolution) * info.DEM_resolution) / 2) * 2;
     
     printf("%d %d tile size %d\n", lengthOfX, lengthOfY, tile_size);
-    printf("dx = %d\tdy = %d\t%d\t%d\n", division_X, division_Y, *subX, *subY);
+    printf("dx = %d\tdy = %d\t%f\t%f\n", division_X, division_Y, *subX, *subY);
     
     *pyramid_step = 4;
     *RA_col_iter = 2;
@@ -11149,66 +11149,73 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
             
             //fclose(p_tempfile);
             
-            //printf("count mps %d\n",count_MPs_nums);
-            F3DPOINT *selected_ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs_nums);
-            
-            uint32 *temp_array = (uint32*)calloc(sizeof(uint32),count_MPs_nums);
-            
-            //p_tempfile = fopen(temp_pts_file,"r");
-            for(t_i=0;t_i<count_MPs_nums;t_i++)
+            printf("count mps %d\n",count_MPs_nums);
+            //if(count_MPs_nums > 3)
             {
-                float temp_X, temp_Y, temp_Z,temp_f,temp_id;
+                F3DPOINT *selected_ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs_nums);
                 
-                selected_ptslists[t_i].m_X = temp_selected_ptslists[t_i].m_X;
-                selected_ptslists[t_i].m_Y = temp_selected_ptslists[t_i].m_Y;
-                temp_array[t_i]            = temp_selected_ptslists[t_i].m_Z;
-                //fscanf(p_tempfile,"%f %f %d\n",&temp_X,&temp_Y,&temp_id);
-                //selected_ptslists[t_i].m_X = temp_X;
-                //selected_ptslists[t_i].m_Y = temp_Y;
+                uint32 *temp_array = (uint32*)calloc(sizeof(uint32),count_MPs_nums);
+                
+                //p_tempfile = fopen(temp_pts_file,"r");
+                for(t_i=0;t_i<count_MPs_nums;t_i++)
+                {
+                    float temp_X, temp_Y, temp_Z,temp_f,temp_id;
+                    
+                    selected_ptslists[t_i].m_X = temp_selected_ptslists[t_i].m_X;
+                    selected_ptslists[t_i].m_Y = temp_selected_ptslists[t_i].m_Y;
+                    temp_array[t_i]            = temp_selected_ptslists[t_i].m_Z;
+                    //fscanf(p_tempfile,"%f %f %d\n",&temp_X,&temp_Y,&temp_id);
+                    //selected_ptslists[t_i].m_X = temp_X;
+                    //selected_ptslists[t_i].m_Y = temp_Y;
+                }
+                //fclose(p_tempfile);
+                
+                
+                UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
+                
+                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
+                TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists);
+                
+                i = 0;
+                for(i=0;i<count_tri;i++)
+                {
+                    trilists[tri_counts].m_X = temp_array[t_trilists[i].m_X];
+                    trilists[tri_counts].m_Y = temp_array[t_trilists[i].m_Y];
+                    trilists[tri_counts].m_Z = temp_array[t_trilists[i].m_Z];
+                    //t_i++;
+                    tri_counts++;
+                }
+                
+                free(t_trilists);
+                
+                /*
+                 sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
+                 TINCreate(selected_ptslists,bufstr,count_MPs_nums);
+                 FILE *pTri;
+                 pTri		= fopen(bufstr,"r");
+                 int t_tri_X, t_tri_Y, t_tri_Z;
+                 while( (fscanf(pTri,"%d %d %d\n",&t_tri_X,&t_tri_Y,&t_tri_Z)) != EOF)
+                 {
+                 trilists[tri_counts].m_X = temp_array[t_tri_X];
+                 trilists[tri_counts].m_Y = temp_array[t_tri_Y];
+                 trilists[tri_counts].m_Z = temp_array[t_tri_Z];
+                 //t_i++;
+                 tri_counts++;
+                 }
+                 fclose(pTri);
+                 remove(bufstr);
+                 */
+                //printf("count_tri %d\n",count_tri);
+                total_tri_counts			+= count_tri;
+                
+                count_tri = 0;
+                
+                free(temp_array);
+                
+                free(selected_ptslists);
             }
-            //fclose(p_tempfile);
             
-            
-            UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
-            
-            sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
-            TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists);
-            
-            i = 0;
-            for(i=0;i<count_tri;i++)
-            {
-                trilists[tri_counts].m_X = temp_array[t_trilists[i].m_X];
-                trilists[tri_counts].m_Y = temp_array[t_trilists[i].m_Y];
-                trilists[tri_counts].m_Z = temp_array[t_trilists[i].m_Z];
-                //t_i++;
-                tri_counts++;
-            }
-            
-            free(t_trilists);
-            
-            /*
-             sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
-             TINCreate(selected_ptslists,bufstr,count_MPs_nums);
-             FILE *pTri;
-             pTri		= fopen(bufstr,"r");
-             int t_tri_X, t_tri_Y, t_tri_Z;
-             while( (fscanf(pTri,"%d %d %d\n",&t_tri_X,&t_tri_Y,&t_tri_Z)) != EOF)
-             {
-             trilists[tri_counts].m_X = temp_array[t_tri_X];
-             trilists[tri_counts].m_Y = temp_array[t_tri_Y];
-             trilists[tri_counts].m_Z = temp_array[t_tri_Z];
-             //t_i++;
-             tri_counts++;
-             }
-             fclose(pTri);
-             remove(bufstr);
-             */
-            //printf("count_tri %d\n",count_tri);
-            total_tri_counts			+= count_tri;
-            
-            free(temp_array);
             free(temp_selected_ptslists);
-            free(selected_ptslists);
         }
     }
     
@@ -11326,7 +11333,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 	}
     if(IsRA)
     {
-        TIN_split_level = 5;
+        TIN_split_level = 4;
     }
 //	printf("Start blunder detection\n");
 	//count_MPs = 1;
