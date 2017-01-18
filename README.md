@@ -1,5 +1,6 @@
-SETSM is a scalable XSEDE system for automated, high resolution terrain 
-generation.
+The Surface Extraction from TIN-based Searchspace Minimization (SETSM) software
+is a fully automatic algorithm for deriving Digital Terrain Models (DTM) from
+pairs of satellite imagery.
 
 SETSM was written by Myoung-Jong (MJ) Noh, Byrd Polar & Climate Rsch Cntr, 
 the Ohio State University, www.osu.edu.
