@@ -30,3 +30,10 @@ make install
 Once LibTIFF is installed you must edit the SETSM Makefile to set the correct
 path to the library.  SETSM can then be built simply by typing make.
 
+-------------------------------------------------------------------------------
+
+License
+
+SETSM is released under the Apache 2.0 license, a copy of which is included in
+this directory.
+
