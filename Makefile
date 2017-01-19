@@ -1,4 +1,4 @@
-TIFFPATH=/nfs/project/PZS0530/setsm/tiff-4.0.3
+TIFFPATH=/fs/project/PZS0530/setsm/tiff-4.0.3
 
 CC=gcc
 CFLAGS=-g -std=c99 -O3 -fopenmp
