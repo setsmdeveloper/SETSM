@@ -12,17 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 /*
- * Includes code derived from the voronoi algorithm by Steven Fortune 
- * (http://ect.bell-labs.com/who/sjf/) 
- * as modified by Derek Bradley 
+ * Includes code derived from the voronoi algorithm by Steven Fortune
+ * (http://ect.bell-labs.com/who/sjf/)
+ * as modified by Derek Bradley
  * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
- * 
- * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams, 
+ *
+ * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
  * Algorithmica 2, 153-174.
-*/
+ */
 
 #include "Typedefine.h"
 #include <stdlib.h>
@@ -30,7 +30,6 @@
 #include <string.h>
 #include "tiff.h"
 #include "tiffio.h"
-//#include "vdefs.h"
 
 #define  MAXRAND     0x7fffffff
 #define  BIGNUM      1e37
@@ -46,23 +45,6 @@ float xmin, xmax, ymin, ymax ;
 Site * sites ;
 Freelist sfl ;
 
-struct simplex
-{  int            *vert;
-   double         *cent;
-   struct simplex *nextsimp;
-};
-
-struct facelist
-{  int             *vert;
-   struct facelist *nextface;
-};
-
-struct nnweight       
-{  double          weight;
-   int             vert;
-   struct nnweight *nextcoord;
-};
-
 typedef struct nnXY
 {
     double X;
@@ -73,10 +55,8 @@ typedef struct nnXY
 void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_LeftImagefilename, char *_save_filepath);
 char* SetOutpathName(char *_path);
 
-bool OpenProject_all(char* _filename, ProInfo *info);
 bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
 int Maketmpfolders(ProInfo info);
-bool SetupParam_all(ProInfo info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *DEM_level,  bool *pre_DEMtif, bool *check_tile_array, bool *tile_array, float *Boundary);
 bool SetupParam(ProInfo info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *DEM_level,  bool *pre_DEMtif, bool *check_tile_array);
 void SetTransParam(float minLat, float minLon, bool *Hemisphere, TransParam *param);
 void SetTiles(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
@@ -163,8 +143,6 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 				   int *subBoundary, int total_point_count, F3DPOINT *ptslists, int *iter_row, int *iter_col,
 				   int *re_total_tri_counts);
 
-UI3DPOINT *LoadTrilistFromFile(char *savepath, int interval_row, int interval_col, int total_tri_counts);
-
 int DecisionMPs(bool flag_blunder,int count_MPs, int* Boundary, UGRID *GridPT3, uint8 Pyramid_step, float grid_resolution,
 				 uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, char *filename_tri, float Hinterval, 
 				 bool *p_flag, float *pre_3sigma, float *pre_mean, int *count_Results, float *minz_mp, float *maxz_mp, float *minmaxHeight,
@@ -224,30 +202,8 @@ bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, float 
 void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);
 float MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration);
 
-
-struct simplex *IMakeSimplex(int ndim1);
-struct facelist *IMakeFacelist(int ndim);
-struct nnweight *IMakeWeight();
-int *IntVect();
-void FreeVecti();
-double *DoubleVect();
-void FreeVectd();
-int *IntMatrix();
-void FreeMatrixi();
-float *FloatMatrix();
-void FreeMatrixf();
-double *DoubleMatrix();
-void FreeMatrixd();
-
-void FindNebPts_F(NNXY *input, int row_size, int col_size, int grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
-double *FindNebPts_F_M(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 
-double nnamain(int ndata, int ndim, int ndim1, double q1, double q2, int *check_find,char* path);
-double nnamain_M(double *points,int ndata, int ndim, int ndim1, double q1, double q2, int *check_find, char* path);
-double nnamain_M_R(double *points,int ndata, int ndim, int ndim1, double q1, double q2, int *check_find, char* path);
-
-void NNA(char *save_path, char *datafile, int row, int col, int level, int iteration, float min_X, float min_Y, float grid_resolution, CSize Size_Grid2D);
 void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, int row_end, int col_end, float grid_resolution, float mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration);
 
 void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size, float grid_size, float minX, float maxY, int NS_flag, int data_type);
@@ -275,22 +231,12 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 F2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, float *_imageparam, F3DPOINT _GP);
 F2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, float *_imageparam, uint16 _numofpts, F3DPOINT *_GP);
 
-F2DPOINT *SetDEMGrid_ortho(float *Boundary, float Grid_x, float Grid_y, CSize Size_2D);
-
-bool SetOrthoBoundary_ortho(CSize *Imagesize, float *Boundary, 
+bool SetOrthoBoundary_ortho(CSize *Imagesize, float *Boundary,
 							double **RPCs, float gridspace, CSize DEM_size, float minX, float maxY, TransParam param);
 float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path);
 
 
 double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c);
 CSize Envihdr_reader_ortho(char *filename);
-void Envihdr_writer_ortho(char *filename, int col_size, int row_size, float grid_size, float minX, float maxY, int NS_flag, int data_type);
 CSize Envihdr_reader_DEM_ortho(TransParam param, char *filename, float *minX, float *maxY, float *grid_size);
 char* remove_ext_ortho(char* mystr);
-F2DPOINT* wgs2ps_ortho(bool _bopenmp, TransParam _param, int _numofpts, F2DPOINT *_wgs);
-F2DPOINT wgs2ps_single_ortho(TransParam _param, F2DPOINT _wgs);
-F3DPOINT* wgs2ps_3D_ortho(bool _bopenmp, TransParam _param, int _numofpts, F3DPOINT *_wgs);
-F2DPOINT* ps2wgs_ortho(bool _bopenmp, TransParam _param, int _numofpts, F2DPOINT *_ps);
-F2DPOINT ps2wgs_single_ortho(TransParam _param, F2DPOINT _ps);
-F3DPOINT* ps2wgs_3D_ortho(bool _bopenmp, TransParam _param, int _numofpts, F3DPOINT *_ps);
-void SetTransParam_ortho(float minLat, bool *Hemisphere, TransParam *param);
