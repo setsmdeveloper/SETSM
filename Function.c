@@ -1582,7 +1582,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							iteration		= 1;
                             int pre_matched_pts=10;
                             float matching_change_rate = 100;
-                            float rate_th = 0.01;
+                            float rate_th = 0.00999999;
                             int max_iteration = 10 - (4 - level)*2;
                             if(max_iteration < 3)
                                 max_iteration = 3;
@@ -3224,29 +3224,55 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 {
 	if(*dem_update_flag)
 	{
-        if (flag_start)
+        if(DEM_resolution == 8)
         {
-            if(DEM_resolution == 8)
+            *py_resolution   = 8;
+            *grid_resolution = 8;
+        }
+        else if(DEM_resolution == 4)
+        {
+            if(level <= 3)
+            {
+                *py_resolution   = 4;
+                *grid_resolution = 4;
+            }
+            else
             {
                 *py_resolution   = 8;
                 *grid_resolution = 8;
             }
-            else if(DEM_resolution == 4)
+        }
+        else if(DEM_resolution == 2)
+        {
+            if(level == 1)
             {
-                if(level <= 3)
-                {
-                    *py_resolution   = 4;
-                    *grid_resolution = 4;
-                    
-                    
-                }
-                else
-                {
-                    *py_resolution   = 8;
-                    *grid_resolution = 8;
-                }
+                *py_resolution   = 4;
+                *grid_resolution = 4;
+                
             }
-            else if(DEM_resolution == 2)
+            else if(level >= 2)
+            {
+                *py_resolution   = 8;
+                *grid_resolution = 8;
+            }
+            else if(level == 0)
+            {
+                *py_resolution   = 2;
+                *grid_resolution = 2;
+            }
+            else
+            {
+                *py_resolution   = 8;
+                *grid_resolution = 8;
+                
+                *py_resolution   = (float)(resolution*pow(2,level));
+                *grid_resolution = (float)(resolution*pow(2,level));
+            }
+        }
+        
+        if(pre_DEMtif && level == 2)
+        {
+            if(DEM_resolution == 2)
             {
                 if(level == 1)
                 {
@@ -3254,63 +3280,24 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
                     *grid_resolution = 4;
                     
                 }
-                else if(level >= 2)
-                {
-                    *py_resolution   = 8;
-                    *grid_resolution = 8;
-                }
                 else if(level == 0)
                 {
                     *py_resolution   = 2;
                     *grid_resolution = 2;
+                    
                 }
                 else
                 {
                     *py_resolution   = 8;
                     *grid_resolution = 8;
-                    
-                    *py_resolution   = (float)(resolution*pow(2,level));
-                    *grid_resolution = (float)(resolution*pow(2,level));
                 }
             }
-            
-            Size_Grid2D->width	= (int)(ceil((float)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
-            Size_Grid2D->height	= (int)(ceil((float)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
         }
-        else
-        {
-            *py_resolution   = (float)(resolution*pow(2,level));
-            *grid_resolution = (float)(resolution*pow(2,level));
-            
-            if(pre_DEMtif && level == 2)
-            {
-                if(DEM_resolution == 2)
-                {
-                    if(level == 1)
-                    {
-                        *py_resolution   = 4;
-                        *grid_resolution = 4;
-                        
-                    }
-                    else if(level == 0)
-                    {
-                        *py_resolution   = 2;
-                        *grid_resolution = 2;
-                        
-                    }
-                    else
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-            }
-            Size_Grid2D->width	= (int)(ceil((float)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
-            Size_Grid2D->height	= (int)(ceil((float)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
-        }
+        Size_Grid2D->width	= (int)(ceil((float)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
+        Size_Grid2D->height	= (int)(ceil((float)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
  	}
  
-    printf("resolution %f\t size %d\t%d\n",*py_resolution,Size_Grid2D->width,Size_Grid2D->height);
+    printf("DEM resolution %f\tresolution %f\t size %d\t%d\n",DEM_resolution,*py_resolution,Size_Grid2D->width,Size_Grid2D->height);
     F2DPOINT *GridPT = SetDEMGrid(subBoundary, *grid_resolution, *grid_resolution, Size_Grid2D);
 
 	return GridPT;
@@ -10991,7 +10978,12 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, int* Boundary, F2DPOINT *
         }
     }
     
+    printf("before release preGirdPT3\n");
+    
     free(preGridPT3);
+    
+    printf("after release preGirdPT3\n");
+    
     return resize_GridPT3;
 }
 
