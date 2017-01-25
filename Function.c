@@ -222,7 +222,7 @@ int main(int argc,char *argv[])
  
             if (strcmp("-seed",argv[i]) == 0)
             {
-                TIFF *tif;
+                TIFF *tif = NULL;
                 
                 if (argc == i+1) {
                     printf("Please input the seed filepath\n");
@@ -724,7 +724,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
         {
 			char metafilename[500];
             
-            FILE *pMetafile;
+            FILE *pMetafile = NULL;
             sprintf(metafilename, "%s/%s_meta.txt", proinfo.save_filepath, proinfo.Outputpath_name);
 			
             if(!proinfo.check_checktiff)
@@ -841,7 +841,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 				uint8 Template_size	= 15;
 				uint16 buffer_area	= 400;
 				uint8 iter_row_start, iter_row_end, t_col_start, t_col_end;
-				int  total_count, tile_size;
+				int  total_count, tile_size = 0;
 				float subX, subY;
 				float bin_angle;
 				float mt_grid_size;
@@ -1282,7 +1282,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			  double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 			  CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,int *ori_minmaxHeight,int *Boundary, int row_iter, int col_iter)
 {
-    int final_iteration;
+    int final_iteration = 0;
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
@@ -1302,8 +1302,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
 			char *filename;
 			
-			FILE *fid;
-			FILE *fid_header;
+			FILE *fid = NULL;
+			FILE *fid_header = NULL;
             FILE *fid_RAinfo;
             
 			float minmaxHeight[2];
@@ -1406,7 +1406,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						float pre_3sigma= 1000;
 						float pre_mean	= 1000;
 						float ratio = 0;
-						float py_resolution, grid_resolution,pre_grid_resolution;
+						float py_resolution, grid_resolution,pre_grid_resolution = 0;
 						
 						bool flag_start, dem_update_flag;
 
@@ -1416,7 +1416,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						CSize Size_Grid2D, pre_Size_Grid2D;
 
 						CSize *data_size_l, *data_size_r;
-						UGRID *GridPT3, *Pre_GridPT3;
+						UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
 						
 						
 						time_t PreST = 0, PreET = 0;
@@ -1485,7 +1485,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                             uint16 *SubImages_BL, *SubImages_BR;
                             uint16 *SubMagImages_BL, *SubMagImages_BR;
 							
-							F2DPOINT *GridPT;
+							F2DPOINT *GridPT = NULL;
 							F2DPOINT *Grid_wgs;
 							
                             if(level == 4)
@@ -1596,7 +1596,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								
 
 								float pre_3sigma, pre_mean;
-								float Th_roh_update;
+								float Th_roh_update = 0;
 
 								NCCflag flag;
 
@@ -3393,7 +3393,7 @@ char* remove_ext(char* mystr)
 char* GetFileName(char file_path[])
 {
  
-    char *file_name;
+    char *file_name = NULL;
  
     while(*file_path)
     {
@@ -3413,7 +3413,7 @@ char* GetFileName(char file_path[])
 char* GetFileDir(char file_path[],int *size)
 {
 	
-    char *file_name;
+    char *file_name = NULL;
 	*size = 0;
     while(*file_path)
     {
@@ -3573,7 +3573,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 	uint16 *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin 
-	TIFF *tif;
+	TIFF *tif = NULL;
     char *ext;
 	ext = strrchr(filename,'.');
 	
@@ -3789,7 +3789,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 	float *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin 
-	TIFF *tif;
+	TIFF *tif = NULL;
     char *ext;
 	ext = strrchr(filename,'.');
 	
@@ -4263,7 +4263,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary, CSize Gr
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 {
-	double** out;
+	double** out = NULL;
 
 	FILE *pFile;
 	char temp_str[1000];
@@ -9747,10 +9747,10 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
                   
                 for(iter = 0 ; iter < max_iter ; iter++)
                 {
-                    uint32 reference_index;
+                    uint32 reference_index = 0;
                     int t_count = 0;
                     double U[3], V[3];
-                    int target_index_0, target_index_1;
+                    int target_index_0 = 0, target_index_1 = 0;
                       
                     double dh1, dh2, dh3, ddh_1, ddh_2, ddh_3;
                     double N[3];
@@ -12398,8 +12398,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	int total_null_cell = 0;
 	int threads_num;
 	int guided_size;
-	double *cal_gridpts_X;
-	double *cal_gridpts_Y;
+	double *cal_gridpts_X = NULL;
+	double *cal_gridpts_Y = NULL;
     struct calgrid
     {
         double X, Y;
@@ -14586,7 +14586,7 @@ uint16 *subsetImage_ortho(TransParam transparam, double **RPCs, char *ImageFilen
 	*ret = false;
 	
 	CSize Imagesize;
-	uint16 *leftimage;
+	uint16 *leftimage = NULL;
 	if(GetImageSize_ortho(ImageFilename,&Imagesize))
 	{
 		int cols[2], rows[2];
@@ -14771,7 +14771,7 @@ F2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, float *_im
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
     {
-        float L, P, H, Line, Samp, deltaP, deltaR;
+        float L, P, H, Line, Samp, deltaP = 0.0, deltaR = 0.0;
         double *Coeff;
         
         L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
@@ -14819,7 +14819,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
     uint16 *out;
     FILE *bin;
     int check_ftype = 1; // 1 = tif, 2 = bin
-    TIFF *tif;
+    TIFF *tif = NULL;
     char *ext;
     ext = strrchr(filename,'.');
     
@@ -15106,7 +15106,7 @@ float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path)
 
 double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
 {
-	double** out;
+	double** out = NULL;
 	
 	FILE *pFile;
 	char temp_str[1000];
