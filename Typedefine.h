@@ -1,8 +1,33 @@
+/*
+ * Copyright 2017 Myoung-Jong Noh
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Includes code derived from the voronoi algorithm by Steven Fortune
+ * (http://ect.bell-labs.com/who/sjf/)
+ * as modified by Derek Bradley
+ * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
+ *
+ * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
+ * Algorithmica 2, 153-174.
+ */
+
 #include "tiff.h"
 
 #ifndef _Typedefine_H_
 #define _Typedefine_H_
-//#pragma once
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -13,27 +38,6 @@
   #define true 0x1
   #define false 0x0
 #endif
-
-//#ifndef int8
-//  #define int8 char
-//#endif
-//#ifndef uint8
-//  #define uint8 unsigned int8
-//#endif
-//#ifndef int16
-//  #define int16 short int
-//#endif
-//#ifndef uint16
-//  #define uint16 unsigned int16 
-//#endif
-//#ifndef int32
-//  #define int32 int
-//#endif
-//#ifndef uint32
-//  #define uint32 unsigned int32
-//  #define maxuint32 (~(uint32)0)
-//#endif
-
 
 typedef struct tagUI2DPoint
 {
@@ -140,7 +144,6 @@ typedef struct UpdateGrid{
     
 }UGRID;
 
-//typedef struct BlunderIP BL;
 typedef struct BlunderIP{
 	uint8 Pyramid_step;
 	CSize Size_Grid2D;
@@ -187,7 +190,6 @@ typedef struct ProjectInfo{
 	bool check_boundary;
     bool check_checktiff;
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
-	//uint8 start_row, start_col;
 
 	int threads_num;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
