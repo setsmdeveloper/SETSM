@@ -99,7 +99,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm verion : 3.0.1\n");
+			printf("setsm verion : 3.0.5\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -731,7 +731,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.1\n");
+				fprintf(pMetafile,"SETSM Version=3.0.5\n");
 			}
 			
 			time_t current_time;
@@ -2144,8 +2144,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											}
 											
 											free(scaled_ptslists);
-										
-											matching_change_rate = fabs( (float)pre_matched_pts - (float)count_MPs ) /(float)pre_matched_pts;
+                                            
+                                            if(pre_matched_pts == 0)
+                                                matching_change_rate = 0;
+                                            else
+                                                matching_change_rate = fabs( (float)pre_matched_pts - (float)count_MPs ) /(float)pre_matched_pts;
 											
 											printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
 											pre_matched_pts = count_results[0];
@@ -8798,7 +8801,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 		FILE *survey;
 		int Th_pts;
 
-		printf("DEM resolution %d\n",f_demsize);
+		printf("DEM resolution %f\n",f_demsize);
 	
 		if(flag_blunder)
 		{
