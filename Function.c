@@ -30,6 +30,8 @@
 #include <time.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <sys/stat.h>
+
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
