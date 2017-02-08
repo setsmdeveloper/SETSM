@@ -101,7 +101,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm verion : 3.0.1\n");
+			printf("setsm verion : 3.0.6\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -733,7 +733,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.1\n");
+				fprintf(pMetafile,"SETSM Version=3.0.6\n");
 			}
 			
 			time_t current_time;
@@ -2153,6 +2153,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											free(scaled_ptslists);
 										
+                                            if(pre_matched_pts == 0)
+                                                matching_change_rate = 0;
+                                            else
 											matching_change_rate = fabs( (float)pre_matched_pts - (float)count_MPs ) /(float)pre_matched_pts;
 											
 											printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
@@ -12457,6 +12460,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		pfile	= fopen(t_str,"r");
 		if(pfile)
 		{
+            //printf("row %d\tcol %d\n",row,col);
 			long int size;
 			fseek(pfile,0,SEEK_END);
 			size = ftell(pfile);
@@ -12490,6 +12494,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		}
 	}
 	
+    printf("end loading matched pts\n");
+    
 	minX = (int)(minX/40.0)*40 - 40;
 	maxX = (int)(maxX/40.0)*40 + 40;
 	minY = (int)(minY/40.0)*40 - 40;
@@ -12606,6 +12612,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		pfile	= fopen(t_str,"r");
 		if(pfile)
 		{
+            //printf("matched row %d\tcol %d\n",row,col);
+            
 			long int size;
 			fseek(pfile,0,SEEK_END);
 			size = ftell(pfile);
@@ -12622,6 +12630,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 				p_hfile		= fopen(h_t_str,"r");
 				if(p_hfile)
 				{
+                    //printf("header row %d\tcol %d\n",row,col);
 					int iter;
 					char hv_t_str[500];
 					int row_size,col_size;
@@ -12633,6 +12642,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 						
 						fscanf(p_hfile,"%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",
 							   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                        
+                        //printf("%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
 					}	
 					
 					while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
@@ -12656,14 +12667,23 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 							pt_save[t_index].Z = t_z;
 						}
 					}
-				}
 				fclose(p_hfile);
+			}
+                else
+                {
+                    printf("No header file exist : %s\n",h_t_str);
+                    printf("Removed %s\n",t_str);
+                    printf("Please reprocess!!\n");
+                    remove(t_str);
+                    exit(1);
+                }
+				
 			}
 			fclose(pfile);
 		}
 	}
 
-	//printf("start null\n");
+	printf("start null\n");
 	int count_null_cell = 0;
 	int check_while = 0;
 	while(check_while == 0)

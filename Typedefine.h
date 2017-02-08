@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *	   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,9 +34,9 @@
 #define RadToDeg 180/PI
 
 #ifndef bool
-  #define bool unsigned char
-  #define true 0x1
-  #define false 0x0
+#define bool unsigned char
+#define true 0x1
+#define false 0x0
 #endif
 
 typedef struct tagUI2DPoint
@@ -89,12 +89,12 @@ typedef struct tagTransParam
 	float phi_c, lambda_0;
 	double t_c, m_c;
 	int pm;
-    
-    //UTM param
-    double sa, sb, e2, e2cuadrada, c;
-    int zone;
-    char direction[10];
-    int projection;
+	
+	//UTM param
+	double sa, sb, e2, e2cuadrada, c;
+	int zone;
+	char direction[10];
+	int projection;
 } TransParam;
 
 typedef struct tagCSize
@@ -119,29 +119,29 @@ typedef struct tagNCCresult
 	float result2;
 	float result3;
 	float result4;
-    int roh_count;
+	int roh_count;
 	uint8 mag_tag;
-    float INCC;
-    float GNCC;
+	float INCC;
+	float GNCC;
 } NCCresult;
 
 typedef struct UpdateGrid{
 	float minHeight;
 	float maxHeight;
-    
-    float t_minHeight;
-    float t_maxHeight;
-    
+	
+	float t_minHeight;
+	float t_maxHeight;
+	
 	float Height; //after blunder detection
 	uint8 Matched_flag;
 	float roh;
 	uint8 anchor_flag;
 	float Matched_height;//before blunder detection
 	float ortho_ncc;
-    float angle;
-    uint16 false_h_count;
-    float *false_h;
-    
+	float angle;
+	uint16 false_h_count;
+	float *false_h;
+	
 }UGRID;
 
 typedef struct BlunderIP{
@@ -160,7 +160,7 @@ typedef struct ProjectInfo{
 	char LeftRPCfilename[500];
 	char RightRPCfilename[500];
 	char save_filepath[500];
-    char Outputpath_name[500];
+	char Outputpath_name[500];
 	char tmpdir[500];
 	char tile_info[500];
 	char priori_DEM_tif[500];
@@ -171,7 +171,7 @@ typedef struct ProjectInfo{
 	float preDEM_space;
 	float cal_boundary[4];
 	float RA_param[2];
-    float seedDEMsigma;
+	float seedDEMsigma;
 	
 	float minHeight;
 	float maxHeight;
@@ -188,7 +188,7 @@ typedef struct ProjectInfo{
 	bool check_tiles_EC;
 	bool check_gridonly;
 	bool check_boundary;
-    bool check_checktiff;
+	bool check_checktiff;
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 
 	int threads_num;
@@ -213,12 +213,12 @@ typedef struct ArgumentInfo{
 	bool check_RA_tileC;
 	bool check_tilesize;
 	bool check_boundary;
-    bool check_checktiff;
-    
+	bool check_checktiff;
+	
 	char Image1[500];
 	char Image2[500];
 	char Outputpath[500];
-    char Outputpath_name[500];
+	char Outputpath_name[500];
 	int Threads_num;
 	float DEM_space;
 	char seedDEMfilename[500];
@@ -237,8 +237,8 @@ typedef struct ArgumentInfo{
 	int tilesize;
 	int Min_X, Max_X, Min_Y, Max_Y;
 	
-    int projection;
-    
+	int projection;
+	
 } ARGINFO;
 
 #endif
@@ -254,38 +254,38 @@ typedef struct ArgumentInfo{
 
 typedef struct tagFreenode
 {
-    struct tagFreenode * nextfree;
+	struct tagFreenode * nextfree;
 } Freenode ;
 
 
 typedef struct tagFreelist
 {
-    Freenode * head;
-    int nodesize;
+	Freenode * head;
+	int nodesize;
 } Freelist ;
 
 typedef struct tagPoint
 {
-    float x ;
-    float y ;
+	float x ;
+	float y ;
 } Point ;
 
 /* structure used both for sites and for vertices */
 
 typedef struct tagSite
 {
-    Point coord ;
-    int sitenbr ;
-    int refcnt ;
+	Point coord ;
+	int sitenbr ;
+	int refcnt ;
 } Site ;
 
 
 typedef struct tagEdge
 {
-    float a, b, c ;
-    Site * ep[2] ;
-    Site * reg[2] ;
-    int edgenbr ;
+	float a, b, c ;
+	Site * ep[2] ;
+	Site * reg[2] ;
+	int edgenbr ;
 } Edge ;
 
 #define le 0
@@ -293,14 +293,14 @@ typedef struct tagEdge
 
 typedef struct tagHalfedge
 {
-    struct tagHalfedge * ELleft ;
-    struct tagHalfedge * ELright ;
-    Edge * ELedge ;
-    int ELrefcnt ;
-    char ELpm ;
-    Site * vertex ;
-    float ystar ;
-    struct tagHalfedge * PQnext ;
+	struct tagHalfedge * ELleft ;
+	struct tagHalfedge * ELright ;
+	Edge * ELedge ;
+	int ELrefcnt ;
+	char ELpm ;
+	Site * vertex ;
+	float ystar ;
+	struct tagHalfedge * PQnext ;
 } Halfedge ;
 
 /* edgelist.c */
@@ -370,6 +370,6 @@ void clip_line(Edge *) ;
 /* voronoi.c */
 void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
 
-#endif  
+#endif	
 
 
