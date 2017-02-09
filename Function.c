@@ -99,7 +99,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm verion : 3.0.6\n");
+			printf("setsm verion : 3.0.7\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -731,7 +731,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.6\n");
+				fprintf(pMetafile,"SETSM Version=3.0.7\n");
 			}
 			
 			time_t current_time;
@@ -2056,7 +2056,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											
 											
-											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
@@ -2216,7 +2216,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												update_flag				= false;
 
 											
-											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
@@ -2379,24 +2379,31 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								free(GridPT);
 							}
 
+                            printf("release Grid_wgs, nccresult\n");
 							free(Grid_wgs);
 							free(nccresult);
 							
+                            printf("release subImage L\n");
 							free(SubImages_L);
 							free(SubImages_BL);
 							free(SubOriImages_L);
 							
+                            printf("release subImage R\n");
 							free(SubImages_R);
 							free(SubImages_BR);
 							free(SubOriImages_R);
 
+                            printf("release subimage Mag\n");
 							free(SubMagImages_L);
 							free(SubMagImages_R);
 							free(SubMagImages_BL);
 							free(SubMagImages_BR);
 						}
+                        printf("relese data size\n");
 						free(data_size_l);
 						free(data_size_r);
+                        
+                        printf("release GridTP3\n");
 						free(GridPT3);
 						
 						PreET = time(0);
