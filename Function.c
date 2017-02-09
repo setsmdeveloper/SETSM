@@ -2454,7 +2454,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 	pFile		= fopen(_filename,"r");
 	if( pFile == NULL)
 	{
-		printf("File did not open\n");
+		printf("'default.txt' file doesn't exist in SETSM execution folder, please check it!!\n");
+        exit(1);
 	}
 	else
 	{
@@ -2486,18 +2487,28 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			else if (args.check_arg == 0 && strstr(bufstr,"Image1")!=NULL)
 			{
 				sscanf(bufstr,"Image1 %s\n",&info->LeftImagefilename);
+                
+                FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
+                if(temp_ptif)
+                    printf("image1 load completed!\n");
+                else
+                {
+                    printf("image1 load faied. Please check filename!!\n");
+                    exit(1);
+                }
+                
 				tmp_chr = remove_ext(info->LeftImagefilename);
 				sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
 				
 				FILE *temp_pFile;
 				temp_pFile			 = fopen(info->LeftRPCfilename,"r");
-				printf("xml file %s\n",info->LeftRPCfilename);
+				//printf("xml file %s\n",info->LeftRPCfilename);
 				if(temp_pFile)
 					printf("image1 xml load completed!\n");
 				else
 				{
 					sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
-					printf("xml file %s\n",info->LeftRPCfilename);
+					//printf("xml file %s\n",info->LeftRPCfilename);
 					temp_pFile			 = fopen(info->LeftRPCfilename,"r");
 					if(temp_pFile)
 						printf("image1 XML load completed!\n");
@@ -2507,25 +2518,32 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 						exit(0);
 					}
 				}
-				
-
-				
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"Image2")!=NULL)
 			{
 				sscanf(bufstr,"Image2 %s\n",&info->RightImagefilename);
+                
+                FILE *temp_ptif = fopen(info->RightImagefilename,"r");
+                if(temp_ptif)
+                    printf("image2 load completed!\n");
+                else
+                {
+                    printf("image2 load faied. Please check filename!!\n");
+                    exit(1);
+                }
+                
 				tmp_chr = remove_ext(info->RightImagefilename);
 				sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
 				
 				FILE *temp_pFile;
 				temp_pFile			 = fopen(info->RightRPCfilename,"r");
-				printf("xml file %s\n",info->RightRPCfilename);
+				//printf("xml file %s\n",info->RightRPCfilename);
 				if(temp_pFile)
 					printf("image2 xml load completed!\n");
 				else
 				{
 					sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
-					printf("xml file %s\n",info->RightRPCfilename);
+					//printf("xml file %s\n",info->RightRPCfilename);
 					temp_pFile			 = fopen(info->RightRPCfilename,"r");
 					if(temp_pFile)
 						printf("image2 XML load completed!\n");
@@ -2534,9 +2552,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 						printf("image2 xml/XML load failed!\n");
 						exit(0);
 					}
-						
 				}
-				
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
 			{
@@ -2599,18 +2615,27 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			sprintf(info->LeftImagefilename,"%s", args.Image1);
 			sprintf(info->RightImagefilename,"%s",args.Image2);
 			
+            FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
+            if(temp_ptif)
+                printf("image1 load completed!\n");
+            else
+            {
+                printf("image1 load faied. Please check filename!!\n");
+                exit(1);
+            }
+            
 			tmp_chr = remove_ext(args.Image1);
 			sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
 			
 			FILE *temp_pFile;
 			temp_pFile			 = fopen(info->LeftRPCfilename,"r");
-			printf("xml file %s\n",info->LeftRPCfilename);
+			//printf("xml file %s\n",info->LeftRPCfilename);
 			if(temp_pFile)
 				printf("image1 xml load completed!\n");
 			else
 			{
 				sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
-				printf("xml file %s\n",info->LeftRPCfilename);
+				//printf("xml file %s\n",info->LeftRPCfilename);
 				temp_pFile			 = fopen(info->LeftRPCfilename,"r");
 				if(temp_pFile)
 					printf("image1 XML load completed!\n");
@@ -2621,17 +2646,26 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				}
 			}
 			
+            temp_ptif = fopen(info->RightImagefilename,"r");
+            if(temp_ptif)
+                printf("image2 load completed!\n");
+            else
+            {
+                printf("image2 load faied. Please check filename!!\n");
+                exit(1);
+            }
+            
 			tmp_chr = remove_ext(args.Image2);
 			sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
 			
 			temp_pFile			 = fopen(info->RightRPCfilename,"r");
-			printf("xml file %s\n",info->RightRPCfilename);
+			//printf("xml file %s\n",info->RightRPCfilename);
 			if(temp_pFile)
 				printf("image2 xml load completed!\n");
 			else
 			{
 				sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
-				printf("xml file %s\n",info->RightRPCfilename);
+				//printf("xml file %s\n",info->RightRPCfilename);
 				temp_pFile			 = fopen(info->RightRPCfilename,"r");
 				if(temp_pFile)
 					printf("image2 XML load completed!\n");
@@ -2710,8 +2744,17 @@ int Maketmpfolders(ProInfo info)
 	
 	if(!info.check_checktiff)
 	{
-		mkdir(info.save_filepath,0777);
-		sprintf(temp_filepath,"%s/txt",info.save_filepath);
+        int status;
+		status = mkdir(info.save_filepath,0777);
+        if (opendir(info.save_filepath) == NULL)
+        {
+            if (status == -1)
+            {
+                printf("Outpath of '%s' cannot make, please check outpath!!\n",info.save_filepath);
+                exit(1);
+            }
+        }
+        sprintf(temp_filepath,"%s/txt",info.save_filepath);
 		mkdir(temp_filepath,0777);
 		sprintf(temp_filepath,"%s/tif",info.save_filepath);
 		mkdir(temp_filepath,0777);
@@ -3444,7 +3487,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if(!strcmp("tif",ext+1))
+	if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		TIFF *tif  = TIFFOpen(filename,"r");
 
@@ -3580,7 +3623,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		printf("tif open\n");
 		tif	 = TIFFOpen(filename,"r");
@@ -3796,7 +3839,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		tif	 = TIFFOpen(filename,"r");
 		check_ftype = 1;
@@ -3968,7 +4011,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary, CSize Gr
 	char *ext;
 	ext = strrchr(GIMP_path,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		check_ftype = 1;
 	}
@@ -14634,7 +14677,7 @@ bool GetImageSize_ortho(char *filename, CSize *Imagesize)
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if(!strcmp("tif",ext+1))
+	if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		
 		TIFF *tif  = TIFFOpen(filename,"r");
@@ -14843,7 +14886,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1))
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		printf("tif open\n");
 		tif	 = TIFFOpen(filename,"r");
