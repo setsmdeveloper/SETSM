@@ -64,6 +64,9 @@ int main(int argc,char *argv[])
 	args.check_checktiff = false;
 	
 	args.projection = 3;//PS = 1, UTM = 2
+    args.sensor_provider = 1; //DG = 1, Pleiades = 2
+    args.check_imageresolution = false;
+    
 	TransParam param;
 	
 	if(argc == 1)
@@ -99,7 +102,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm verion : 3.0.7\n");
+			printf("setsm verion : 3.0.8\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -192,6 +195,45 @@ int main(int argc,char *argv[])
 		
 		for (i=4; i<argc; i++)
 		{
+            if (strcmp("-provider", argv[i]) == 0) {
+                if (argc == i + 1) {
+                    printf("Please input Provider info\n");
+                    cal_flag = false;
+                } else {
+                    if(strcmp("DG",argv[i+1]) == 0 || strcmp("dg",argv[i+1]) == 0)
+                    {
+                        args.sensor_provider = 1;
+                        printf("Image Provider : Digital Globe\n");
+                        
+                    }
+                    else if(strcmp("Pleiades",argv[i+1]) == 0 || strcmp("pleiades",argv[i+1]) == 0)
+                    {
+                        args.sensor_provider = 2;
+                        printf("Image Provider : Pleiades\n");
+                    }
+                    else
+                    {
+                        args.projection = 1;	
+                        printf("Not suppoted Provider. Please use Digital Globe (Worldview, QuickBird, GeoEye) or Pleiades\n");
+                        exit(1);
+                    }
+                }
+            }
+            
+            if (strcmp("-GSD",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input the image resolution (GSD) value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.image_resolution = atof(argv[i+1]);
+                    printf("%f\n",args.image_resolution);
+                    args.check_imageresolution = true;
+                }
+            }
+            
 			if (strcmp("-outres",argv[i]) == 0) 
 			{
 				if (argc == i+1) {
@@ -731,7 +773,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.7\n");
+				fprintf(pMetafile,"SETSM Version=3.0.8\n");
 			}
 			
 			time_t current_time;
@@ -751,16 +793,41 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			char temp_filepath[500];
 			double Image1_gsd_r,Image1_gsd_c,Image2_gsd_r,Image2_gsd_c;
 
-			LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
-			RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
-			
-			proinfo.resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
+            if(args.sensor_provider == 1)
+            {
+                LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
+                RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
+            }
+            else
+            {
+                LRPCs		= OpenXMLFile_Pleiades(proinfo.LeftRPCfilename);
+                RRPCs		= OpenXMLFile_Pleiades(proinfo.RightRPCfilename);
+            }
+            
 
-			if (proinfo.resolution < 0.75) {
-				proinfo.resolution = 0.5;
-			}
-			else if(proinfo.resolution < 1.25)
-				proinfo.resolution = 1.0;
+            if(!args.check_imageresolution)
+            {
+                if(args.sensor_provider == 1)
+                {
+                    proinfo.resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
+                    
+                    if (proinfo.resolution < 0.75)
+                    {
+                        proinfo.resolution = 0.5;
+                    }
+                    else if(proinfo.resolution < 1.25)
+                        proinfo.resolution = 1.0;
+                }
+                else
+                    proinfo.resolution = 0.5;
+            }
+            else
+            {
+                proinfo.resolution  = args.image_resolution;
+            }
+            
+            printf("image resolution %f\n",proinfo.resolution);
+            
 			
 			Res[0]		= proinfo.resolution;						Res[1]		= proinfo.DEM_resolution;
 			Image_res[0]= proinfo.resolution;						Image_res[1]= proinfo.resolution;
@@ -2402,10 +2469,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                         printf("relese data size\n");
 						free(data_size_l);
 						free(data_size_r);
-                        
-                        printf("release GridTP3\n");
 						free(GridPT3);
 						
+                        printf("release GridTP3\n");
 						PreET = time(0);
 						Pregab = difftime(PreET,PreST);
 						printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
@@ -4468,6 +4534,164 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 	return out;
 }
 
+
+double** OpenXMLFile_Pleiades(char* _filename)
+{
+    double** out;
+    
+    FILE *pFile;
+    char temp_str[1000];
+    char linestr[1000];
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    
+    double aa;
+    
+    pFile			= fopen(_filename,"r");
+    if(pFile)
+    {
+        out = (double**)malloc(sizeof(double*)*7);
+        while(!feof(pFile))
+        {
+            fscanf(pFile,"%s",temp_str);
+            if(strcmp(temp_str,"<Inverse_Model>") == 0)
+            {
+                fgets(linestr,sizeof(linestr),pFile);
+                
+                printf("sample num\n");
+                out[4] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[4][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[4][i]);
+                }
+                
+                printf("sample den\n");
+                out[5] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[5][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[5][i]);
+                }
+                
+                printf("line num\n");
+                out[2] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[2][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[2][i]);
+                }
+                
+                printf("line den\n");
+                out[3] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[3][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[3][i]);
+                }
+                
+                out[6] = (double*)malloc(sizeof(double)*2);
+                for(i=0;i<2;i++)
+                {
+                    
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[6][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[6][i]);
+                }
+                
+                for(i=0;i<14;i++)
+                    fgets(linestr,sizeof(linestr),pFile);
+                
+                out[0] = (double*)malloc(sizeof(double)*5); //offset
+                out[1] = (double*)malloc(sizeof(double)*5); //scale
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][2]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][2]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][3]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][3]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][4]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][4]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][1]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][1]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][0]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][0]			= atof(pos2);
+                
+                for(i=0;i<2;i++)
+                {
+                    for(int j=0;j<5;j++)
+                        printf("%f\n",out[i][j]);
+                }
+            }
+        }
+        fclose(pFile);
+        
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+    }
+    return out;
+}
 
 void SetDEMBoundary(double** _rpcs, float* _res,TransParam _param, bool _hemisphere, int* _boundary, int* _minmaxheight, CSize* _imagesize, int* _Hinterval)
 {
@@ -14240,8 +14464,40 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	
 	Image_resolution = 0.5;
 	
+    // load RPCs info from xml file
+    if(args.sensor_provider == 1)
+    {
+        RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
+    }
+    else
+    {
+        RPCs            = OpenXMLFile_Pleiades(RPCFilename);
+    }
+    
+    
+    if(!args.check_imageresolution)
+    {
+        if(args.sensor_provider == 1)
+        {
+            Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
+            
+            if (Image_resolution < 0.75) {
+                Image_resolution = 0.5;
+            }
+            else if(Image_resolution < 1.25)
+                Image_resolution = 1.0;
+        }
+        else
+            Image_resolution = 0.5;
+    }
+    else
+    {
+        Image_resolution  = args.image_resolution;
+    }
+
+    
 	// load RPCs info from xml file
-	RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
+	/*RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
 	
 	Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
 	
@@ -14250,7 +14506,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	}
 	else if(Image_resolution < 1.25)
 		Image_resolution = 1.0;
-	
+	*/
 	printf("Image resolution %f\n",Image_resolution);
 	
 	minLat = RPCs[0][3];
