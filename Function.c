@@ -30,6 +30,8 @@
 #include <time.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <sys/stat.h>
+
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
@@ -37,6 +39,7 @@ char *dirname(char *path);
 
 int main(int argc,char *argv[])
 {
+	TIFFSetWarningHandler(NULL);
 	char* projectfilename	= "default.txt";
 	int i=0;
 	char* image1_name = NULL;
@@ -699,7 +702,7 @@ char* SetOutpathName(char *_path)
 		t_name[lenth] = '\0';
 	}
 	else {
-		t_name = (char*)(malloc(sizeof(char)*(full_size)));
+		t_name = (char*)(malloc(sizeof(char)*(full_size+1)));
 		strcpy(t_name,_path);
 	}
 	
@@ -1349,7 +1352,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,int *ori_minmaxHeight,int *Boundary, int row_iter, int col_iter)
 {
-	int final_iteration;
+	int final_iteration = -1;
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
@@ -1683,7 +1686,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								int count_results_anchor[2];
 								int count_MPs;
 								int count_blunder;
-								bool update_flag; 
+								bool update_flag = false;
 								bool check_ortho_cal = false;
 								
 								uint8 ortho_level = 2;
@@ -2522,7 +2525,10 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 	info->check_tiles_EC= false;
 	info->check_minH	= false;
 	info->check_maxH	= false;
-	info->check_checktiff = false;
+	info->check_checktiff	= false;
+	info->tile_info[0]		= '\0';
+	info->priori_DEM_tif[0]	= '\0';
+	info->metafilename[0]	= '\0';
 
 	pFile		= fopen(_filename,"r");
 	if( pFile == NULL)
@@ -8962,7 +8968,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 				}
 			}
 			
-			printf("count mps %d\n",count_MPs_nums);
+			//printf("count mps %d\n",count_MPs_nums);
  
 			F3DPOINT *selected_ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs_nums);
 			
@@ -9604,21 +9610,24 @@ void readsites(F3DPOINT *ptslists,int numofpts)
 	}
 
 	qsort((void *)sites, nsites, sizeof(Site), scomp) ;
-	xmin = sites[0].coord.x ;
-	xmax = sites[0].coord.x ;
-	for (i = 1 ; i < nsites ; ++i)
+	if (nsites > 0)
 	{
-		if(sites[i].coord.x < xmin)
+		xmin = sites[0].coord.x ;
+		xmax = sites[0].coord.x ;
+		for (i = 1 ; i < nsites ; ++i)
 		{
-			xmin = sites[i].coord.x ;
+			if(sites[i].coord.x < xmin)
+			{
+				xmin = sites[i].coord.x ;
+			}
+			if (sites[i].coord.x > xmax)
+			{
+				xmax = sites[i].coord.x ;
+			}
 		}
-		if (sites[i].coord.x > xmax)
-		{
-			xmax = sites[i].coord.x ;
-		}
+		ymin = sites[0].coord.y ;
+		ymax = sites[nsites-1].coord.y ;
 	}
-	ymin = sites[0].coord.y ;
-	ymax = sites[nsites-1].coord.y ;
 }
 
 /*** read one site ***/
