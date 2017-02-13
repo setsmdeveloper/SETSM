@@ -69,6 +69,7 @@ int main(int argc,char *argv[])
 	args.projection = 3;//PS = 1, UTM = 2
     args.sensor_provider = 1; //DG = 1, Pleiades = 2
     args.check_imageresolution = false;
+    args.utm_zone = -99;
     
 	TransParam param;
 	
@@ -640,6 +641,20 @@ int main(int argc,char *argv[])
 					}
 				}
 			}
+            
+            if (strcmp("-utm_zone",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input utm_zome value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.utm_zone = atoi(argv[i+1]);
+                    printf("%d\n",args.utm_zone);
+                }
+            }
+            
 		}
 		
 		if(cal_flag)
@@ -840,9 +855,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			minLat		= LRPCs[0][3];
 			minLon = (float) LRPCs[0][2];
 			param.projection = args.projection;
+            param.utm_zone   = args.utm_zone;
+            
 			SetTransParam((float)(minLat),(float)(minLon),&Hemisphere, &param);
 
-			printf("param projection %d\n",param.projection);
+			printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
 			*return_param = param;
 			
 			SetDEMBoundary(LRPCs,Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LBRsize,LHinterval);
@@ -2978,8 +2995,11 @@ void SetTransParam(float minLat, float minLon, bool *Hemisphere, TransParam *par
 	
 	sprintf(param->direction,"%s",direction);
 	
-	
-	param->zone = (int)( ( minLon / 6 ) + 31);
+    if(param->utm_zone < -1)
+		param->zone = (int)( ( minLon / 6 ) + 31);
+    else
+        param->zone = param->utm_zone;
+    
 }
 void SetTiles(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
 			  uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, float *subX, float *subY)
@@ -14524,6 +14544,9 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	minLon = RPCs[0][2];
 	
 	//set projection conversion info.
+    param.utm_zone   = args.utm_zone;
+    _param.utm_zone  = args.utm_zone;
+    
 	SetTransParam(minLat, minLon, &Hemisphere, &_param);
 	SetTransParam(minLat, minLon, &Hemisphere, &param);
 	

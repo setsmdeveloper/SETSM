@@ -95,6 +95,7 @@ typedef struct tagTransParam
 	int zone;
 	char direction[10];
 	int projection;
+    int utm_zone;
 } TransParam;
 
 typedef struct tagCSize
@@ -238,6 +239,7 @@ typedef struct ArgumentInfo{
 	int Min_X, Max_X, Min_Y, Max_Y;
 	
 	int projection; //PS = 1, UTM = 2
+    int utm_zone;
     int sensor_provider; //DG = 1, Pleiades = 2
     float image_resolution;
 	
