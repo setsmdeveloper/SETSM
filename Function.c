@@ -2590,7 +2590,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				sscanf(bufstr,"Threads_num %d\n",&info->threads_num);
 			else if (args.check_arg == 0 && strstr(bufstr,"Image1")!=NULL)
 			{
-				sscanf(bufstr,"Image1 %s\n",&info->LeftImagefilename);
+				sscanf(bufstr,"Image1 %s\n",info->LeftImagefilename);
                 
                 FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
                 if(temp_ptif)
@@ -2625,7 +2625,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"Image2")!=NULL)
 			{
-				sscanf(bufstr,"Image2 %s\n",&info->RightImagefilename);
+				sscanf(bufstr,"Image2 %s\n",info->RightImagefilename);
                 
                 FILE *temp_ptif = fopen(info->RightImagefilename,"r");
                 if(temp_ptif)
@@ -2674,7 +2674,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				int temp_pre_DEMtif;
 				sscanf(bufstr,"seeddempath %d ",&temp_pre_DEMtif);
 				info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
-				if(info->pre_DEMtif){
+				if(info->pre_DEMtif)
+				{
 					sscanf(bufstr,"seeddempath %d %s %f\n",&temp_pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
 					info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
 				}
@@ -14081,19 +14082,16 @@ openpl(void)
 {
 }
 
-#pragma argsused
 void
 line(float ax, float ay, float bx, float by)
 {
 }
 
-#pragma argsused
 void
 circle(float ax, float ay, float radius)
 {
 }
 
-#pragma argsused
 void
 range(float pxmin, float pxmax, float pymin, float pymax)
 {
