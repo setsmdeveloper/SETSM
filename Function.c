@@ -14530,13 +14530,13 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	// load RPCs info from xml file
 	/*RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
 	
-	Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
+	  Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
 	
-	if (Image_resolution < 0.75) {
-		Image_resolution = 0.5;
-	}
-	else if(Image_resolution < 1.25)
-		Image_resolution = 1.0;
+	  if (Image_resolution < 0.75) {
+	  Image_resolution = 0.5;
+	  }
+	  else if(Image_resolution < 1.25)
+	  Image_resolution = 1.0;
 	*/
 	printf("Image resolution %f\n",Image_resolution);
 	
