@@ -95,6 +95,7 @@ typedef struct tagTransParam
 	int zone;
 	char direction[10];
 	int projection;
+    int utm_zone;
 } TransParam;
 
 typedef struct tagCSize
@@ -214,7 +215,7 @@ typedef struct ArgumentInfo{
 	bool check_tilesize;
 	bool check_boundary;
 	bool check_checktiff;
-	
+    bool check_imageresolution;
 	char Image1[500];
 	char Image2[500];
 	char Outputpath[500];
@@ -237,7 +238,10 @@ typedef struct ArgumentInfo{
 	int tilesize;
 	int Min_X, Max_X, Min_Y, Max_Y;
 	
-	int projection;
+	int projection; //PS = 1, UTM = 2
+    int utm_zone;
+    int sensor_provider; //DG = 1, Pleiades = 2
+    float image_resolution;
 	
 } ARGINFO;
 

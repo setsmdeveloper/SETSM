@@ -87,7 +87,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 void SetSubBoundary(int *Boundary, float subX, float subY, float buffer_area, int col, int row, int *subBoundary);
 F2DPOINT *SetDEMGrid(int *Boundary, float Grid_x, float Grid_y, CSize *Size_2D);
 void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary,CSize Grid_size, float Grid_set,	 char *GIMP_path, float *minmaxHeight, float seedDEMsigma, int IsRA,char* metafilename);
+
 double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c);
+double** OpenXMLFile_Pleiades(char* _filename);
+
 void SetDEMBoundary(double** _rpcs, float* _res,TransParam _param, bool _hemisphere, int* _boundary, int* _minmaxheight, CSize* _imagesize, int* _Hinterval);
 bool subsetImage(TransParam transparam, uint8 NumofIAparam, double **LRPCs, float *LImageParam, char *LImageFilename, double **RRPCs, float *RImageParam, char *RImageFilename, 
 				 int *subBoundary, float *minmaxHeight, F2DPOINT *Lstartpos, F2DPOINT *Rstartpos, char *LsubsetImage, char *RsubsetImage, CSize* Lsubsetsize, CSize* Rsubsetsize, FILE *fid,bool check_checktiff);
