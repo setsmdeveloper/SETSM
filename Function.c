@@ -30,6 +30,8 @@
 #include <time.h>
 #include <dirent.h>
 #include <libgen.h>
+#include <sys/stat.h>
+
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
@@ -37,6 +39,8 @@ char *dirname(char *path);
 
 int main(int argc,char *argv[])
 {
+	setbuf(stdout, NULL);
+	TIFFSetWarningHandler(NULL);
 	char* projectfilename	= "default.txt";
 	int i=0;
 	char* image1_name = NULL;
@@ -64,6 +68,10 @@ int main(int argc,char *argv[])
 	args.check_checktiff = false;
 	
 	args.projection = 3;//PS = 1, UTM = 2
+    args.sensor_provider = 1; //DG = 1, Pleiades = 2
+    args.check_imageresolution = false;
+    args.utm_zone = -99;
+    
 	TransParam param;
 	
 	if(argc == 1)
@@ -99,7 +107,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm verion : 3.0.6\n");
+			printf("setsm verion : 3.0.9\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -192,6 +200,45 @@ int main(int argc,char *argv[])
 		
 		for (i=4; i<argc; i++)
 		{
+            if (strcmp("-provider", argv[i]) == 0) {
+                if (argc == i + 1) {
+                    printf("Please input Provider info\n");
+                    cal_flag = false;
+                } else {
+                    if(strcmp("DG",argv[i+1]) == 0 || strcmp("dg",argv[i+1]) == 0)
+                    {
+                        args.sensor_provider = 1;
+                        printf("Image Provider : Digital Globe\n");
+                        
+                    }
+                    else if(strcmp("Pleiades",argv[i+1]) == 0 || strcmp("pleiades",argv[i+1]) == 0)
+                    {
+                        args.sensor_provider = 2;
+                        printf("Image Provider : Pleiades\n");
+                    }
+                    else
+                    {
+                        args.projection = 1;	
+                        printf("Not suppoted Provider. Please use Digital Globe (Worldview, QuickBird, GeoEye) or Pleiades\n");
+                        exit(1);
+                    }
+                }
+            }
+            
+            if (strcmp("-GSD",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input the image resolution (GSD) value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.image_resolution = atof(argv[i+1]);
+                    printf("%f\n",args.image_resolution);
+                    args.check_imageresolution = true;
+                }
+            }
+            
 			if (strcmp("-outres",argv[i]) == 0) 
 			{
 				if (argc == i+1) {
@@ -222,7 +269,7 @@ int main(int argc,char *argv[])
  
 			if (strcmp("-seed",argv[i]) == 0)
 			{
-				TIFF *tif;
+				TIFF *tif = NULL;
 				
 				if (argc == i+1) {
 					printf("Please input the seed filepath\n");
@@ -595,6 +642,20 @@ int main(int argc,char *argv[])
 					}
 				}
 			}
+            
+            if (strcmp("-utm_zone",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input utm_zome value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.utm_zone = atoi(argv[i+1]);
+                    printf("%d\n",args.utm_zone);
+                }
+            }
+            
 		}
 		
 		if(cal_flag)
@@ -657,7 +718,7 @@ char* SetOutpathName(char *_path)
 		t_name[lenth] = '\0';
 	}
 	else {
-		t_name = (char*)(malloc(sizeof(char)*(full_size)));
+		t_name = (char*)(malloc(sizeof(char)*(full_size+1)));
 		strcpy(t_name,_path);
 	}
 	
@@ -724,14 +785,14 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		{
 			char metafilename[500];
 			
-			FILE *pMetafile;
+			FILE *pMetafile = NULL;
 			sprintf(metafilename, "%s/%s_meta.txt", proinfo.save_filepath, proinfo.Outputpath_name);
 			
 			if(!proinfo.check_checktiff)
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.6\n");
+				fprintf(pMetafile,"SETSM Version=3.0.9\n");
 			}
 			
 			time_t current_time;
@@ -751,16 +812,41 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			char temp_filepath[500];
 			double Image1_gsd_r,Image1_gsd_c,Image2_gsd_r,Image2_gsd_c;
 
-			LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
-			RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
-			
-			proinfo.resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
+            if(args.sensor_provider == 1)
+            {
+                LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
+                RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
+            }
+            else
+            {
+                LRPCs		= OpenXMLFile_Pleiades(proinfo.LeftRPCfilename);
+                RRPCs		= OpenXMLFile_Pleiades(proinfo.RightRPCfilename);
+            }
+            
 
-			if (proinfo.resolution < 0.75) {
-				proinfo.resolution = 0.5;
-			}
-			else if(proinfo.resolution < 1.25)
-				proinfo.resolution = 1.0;
+            if(!args.check_imageresolution)
+            {
+                if(args.sensor_provider == 1)
+                {
+                    proinfo.resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
+                    
+                    if (proinfo.resolution < 0.75)
+                    {
+                        proinfo.resolution = 0.5;
+                    }
+                    else if(proinfo.resolution < 1.25)
+                        proinfo.resolution = 1.0;
+                }
+                else
+                    proinfo.resolution = 0.5;
+            }
+            else
+            {
+                proinfo.resolution  = args.image_resolution;
+            }
+            
+            printf("image resolution %f\n",proinfo.resolution);
+            
 			
 			Res[0]		= proinfo.resolution;						Res[1]		= proinfo.DEM_resolution;
 			Image_res[0]= proinfo.resolution;						Image_res[1]= proinfo.resolution;
@@ -770,9 +856,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			minLat		= LRPCs[0][3];
 			minLon = (float) LRPCs[0][2];
 			param.projection = args.projection;
+            param.utm_zone   = args.utm_zone;
+            
 			SetTransParam((float)(minLat),(float)(minLon),&Hemisphere, &param);
 
-			printf("param projection %d\n",param.projection);
+			printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
 			*return_param = param;
 			
 			SetDEMBoundary(LRPCs,Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LBRsize,LHinterval);
@@ -841,7 +929,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 				uint8 Template_size	= 15;
 				uint16 buffer_area	= 400;
 				uint8 iter_row_start, iter_row_end, t_col_start, t_col_end;
-				int	 total_count, tile_size;
+				int	 total_count = 0, tile_size = 0;
 				float subX, subY;
 				float bin_angle;
 				float mt_grid_size;
@@ -1282,7 +1370,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,int *ori_minmaxHeight,int *Boundary, int row_iter, int col_iter)
 {
-	int final_iteration;
+	int final_iteration = -1;
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
@@ -1302,9 +1390,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
 			char *filename;
 			
-			FILE *fid;
-			FILE *fid_header;
-			FILE *fid_RAinfo;
+			FILE *fid = NULL;
+			FILE *fid_header = NULL;
+			FILE *fid_RAinfo = NULL;
 			
 			float minmaxHeight[2];
 			int subBoundary[4];
@@ -1406,7 +1494,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						float pre_3sigma= 1000;
 						float pre_mean	= 1000;
 						float ratio = 0;
-						float py_resolution, grid_resolution,pre_grid_resolution;
+						float py_resolution = 0;
+						float grid_resolution = 0;
+						float pre_grid_resolution = 0;
 						
 						bool flag_start, dem_update_flag;
 
@@ -1416,7 +1506,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						CSize Size_Grid2D, pre_Size_Grid2D;
 
 						CSize *data_size_l, *data_size_r;
-						UGRID *GridPT3, *Pre_GridPT3;
+						UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
 						
 						
 						time_t PreST = 0, PreET = 0;
@@ -1464,6 +1554,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							pre_blunder_selected_level = 0;
 						
 						
+						F2DPOINT *GridPT = NULL;
 						
 						while(lower_level_match && level >= DEM_level)
 						{
@@ -1485,7 +1576,6 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							uint16 *SubImages_BL, *SubImages_BR;
 							uint16 *SubMagImages_BL, *SubMagImages_BR;
 							
-							F2DPOINT *GridPT;
 							F2DPOINT *Grid_wgs;
 							
 							if(level == 4)
@@ -1535,7 +1625,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							pre_Size_Grid2D.height = Size_Grid2D.height;
 							pre_grid_resolution = grid_resolution;
 							
-							fprintf(fid,"level = , Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
+							fprintf(fid,"level = %d, Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
 							
 							fprintf(fid_header, "%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
 
@@ -1596,7 +1686,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								
 
 								float pre_3sigma, pre_mean;
-								float Th_roh_update;
+								float Th_roh_update = 0;
 
 								NCCflag flag;
 
@@ -1616,7 +1706,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								int count_results_anchor[2];
 								int count_MPs;
 								int count_blunder;
-								bool update_flag; 
+								bool update_flag = false;
 								bool check_ortho_cal = false;
 								
 								uint8 ortho_level = 2;
@@ -1774,8 +1864,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
 										
 										i = 0;
-										while( (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF && i < count_MPs )
+										int temp_flag;
+										while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
 										{
+											ptslists[i].flag = (uint8)temp_flag;
 											i++;
 										}
 										fclose(survey);
@@ -1816,8 +1908,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
 											
 											i = 0;
-											while( (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF && i < count_MPs )
+											int temp_flag;
+											while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
 											{
+												ptslists[i].flag = (uint8)temp_flag;
 												if(maxX_ptslists < ptslists[i].m_X)
 													maxX_ptslists = ptslists[i].m_X;
 												if(maxY_ptslists < ptslists[i].m_Y)
@@ -1918,7 +2012,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
 											
 											i = 0;
-											while( (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF && i < count_MPs )
+											while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
 											{
 												if(maxX_ptslists < ptslists[i].m_X)
 													maxX_ptslists = ptslists[i].m_X;
@@ -1984,8 +2078,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 											printf("end decision_setheight\n");
 											
-											
-											matching_change_rate = fabs( (float)pre_matched_pts - (float)count_MPs ) /(float)pre_matched_pts;
+                                            if(pre_matched_pts == 0)
+                                                matching_change_rate = 0;
+                                            else
+                                                matching_change_rate = fabs( (float)pre_matched_pts - (float)count_MPs ) /(float)pre_matched_pts;
 											
 											printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
 											pre_matched_pts = count_MPs;
@@ -2056,7 +2152,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											
 											
-											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
@@ -2087,8 +2183,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											
 											i = 0;
-											while( (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF && i < count_MPs )
+											int temp_flag;
+											while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
 											{
+												ptslists[i].flag = (uint8)temp_flag;
 												if(maxX_ptslists < ptslists[i].m_X)
 													maxX_ptslists = ptslists[i].m_X;
 												if(maxY_ptslists < ptslists[i].m_Y)
@@ -2216,7 +2314,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												update_flag				= false;
 
 											
-											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
@@ -2249,7 +2347,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										
 										if (level <= 1)
 										{
-											sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath,row,col);
+											//sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath,row,col);
+											sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath);
 											fid_RAinfo	= fopen(save_file,"w");
 											fprintf(fid_RAinfo,"%f\t%f\n",t_Rimageparam[0],t_Rimageparam[1]);
 											fclose(fid_RAinfo);
@@ -2353,7 +2452,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
 							}
 							
-							printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%) = %4.2f% !!\n",row,iter_row_end,col,t_col_end,(float)(pyramid_step+1 - level)/(float)(pyramid_step+1)*100);
+							printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%%) = %4.2f%% !!\n",row,iter_row_end,col,t_col_end,(float)(pyramid_step+1 - level)/(float)(pyramid_step+1)*100);
 							
 							level	= level - 1;
 
@@ -2379,26 +2478,32 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								free(GridPT);
 							}
 
+                            printf("release Grid_wgs, nccresult\n");
 							free(Grid_wgs);
 							free(nccresult);
 							
+                            printf("release subImage L\n");
 							free(SubImages_L);
 							free(SubImages_BL);
 							free(SubOriImages_L);
 							
+                            printf("release subImage R\n");
 							free(SubImages_R);
 							free(SubImages_BR);
 							free(SubOriImages_R);
 
+                            printf("release subimage Mag\n");
 							free(SubMagImages_L);
 							free(SubMagImages_R);
 							free(SubMagImages_BL);
 							free(SubMagImages_BR);
 						}
+                        printf("relese data size\n");
 						free(data_size_l);
 						free(data_size_r);
 						free(GridPT3);
 						
+                        printf("release GridTP3\n");
 						PreET = time(0);
 						Pregab = difftime(PreET,PreST);
 						printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
@@ -2449,12 +2554,16 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 	info->check_tiles_EC= false;
 	info->check_minH	= false;
 	info->check_maxH	= false;
-	info->check_checktiff = false;
+	info->check_checktiff	= false;
+	info->tile_info[0]		= '\0';
+	info->priori_DEM_tif[0]	= '\0';
+	info->metafilename[0]	= '\0';
 
 	pFile		= fopen(_filename,"r");
 	if( pFile == NULL)
 	{
-		printf("File did not open\n");
+		printf("'default.txt' file doesn't exist in SETSM execution folder, please check it!!\n");
+        exit(1);
 	}
 	else
 	{
@@ -2485,19 +2594,29 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				sscanf(bufstr,"Threads_num %d\n",&info->threads_num);
 			else if (args.check_arg == 0 && strstr(bufstr,"Image1")!=NULL)
 			{
-				sscanf(bufstr,"Image1 %s\n",&info->LeftImagefilename);
+				sscanf(bufstr,"Image1 %s\n",info->LeftImagefilename);
+                
+                FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
+                if(temp_ptif)
+                    printf("image1 load completed!\n");
+                else
+                {
+                    printf("image1 load faied. Please check filename!!\n");
+                    exit(1);
+                }
+                
 				tmp_chr = remove_ext(info->LeftImagefilename);
 				sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
 				
 				FILE *temp_pFile;
 				temp_pFile			 = fopen(info->LeftRPCfilename,"r");
-				printf("xml file %s\n",info->LeftRPCfilename);
+				//printf("xml file %s\n",info->LeftRPCfilename);
 				if(temp_pFile)
 					printf("image1 xml load completed!\n");
 				else
 				{
 					sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
-					printf("xml file %s\n",info->LeftRPCfilename);
+					//printf("xml file %s\n",info->LeftRPCfilename);
 					temp_pFile			 = fopen(info->LeftRPCfilename,"r");
 					if(temp_pFile)
 						printf("image1 XML load completed!\n");
@@ -2507,25 +2626,32 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 						exit(0);
 					}
 				}
-				
-
-				
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"Image2")!=NULL)
 			{
-				sscanf(bufstr,"Image2 %s\n",&info->RightImagefilename);
+				sscanf(bufstr,"Image2 %s\n",info->RightImagefilename);
+                
+                FILE *temp_ptif = fopen(info->RightImagefilename,"r");
+                if(temp_ptif)
+                    printf("image2 load completed!\n");
+                else
+                {
+                    printf("image2 load faied. Please check filename!!\n");
+                    exit(1);
+                }
+                
 				tmp_chr = remove_ext(info->RightImagefilename);
 				sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
 				
 				FILE *temp_pFile;
 				temp_pFile			 = fopen(info->RightRPCfilename,"r");
-				printf("xml file %s\n",info->RightRPCfilename);
+				//printf("xml file %s\n",info->RightRPCfilename);
 				if(temp_pFile)
 					printf("image2 xml load completed!\n");
 				else
 				{
 					sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
-					printf("xml file %s\n",info->RightRPCfilename);
+					//printf("xml file %s\n",info->RightRPCfilename);
 					temp_pFile			 = fopen(info->RightRPCfilename,"r");
 					if(temp_pFile)
 						printf("image2 XML load completed!\n");
@@ -2534,13 +2660,11 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 						printf("image2 xml/XML load failed!\n");
 						exit(0);
 					}
-						
 				}
-				
 			}
 			else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
 			{
-				sscanf(bufstr,"outputpath %s\n",&info->save_filepath);
+				sscanf(bufstr,"outputpath %s\n",info->save_filepath);
 				
 				
 				char *Outputpath_name  = SetOutpathName(info->save_filepath);
@@ -2551,9 +2675,14 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			}
 			else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
 			{
-				sscanf(bufstr,"seeddempath %d ",&info->pre_DEMtif);
+				int temp_pre_DEMtif;
+				sscanf(bufstr,"seeddempath %d ",&temp_pre_DEMtif);
+				info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
 				if(info->pre_DEMtif)
-					sscanf(bufstr,"seeddempath %d %s %f\n",&info->pre_DEMtif,&info->priori_DEM_tif,&info->seedDEMsigma);
+				{
+					sscanf(bufstr,"seeddempath %d %s %f\n",&temp_pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
+					info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
+				}
 				printf("seeddempath %d %s %f\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
 			}
 			else if (args.check_tiles_SR == 0 && strstr(bufstr,"tile_SR")!=NULL)
@@ -2599,18 +2728,27 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			sprintf(info->LeftImagefilename,"%s", args.Image1);
 			sprintf(info->RightImagefilename,"%s",args.Image2);
 			
+            FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
+            if(temp_ptif)
+                printf("image1 load completed!\n");
+            else
+            {
+                printf("image1 load faied. Please check filename!!\n");
+                exit(1);
+            }
+            
 			tmp_chr = remove_ext(args.Image1);
 			sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
 			
 			FILE *temp_pFile;
 			temp_pFile			 = fopen(info->LeftRPCfilename,"r");
-			printf("xml file %s\n",info->LeftRPCfilename);
+			//printf("xml file %s\n",info->LeftRPCfilename);
 			if(temp_pFile)
 				printf("image1 xml load completed!\n");
 			else
 			{
 				sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
-				printf("xml file %s\n",info->LeftRPCfilename);
+				//printf("xml file %s\n",info->LeftRPCfilename);
 				temp_pFile			 = fopen(info->LeftRPCfilename,"r");
 				if(temp_pFile)
 					printf("image1 XML load completed!\n");
@@ -2621,17 +2759,26 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 				}
 			}
 			
+            temp_ptif = fopen(info->RightImagefilename,"r");
+            if(temp_ptif)
+                printf("image2 load completed!\n");
+            else
+            {
+                printf("image2 load faied. Please check filename!!\n");
+                exit(1);
+            }
+            
 			tmp_chr = remove_ext(args.Image2);
 			sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
 			
 			temp_pFile			 = fopen(info->RightRPCfilename,"r");
-			printf("xml file %s\n",info->RightRPCfilename);
+			//printf("xml file %s\n",info->RightRPCfilename);
 			if(temp_pFile)
 				printf("image2 xml load completed!\n");
 			else
 			{
 				sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
-				printf("xml file %s\n",info->RightRPCfilename);
+				//printf("xml file %s\n",info->RightRPCfilename);
 				temp_pFile			 = fopen(info->RightRPCfilename,"r");
 				if(temp_pFile)
 					printf("image2 XML load completed!\n");
@@ -2710,8 +2857,17 @@ int Maketmpfolders(ProInfo info)
 	
 	if(!info.check_checktiff)
 	{
-		mkdir(info.save_filepath,0777);
-		sprintf(temp_filepath,"%s/txt",info.save_filepath);
+        int status;
+		status = mkdir(info.save_filepath,0777);
+        if (opendir(info.save_filepath) == NULL)
+        {
+            if (status == -1)
+            {
+                printf("Outpath of '%s' cannot make, please check outpath!!\n",info.save_filepath);
+                exit(1);
+            }
+        }
+        sprintf(temp_filepath,"%s/txt",info.save_filepath);
 		mkdir(temp_filepath,0777);
 		sprintf(temp_filepath,"%s/tif",info.save_filepath);
 		mkdir(temp_filepath,0777);
@@ -2854,8 +3010,11 @@ void SetTransParam(float minLat, float minLon, bool *Hemisphere, TransParam *par
 	
 	sprintf(param->direction,"%s",direction);
 	
-	
-	param->zone = (int)( ( minLon / 6 ) + 31);
+    if(param->utm_zone < -1)
+		param->zone = (int)( ( minLon / 6 ) + 31);
+    else
+        param->zone = param->utm_zone;
+    
 }
 void SetTiles(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
 			  uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, float *subX, float *subY)
@@ -3396,7 +3555,7 @@ char* remove_ext(char* mystr)
 char* GetFileName(char file_path[])
 {
  
-	char *file_name;
+	char *file_name = NULL;
  
 	while(*file_path)
 	{
@@ -3416,7 +3575,7 @@ char* GetFileName(char file_path[])
 char* GetFileDir(char file_path[],int *size)
 {
 	
-	char *file_name;
+	char *file_name = NULL;
 	*size = 0;
 	while(*file_path)
 	{
@@ -3444,7 +3603,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if(!strcmp("tif",ext+1))
+	if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		TIFF *tif  = TIFFOpen(filename,"r");
 
@@ -3576,11 +3735,11 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 	uint16 *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin 
-	TIFF *tif;
+	TIFF *tif = NULL;
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		printf("tif open\n");
 		tif	 = TIFFOpen(filename,"r");
@@ -3792,11 +3951,11 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 	float *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin 
-	TIFF *tif;
+	TIFF *tif = NULL;
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		tif	 = TIFFOpen(filename,"r");
 		check_ftype = 1;
@@ -3968,7 +4127,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary, CSize Gr
 	char *ext;
 	ext = strrchr(GIMP_path,'.');
 	
-	if (!strcmp("tif",ext+1)) 
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		check_ftype = 1;
 	}
@@ -4266,7 +4425,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary, CSize Gr
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 {
-	double** out;
+	double** out = NULL;
 
 	FILE *pFile;
 	char temp_str[1000];
@@ -4418,6 +4577,164 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 	return out;
 }
 
+
+double** OpenXMLFile_Pleiades(char* _filename)
+{
+    double** out;
+    
+    FILE *pFile;
+    char temp_str[1000];
+    char linestr[1000];
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    
+    double aa;
+    
+    pFile			= fopen(_filename,"r");
+    if(pFile)
+    {
+        out = (double**)malloc(sizeof(double*)*7);
+        while(!feof(pFile))
+        {
+            fscanf(pFile,"%s",temp_str);
+            if(strcmp(temp_str,"<Inverse_Model>") == 0)
+            {
+                fgets(linestr,sizeof(linestr),pFile);
+                
+                printf("sample num\n");
+                out[4] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[4][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[4][i]);
+                }
+                
+                printf("sample den\n");
+                out[5] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[5][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[5][i]);
+                }
+                
+                printf("line num\n");
+                out[2] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[2][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[2][i]);
+                }
+                
+                printf("line den\n");
+                out[3] = (double*)malloc(sizeof(double)*20);
+                for(i=0;i<20;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[3][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[3][i]);
+                }
+                
+                out[6] = (double*)malloc(sizeof(double)*2);
+                for(i=0;i<2;i++)
+                {
+                    
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[6][i]			= atof(pos2);
+                    
+                    printf("%f\n",out[6][i]);
+                }
+                
+                for(i=0;i<14;i++)
+                    fgets(linestr,sizeof(linestr),pFile);
+                
+                out[0] = (double*)malloc(sizeof(double)*5); //offset
+                out[1] = (double*)malloc(sizeof(double)*5); //scale
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][2]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][2]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][3]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][3]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][4]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][4]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][1]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][1]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][0]			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][0]			= atof(pos2);
+                
+                for(i=0;i<2;i++)
+                {
+                    for(int j=0;j<5;j++)
+                        printf("%f\n",out[i][j]);
+                }
+            }
+        }
+        fclose(pFile);
+        
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+    }
+    return out;
+}
 
 void SetDEMBoundary(double** _rpcs, float* _res,TransParam _param, bool _hemisphere, int* _boundary, int* _minmaxheight, CSize* _imagesize, int* _Hinterval)
 {
@@ -8688,7 +9005,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 				}
 			}
 			
-			printf("count mps %d\n",count_MPs_nums);
+			//printf("count mps %d\n",count_MPs_nums);
  
 			F3DPOINT *selected_ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs_nums);
 			
@@ -8870,8 +9187,10 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 			double distX_ptslists, distY_ptslists;
 			double Scale_ptslists = 1000;
 			
-			while( (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF && i < count_MPs )
+			int temp_flag;
+			while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
 			{
+				ptslists[i].flag = temp_flag;
 				if(maxX_ptslists < ptslists[i].m_X)
 					maxX_ptslists = ptslists[i].m_X;
 				if(maxY_ptslists < ptslists[i].m_Y)
@@ -9330,21 +9649,24 @@ void readsites(F3DPOINT *ptslists,int numofpts)
 	}
 
 	qsort((void *)sites, nsites, sizeof(Site), scomp) ;
-	xmin = sites[0].coord.x ;
-	xmax = sites[0].coord.x ;
-	for (i = 1 ; i < nsites ; ++i)
+	if (nsites > 0)
 	{
-		if(sites[i].coord.x < xmin)
+		xmin = sites[0].coord.x ;
+		xmax = sites[0].coord.x ;
+		for (i = 1 ; i < nsites ; ++i)
 		{
-			xmin = sites[i].coord.x ;
+			if(sites[i].coord.x < xmin)
+			{
+				xmin = sites[i].coord.x ;
+			}
+			if (sites[i].coord.x > xmax)
+			{
+				xmax = sites[i].coord.x ;
+			}
 		}
-		if (sites[i].coord.x > xmax)
-		{
-			xmax = sites[i].coord.x ;
-		}
+		ymin = sites[0].coord.y ;
+		ymax = sites[nsites-1].coord.y ;
 	}
-	ymin = sites[0].coord.y ;
-	ymax = sites[nsites-1].coord.y ;
 }
 
 /*** read one site ***/
@@ -9750,10 +10072,10 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 				  
 				for(iter = 0 ; iter < max_iter ; iter++)
 				{
-					uint32 reference_index;
+					uint32 reference_index = 0;
 					int t_count = 0;
 					double U[3], V[3];
-					int target_index_0, target_index_1;
+					int target_index_0 = 0, target_index_1 = 0;
 					  
 					double dh1, dh2, dh3, ddh_1, ddh_2, ddh_3;
 					double N[3];
@@ -10112,7 +10434,7 @@ int SetttingFlagOfGrid(int *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,float
 	FILE *fid = fopen(filename_mps_anchor,"r");
 	FILE *fid_all = fopen(filename_mps,"w");
 	
-	while( (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF && i < count_MPs_anchor )
+	while( i < count_MPs_anchor && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
 	{
 		int grid_index;
 		int t_col, t_row;
@@ -10132,7 +10454,7 @@ int SetttingFlagOfGrid(int *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,float
 	
 	i=0;
 	fid = fopen(filename_mps_aft,"r");
-	while( (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF && i < count_MPs_blunder )
+	while( i < count_MPs_blunder && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
 	{
 		int grid_index;
 		int t_col, t_row;
@@ -12028,7 +12350,8 @@ float MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fin
 			{
 				char h_t_str[500];
 				FILE *p_hfile;
-				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+				//sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
 				p_hfile		= fopen(h_t_str,"r");
 				if(p_hfile)
 				{
@@ -12156,7 +12479,8 @@ float MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fin
 				}
 
 
-				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+				//sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
 				p_hfile		= fopen(h_t_str,"r");
 				if(p_hfile)
 				{
@@ -12401,8 +12725,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	int total_null_cell = 0;
 	int threads_num;
 	int guided_size;
-	double *cal_gridpts_X;
-	double *cal_gridpts_Y;
+	double *cal_gridpts_X = NULL;
+	double *cal_gridpts_Y = NULL;
 	struct calgrid
 	{
 		double X, Y;
@@ -12960,13 +13284,13 @@ CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, float *minX, flo
 		{
 			if(_param.projection == 1)
 			{
-				sscanf(bufstr, "map info = {%s %s %d%s %d%s %f%s %f%s %f%s %f%s %s %s\n", &t_str1, &t_str2, &t_int1, &t_str, &t_int2, &t_str, &(*minX), &t_str, &(*maxY), &t_str,
-					   &(*grid_size), &t_str, &(*grid_size), &t_str, &t_str, &t_str);
+				sscanf(bufstr, "map info = {%s %s %d%s %d%s %f%s %f%s %f%s %f%s %s %s\n", t_str1, t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+					   &(*grid_size), t_str, &(*grid_size), t_str, t_str, t_str);
 			}
 			else
 			{
-				sscanf(bufstr, "map info = {%s %d%s %d%s %f%s %f%s %f%s %f%s %d%s %s %s %s\n", &t_str2, &t_int1, &t_str, &t_int2, &t_str, &(*minX), &t_str, &(*maxY), &t_str,
-					   &(*grid_size), &t_str, &(*grid_size), &t_str, &t_int1, &t_str, &t_str, &t_str, &t_str);
+				sscanf(bufstr, "map info = {%s %d%s %d%s %f%s %f%s %f%s %f%s %d%s %s %s %s\n", t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+					   &(*grid_size), t_str, &(*grid_size), t_str, &t_int1, t_str, t_str, t_str, t_str);
 			}
 		}
 	}
@@ -13764,19 +14088,16 @@ openpl(void)
 {
 }
 
-#pragma argsused
 void
 line(float ax, float ay, float bx, float by)
 {
 }
 
-#pragma argsused
 void
 circle(float ax, float ay, float radius)
 {
 }
 
-#pragma argsused
 void
 range(float pxmin, float pxmax, float pymin, float pymax)
 {
@@ -14190,23 +14511,58 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	
 	Image_resolution = 0.5;
 	
+    // load RPCs info from xml file
+    if(args.sensor_provider == 1)
+    {
+        RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
+    }
+    else
+    {
+        RPCs            = OpenXMLFile_Pleiades(RPCFilename);
+    }
+    
+    
+    if(!args.check_imageresolution)
+    {
+        if(args.sensor_provider == 1)
+        {
+            Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
+            
+            if (Image_resolution < 0.75) {
+                Image_resolution = 0.5;
+            }
+            else if(Image_resolution < 1.25)
+                Image_resolution = 1.0;
+        }
+        else
+            Image_resolution = 0.5;
+    }
+    else
+    {
+        Image_resolution  = args.image_resolution;
+    }
+
+    
 	// load RPCs info from xml file
-	RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
+	/*RPCs			= OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
 	
-	Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
+	  Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
 	
-	if (Image_resolution < 0.75) {
-		Image_resolution = 0.5;
-	}
-	else if(Image_resolution < 1.25)
-		Image_resolution = 1.0;
-	
+	  if (Image_resolution < 0.75) {
+	  Image_resolution = 0.5;
+	  }
+	  else if(Image_resolution < 1.25)
+	  Image_resolution = 1.0;
+	*/
 	printf("Image resolution %f\n",Image_resolution);
 	
 	minLat = RPCs[0][3];
 	minLon = RPCs[0][2];
 	
 	//set projection conversion info.
+    param.utm_zone   = args.utm_zone;
+    _param.utm_zone  = args.utm_zone;
+    
 	SetTransParam(minLat, minLon, &Hemisphere, &_param);
 	SetTransParam(minLat, minLon, &Hemisphere, &param);
 	
@@ -14606,7 +14962,7 @@ uint16 *subsetImage_ortho(TransParam transparam, double **RPCs, char *ImageFilen
 	*ret = false;
 	
 	CSize Imagesize;
-	uint16 *leftimage;
+	uint16 *leftimage = NULL;
 	if(GetImageSize_ortho(ImageFilename,&Imagesize))
 	{
 		int cols[2], rows[2];
@@ -14634,7 +14990,7 @@ bool GetImageSize_ortho(char *filename, CSize *Imagesize)
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if(!strcmp("tif",ext+1))
+	if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		
 		TIFF *tif  = TIFFOpen(filename,"r");
@@ -14791,7 +15147,8 @@ F2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, float *_im
 #pragma omp parallel for schedule(guided)
 	for(int i=0;i<_numofpts;i++)
 	{
-		float L, P, H, Line, Samp, deltaP, deltaR;
+		float L, P, H, Line, Samp;
+		float deltaP = 0.0, deltaR = 0.0;
 		double *Coeff;
 		
 		L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
@@ -14839,11 +15196,11 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 	uint16 *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin
-	TIFF *tif;
+	TIFF *tif = NULL;
 	char *ext;
 	ext = strrchr(filename,'.');
 	
-	if (!strcmp("tif",ext+1))
+	if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
 	{
 		printf("tif open\n");
 		tif	 = TIFFOpen(filename,"r");
@@ -15126,7 +15483,7 @@ float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path)
 
 double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
 {
-	double** out;
+	double** out = NULL;
 	
 	FILE *pFile;
 	char temp_str[1000];
@@ -15304,13 +15661,13 @@ CSize Envihdr_reader_DEM_ortho(TransParam _param, char *filename, float *minX, f
 		{
 			if(_param.projection == 1)
 			{
-				sscanf(bufstr, "map info = {%s %s %d%s %d%s %f%s %f%s %f%s %f%s %s %s\n", &t_str1, &t_str2, &t_int1, &t_str, &t_int2, &t_str, &(*minX), &t_str, &(*maxY), &t_str,
-					   &(*grid_size), &t_str, &(*grid_size), &t_str, &t_str, &t_str);
+				sscanf(bufstr, "map info = {%s %s %d%s %d%s %f%s %f%s %f%s %f%s %s %s\n", t_str1, t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+					   &(*grid_size), t_str, &(*grid_size), t_str, t_str, t_str);
 			}
 			else
 			{
-				sscanf(bufstr, "map info = {%s %d%s %d%s %f%s %f%s %f%s %f%s %d%s %s %s %s\n", &t_str2, &t_int1, &t_str, &t_int2, &t_str, &(*minX), &t_str, &(*maxY), &t_str,
-					   &(*grid_size), &t_str, &(*grid_size), &t_str, &t_int1, &t_str, &t_str, &t_str, &t_str);
+				sscanf(bufstr, "map info = {%s %d%s %d%s %f%s %f%s %f%s %f%s %d%s %s %s %s\n", t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+					   &(*grid_size), t_str, &(*grid_size), t_str, &t_int1, t_str, t_str, t_str, t_str);
 			}
 		}
 	}
