@@ -792,7 +792,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.0.9\n");
+				fprintf(pMetafile,"SETSM Version=3.1.0\n");
 			}
 			
 			time_t current_time;
