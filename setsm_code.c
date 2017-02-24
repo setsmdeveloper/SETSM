@@ -6073,7 +6073,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	int iter_count;
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	int sub_imagesize_w, sub_imagesize_h;
+	long int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -6137,18 +6137,18 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 		check_ortho = true;
 	
 #pragma omp parallel for schedule(guided)
-	for(int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
 	{
-		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-		int pts_col = iter_count % sub_imagesize_w;
+		long int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+		long int pts_col = iter_count % sub_imagesize_w;
 		int pt_index;
 		float t_X, t_Y;
 		int t_col, t_row;
 		int pt_index_im;
 		
 		
-		t_X		= subBoundary[0] + pts_col*im_resolution;
-		t_Y		= subBoundary[1] + pts_row*im_resolution;
+		t_X		= (float)((long)subBoundary[0] + pts_col*(long)im_resolution);
+		t_Y		= (float)((long)subBoundary[1] + pts_row*(long)im_resolution);
 		
 		t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
 		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
@@ -6682,7 +6682,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 											
 											if(row != 0 && col != 0)
 											{
-												int pt_index_temp,pt_index_dem;
+												long int pt_index_temp,pt_index_dem;
 												float t_X, t_Y;
 												int t_col, t_row, tt_col, tt_row;
 												
