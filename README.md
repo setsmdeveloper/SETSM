@@ -2,6 +2,8 @@ The Surface Extraction from TIN-based Searchspace Minimization (SETSM) software
 is a fully automatic algorithm for deriving Digital Terrain Models (DTM) from
 pairs of satellite imagery.
 
+SETSM homepage, mjremotesensing.wordpress.com/setsm
+
 SETSM was written by Myoung-Jong (MJ) Noh, Byrd Polar & Climate Rsch Cntr, 
 the Ohio State University, www.osu.edu.
 Principal investigator is Ian Howat, School of Earth Sciences,
