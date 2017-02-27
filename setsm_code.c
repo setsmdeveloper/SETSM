@@ -5288,7 +5288,7 @@ F2DPOINT ps2wgs_single(TransParam _param, F2DPOINT _ps) {
 		double t_c = _param.t_c;
 		double m_c = _param.m_c;
 		
-		F2DPOINT m_sWGS = {};
+		F2DPOINT m_sWGS;
 		F2DPOINT m_sPS = _ps;
 		
 		{
@@ -5332,7 +5332,7 @@ F2DPOINT ps2wgs_single(TransParam _param, F2DPOINT _ps) {
 		double e2cuadrada = _param.e2cuadrada;
 		double c = _param.c;
 		
-		F2DPOINT m_sWGS = {};
+		F2DPOINT m_sWGS;
 		F2DPOINT m_sPS = _ps;
 		
 		double x = m_sPS.m_X;
