@@ -24,7 +24,7 @@
  * Algorithmica 2, 153-174.
  */
 
-#include "Function.h"
+#include "setsm_code.h"
 #include "math.h"
 #include <omp.h>
 #include <time.h>
