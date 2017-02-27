@@ -6,11 +6,11 @@ CFLAGS=-g -std=c99 -O3 -ffast-math -fopenmp -march=native
 INCS=-I$(TIFFPATH)/include
 LDFLAGS=-L$(TIFFPATH)/lib
 
-setsm : Function.o $(LINKER)
-	$(CC) $(CFLAGS) -o setsm Function.o $(LDFLAGS) -lm -ltiff
+setsm : setsm_code.o $(LINKER)
+	$(CC) $(CFLAGS) -o setsm setsm_code.o $(LDFLAGS) -lm -ltiff
 
-Function.o : Typedefine.h Function.h Function.c
-	$(CC) $(CFLAGS) $(INCS) -c Function.c
+setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
+	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
 
 .PHONY: clean
 
