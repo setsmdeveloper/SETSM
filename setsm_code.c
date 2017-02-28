@@ -9153,7 +9153,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 			int blunder_th_counts;
 			int pre_count_blunder = -100;
 			int pre_count_MPs = -100;
-			int blunder_count[2];
+			uint32 blunder_count[2];
 			int iter_row,iter_col;
 			
 			
@@ -13044,7 +13044,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 					t_x = minX + col*grid;
 					t_y = maxY - row*grid;
 					
-					if(pt_save[row*col_count + col].Z = -9999)
+					if(pt_save[row*col_count + col].Z == -9999)
 					{
 						pt_save[row*col_count + col].X = t_x;
 						pt_save[row*col_count + col].Y = t_y;
