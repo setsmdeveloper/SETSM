@@ -3773,7 +3773,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width	= cols[1] - cols[0];
 			data_size->height	= rows[1] - rows[0];
 
-			long long int data_length = data_size->height*data_size->width;
+			long int data_length = data_size->height*data_size->width;
 			
 			printf("memory allocation %d\t%d\n",data_size->height,data_size->width);
 			
@@ -3816,7 +3816,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 #pragma omp parallel for shared(cols,rows,out,data_size,t_data) private(a)
 							for(a = cols[0];a<cols[1];a++)
 							{
-								long long int pos = (row-rows[0])*data_size->width + (a-cols[0]);
+								long int pos = (row-rows[0])*data_size->width + (a-cols[0]);
 								out[pos] = t_data[a];
 							}
 						}
@@ -3866,7 +3866,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
-			long long int data_length = data_size->height*data_size->width;
+			long int data_length = data_size->height*data_size->width;
 			printf("memory allocation %d\t%d\t%lli\n",data_size->height,data_size->width,data_length);
 			
 			out				= (uint16*)malloc(sizeof(uint16)*data_length);
@@ -3892,7 +3892,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 							{
 								for (j=0;j<tileW;j++)
 								{
-									long long int pos = ((row*tileL) + i)*data_size->width + ((col*tileL) + j);
+									long int pos = ((row*tileL) + i)*data_size->width + ((col*tileL) + j);
 									out[pos] = t_data[i*tileW + j];
 								}
 							}
@@ -3919,7 +3919,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 		data_size->width	= cols[1] - cols[0];
 		data_size->height	= rows[1] - rows[0];
 		
-		long long int data_length = data_size->height*data_size->width;
+		long int data_length = data_size->height*data_size->width;
 		
 		out				= (uint16*)malloc(sizeof(uint16)*data_length);
 		
@@ -3932,7 +3932,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 		
 			for(a = cols[0];a<cols[1];a++)
 			{
-				long long int pos = (r-rows[0])*data_size->width + (a-cols[0]);
+				long int pos = (r-rows[0])*data_size->width + (a-cols[0]);
 				
 				out[pos] = t_data[a-cols[0]];
 			}
@@ -4833,7 +4833,7 @@ bool subsetImage(TransParam transparam, uint8 NumofIAparam, double **LRPCs, floa
 				result_size.width	= Lsubsetsize->width;
 				result_size.height	= Lsubsetsize->height;
 					
-				long long int data_length = result_size.height*result_size.width;
+				long int data_length = result_size.height*result_size.width;
 				fwrite(leftimage,sizeof(uint16),data_length,pFile);
 				fclose(pFile);
 				
@@ -4851,7 +4851,7 @@ bool subsetImage(TransParam transparam, uint8 NumofIAparam, double **LRPCs, floa
 				result_size.width  = Rsubsetsize->width;
 				result_size.height = Rsubsetsize->height;
 
-				long long int data_length = result_size.height*result_size.width;
+				long int data_length = result_size.height*result_size.width;
 				fwrite(rightimage,sizeof(uint16),data_length,pFile);
 				fclose(pFile);
 
@@ -5637,7 +5637,7 @@ void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 p
 					data_size[i]		= data_size_r[i];
 			}
 
-			long long int data_length = data_size[0].height*data_size[0].width;
+			long int data_length = data_size[0].height*data_size[0].width;
 			pyimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
 			magimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
 			dirimg[0] = (int16*)malloc(sizeof(int16)*data_length);
@@ -5683,7 +5683,7 @@ void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 p
 					fprintf(fid,"level = %d\t width = %d\theight = %d\n",i+1,data_size_r[i+1].width,data_size_r[i+1].height);
 				}
 
-				long long int data_length_array[6];
+				long int data_length_array[6];
 				data_length_array[i] = data_size[i+1].height*data_size[i+1].width;
 				magimg[i+1] = (uint16*)malloc(sizeof(uint16)*data_length_array[i]);
 				dirimg[i+1] = (int16*)malloc(sizeof(int16)*data_length_array[i]);
@@ -5865,9 +5865,9 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, fl
 	}
 
 #pragma omp parallel for private(temp) schedule(guided)
-	for(long long int r=0;r<result_size.height;r++)
+	for(long int r=0;r<result_size.height;r++)
 	{
-		for(long long int c=0;c<result_size.width;c++)
+		for(long int c=0;c<result_size.width;c++)
 		{
 			temp = 0;
 
@@ -5929,10 +5929,10 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
 	
 	
 #pragma omp parallel for
-	for(long long int i=0;i<_img_size.height;i++)
+	for(long int i=0;i<_img_size.height;i++)
 	{
 		int16 _gx, _gy;
-		for(long long int j=0;j<_img_size.width;j++)
+		for(long int j=0;j<_img_size.width;j++)
 		{
 			if(j == 0 || j == _img_size.width-1 || i == 0 || i == _img_size.height-1)
 			{
@@ -5972,7 +5972,7 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	int Half_template_size = Template_size / 2;
 	
-	long long int main_col, main_row;
+	long int main_col, main_row;
 	main_col = imagesize.width;
 	main_row = imagesize.height;
 	
@@ -5990,8 +5990,8 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 		}
 	}
 #pragma omp parallel for
-	for (long long int mask_row = 0; mask_row < main_row; mask_row++) {
-		for (long long int mask_col = 0; mask_col < main_col; mask_col++) {
+	for (long int mask_row = 0; mask_row < main_row; mask_row++) {
+		for (long int mask_col = 0; mask_col < main_col; mask_col++) {
 			const double sub_ratio = 18.0 / 4.0;
 			const double bin_angle = 360.0 / 18.0;
 			double bin[18] = {0.0};
@@ -6001,9 +6001,9 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 			for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++) {
 				for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++) {
 					double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
-					long long int radius2 = (row * row + col * col);
-					long long int pixel_row = mask_row + row;
-					long long int pixel_col = mask_col + col;
+					long int radius2 = (row * row + col * col);
+					long int pixel_row = mask_row + row;
+					long int pixel_col = mask_col + col;
 					if (radius2 <= (Half_template_size - 1) * (Half_template_size - 1) && pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1) {
 						double mag, theta;
 						mag = Gmag[pixel_row * main_col + pixel_col];
@@ -6012,7 +6012,7 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 						if (theta < 0) {
 							theta += 360;
 						}
-						long long int index = (long long int) (theta / bin_angle);
+						long int index = (long int) (theta / bin_angle);
 						if (index >= 18) {
 							printf("ERROR: Orientation array out of bounds access\n");
 						}
@@ -6139,19 +6139,19 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 #pragma omp parallel for schedule(guided)
 	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
 	{
-		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-		int pts_col = iter_count % sub_imagesize_w;
-		long  pt_index;
+		long int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+		long int pts_col = iter_count % sub_imagesize_w;
+		long int pt_index;
 		float t_X, t_Y;
-		int t_col, t_row;
-		long  pt_index_im;
+		long int t_col, t_row;
+		long int pt_index_im;
 		
 		
 		t_X		= subBoundary[0] + pts_col*im_resolution;
 		t_Y		= subBoundary[1] + pts_row*im_resolution;
 		
-		t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
-		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
+		t_col	= (t_X - subBoundary[0]) / DEM_resolution;
+		t_row	= (t_Y - subBoundary[1]) / DEM_resolution;
 		
 		pt_index	= t_row*Size_Grid2D.width + t_col;
 		pt_index_im = pts_row*sub_imagesize_w + pts_col;
@@ -6166,8 +6166,6 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 				F2DPOINT temp_GP_p;
 				F2DPOINT Left_Imagecoord, Right_Imagecoord;
 				F2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
-				int row, col;
-				
 				
 				temp_GP_p.m_X = t_X;
 				temp_GP_p.m_Y = t_Y;
@@ -6284,11 +6282,11 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	printf("height step %f\n",height_step);
 
 #pragma omp parallel for schedule(guided)
-	for(long  iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
 	{
-		int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-		int pts_col = iter_count % Size_Grid2D.width;
-		long  pt_index = pts_row*Size_Grid2D.width + pts_col;
+		long int pts_row = floor(iter_count/Size_Grid2D.width);
+		long int pts_col = iter_count % Size_Grid2D.width;
+		long int pt_index = pts_row*Size_Grid2D.width + pts_col;
 		
 		{
 			double pre_rho	= -1.0;
@@ -6573,7 +6571,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 												double right_patch;
 												double left_mag_patch;
 												double right_mag_patch;
-												long long int position = (long long int) pos_col_left + ((long long int) pos_row_left) * LImagesize.width;
+												long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
 												
 												left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
 													(double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) +
@@ -6589,7 +6587,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 												dx			=  pos_col_right - (int)(pos_col_right);
 												dy			=  pos_row_right - (int)(pos_row_right);
 												dxdy = dx * dy;
-												position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * RImagesize.width;
+												position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
 												
 												right_patch =
 													(double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
@@ -6684,7 +6682,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 											{
 												long int pt_index_temp,pt_index_dem;
 												float t_X, t_Y;
-												int t_col, t_row, tt_col, tt_row;
+												long int t_col, t_row, tt_col, tt_row;
 												
 												t_X		= GridPts[pt_index].m_X + col*im_resolution;
 												t_Y		= GridPts[pt_index].m_Y + row*im_resolution;
@@ -6738,7 +6736,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 												double left_mag_patch;
 												double right_mag_patch;
 												
-												long long int position = (long long int) (pos_col_left) + (long long int) (pos_row_left) * LImagesize.width;
+												long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
 												
 												left_patch =
 													(double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
@@ -6754,7 +6752,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 												dx			=  pos_col_right - (int)(pos_col_right);
 												dy			=  pos_row_right - (int)(pos_row_right);
 												dxdy = dx * dy;
-												position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * RImagesize.width;
+												position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
 												right_patch =
 													(double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
 													(double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
@@ -7210,7 +7208,7 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 	
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	long sub_imagesize_w, sub_imagesize_h;
+	long int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -7237,20 +7235,20 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 	
 		
 #pragma omp parallel for schedule(guided)
-	for(long iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
 	{
-		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-		int pts_col = iter_count % sub_imagesize_w;
+		long int pts_row = floor(iter_count/sub_imagesize_w);
+		long int pts_col = iter_count % sub_imagesize_w;
 		long pt_index;
 		float t_X, t_Y;
-		int t_col, t_row;
-		long pt_index_im;
+		long int t_col, t_row;
+		long int pt_index_im;
 		
 		t_X		= subBoundary[0] + pts_col*im_resolution;
 		t_Y		= subBoundary[1] + pts_row*im_resolution;
 		
-		t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
-		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
+		t_col	= (t_X - subBoundary[0]) / DEM_resolution;
+		t_row	= (t_Y - subBoundary[1]) / DEM_resolution;
 		
 		pt_index	= t_row*Size_Grid2D.width + t_col;
 		pt_index_im = pts_row*sub_imagesize_w + pts_col;
@@ -7265,8 +7263,6 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 				F2DPOINT temp_GP_p;
 				F2DPOINT Left_Imagecoord, Right_Imagecoord;
 				F2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
-				int row, col;
-				
 				
 				temp_GP_p.m_X = t_X;
 				temp_GP_p.m_Y = t_Y;
@@ -7394,7 +7390,7 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 								double dx = pos_col_left - (int) (pos_col_left);
 								double dy = pos_row_left - (int) (pos_row_left);
 								double dxdy = dx * dy;
-								long long int position = (long long int) pos_col_left + ((long long int) pos_row_left) * LImagesize.width;
+								long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
 								
 								double left_patch;
 								double right_patch;
@@ -7413,7 +7409,7 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 								dx = pos_col_right - (int) (pos_col_right);
 								dy = pos_row_right - (int) (pos_row_right);
 								dxdy = dx * dy;
-								position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * RImagesize.width;
+								position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
 								right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
 									(double) (RightImage[position + RImagesize.width]) * (dy - dxdy) + (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
 								
@@ -7687,7 +7683,7 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 	
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	long sub_imagesize_w, sub_imagesize_h;
+	long int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -7718,14 +7714,14 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 	
 	int pts_row, pts_col;
 #pragma omp parallel for schedule(guided)
-	for(long iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
 	{
-		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-		int pts_col = iter_count % sub_imagesize_w;
-		long pt_index;
+		long int pts_row = floor(iter_count/sub_imagesize_w);
+		long int pts_col = iter_count % sub_imagesize_w;
+		long int pt_index;
 		float t_X, t_Y;
 		int t_col, t_row;
-		long pt_index_im;
+		long int pt_index_im;
 		
 		t_X		= subBoundary[0] + pts_col*im_resolution;
 		t_Y		= subBoundary[1] + pts_row*im_resolution;
@@ -7746,8 +7742,6 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 				F2DPOINT temp_GP_p;
 				F2DPOINT Left_Imagecoord, Right_Imagecoord;
 				F2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
-				int row, col;
-				
 				
 				temp_GP_p.m_X = t_X;
 				temp_GP_p.m_Y = t_Y;
@@ -7896,7 +7890,7 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 									double left_mag_patch;
 									double right_mag_patch;
 									double dxdy = dx * dy;
-									long long int position = (long long int) (pos_col_left) + (long long int) (pos_row_left) * LImagesize.width;
+									long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
 									
 									left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
 										(double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) + (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
@@ -7910,7 +7904,7 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 									dx			=  pos_col_right - (int)(pos_col_right);
 									dy			=  pos_row_right - (int)(pos_row_right);
 									dxdy = dx * dy;
-									position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * RImagesize.width;
+									position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
 									
 									right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
 										(double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
@@ -8375,7 +8369,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 						double left_mag_patch;
 						double right_mag_patch;
 						double dxdy = dx * dy;
-						long long int position = (long long int) (pos_col_left) + (long long int) (pos_row_left) * LImagesize.width;
+						long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
 						left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
 							(double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) + (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
 						
@@ -8386,7 +8380,7 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 						dx = pos_col_right - (int) (pos_col_right);
 						dy = pos_row_right - (int) (pos_row_right);
 						dxdy = dx * dy;
-						position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * RImagesize.width;
+						position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
 						
 						right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
 							(double) (RightImage[position + RImagesize.width]) * (dy - dxdy) + (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
@@ -11270,12 +11264,12 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, int* Boundary, F2DPOINT *
 	{
 		for(int col=0;col<resize_Size.width;col++)
 		{
-			long long int index = row*resize_Size.width + col;
+			long int index = row*resize_Size.width + col;
 			float X = resize_Grid[index].m_X;
 			float Y = resize_Grid[index].m_Y;
 			int pos_c = (int)((X - Boundary[0])/pre_gridsize);
 			int pos_r = (int)((Y - Boundary[1])/pre_gridsize);
-			long long int pre_index = pos_r*preSize.width + pos_c;
+			long int pre_index = pos_r*preSize.width + pos_c;
 			if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height)
 			{
 				resize_GridPT3[index].minHeight		= preGridPT3[pre_index].minHeight;
@@ -11942,7 +11936,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 							double left_patch;
 							double right_patch;
 							double dxdy = dx * dy;
-							long long int position = (long long int) (pos_col_left) + (long long int) (pos_row_left) * L_colsize;
+							long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * L_colsize;
 							
 							// Appears inter_flag is always == 1
 							if (inter_flag == 1) {
@@ -11955,7 +11949,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 							dx = pos_col_right - (int) (pos_col_right);
 							dy = pos_row_right - (int) (pos_row_right);
 							dxdy = dx * dy;
-							position = (long long int) (pos_col_right) + (long long int) (pos_row_right) * R_colsize;
+							position = (long int) (pos_col_right) + (long int) (pos_row_right) * R_colsize;
 							
 							// Appears inter_flag is always == 1
 							if (inter_flag == 1) {
@@ -14867,7 +14861,7 @@ uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg)
 uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_size, float _sigma)
 {
 	//_filter_size = 7, sigma = 1.6
-	//long long int i,j,r,c,l,k;
+	//long int i,j,r,c,l,k;
 	float sigma = _sigma;
 	float temp,scale;
 	float sum = 0;
@@ -14906,9 +14900,9 @@ uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_si
 	}
 	
 #pragma omp parallel for private(temp) schedule(guided)
-	for(long long int r=0;r<result_size.height;r++)
+	for(long int r=0;r<result_size.height;r++)
 	{
-		for(long long int c=0;c<result_size.width;c++)
+		for(long int c=0;c<result_size.width;c++)
 		{
 			temp = 0;
 			
@@ -15229,7 +15223,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 			data_size->width	= cols[1] - cols[0];
 			data_size->height	= rows[1] - rows[0];
 			
-			long long int data_length = data_size->height*data_size->width;
+			long int data_length = data_size->height*data_size->width;
 			out				= (uint16*)malloc(sizeof(uint16)*data_length);
 			scanline		= TIFFScanlineSize(tif);
 			
@@ -15249,7 +15243,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 #pragma omp parallel for schedule(guided)
 					for(int a = cols[0];a<cols[1];a++)
 					{
-						long long int pos = (row-rows[0])*data_size->width + (a-cols[0]);
+						long int pos = (row-rows[0])*data_size->width + (a-cols[0]);
 						out[pos] = t_data[a];
 					}
 				}
@@ -15288,7 +15282,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 			
-			long long int data_length = data_size->height*data_size->width;
+			long int data_length = data_size->height*data_size->width;
 			
 			out				= (uint16*)malloc(sizeof(uint16)*data_length);
 			
@@ -15308,7 +15302,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 					{
 						for (j=0;j<tileW;j++)
 						{
-							long long int pos = ((row*tileL) + i)*data_size->width + ((col*tileL) + j);
+							long int pos = ((row*tileL) + i)*data_size->width + ((col*tileL) + j);
 							out[pos] = t_data[i*tileW + j];
 						}
 					}
@@ -15324,7 +15318,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 		data_size->width	= cols[1] - cols[0];
 		data_size->height	= rows[1] - rows[0];
 		
-		long long int data_length = data_size->height*data_size->width;
+		long int data_length = data_size->height*data_size->width;
 		
 		out				= (uint16*)malloc(sizeof(uint16)*data_length);
 		
@@ -15338,7 +15332,7 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
 			
 			for(a = cols[0];a<cols[1];a++)
 			{
-				long long int pos = (r-rows[0])*data_size->width + (a-cols[0]);
+				long int pos = (r-rows[0])*data_size->width + (a-cols[0]);
 				
 				out[pos] = t_data[a-cols[0]];
 			}
