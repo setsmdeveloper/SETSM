@@ -1,4 +1,6 @@
-# This Makefile should be used for building with the gnu compiler.
+# This Makefile should be used for building with the Cray compiler.
+# This worked on the Blue Waters system.  You might need to modify 
+# CC for use on another system.
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
@@ -6,8 +8,8 @@
 #TIFFINC=-I$(TIFFPATH)/include
 #TIFFLIB=-L$(TIFFPATH)/lib
 
-CC=gcc
-CFLAGS=-g -std=c99 -O3 -fopenmp -ffast-math -march=native
+CC=cc
+CFLAGS=-g
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)

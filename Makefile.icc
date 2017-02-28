@@ -1,4 +1,4 @@
-# This Makefile should be used for building with the gnu compiler.
+# This Makefile should be used for building with the Intel compiler.
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
@@ -6,8 +6,8 @@
 #TIFFINC=-I$(TIFFPATH)/include
 #TIFFLIB=-L$(TIFFPATH)/lib
 
-CC=gcc
-CFLAGS=-g -std=c99 -O3 -fopenmp -ffast-math -march=native
+CC=icc
+CFLAGS=-g -std=c99 -O3 -qopenmp -xHost
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)

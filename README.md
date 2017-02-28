@@ -2,6 +2,8 @@ The Surface Extraction from TIN-based Searchspace Minimization (SETSM) software
 is a fully automatic algorithm for deriving Digital Terrain Models (DTM) from
 pairs of satellite imagery.
 
+SETSM homepage, mjremotesensing.wordpress.com/setsm
+
 SETSM was written by Myoung-Jong (MJ) Noh, Byrd Polar & Climate Rsch Cntr, 
 the Ohio State University, www.osu.edu.
 Principal investigator is Ian Howat, School of Earth Sciences,
@@ -21,15 +23,17 @@ Algorithmica 2, 153-174.
 
 Installation instructions
 
-SETSM is dependent on the TIFF Library, which you must download and install 
+SETSM is dependent on LibTIFF, version 4.0.3 or higher.  Your system may 
+already have LibTIFF installed.  If not, you must download and install it 
 separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
 it according to the instructions in the README file.  In short,
 ./configure --prefix=/directory-to-install-in
 make
 make install
 
-Once LibTIFF is installed you must edit the SETSM Makefile to set the correct
-path to the library.  SETSM can then be built simply by typing make.
+Select one of the SETSM Makefile.* files based on the compiler you plan to use.
+Copy the selected file to Makefile and edit it if necessary to set the correct 
+path to the TIFF library.  SETSM can then be built simply by typing make.
 
 -------------------------------------------------------------------------------
 
