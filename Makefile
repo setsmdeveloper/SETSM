@@ -7,7 +7,7 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=gcc
-CFLAGS=-g -std=c99 -O3 -fopenmp -ffast-math -march=native
+CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)

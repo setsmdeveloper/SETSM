@@ -7,7 +7,7 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=icc
-CFLAGS=-g -std=c99 -O3 -qopenmp -xHost
+CFLAGS=-std=c99 -O3 -qopenmp -xHost
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
