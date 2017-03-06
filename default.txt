@@ -1,0 +1,27 @@
+## Output grid spacing[m] of Digital Elevation Model(DEM)
+DEM_space               8
+## Relative RPC Compensation{RRPCC] parameters (three input value)
+## first value            : if the value is '1', this RRPCC module is executed. Otherwise this module is passed.
+## second and third value : if RPC image bias parameters (a0 and b0) are not unknown, input the values. Otherwise input '1 0 0' as defaults. 
+Image_RA 		1 0 0
+## Total number of threads for utilizing openmp parallel codes : if you don't know about this value, input '0'. Openmp can automatically detect a best value of your system.   
+Threads_num		0
+
+## Image filepaths and output directory path can be changed in command line arguments. If there is no information about these in the command line arguments, following information are input as defaults.
+## Image 1 filepath of stereo pair
+Image1 			/data1/pgc_projects/Cross_Track_Testing/Dry_Valleys/imagery/WV01_20090925205857_1020010009D6D700_09SEP25205857-P1BS-052823345020_01_P002.tif
+## Image 2 filepath of stereo pair
+Image2 			/data1/pgc_projects/Cross_Track_Testing/Dry_Valleys/imagery/WV01_20091028212145_102001000AAFE900_09OCT28212145-P1BS-052240076010_01_P001.tif
+
+## Output directory path
+outputpath 		/scratch/ngnmj_test/Github/DEMgeneration/test
+## Seed DEM path. If there is no seeddem available, input 0.
+seeddempath 		0 /surge-data/nga/Test/WV01_20141111_1020010035311B00_102001003907DF00_1_8/tif/DEM_nn.raw 10
+## processing tiles
+ile_SR 4
+ile_ER 5
+ile_SC 5
+ile_EC 6
+## minmax Height
+inH 3000
+axH 6000
