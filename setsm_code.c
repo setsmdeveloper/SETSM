@@ -9727,7 +9727,9 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 		uint8 max_nodes;
 		int *boundary;
 		CSize gridsize;
-		uint32 **savenode;
+		//uint32 **savenode;
+		//savenode will now be a pointer to a uint
+		uint32* savenode;
 		uint32 *nodecount;
 		uint32 *hdiffbin;
 		uint32 th80 = 1000;
@@ -9739,14 +9741,16 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 		max_nodes		= 30;
 		num_triangles	= numOfTri;
 		num_points	= numOfPts;
-		savenode		= (uint32**)calloc(num_points,sizeof(uint32*));
+		//savenode		= (uint32**)calloc(num_points,sizeof(uint32*));
+		//make savenode a giant array with row size max_nodes
+		savenode = malloc((long)sizeof(uint32)*(long)max_nodes*(long)num_points);
 		nodecount		= (uint32*)calloc(num_points,sizeof(uint32));
 		hdiffbin	  = (uint32*)calloc(hdiffcount+1,sizeof(uint32));
 		i = 0;
-		for(i=0;i<num_points;i++)
+		/*for(i=0;i<num_points;i++)
 		{
 			savenode[i]		= (uint32*)calloc(max_nodes,sizeof(uint32));
-		}
+			}*/
 		if(pyramid_step <= 4 && pyramid_step >= 3)
 		{
 			if(iteration <= 4)
@@ -9806,8 +9810,9 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 			{
 				if(nodecount[node1] < max_nodes)
 				{
-					savenode[node1][nodecount[node1]] = tcnt;
-					//#pragma omp critical
+					//savenode[node1][nodecount[node1]] = tcnt;
+					savenode[(long)node1*(long)max_nodes+(long)nodecount[node1]] = tcnt;
+                    //#pragma omp critical
 					nodecount[node1]++;
 				}
 				pt0		= pts[node1];
@@ -9826,8 +9831,9 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 			{
 				if(nodecount[node2] < max_nodes)
 				{
-					savenode[node2][nodecount[node2]] = tcnt;
-					//#pragma omp critical
+					//savenode[node2][nodecount[node2]] = tcnt;
+					savenode[(long)node2*(long)max_nodes+(long)nodecount[node2]] = tcnt;
+                    //#pragma omp critical
 					nodecount[node2]++;
 				}
 				pt1		= pts[node2];
@@ -9846,7 +9852,8 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 			{
 				if(nodecount[node3] < max_nodes)
 				{
-					savenode[node3][nodecount[node3]] = tcnt;
+					//savenode[node3][nodecount[node3]] = tcnt;
+					savenode[(long)node3*(long)max_nodes+(long)nodecount[node3]] = tcnt;
 					//#pragma omp critical
 					nodecount[node3]++;
 				}
@@ -10080,11 +10087,16 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 					bool check_index = false;
 					uint32 temp_tri[3];
 					  
-					if(savenode[index][iter] < num_triangles && savenode[index][iter] > 0)
+					//if(savenode[index][iter] < num_triangles && savenode[index][iter] > 0)
+					if(savenode[(long)index*(long)max_nodes+(long)iter] < num_triangles && savenode[(long)index*(long)max_nodes+(long)iter] > 0)
 					{
+						/*
 						temp_tri[0]	= tris[savenode[index][iter]].m_X;
 						temp_tri[1]	= tris[savenode[index][iter]].m_Y;
-						temp_tri[2]	= tris[savenode[index][iter]].m_Z;
+						temp_tri[2]	= tris[savenode[index][iter]].m_Z;*/
+						temp_tri[0] = tris[savenode[(long)index*(long)max_nodes+(long)iter]].m_X;
+						temp_tri[1] = tris[savenode[(long)index*(long)max_nodes+(long)iter]].m_Y;
+						temp_tri[2] = tris[savenode[(long)index*(long)max_nodes+(long)iter]].m_Z;
 
 						for(kk=0;kk<3;kk++)
 						{
@@ -10409,7 +10421,7 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 				if(*maxz_mp < pts[tcnt].m_Z)
 					*maxz_mp		= pts[tcnt].m_Z;
 			}
-			free(savenode[tcnt]);
+			//free(savenode[tcnt]);
 		}
 		free(savenode);
 		free(nodecount);
