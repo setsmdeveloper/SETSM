@@ -26,9 +26,12 @@ Installation instructions
 SETSM is dependent on the TIFF Library, which you must download and install 
 separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
 it according to the instructions in the README file.  In short,
+
+```
 ./configure --prefix=/directory-to-install-in
 make
 make install
+```
 
 Once LibTIFF is installed you must edit the SETSM Makefile to set the correct
 path to the library.  SETSM can then be built simply by typing make.
