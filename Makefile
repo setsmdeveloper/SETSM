@@ -1,7 +1,7 @@
-TIFFPATH=/fs/project/PZS0530/setsm/tiff-4.0.3
+TIFFPATH=/fs/project/PZS0530/setsm/libs/Owens/tiff-4.0.6
 
-CC=gcc
-CFLAGS=-g -std=c99 -O3 -ffast-math -fopenmp -march=native
+CC=icc
+CFLAGS=-g -std=c99 -O3 -qopenmp -xHost
 
 INCS=-I$(TIFFPATH)/include
 LDFLAGS=-L$(TIFFPATH)/lib
@@ -17,4 +17,3 @@ setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
 clean :
 	rm -f setsm
 	rm -f *.o
-

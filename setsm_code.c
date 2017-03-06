@@ -107,7 +107,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.1.0\n");
+			printf("setsm version : 3.1.1\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -1302,6 +1302,13 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 				printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
 				
+                
+                if(iter_row_end < 2 && t_col_end < 2)
+                {
+                    printf("No matching results. Please check overlapped area of stereo pair\n");
+                    exit(1);
+                }
+                
 				char str_DEMfile[500];
 				sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
 				
@@ -13044,7 +13051,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 					t_x = minX + col*grid;
 					t_y = maxY - row*grid;
 					
-					if(pt_save[row*col_count + col].Z = -9999)
+					if(pt_save[row*col_count + col].Z == -9999)
 					{
 						pt_save[row*col_count + col].X = t_x;
 						pt_save[row*col_count + col].Y = t_y;
