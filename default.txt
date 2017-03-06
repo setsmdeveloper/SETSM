@@ -17,11 +17,3 @@ Image2 			/data1/pgc_projects/Cross_Track_Testing/Dry_Valleys/imagery/WV01_20091
 outputpath 		/scratch/ngnmj_test/Github/DEMgeneration/test
 ## Seed DEM path. If there is no seeddem available, input 0.
 seeddempath 		0 /surge-data/nga/Test/WV01_20141111_1020010035311B00_102001003907DF00_1_8/tif/DEM_nn.raw 10
-## processing tiles
-ile_SR 4
-ile_ER 5
-ile_SC 5
-ile_EC 6
-## minmax Height
-inH 3000
-axH 6000
