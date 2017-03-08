@@ -1302,6 +1302,13 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 				printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
 				
+                
+                if(iter_row_end < 2 && t_col_end < 2)
+                {
+                    printf("No matching results. Please check overlapped area of stereo pair\n");
+                    exit(1);
+                }
+                
 				char str_DEMfile[500];
 				sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
 				
