@@ -1864,10 +1864,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
 										
 										i = 0;
-										int temp_flag;
-										while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
+										while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 										{
-											ptslists[i].flag = (uint8)temp_flag;
 											i++;
 										}
 										fclose(survey);
@@ -1908,10 +1906,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
 											
 											i = 0;
-											int temp_flag;
-											while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
+											while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 											{
-												ptslists[i].flag = (uint8)temp_flag;
 												if(maxX_ptslists < ptslists[i].m_X)
 													maxX_ptslists = ptslists[i].m_X;
 												if(maxY_ptslists < ptslists[i].m_Y)
@@ -2183,10 +2179,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											
 											i = 0;
-											int temp_flag;
-											while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
+											while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 											{
-												ptslists[i].flag = (uint8)temp_flag;
 												if(maxX_ptslists < ptslists[i].m_X)
 													maxX_ptslists = ptslists[i].m_X;
 												if(maxY_ptslists < ptslists[i].m_Y)
@@ -2676,13 +2670,10 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 			}
 			else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
 			{
-				int temp_pre_DEMtif;
-				sscanf(bufstr,"seeddempath %d ",&temp_pre_DEMtif);
-				info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
+				sscanf(bufstr,"seeddempath %hhd ",&info->pre_DEMtif);
 				if(info->pre_DEMtif)
 				{
-					sscanf(bufstr,"seeddempath %d %s %f\n",&temp_pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
-					info->pre_DEMtif = (unsigned char)temp_pre_DEMtif;
+					sscanf(bufstr,"seeddempath %hhd %s %f\n",&info->pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
 				}
 				printf("seeddempath %d %s %f\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
 			}
@@ -9181,10 +9172,8 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 			double distX_ptslists, distY_ptslists;
 			double Scale_ptslists = 1000;
 			
-			int temp_flag;
-			while( i < count_MPs && (fscanf(survey,"%f %f %f %d\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&temp_flag)) != EOF )
+			while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 			{
-				ptslists[i].flag = temp_flag;
 				if(maxX_ptslists < ptslists[i].m_X)
 					maxX_ptslists = ptslists[i].m_X;
 				if(maxY_ptslists < ptslists[i].m_Y)
