@@ -2503,7 +2503,6 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						free(data_size_l);
 						free(data_size_r);
 						free(GridPT3);
-						free(Pre_GridPT3);
 						
                         printf("release GridTP3\n");
 						PreET = time(0);
