@@ -1,7 +1,7 @@
-cmake_minimum_required (VERSION 3.7.2)
-set (GNU_VERSION 6.3.0)
-set (INTEL_VERSION 16.0.3)
-set (PGI_VERSION 16.5.0)
+cmake_minimum_required (VERSION 3.1.0)
+set (GNU_VERSION 4.0.0)
+set (INTEL_VERSION 14.0.0)
+set (PGI_VERSION 13.0.0)
 set (CRAY_VERSION 0.0.0)
 set (TIFF_VERSION 4.0.3)
 
