@@ -107,7 +107,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.1.1\n");
+			printf("setsm version : 3.1.2\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -792,7 +792,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.1.1\n");
+				fprintf(pMetafile,"SETSM Version=3.1.2\n");
 			}
 			
 			time_t current_time;
@@ -3685,7 +3685,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 		t_pts[6].m_Z	= minmaxHeight[1];
 		t_pts[7].m_Z	= minmaxHeight[1];
 
-		t_pts1			= ps2wgs_3D(transparam,8,t_pts);
+        t_pts1			= ps2wgs_3D(transparam,8,t_pts);
 
 		ImageCoord		= GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
 
@@ -3699,7 +3699,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 				minY	= ImageCoord[i].m_Y;
 			if(maxY < ImageCoord[i].m_Y)
 				maxY	= ImageCoord[i].m_Y;
-		}
+      	}
 
 		buffer				= 200;
 		cols[0]				= (int)(ceil(minX)-buffer);
@@ -3707,7 +3707,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 		rows[0]				= (int)(ceil(minY)-buffer);
 		rows[1]				= (int)(ceil(maxY)+buffer);
 
-		null_buffer			= 1;
+        null_buffer			= 1;
 		// Null pixel value remove
 		if(cols[0]			<= null_buffer)
 			cols[0]			= null_buffer;
@@ -3844,6 +3844,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 		}
 		else
 		{
+            printf("before cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
 			int tileL,count_W,count_L,starttileL,starttileW;
 			int start_row,start_col,end_row,end_col;
 			tdata_t buf;
@@ -3869,7 +3870,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			cols[1]			= end_col;
 			rows[0]			= start_row;
 			rows[1]			= end_row;
-			printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
+			printf("after cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
@@ -5544,6 +5545,18 @@ F2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, float *_imagepar
 
 		IP[i].m_Y		= deltaP + Line;
 		IP[i].m_X		= deltaR + Samp;
+        
+        if(IP[i].m_Y < 0)
+            IP[i].m_Y = 0;
+        
+        if(IP[i].m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
+            IP[i].m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+        
+        if(IP[i].m_X < 0)
+            IP[i].m_X = 0;
+        
+        if(IP[i].m_X > _rpc[0][1] + _rpc[1][1]*1.2)
+            IP[i].m_X = _rpc[0][1] + _rpc[1][1]*1.2;
 	}
 
 	return IP;
@@ -5582,6 +5595,18 @@ F2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, float *_im
 	IP.m_Y		= deltaP + Line;
 	IP.m_X		= deltaR + Samp;
 
+    if(IP.m_Y < 0)
+        IP.m_Y = 0;
+    
+    if(IP.m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
+        IP.m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+    
+    if(IP.m_X < 0)
+        IP.m_X = 0;
+    
+    if(IP.m_X > _rpc[0][1] + _rpc[1][1]*1.2)
+        IP.m_X = _rpc[0][1] + _rpc[1][1]*1.2;
+    
 	return IP;
 }
 
