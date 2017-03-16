@@ -3844,8 +3844,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 		}
 		else
 		{
-            printf("before cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
-			int tileL,count_W,count_L,starttileL,starttileW;
+            int tileL,count_W,count_L,starttileL,starttileW;
 			int start_row,start_col,end_row,end_col;
 			tdata_t buf;
 			uint16* t_data;
@@ -3870,7 +3869,6 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			cols[1]			= end_col;
 			rows[0]			= start_row;
 			rows[1]			= end_row;
-			printf("after cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
