@@ -3676,7 +3676,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 		t_pts[6].m_Z	= minmaxHeight[1];
 		t_pts[7].m_Z	= minmaxHeight[1];
 
-		t_pts1			= ps2wgs_3D(transparam,8,t_pts);
+        t_pts1			= ps2wgs_3D(transparam,8,t_pts);
 
 		ImageCoord		= GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
 
@@ -3690,7 +3690,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 				minY	= ImageCoord[i].m_Y;
 			if(maxY < ImageCoord[i].m_Y)
 				maxY	= ImageCoord[i].m_Y;
-		}
+      	}
 
 		buffer				= 200;
 		cols[0]				= (int)(ceil(minX)-buffer);
@@ -3698,7 +3698,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, f
 		rows[0]				= (int)(ceil(minY)-buffer);
 		rows[1]				= (int)(ceil(maxY)+buffer);
 
-		null_buffer			= 1;
+        null_buffer			= 1;
 		// Null pixel value remove
 		if(cols[0]			<= null_buffer)
 			cols[0]			= null_buffer;
@@ -3835,7 +3835,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 		}
 		else
 		{
-			int tileL,count_W,count_L,starttileL,starttileW;
+            int tileL,count_W,count_L,starttileL,starttileW;
 			int start_row,start_col,end_row,end_col;
 			tdata_t buf;
 			uint16* t_data;
@@ -3860,7 +3860,6 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			cols[1]			= end_col;
 			rows[0]			= start_row;
 			rows[1]			= end_row;
-			printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
@@ -5535,6 +5534,18 @@ F2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, float *_imagepar
 
 		IP[i].m_Y		= deltaP + Line;
 		IP[i].m_X		= deltaR + Samp;
+        
+        if(IP[i].m_Y < 0)
+            IP[i].m_Y = 0;
+        
+        if(IP[i].m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
+            IP[i].m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+        
+        if(IP[i].m_X < 0)
+            IP[i].m_X = 0;
+        
+        if(IP[i].m_X > _rpc[0][1] + _rpc[1][1]*1.2)
+            IP[i].m_X = _rpc[0][1] + _rpc[1][1]*1.2;
 	}
 
 	return IP;
@@ -5573,6 +5584,18 @@ F2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, float *_im
 	IP.m_Y		= deltaP + Line;
 	IP.m_X		= deltaR + Samp;
 
+    if(IP.m_Y < 0)
+        IP.m_Y = 0;
+    
+    if(IP.m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
+        IP.m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+    
+    if(IP.m_X < 0)
+        IP.m_X = 0;
+    
+    if(IP.m_X > _rpc[0][1] + _rpc[1][1]*1.2)
+        IP.m_X = _rpc[0][1] + _rpc[1][1]*1.2;
+    
 	return IP;
 }
 
