@@ -107,7 +107,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.1.2\n");
+			printf("setsm version : 3.1.3\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -792,7 +792,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.1.2\n");
+				fprintf(pMetafile,"SETSM Version=3.1.3\n");
 			}
 			
 			time_t current_time;
@@ -5658,7 +5658,7 @@ void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 p
 					data_size[i]		= data_size_r[i];
 			}
 
-			long int data_length = data_size[0].height*data_size[0].width;
+			long int data_length = (long int)data_size[0].height*(long int)data_size[0].width;
 			pyimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
 			magimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
 			dirimg[0] = (int16*)malloc(sizeof(int16)*data_length);
@@ -5705,13 +5705,12 @@ void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 p
 				}
 
 				long int data_length_array[6];
-				data_length_array[i] = data_size[i+1].height*data_size[i+1].width;
+				data_length_array[i] = (long int)data_size[i+1].height*(long int)data_size[i+1].width;
 				magimg[i+1] = (uint16*)malloc(sizeof(uint16)*data_length_array[i]);
 				dirimg[i+1] = (int16*)malloc(sizeof(int16)*data_length_array[i]);
 				oriimg[i+1] = (uint8*)malloc(sizeof(uint8)*data_length_array[i]);
 				MakeSobelMagnitudeImage(data_size[i+1],pyimg[i+1],magimg[i+1],dirimg[i+1]);
 				Orientation(data_size[i+1],magimg[i+1],dirimg[i+1],15,oriimg[i+1]);
-
 
 				sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,i+1);
 				pFile	= fopen(t_str,"wb");
@@ -6093,7 +6092,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	long int sub_imagesize_w, sub_imagesize_h;
+	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -6141,13 +6140,18 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	im_resolution = im_resolution*pow(2,Pyramid_step);
 	
 	
-	sub_imagesize_w = (long int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-	sub_imagesize_h = (long int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+	sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
+	sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
 	
-	printf("imsize %ld %ld %u %u\n",sub_imagesize_w,sub_imagesize_h,Size_Grid2D.width,Size_Grid2D.height);
+	printf("imsize %d %d %u %u\n",sub_imagesize_w,sub_imagesize_h,Size_Grid2D.width,Size_Grid2D.height);
+
+	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
-	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
+	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 	
 	if((Pyramid_step == 4 && iteration == 1) || IsRA == true)
 		check_ortho = false;
@@ -6158,26 +6162,27 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 		check_ortho = true;
 	
 #pragma omp parallel for schedule(guided)
-	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
 	{
-		long int pts_row = floor(iter_count/sub_imagesize_w);
-		long int pts_col = iter_count % sub_imagesize_w;
-		long int pt_index;
+		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+		int pts_col = iter_count % sub_imagesize_w;
+		int pt_index;
 		float t_X, t_Y;
-		long int t_col, t_row;
+		int t_col, t_row;
 		long int pt_index_im;
 		
 		t_X		= subBoundary[0] + pts_col*im_resolution;
 		t_Y		= subBoundary[1] + pts_row*im_resolution;
 		
-		t_col	= (t_X - subBoundary[0]) / DEM_resolution;
-		t_row	= (t_Y - subBoundary[1]) / DEM_resolution;
+		t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
+		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
 		
 		pt_index	= t_row*Size_Grid2D.width + t_col;
-		pt_index_im = pts_row*sub_imagesize_w + pts_col;
+		pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
 		
 		if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height &&
+			all_left_im_cd != NULL && all_right_im_cd != NULL)
 		{
 			if(GridPT3[pt_index].Height != -1000)
 			{
@@ -6302,11 +6307,11 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	printf("height step %f\n",height_step);
 
 #pragma omp parallel for schedule(guided)
-	for(long int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+	for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
 	{
-		long int pts_row = floor(iter_count/Size_Grid2D.width);
-		long int pts_col = iter_count % Size_Grid2D.width;
-		long int pt_index = pts_row*Size_Grid2D.width + pts_col;
+		int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
+		int pts_col = iter_count % Size_Grid2D.width;
+		int pt_index = pts_row*Size_Grid2D.width + pts_col;
 		
 		{
 			double pre_rho	= -1.0;
@@ -6702,7 +6707,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 											{
 												long int pt_index_temp,pt_index_dem;
 												float t_X, t_Y;
-												long int t_col, t_row, tt_col, tt_row;
+												int t_col, t_row, tt_col, tt_row;
 												
 												t_X		= GridPts[pt_index].m_X + col*im_resolution;
 												t_Y		= GridPts[pt_index].m_Y + row*im_resolution;
@@ -6713,13 +6718,14 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 												tt_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
 												tt_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
 												
-												pt_index_temp = t_row*sub_imagesize_w + t_col;
+												pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
 												pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
 												
 												if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
 												   t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
 												   pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-												   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height)		
+												   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+													all_left_im_cd != NULL && all_right_im_cd != NULL)
 												{
 													if(GridPT3[pt_index_dem].Height != -1000)
 													{
@@ -7180,8 +7186,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 			}
 		}
 	}
-	free(all_left_im_cd);
-	free(all_right_im_cd);
+	if (all_left_im_cd) free(all_left_im_cd);
+	if (all_right_im_cd) free(all_right_im_cd);
 
 	return true;
 }
@@ -7228,7 +7234,7 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 	
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	long int sub_imagesize_w, sub_imagesize_h;
+	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -7247,34 +7253,38 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 	
 	im_resolution = im_resolution*pow(2,Pyramid_step);
 	
-	sub_imagesize_w = (long int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-	sub_imagesize_h = (long int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+	sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
+	sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
-	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
-	
-		
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
+	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
+
 #pragma omp parallel for schedule(guided)
-	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
 	{
-		long int pts_row = floor(iter_count/sub_imagesize_w);
-		long int pts_col = iter_count % sub_imagesize_w;
-		long int pt_index;
+		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+		int pts_col = iter_count % sub_imagesize_w;
+		int pt_index;
 		float t_X, t_Y;
-		long int t_col, t_row;
+		int t_col, t_row;
 		long int pt_index_im;
 		
 		t_X		= subBoundary[0] + pts_col*im_resolution;
 		t_Y		= subBoundary[1] + pts_row*im_resolution;
 		
-		t_col	= (t_X - subBoundary[0]) / DEM_resolution;
-		t_row	= (t_Y - subBoundary[1]) / DEM_resolution;
+		t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
+		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
 		
 		pt_index	= t_row*Size_Grid2D.width + t_col;
-		pt_index_im = pts_row*sub_imagesize_w + pts_col;
+		pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
 		
 		if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height &&
+			all_left_im_cd != NULL && all_right_im_cd != NULL)
 		{
 			if(GridPT3[pt_index].Height != -1000)
 			{
@@ -7375,7 +7385,7 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 					double pos_row_right= -100;
 					double pos_col_right= -100;
 					
-					int pt_index_temp,pt_index_dem;
+					long int pt_index_temp,pt_index_dem;
 					float t_X, t_Y;
 					int t_col, t_row, tt_col, tt_row;
 					
@@ -7388,13 +7398,14 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 					tt_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
 					tt_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
 					
-					pt_index_temp = t_row*sub_imagesize_w + t_col;
+					pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
 					pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
 					
 					if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
 					   t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
 					   pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-					   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height)		
+					   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+						all_left_im_cd != NULL && all_right_im_cd != NULL)
 					{
 						if(GridPT3[pt_index_dem].Height != -1000)
 						{
@@ -7650,8 +7661,8 @@ float VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,float DE
 		}
 		
 	}
-	free(all_left_im_cd);
-	free(all_right_im_cd);
+	if (all_left_im_cd) free(all_left_im_cd);
+	if (all_right_im_cd) free(all_right_im_cd);
 			   
 	free(orthoheight);
 	free(nccresult1);
@@ -7703,7 +7714,7 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 	
 	int numofpts;
 	F2DPOINT *all_left_im_cd, *all_right_im_cd;
-	long int sub_imagesize_w, sub_imagesize_h;
+	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
 	bool check_ortho = false;
@@ -7726,19 +7737,22 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 	
 	printf("im_resolution = %f\n",im_resolution);
 	
-	sub_imagesize_w = (long int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-	sub_imagesize_h = (long int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+	sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
+	sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
-	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_w*sub_imagesize_h);
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
+	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 	
-	int pts_row, pts_col;
 #pragma omp parallel for schedule(guided)
-	for(long int iter_count = 0 ; iter_count < sub_imagesize_w*sub_imagesize_h ; iter_count++)
+	for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
 	{
-		long int pts_row = floor(iter_count/sub_imagesize_w);
-		long int pts_col = iter_count % sub_imagesize_w;
-		long int pt_index;
+		int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+		int pts_col = iter_count % sub_imagesize_w;
+		int pt_index;
 		float t_X, t_Y;
 		int t_col, t_row;
 		long int pt_index_im;
@@ -7750,10 +7764,10 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 		t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
 		
 		pt_index	= t_row*Size_Grid2D.width + t_col;
-		pt_index_im = pts_row*sub_imagesize_w + pts_col;
+		pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
 		
 		if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+		   t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height && all_left_im_cd != NULL && all_right_im_cd != NULL)
 		{
 			if(GridPT3[pt_index].Height != -1000)
 			{
@@ -7890,7 +7904,8 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 						if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
 						   t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
 						   pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-						   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height)		
+						   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+							all_left_im_cd != NULL && all_right_im_cd != NULL)
 						{
 							if(GridPT3[pt_index_dem].Height != -1000)
 							{
@@ -8131,8 +8146,8 @@ bool VerticalLineLocus_blunder(float* nccresult, float* INCC, uint16 *MagImages_
 		}
 	}
 
-	free(all_left_im_cd);
-	free(all_right_im_cd);
+	if (all_left_im_cd) free(all_left_im_cd);
+	if (all_right_im_cd) free(all_right_im_cd);
 	
 	free(orthoimage_l);
 	free(orthoimage_r);
