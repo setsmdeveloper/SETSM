@@ -4321,7 +4321,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary, CSize Gr
 					}
 					else
 					{
-						printf("out of seeddem\n");
+						//printf("out of seeddem\n");
 					}
 					
 				}
@@ -6448,16 +6448,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 							
 							b_count = false;
 							left_max_th = -100;
-							left_th;
 							
 							Weight		= weight;
 							Left_CR		= Left_Imagecoord_py[0].m_Y;
 							Left_CC		= Left_Imagecoord_py[0].m_X;
 							Right_CR	= Right_Imagecoord_py[0].m_Y;
 							Right_CC	= Right_Imagecoord_py[0].m_X;
-							
-							
-							
 							
 							diff_theta	= (float)(ori_diff);
 
