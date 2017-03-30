@@ -45,8 +45,6 @@ correct path to the TIFF library.  SETSM can then be built simply by typing:
 make
 ```
 
-Note:  SETSM does not yet run reliably when built with the Cray compiler.
-
 ### Building and installing SETSM using CMake
 
 A CMake build is provided as an alternative to the Makefile method described 
