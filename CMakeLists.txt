@@ -1,9 +1,9 @@
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 3.0.0)
 set (GNU_VERSION 4.0.0)
 set (INTEL_VERSION 14.0.0)
 set (PGI_VERSION 13.0.0)
 set (CRAY_VERSION 0.0.0)
-set (TIFF_VERSION 4.0.3)
+set (TIFF_VERSION 4.0.0)
 
 set (CC_LIST GNU INTEL PGI CRAY)
 
@@ -17,10 +17,15 @@ set (CRAY_ID "Cray")
 set (GNU_FLAGS -O3 -march=native -ffast-math)
 set (INTEL_FLAGS -O3 -xHost)
 set (PGI_FLAGS -O3 -fast)
-set (CRAY_FLAGS "")
+set (CRAY_FLAGS )
+
+# Other options
+if (NOT DEFINED OPENMP_OPTION)
+	set (OPENMP_OPTION )
+endif (NOT DEFINED OPENMP_OPTION)
 
 # Create target
-project (setsm)
+project (setsm C)
 add_executable (setsm setsm_code.c)
 set_target_properties (setsm PROPERTIES C_STANDARD 99)
 
@@ -40,7 +45,7 @@ endif ()
 # Find tiff
 find_package (TIFF ${TIFF_VERSION})
 if (NOT TIFF_FOUND)
-	message(FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
+	message (FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
 endif (NOT TIFF_FOUND)
 
 # Find OpenMP
@@ -53,4 +58,4 @@ endif (NOT OPENMP_FOUND)
 target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
 target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
 target_link_libraries (setsm m ${TIFF_LIBRARIES})
-list (APPEND CMAKE_C_FLAGS ${OpenMP_C_FLAGS})
+list (APPEND CMAKE_C_FLAGS ${OpenMP_C_FLAGS}${OPENMP_OPTION})
