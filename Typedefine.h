@@ -246,6 +246,7 @@ typedef struct ArgumentInfo{
     int sensor_provider; //DG = 1, Pleiades = 2
     float image_resolution;
     int ortho_count;
+    float overlap_length;
 	
 } ARGINFO;
 
