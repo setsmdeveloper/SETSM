@@ -919,6 +919,18 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			
 			printf("boundary = %d\t%d\t%d\t%d\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
 			
+            
+            CSize Boundary_size;
+            Boundary_size.width     = Boundary[2] - Boundary[0];
+            Boundary_size.height    = Boundary[3] - Boundary[1];
+            
+            if(Boundary_size.height/1000.0 > 60 || Boundary_size.width/1000.0 > 60)
+            {
+                printf("Overlapped area between stereo pair is very long (height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area into several small area less than 50 km\nBounary(minX, minY, maxX, maxY[m]) = %d %d %d %d\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                exit(1);
+            }
+            
+            
 			ori_minmaxHeight[0] = min(LminmaxHeight[0],RminmaxHeight[0]);
 			ori_minmaxHeight[1] = max(LminmaxHeight[1],RminmaxHeight[1]);
 
