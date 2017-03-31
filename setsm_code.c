@@ -73,6 +73,7 @@ int main(int argc,char *argv[])
     args.check_imageresolution = false;
     args.utm_zone = -99;
     args.ortho_count = 1;
+    args.overlap_length = 50;
     
 	TransParam param;
 	
@@ -560,6 +561,20 @@ int main(int argc,char *argv[])
 					args.check_tilesize = true;
 				}
 			}
+            
+            if (strcmp("-LOO",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input length of overlapped area value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.overlap_length = atof(argv[i+1]);
+                    printf("%f\n",args.overlap_length);
+                }
+            }
+            
 			
 			if (strcmp("-boundary_min_X",argv[i]) == 0) 
 			{
@@ -924,9 +939,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             Boundary_size.width     = Boundary[2] - Boundary[0];
             Boundary_size.height    = Boundary[3] - Boundary[1];
             
-            if(Boundary_size.height/1000.0 > 60 || Boundary_size.width/1000.0 > 60)
+            if(Boundary_size.height/1000.0 > args.overlap_length || Boundary_size.width/1000.0 > args.overlap_length)
             {
-                printf("Overlapped area between stereo pair is very long (height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area into several small area less than 50 km\nBounary(minX, minY, maxX, maxY[m]) = %d %d %d %d\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                printf("Overlapped area between stereo pair is very long along the strip(height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area in strip direction into several small area less than 30 km\nBounary(minX, minY, maxX, maxY[m]) = %d %d %d %d\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
                 exit(1);
             }
             
