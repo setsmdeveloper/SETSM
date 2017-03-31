@@ -103,6 +103,7 @@ F3DPOINT* ps2wgs_3D(TransParam _param, int _numofpts, F3DPOINT *_ps);
 
 F2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, float *_imageparam, uint16 _numofpts, F3DPOINT *_GP);
 F2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, float *_imageparam, F3DPOINT _GP);
+F2DPOINT GetObjectToImageRPC_single_mpp(double **_rpc, uint8 _numofparam, float *_imageparam, F3DPOINT _GP);
 void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 py_level, CSize *Lsubsetsize, CSize *Rsubsetsize, CSize *data_size_l, CSize *data_size_r, FILE *fid);
 uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level);
 uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level, float *val, float *avg);
@@ -235,7 +236,7 @@ F2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, floa
 F2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, float *_imageparam, uint16 _numofpts, F3DPOINT *_GP);
 
 bool SetOrthoBoundary_ortho(CSize *Imagesize, float *Boundary,
-							double **RPCs, float gridspace, CSize DEM_size, float minX, float maxY, TransParam param);
+							double **RPCs, float gridspace, CSize DEM_size, float minX, float maxY, TransParam param, float Ortho_resolution);
 float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path);
 
 
