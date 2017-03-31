@@ -66,11 +66,13 @@ int main(int argc,char *argv[])
 	args.check_tilesize = false;
 	args.check_boundary = false;
 	args.check_checktiff = false;
-	
+	args.check_ortho = false;
+    
 	args.projection = 3;//PS = 1, UTM = 2
     args.sensor_provider = 1; //DG = 1, Pleiades = 2
     args.check_imageresolution = false;
     args.utm_zone = -99;
+    args.ortho_count = 1;
     
 	TransParam param;
 	
@@ -656,6 +658,22 @@ int main(int argc,char *argv[])
                 }
             }
             
+            
+            if (strcmp("-ortho",argv[i]) == 0)
+            {
+                args.check_ortho = true;
+                printf("ortho only\n");
+                
+                if (argc == i + 1) {
+                    printf("Please input ortho # 1 or 2\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.ortho_count = atoi(argv[i+1]);
+                    printf("%d\n",args.ortho_count);
+                }
+            }
 		}
 		
 		if(cal_flag)
@@ -663,7 +681,8 @@ int main(int argc,char *argv[])
 			char save_filepath[500];
 			char LeftImagefilename[500];
 			
-			if(args.check_checktiff)
+            
+            if(args.check_checktiff)
 			{
 				SETSMmainfunction(&param,projectfilename,args,LeftImagefilename,save_filepath);
 			}
@@ -678,8 +697,12 @@ int main(int argc,char *argv[])
 				
 				printf("param %s %d\n", param.direction,param.zone);
 				param.projection = args.projection;
-				orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
-				orthogeneration(param,args,args.Image1, DEMFilename, Outputpath,1);
+                orthogeneration(param,args,args.Image1, DEMFilename, Outputpath,1);
+                if(!args.check_ortho)
+                    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
+                else if(args.ortho_count == 2)
+                    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
+				
 			}
 			else
 				printf("Please check input 1 and input 2. Both is same\n");
@@ -788,7 +811,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			FILE *pMetafile = NULL;
 			sprintf(metafilename, "%s/%s_meta.txt", proinfo.save_filepath, proinfo.Outputpath_name);
 			
-			if(!proinfo.check_checktiff)
+			if(!proinfo.check_checktiff && !args.check_ortho)
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
@@ -801,7 +824,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			current_time = time(NULL);
 			c_time_string = ctime(&current_time);
 			
-			if(!proinfo.check_checktiff)
+			if(!proinfo.check_checktiff && !args.check_ortho)
 			{
 				fprintf(pMetafile,"Creation Date=%s",c_time_string);
 				fprintf(pMetafile,"Image 1=%s\n",proinfo.LeftImagefilename);
@@ -896,6 +919,18 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			
 			printf("boundary = %d\t%d\t%d\t%d\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
 			
+            
+            CSize Boundary_size;
+            Boundary_size.width     = Boundary[2] - Boundary[0];
+            Boundary_size.height    = Boundary[3] - Boundary[1];
+            
+            if(Boundary_size.height/1000.0 > 60 || Boundary_size.width/1000.0 > 60)
+            {
+                printf("Overlapped area between stereo pair is very long (height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area into several small area less than 50 km\nBounary(minX, minY, maxX, maxY[m]) = %d %d %d %d\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                exit(1);
+            }
+            
+            
 			ori_minmaxHeight[0] = min(LminmaxHeight[0],RminmaxHeight[0]);
 			ori_minmaxHeight[1] = max(LminmaxHeight[1],RminmaxHeight[1]);
 
@@ -921,439 +956,443 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 				ori_minmaxHeight[1] = 9000;
 			}
 			
-			printf("minmaxH = %d\t%d\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
-			printf("seed fff %d\n",proinfo.pre_DEMtif);
-			if(SetupParam(proinfo,&NumOfIAparam, &pre_DEM_level, &DEM_level,&proinfo.pre_DEMtif,&check_tile_array ))
-			{
-				uint8 pyramid_step;
-				uint8 Template_size	= 15;
-				uint16 buffer_area	= 400;
-				uint8 iter_row_start, iter_row_end, t_col_start, t_col_end;
-				int	 total_count = 0, tile_size = 0;
-				float subX, subY;
-				float bin_angle;
-				float mt_grid_size;
-				char temp_c[500];
-				float temp_br_x, temp_br_y;
-				CSize temp_size;
-				time_t ST = 0, ET = 0;
-				float gap;
-			
-				printf("IsRA = %d\n",proinfo.IsRA);
-				
-				if(proinfo.IsRA)
-				{
-					uint8 RA_row_iter = 1;
-					uint8 RA_col_iter = 1;
-
-					tile_size			= 16000;
-					if(args.check_tilesize)
-						tile_size		= args.tilesize*2;
-					printf("tileszie %d\n",tile_size);
-
-					bin_angle			= 360.0/18.0;
-					bool check_RA_1000	= false;
-					
-					if (args.check_RA_tileR)
-					{
-						if(args.RA_row == 100)
-						{
-							tile_size			= 100000;
-							check_RA_1000		= true;
-							args.RA_row			= 1;
-						}
-					}
-					
-					
-
-					SetTiles_RA(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
-								&iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);	
-
-					
-					printf("before RA row:col => row = %d\t%d\t;col = %d\t%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end);
-					
-					if (args.check_RA_tileR)
-					{
-						iter_row_start	= args.RA_row;
-						iter_row_end	= iter_row_start+1;
-					}
-					
-					if (args.check_RA_tileC)
-					{
-						t_col_start		= args.RA_col;
-						t_col_end		= t_col_start + 1;
-					}
-					
-					total_count			= 0;
-					printf("RA row:col = row = %d\t%d\t;col = %d\t%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end);
-					
-					
-					//loading existing RA parameters
-					bool check_load_RA = false;
-					char str_rafile[500];
-					char bufstr[500];
-					sprintf(str_rafile,"%s/txt/RA_echo_result_row_%d_col_%d.txt",proinfo.save_filepath,iter_row_start,t_col_start);
-					printf("RA file %s\n",str_rafile);
-					FILE* pFile;
-					pFile		= fopen(str_rafile,"r");
-					if(pFile)
-					{
-						char str_echofile[500];
-						sprintf(str_echofile,"%s/txt/echo_result_row_1_col_1.txt",proinfo.save_filepath);
-						FILE* pFile_echo;
-						
-						printf("echo %s\n",str_echofile);
-						
-						pFile_echo	= fopen(str_echofile,"r");
-						if(pFile_echo)
-						{
-							printf("open RA\n");
-							fgets(bufstr,500,pFile_echo);
-							if (strstr(bufstr,"RA param X")!=NULL)
-							{
-								sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
-								if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
-									check_load_RA = true;
-							}
-							fclose(pFile_echo);
-						}
-						
-						fclose(pFile);
-					}
-					
-					printf("check seedem %d\n",args.check_seeddem);
-					if(args.check_seeddem)
-					{
-						int dir_size;
-						int full_size;
-						char str_rafile_1[500];
-						char *fullseeddir	= NULL;
-						char *lastSlash = NULL;
-						lastSlash	= malloc(strlen(args.seedDEMfilename) + 1);
-						strcpy(lastSlash, args.seedDEMfilename);
-						fullseeddir = dirname(lastSlash);
-						
-						dir_size		= strlen(fullseeddir);
-						full_size		= strlen(args.seedDEMfilename);
-						printf("fullseeddir %s\tdir_size %d\n",fullseeddir,dir_size);
-						printf("lastSlash %s\tfull_size %d\n",lastSlash,full_size);
-						char seeddir[500];
-						for(i=0;i<dir_size-4;i++)
-							seeddir[i] = fullseeddir[i];
-						sprintf(str_rafile_1,"%s/txt/RA_echo_result_row_1_col_1.txt",fullseeddir);
-						printf("RA file %s\n",str_rafile_1);
-
-						char str_echofile[500];
-						sprintf(str_echofile,"%s/txt/echo_result_row_1_col_1.txt",fullseeddir);
-						FILE* pFile_echo;
-							
-						pFile_echo	= fopen(str_echofile,"r");
-						if(pFile_echo)
-						{
-							fgets(bufstr,500,pFile_echo);
-							if (strstr(bufstr,"RA param X")!=NULL)
-							{
-								sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
-								if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
-									check_load_RA = true;
-							}
-							fclose(pFile_echo);
-						}
-						
-						char str_rafile_2[500];
-						char RAfile[500];
-						for (int i = 0; i < full_size - 7; i++) {
-							RAfile[i] = args.seedDEMfilename[i];
-						}
-						char RAfile_raw[500];
-						for (int i = 0; i < full_size - 14; i++) {
-							RAfile_raw[i] = args.seedDEMfilename[i];
-						}
-
-						sprintf(str_rafile_2, "%s/txt/RAinfo.txt", RAfile_raw);
-						printf("Meta file %s\n", args.metafilename);
-						printf("Meta file %s\n", proinfo.metafilename);
-						printf("RA file %s\n", str_rafile_2);
-
-						if(!check_load_RA)
-						{
-							FILE* pFile_echo;
-							pFile_echo	= fopen(str_rafile,"r");
-							if(pFile_echo)
-							{
-								fscanf(pFile_echo,"%f %f",&Rimageparam[0],&Rimageparam[1]);
-								if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
-									check_load_RA = true;
-								fclose(pFile_echo);
-							}
-							else
-							{
-								printf("Meta file %s\n",proinfo.metafilename);
-								
-								FILE* pFile_meta;
-								pFile_meta	= fopen(proinfo.metafilename,"r");
-								if(pFile_meta)
-								{
-									printf("meta file exist!!\n");
-									while(!feof(pFile_meta))
-									{
-										
-										fgets(bufstr,500,pFile_meta);
-										if (strstr(bufstr,"RA Params=")!=NULL)
-										{
-											printf("%s\n",bufstr);
-											sscanf(bufstr,"RA Params=%f\t%f\n",&Rimageparam[0],&Rimageparam[1]);
-										}
-										else if(strstr(bufstr,"SETSM Version=")!=NULL)
-										{
-											printf("%s\n",bufstr);
-											float version;
-											sscanf(bufstr,"SETSM Version=%f\n",&version);
-											printf("version %f\n",version);
-											
-											if (version > 2.0128) {
-												proinfo.seedDEMsigma = 20;
-											}
-											else {
-												proinfo.seedDEMsigma = 100;
-											}
-											printf("sigma %f\n",proinfo.seedDEMsigma);
-										}
-										
-									}
-											
-									if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
-										check_load_RA = true;
-									fclose(pFile_meta);
-								}
-								else {
-									printf("meta file doesn't exist!! \n");
-								}
-
-							}
-						}
-					}
-					
-					if(!check_load_RA)
-					{
-						FILE* pFile_info;
-						sprintf(str_rafile,"%s/txt/RAinfo.txt",proinfo.save_filepath);
-						printf("RAinfo %s\n",str_rafile);
-						pFile_info		= fopen(str_rafile,"r");
-						if(pFile_info)
-						{
-							printf("open RA\n");
-							fscanf(pFile_info,"%f\t%f",&Rimageparam[0],&Rimageparam[1]);
-							if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
-								check_load_RA = true;
-							fclose(pFile_info);
-						}
-					}
-					
-					printf("check load RA %d %f %f\n",check_load_RA,Rimageparam[0],Rimageparam[1]);
-					
-					if(!check_load_RA)
-					{
-						tile_size			= 100000;
-						
-						args.RA_row			= 1;
-				
-						SetTiles_RA(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
-									&iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);	
-						
-						iter_row_start	= 1;
-						iter_row_end	= iter_row_start+1;
-						t_col_start		= 1;
-						t_col_end		= t_col_start + 1;
-						
-						final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
-														 subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
-														 LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-														 Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter);
-					}
-				}
-				
-				if (args.check_RA_line)
-					Rimageparam[0] = args.ra_line;
-				if (args.check_RA_sample)
-					Rimageparam[1] = args.ra_sample;
-				
-				if(!proinfo.check_checktiff)
-				{
-					fprintf(pMetafile,"RA Params=%f\t%f\t\n",Rimageparam[0],Rimageparam[1]);
-					fprintf(pMetafile,"RA tilesize=%d\n",tile_size);
-				}
-				
-				proinfo.IsRA		= false;
-				tile_size			= 8000;
-				if(args.check_tilesize)
-					tile_size		= args.tilesize;
-				printf("tilesize %d\n",tile_size);
-
-				if(!proinfo.check_checktiff)
-				{
-					fprintf(pMetafile,"tilesize=%d\n",tile_size);
-					if(proinfo.pre_DEMtif)
-						fprintf(pMetafile,"Seed DEM=%s\n",proinfo.priori_DEM_tif);
-					else
-						fprintf(pMetafile,"Seed DEM=\n");
-				
-					if(param.projection == 1)
-					{
-						if (Hemisphere) {
-							fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
-						} else {
-							fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
-						}
-					}
-					else {
-						if (Hemisphere) {
-							fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +North %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
-						} else {
-							fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +South %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
-						}
-					}
-				}
-				
-				
-				bin_angle			= 360.0/18.0;
-
-				SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
-						 &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);	
-
-				total_count			= 0;
-
-				if (args.check_tiles_SR)
-				{
-					iter_row_start	  = args.start_row;
-				}
-				
-				if (args.check_tiles_ER)
-				{
-					iter_row_end	  = args.end_row;
-				}
-				
-				if (args.check_tiles_SC)
-				{	
-					t_col_start		  = args.start_col;
-				}
-				
-				if (args.check_tiles_EC)
-				{	
-					t_col_end		  = args.end_col;
-				}
-				
-				if (proinfo.check_tiles_SR)
-				{
-					iter_row_start	  = proinfo.start_row;
-				}
-				
-				if (proinfo.check_tiles_ER)
-				{
-					iter_row_end	  = proinfo.end_row;
-				}
-				
-				if (proinfo.check_tiles_SC)
-				{	
-					t_col_start		  = proinfo.start_col;
-				}
-				
-				if (proinfo.check_tiles_EC)
-				{	
-					t_col_end		  = proinfo.end_col;
-				}
-			
-				printf("RA param = %f\t%f\n",Rimageparam[0],Rimageparam[1]);
-				
-				printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
-				
-				if(!args.check_gridonly)
-				{
-					final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
-													 subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
-													 LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-													 Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
-				}
-				else 
-				{
-					char check_file[500];
-					FILE* pcheckFile;
-					int max_row = 0;
-					int max_col = 0;
-					int row,col;
-					for(row = 1; row < 100 ; row++)
-					{
-						for(col = 1; col < 100 ; col++)
-						{
-							sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
-							pcheckFile = fopen(check_file,"r");
-							if(pcheckFile)
-							{
-								if(max_row < row)
-									max_row = row;
-								if(max_col < col)
-									max_col = col;
-							}
-						}
-					}
-					iter_row_end = max_row + 1;
-					t_col_end	 = max_col + 1;
-				}
-
-				printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
-				
-                
-                if(iter_row_end < 2 && t_col_end < 2)
+            
+            if(!args.check_ortho)
+            {
+                printf("minmaxH = %d\t%d\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
+                printf("seed fff %d\n",proinfo.pre_DEMtif);
+                if(SetupParam(proinfo,&NumOfIAparam, &pre_DEM_level, &DEM_level,&proinfo.pre_DEMtif,&check_tile_array ))
                 {
-                    printf("No matching results. Please check overlapped area of stereo pair\n");
-                    exit(1);
-                }
+                    uint8 pyramid_step;
+                    uint8 Template_size	= 15;
+                    uint16 buffer_area	= 400;
+                    uint8 iter_row_start, iter_row_end, t_col_start, t_col_end;
+                    int	 total_count = 0, tile_size = 0;
+                    float subX, subY;
+                    float bin_angle;
+                    float mt_grid_size;
+                    char temp_c[500];
+                    float temp_br_x, temp_br_y;
+                    CSize temp_size;
+                    time_t ST = 0, ET = 0;
+                    float gap;
                 
-				char str_DEMfile[500];
-				sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
-				
-				FILE* pFile_DEM = NULL;
-				
-				pFile_DEM = fopen(str_DEMfile,"r");
-				printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
-				final_iteration = 3;
-				if(!pFile_DEM)
-				{
-					ST = time(0);
-					printf("Tile merging start final iteration %d!!\n",final_iteration);
-					int buffer_tile = 420;
-					mt_grid_size = MergeTiles(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration);
-					ET = time(0);
-					gap = difftime(ET,ST);
-					printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
-					
-					ST = time(0);
-					printf("Interpolation start!!\n");
-					sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
-					printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
-					
-					NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
-					ET = time(0);
-					gap = difftime(ET,ST);
-					printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
-				}
-				
-				char hdr_path[500];
-				CSize seeddem_size;
-				float tminX, tmaxY, tgrid_size;
-				sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
-				seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &tminX, &tmaxY, &tgrid_size);
-				
-				fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
-				fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
-								
-				fclose(pMetafile);
-				 
-			}
-			else
-				printf("out of boundary!! please check boundary infomation!!\n");
-			
-			sprintf(temp_filepath,"%s/tmp",proinfo.save_filepath);
+                    printf("IsRA = %d\n",proinfo.IsRA);
+                    
+                    if(proinfo.IsRA)
+                    {
+                        uint8 RA_row_iter = 1;
+                        uint8 RA_col_iter = 1;
+
+                        tile_size			= 16000;
+                        if(args.check_tilesize)
+                            tile_size		= args.tilesize*2;
+                        printf("tileszie %d\n",tile_size);
+
+                        bin_angle			= 360.0/18.0;
+                        bool check_RA_1000	= false;
+                        
+                        if (args.check_RA_tileR)
+                        {
+                            if(args.RA_row == 100)
+                            {
+                                tile_size			= 100000;
+                                check_RA_1000		= true;
+                                args.RA_row			= 1;
+                            }
+                        }
+                        
+                        
+
+                        SetTiles_RA(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
+                                    &iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);	
+
+                        
+                        printf("before RA row:col => row = %d\t%d\t;col = %d\t%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end);
+                        
+                        if (args.check_RA_tileR)
+                        {
+                            iter_row_start	= args.RA_row;
+                            iter_row_end	= iter_row_start+1;
+                        }
+                        
+                        if (args.check_RA_tileC)
+                        {
+                            t_col_start		= args.RA_col;
+                            t_col_end		= t_col_start + 1;
+                        }
+                        
+                        total_count			= 0;
+                        printf("RA row:col = row = %d\t%d\t;col = %d\t%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end);
+                        
+                        
+                        //loading existing RA parameters
+                        bool check_load_RA = false;
+                        char str_rafile[500];
+                        char bufstr[500];
+                        sprintf(str_rafile,"%s/txt/RA_echo_result_row_%d_col_%d.txt",proinfo.save_filepath,iter_row_start,t_col_start);
+                        printf("RA file %s\n",str_rafile);
+                        FILE* pFile;
+                        pFile		= fopen(str_rafile,"r");
+                        if(pFile)
+                        {
+                            char str_echofile[500];
+                            sprintf(str_echofile,"%s/txt/echo_result_row_1_col_1.txt",proinfo.save_filepath);
+                            FILE* pFile_echo;
+                            
+                            printf("echo %s\n",str_echofile);
+                            
+                            pFile_echo	= fopen(str_echofile,"r");
+                            if(pFile_echo)
+                            {
+                                printf("open RA\n");
+                                fgets(bufstr,500,pFile_echo);
+                                if (strstr(bufstr,"RA param X")!=NULL)
+                                {
+                                    sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
+                                    if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
+                                        check_load_RA = true;
+                                }
+                                fclose(pFile_echo);
+                            }
+                            
+                            fclose(pFile);
+                        }
+                        
+                        printf("check seedem %d\n",args.check_seeddem);
+                        if(args.check_seeddem)
+                        {
+                            int dir_size;
+                            int full_size;
+                            char str_rafile_1[500];
+                            char *fullseeddir	= NULL;
+                            char *lastSlash = NULL;
+                            lastSlash	= malloc(strlen(args.seedDEMfilename) + 1);
+                            strcpy(lastSlash, args.seedDEMfilename);
+                            fullseeddir = dirname(lastSlash);
+                            
+                            dir_size		= strlen(fullseeddir);
+                            full_size		= strlen(args.seedDEMfilename);
+                            printf("fullseeddir %s\tdir_size %d\n",fullseeddir,dir_size);
+                            printf("lastSlash %s\tfull_size %d\n",lastSlash,full_size);
+                            char seeddir[500];
+                            for(i=0;i<dir_size-4;i++)
+                                seeddir[i] = fullseeddir[i];
+                            sprintf(str_rafile_1,"%s/txt/RA_echo_result_row_1_col_1.txt",fullseeddir);
+                            printf("RA file %s\n",str_rafile_1);
+
+                            char str_echofile[500];
+                            sprintf(str_echofile,"%s/txt/echo_result_row_1_col_1.txt",fullseeddir);
+                            FILE* pFile_echo;
+                                
+                            pFile_echo	= fopen(str_echofile,"r");
+                            if(pFile_echo)
+                            {
+                                fgets(bufstr,500,pFile_echo);
+                                if (strstr(bufstr,"RA param X")!=NULL)
+                                {
+                                    sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
+                                    if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
+                                        check_load_RA = true;
+                                }
+                                fclose(pFile_echo);
+                            }
+                            
+                            char str_rafile_2[500];
+                            char RAfile[500];
+                            for (int i = 0; i < full_size - 7; i++) {
+                                RAfile[i] = args.seedDEMfilename[i];
+                            }
+                            char RAfile_raw[500];
+                            for (int i = 0; i < full_size - 14; i++) {
+                                RAfile_raw[i] = args.seedDEMfilename[i];
+                            }
+
+                            sprintf(str_rafile_2, "%s/txt/RAinfo.txt", RAfile_raw);
+                            printf("Meta file %s\n", args.metafilename);
+                            printf("Meta file %s\n", proinfo.metafilename);
+                            printf("RA file %s\n", str_rafile_2);
+
+                            if(!check_load_RA)
+                            {
+                                FILE* pFile_echo;
+                                pFile_echo	= fopen(str_rafile,"r");
+                                if(pFile_echo)
+                                {
+                                    fscanf(pFile_echo,"%f %f",&Rimageparam[0],&Rimageparam[1]);
+                                    if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
+                                        check_load_RA = true;
+                                    fclose(pFile_echo);
+                                }
+                                else
+                                {
+                                    printf("Meta file %s\n",proinfo.metafilename);
+                                    
+                                    FILE* pFile_meta;
+                                    pFile_meta	= fopen(proinfo.metafilename,"r");
+                                    if(pFile_meta)
+                                    {
+                                        printf("meta file exist!!\n");
+                                        while(!feof(pFile_meta))
+                                        {
+                                            
+                                            fgets(bufstr,500,pFile_meta);
+                                            if (strstr(bufstr,"RA Params=")!=NULL)
+                                            {
+                                                printf("%s\n",bufstr);
+                                                sscanf(bufstr,"RA Params=%f\t%f\n",&Rimageparam[0],&Rimageparam[1]);
+                                            }
+                                            else if(strstr(bufstr,"SETSM Version=")!=NULL)
+                                            {
+                                                printf("%s\n",bufstr);
+                                                float version;
+                                                sscanf(bufstr,"SETSM Version=%f\n",&version);
+                                                printf("version %f\n",version);
+                                                
+                                                if (version > 2.0128) {
+                                                    proinfo.seedDEMsigma = 20;
+                                                }
+                                                else {
+                                                    proinfo.seedDEMsigma = 100;
+                                                }
+                                                printf("sigma %f\n",proinfo.seedDEMsigma);
+                                            }
+                                            
+                                        }
+                                                
+                                        if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
+                                            check_load_RA = true;
+                                        fclose(pFile_meta);
+                                    }
+                                    else {
+                                        printf("meta file doesn't exist!! \n");
+                                    }
+
+                                }
+                            }
+                        }
+                        
+                        if(!check_load_RA)
+                        {
+                            FILE* pFile_info;
+                            sprintf(str_rafile,"%s/txt/RAinfo.txt",proinfo.save_filepath);
+                            printf("RAinfo %s\n",str_rafile);
+                            pFile_info		= fopen(str_rafile,"r");
+                            if(pFile_info)
+                            {
+                                printf("open RA\n");
+                                fscanf(pFile_info,"%f\t%f",&Rimageparam[0],&Rimageparam[1]);
+                                if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
+                                    check_load_RA = true;
+                                fclose(pFile_info);
+                            }
+                        }
+                        
+                        printf("check load RA %d %f %f\n",check_load_RA,Rimageparam[0],Rimageparam[1]);
+                        
+                        if(!check_load_RA)
+                        {
+                            tile_size			= 100000;
+                            
+                            args.RA_row			= 1;
+                    
+                            SetTiles_RA(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
+                                        &iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);	
+                            
+                            iter_row_start	= 1;
+                            iter_row_end	= iter_row_start+1;
+                            t_col_start		= 1;
+                            t_col_end		= t_col_start + 1;
+                            
+                            final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
+                                                             subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
+                                                             LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
+                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter);
+                        }
+                    }
+                    
+                    if (args.check_RA_line)
+                        Rimageparam[0] = args.ra_line;
+                    if (args.check_RA_sample)
+                        Rimageparam[1] = args.ra_sample;
+                    
+                    if(!proinfo.check_checktiff)
+                    {
+                        fprintf(pMetafile,"RA Params=%f\t%f\t\n",Rimageparam[0],Rimageparam[1]);
+                        fprintf(pMetafile,"RA tilesize=%d\n",tile_size);
+                    }
+                    
+                    proinfo.IsRA		= false;
+                    tile_size			= 8000;
+                    if(args.check_tilesize)
+                        tile_size		= args.tilesize;
+                    printf("tilesize %d\n",tile_size);
+
+                    if(!proinfo.check_checktiff)
+                    {
+                        fprintf(pMetafile,"tilesize=%d\n",tile_size);
+                        if(proinfo.pre_DEMtif)
+                            fprintf(pMetafile,"Seed DEM=%s\n",proinfo.priori_DEM_tif);
+                        else
+                            fprintf(pMetafile,"Seed DEM=\n");
+                    
+                        if(param.projection == 1)
+                        {
+                            if (Hemisphere) {
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                            } else {
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                            }
+                        }
+                        else {
+                            if (Hemisphere) {
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +North %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                            } else {
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +South %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                            }
+                        }
+                    }
+                    
+                    
+                    bin_angle			= 360.0/18.0;
+
+                    SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
+                             &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);	
+
+                    total_count			= 0;
+
+                    if (args.check_tiles_SR)
+                    {
+                        iter_row_start	  = args.start_row;
+                    }
+                    
+                    if (args.check_tiles_ER)
+                    {
+                        iter_row_end	  = args.end_row;
+                    }
+                    
+                    if (args.check_tiles_SC)
+                    {	
+                        t_col_start		  = args.start_col;
+                    }
+                    
+                    if (args.check_tiles_EC)
+                    {	
+                        t_col_end		  = args.end_col;
+                    }
+                    
+                    if (proinfo.check_tiles_SR)
+                    {
+                        iter_row_start	  = proinfo.start_row;
+                    }
+                    
+                    if (proinfo.check_tiles_ER)
+                    {
+                        iter_row_end	  = proinfo.end_row;
+                    }
+                    
+                    if (proinfo.check_tiles_SC)
+                    {	
+                        t_col_start		  = proinfo.start_col;
+                    }
+                    
+                    if (proinfo.check_tiles_EC)
+                    {	
+                        t_col_end		  = proinfo.end_col;
+                    }
+                
+                    printf("RA param = %f\t%f\n",Rimageparam[0],Rimageparam[1]);
+                    
+                    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
+                    
+                    if(!args.check_gridonly)
+                    {
+                        final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
+                                                         subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
+                                                         LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
+                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
+                    }
+                    else 
+                    {
+                        char check_file[500];
+                        FILE* pcheckFile;
+                        int max_row = 0;
+                        int max_col = 0;
+                        int row,col;
+                        for(row = 1; row < 100 ; row++)
+                        {
+                            for(col = 1; col < 100 ; col++)
+                            {
+                                sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
+                                pcheckFile = fopen(check_file,"r");
+                                if(pcheckFile)
+                                {
+                                    if(max_row < row)
+                                        max_row = row;
+                                    if(max_col < col)
+                                        max_col = col;
+                                }
+                            }
+                        }
+                        iter_row_end = max_row + 1;
+                        t_col_end	 = max_col + 1;
+                    }
+
+                    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
+                    
+                    
+                    if(iter_row_end < 2 && t_col_end < 2)
+                    {
+                        printf("No matching results. Please check overlapped area of stereo pair\n");
+                        exit(1);
+                    }
+                    
+                    char str_DEMfile[500];
+                    sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
+                    
+                    FILE* pFile_DEM = NULL;
+                    
+                    pFile_DEM = fopen(str_DEMfile,"r");
+                    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                    final_iteration = 3;
+                    if(!pFile_DEM)
+                    {
+                        ST = time(0);
+                        printf("Tile merging start final iteration %d!!\n",final_iteration);
+                        int buffer_tile = 420;
+                        mt_grid_size = MergeTiles(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration);
+                        ET = time(0);
+                        gap = difftime(ET,ST);
+                        printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
+                        
+                        ST = time(0);
+                        printf("Interpolation start!!\n");
+                        sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
+                        printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
+                        
+                        NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
+                        ET = time(0);
+                        gap = difftime(ET,ST);
+                        printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
+                    }
+                    
+                    char hdr_path[500];
+                    CSize seeddem_size;
+                    float tminX, tmaxY, tgrid_size;
+                    sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
+                    seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &tminX, &tmaxY, &tgrid_size);
+                    
+                    fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
+                    fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
+                                    
+                    fclose(pMetafile);
+                     
+                }
+                else
+                    printf("out of boundary!! please check boundary infomation!!\n");
+                
+                sprintf(temp_filepath,"%s/tmp",proinfo.save_filepath);
+            }
 		}
 		else
 		{
@@ -3382,27 +3421,32 @@ void SetThs_ratio(int level, float *Th_roh, float *Th_roh_min, float *Th_roh_nex
 F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, float DEM_resolution, float *minmaxHeight,
 				   float *py_resolution, float *grid_resolution, int *subBoundary)
 {
+    *py_resolution	 = (float)(resolution*pow(2,level));
+    *grid_resolution = *py_resolution;
+    
+    printf("pre resolution %f\t level %d\n",*py_resolution,level);
+    
 	if(*dem_update_flag)
 	{
-		if(DEM_resolution == 8)
+		if(DEM_resolution >= 8)
 		{
-			*py_resolution	 = 8;
-			*grid_resolution = 8;
+            *py_resolution	 = DEM_resolution;
+            *grid_resolution = DEM_resolution;
 		}
-		else if(DEM_resolution == 4)
+		else if(DEM_resolution >= 4 && DEM_resolution < 8)
 		{
-			if(level <= 3)
-			{
-				*py_resolution	 = 4;
-				*grid_resolution = 4;
-			}
-			else
-			{
-				*py_resolution	 = 8;
-				*grid_resolution = 8;
-			}
+            if(level <= 3)
+            {
+                *py_resolution	 = DEM_resolution;
+                *grid_resolution = DEM_resolution;
+            }
+            else
+            {
+                *py_resolution	 = 8;
+                *grid_resolution = 8;
+            }
 		}
-		else if(DEM_resolution == 2)
+		else if(DEM_resolution >= 2 && DEM_resolution < 4)
 		{
 			if(level == 1)
 			{
@@ -3412,23 +3456,55 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 			}
 			else if(level >= 2)
 			{
-				*py_resolution	 = 8;
-				*grid_resolution = 8;
+                *py_resolution	 = 8;
+                *grid_resolution = 8;
 			}
 			else if(level == 0)
 			{
-				*py_resolution	 = 2;
-				*grid_resolution = 2;
+                if(*py_resolution < DEM_resolution)
+                {
+                    *py_resolution	 = DEM_resolution;
+                    *grid_resolution = DEM_resolution;
+                }
 			}
 			else
 			{
-				*py_resolution	 = 8;
-				*grid_resolution = 8;
-				
-				*py_resolution	 = (float)(resolution*pow(2,level));
-				*grid_resolution = (float)(resolution*pow(2,level));
+                *py_resolution	 = 8;
+                *grid_resolution = 8;
 			}
 		}
+        else if(DEM_resolution < 2)
+        {
+            if(level == 1)
+            {
+                *py_resolution	 = 2;
+                *grid_resolution = 2;
+                
+            }
+            else if(level == 2)
+            {
+                *py_resolution	 = 4;
+                *grid_resolution = 4;
+            }
+            else if(level >= 3)
+            {
+                *py_resolution	 = 8;
+                *grid_resolution = 8;
+            }
+            else if(level == 0)
+            {
+                if(*py_resolution < DEM_resolution)
+                {
+                    *py_resolution	 = DEM_resolution;
+                    *grid_resolution = DEM_resolution;
+                }
+            }
+            else
+            {
+                *py_resolution	 = 8;
+                *grid_resolution = 8;
+            }
+        }
 		
 		if(pre_DEMtif && level == 2)
 		{
@@ -3442,9 +3518,11 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 				}
 				else if(level == 0)
 				{
-					*py_resolution	 = 2;
-					*grid_resolution = 2;
-					
+                    if(*py_resolution < DEM_resolution)
+                    {
+                        *py_resolution	 = DEM_resolution;
+                        *grid_resolution = DEM_resolution;
+                    }
 				}
 				else
 				{
@@ -3452,6 +3530,29 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 					*grid_resolution = 8;
 				}
 			}
+            else if(DEM_resolution < 2)
+            {
+                if(level == 1)
+                {
+                    *py_resolution	 = 2;
+                    *grid_resolution = 2;
+                    
+                }
+                else if(level == 0)
+                {
+                    if(*py_resolution < DEM_resolution)
+                    {
+                        *py_resolution	 = DEM_resolution;
+                        *grid_resolution = DEM_resolution;
+                    }
+                }
+                else
+                {
+                    *py_resolution	 = 4;
+                    *grid_resolution = 4;
+                }
+            }
+            
 		}
 		Size_Grid2D->width	= (int)(ceil((float)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
 		Size_Grid2D->height	= (int)(ceil((float)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
@@ -5599,6 +5700,42 @@ F2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, float *_im
 	return IP;
 }
 
+F2DPOINT GetObjectToImageRPC_single_mpp(double **_rpc, uint8 _numofparam, float *_imageparam, F3DPOINT _GP)
+{
+    F2DPOINT IP;
+    
+    int j;
+    
+    
+    float L, P, H, Line, Samp, deltaP, deltaR;
+    double Coeff[4];
+    
+    L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+    P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+    H		= (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+    for(j=0;j<4;j++)
+    {
+        Coeff[j]	= _rpc[j+2][0]*1.0			+ _rpc[j+2][1]*L			+ _rpc[j+2][2]*P
+        + _rpc[j+2][3]*H			+ _rpc[j+2][4]*L*P			+ _rpc[j+2][5]*L*H
+        + _rpc[j+2][6]*P*H			+ _rpc[j+2][7]*L*L			+ _rpc[j+2][8]*P*P
+        + _rpc[j+2][9]*H*H			+ _rpc[j+2][10]*(P*L)*H		+ _rpc[j+2][11]*(L*L)*L
+        + _rpc[j+2][12]*(L*P)*P		+ _rpc[j+2][13]*(L*H)*H		+ _rpc[j+2][14]*(L*L)*P
+        + _rpc[j+2][15]*(P*P)*P		+ _rpc[j+2][16]*(P*H)*H		+ _rpc[j+2][17]*(L*L)*H
+        + _rpc[j+2][18]*(P*P)*H		+ _rpc[j+2][19]*(H*H)*H;
+    }
+    
+    Line	 = ((Coeff[0]/Coeff[1])*_rpc[1][0] + _rpc[0][0]); //Line
+    Samp	 = ((Coeff[2]/Coeff[3])*_rpc[1][1] + _rpc[0][1]); //Sample
+    
+    deltaP		= _imageparam[0];
+    deltaR		= _imageparam[1];
+    
+    IP.m_Y		= deltaP + Line;
+    IP.m_X		= deltaR + Samp;
+    
+    return IP;
+}
+
 void Preprocessing(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 py_level, CSize *Lsubsetsize, CSize *Rsubsetsize, CSize *data_size_l, CSize *data_size_r, FILE *fid)
 {
 	uint16 **pyimg;
@@ -6124,10 +6261,10 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
 	temp_GrP.m_Z = minmaxHeight[0];
 	temp_GrP.flag = 0;
-	temp_p1		= GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+	temp_p1		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
 	
 	temp_GrP.m_Z = minmaxHeight[1];
-	temp_p2		= GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+	temp_p2		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
 	
 	*meters_per_pixel = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));	
 	
@@ -14607,7 +14744,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	// load DEM infor from hdr file.
 	DEM_size = Envihdr_reader_DEM_ortho(param, DEM_header, &DEM_minX, &DEM_maxY, &DEM_resolution);
 	
-	Ortho_resolution = DEM_resolution;
+	Ortho_resolution = args.DEM_space;
 	
 	resolution[0] = DEM_resolution;
 	resolution[1] = Image_resolution;
@@ -14622,7 +14759,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	float OrthoBoundary[4];
 	
 	// set generated orthoimage info by comparing DEM info
-	SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param);
+	SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param, Ortho_resolution);
 	
 	// set saving pointer for orthoimage
 	uint16 *result_ortho	= (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
@@ -14720,6 +14857,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 										 subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
 			if(check_subsetImage)
 			{
+                int ori_impyramid_step = impyramid_step;
+                if(impyramid_step > 0)
+                    impyramid_step = 1;
+                
 				CSize data_size[impyramid_step+1];
 				F2DPOINT startpos;
 				char t_str[500];
@@ -14731,7 +14872,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 				uint16 *pyimg;
 				
 				if(impyramid_step > 0)
-					pyimg = Preprocessing_ortho(impyramid_step,data_size,subimage);
+					pyimg = Preprocessing_ortho(ori_impyramid_step,data_size,subimage);
 				
 				Image_size	= data_size[impyramid_step];
 				
@@ -14876,6 +15017,17 @@ F2DPOINT OriginalToPyramid_single_ortho(F2DPOINT InCoord, F2DPOINT Startpos, uin
 
 uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg)
 {
+    uint16 *pyimg;
+    int filter_size = pow(2,py_level)-1;
+    if(filter_size < 3)
+        filter_size = 3;
+    
+    printf("level %d\tfilter size %d\n",py_level,filter_size);
+    
+    pyimg = CreateImagePyramid_ortho(subimg,data_size[0],filter_size,(float)(filter_size/2.0));
+    
+    return pyimg;
+    /*
 	uint16 **pyimg;
 	
 	int i;
@@ -14896,7 +15048,7 @@ uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg)
 	}
 	
 	return pyimg[py_level];
-	
+	*/
 }
 
 uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_size, float _sigma)
@@ -15437,7 +15589,7 @@ F2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, floa
 }
 
 bool SetOrthoBoundary_ortho(CSize *Imagesize, float *Boundary, 
-							double **RPCs, float gridspace, CSize DEM_size, float minX, float maxY, TransParam param)
+							double **RPCs, float gridspace, CSize DEM_size, float minX, float maxY, TransParam param, float Ortho_resolution)
 {
 	float TopLeft[2];
 	TopLeft[0]	= minX;
@@ -15484,8 +15636,8 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, float *Boundary,
 	Boundary[2]	= ceil(min(DEMboundary[2],ImageBoundary[2]));
 	Boundary[3]	= ceil(min(DEMboundary[3],ImageBoundary[3]));
 	
-	Imagesize->height	 = ceil(fabs(Boundary[3] - Boundary[1])/gridspace);
-	Imagesize->width	 = ceil(fabs(Boundary[2] - Boundary[0])/gridspace);
+	Imagesize->height	 = ceil(fabs(Boundary[3] - Boundary[1])/Ortho_resolution);
+	Imagesize->width	 = ceil(fabs(Boundary[2] - Boundary[0])/Ortho_resolution);
 	
 	
 	printf("orthoimage height width %d \t%d\n",Imagesize->height,Imagesize->width);

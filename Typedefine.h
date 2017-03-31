@@ -190,6 +190,8 @@ typedef struct ProjectInfo{
 	bool check_gridonly;
 	bool check_boundary;
 	bool check_checktiff;
+    bool check_ortho;
+    
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 
 	int threads_num;
@@ -215,6 +217,7 @@ typedef struct ArgumentInfo{
 	bool check_tilesize;
 	bool check_boundary;
 	bool check_checktiff;
+    bool check_ortho;
     bool check_imageresolution;
 	char Image1[500];
 	char Image2[500];
@@ -242,6 +245,7 @@ typedef struct ArgumentInfo{
     int utm_zone;
     int sensor_provider; //DG = 1, Pleiades = 2
     float image_resolution;
+    int ortho_count;
 	
 } ARGINFO;
 
