@@ -2494,21 +2494,27 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 							if(flag_start)
 							{
-								if(level != 0)
+                                float min_after, max_after;
+                                min_after	= (float)(minH_mps - pow(2, level)*2*MPP);		max_after	= (float)(maxH_mps + pow(2, level)*2*MPP);
+                                printf("minmax MP %f\t%f\n",min_after, max_after);
+								if(level <= 2)
 								{
-									float min_after, max_after;
-									min_after	= (float)(minH_mps - pow(2, level)*2*MPP);		max_after	= (float)(maxH_mps + pow(2, level)*2*MPP);
-									if(min_after > minH_grid)
-										min_after = minH_grid;
-									if(max_after < maxH_grid)
-										max_after = maxH_grid;
-									printf("minmax MP %f\t%f\n",min_after, max_after);
-									minmaxHeight[0]		= min_after;
-									minmaxHeight[1]		= max_after;
-									
-									printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
+                                    if(minmaxHeight[0] < min_after)
+                                    minmaxHeight[0]		= (float)(floor(min_after));
+                                    if(minmaxHeight[1] > max_after)
+                                        minmaxHeight[1]		= (float)(ceil(max_after));
 								}
-									
+                                else
+                                {
+                                    if(min_after > minH_grid)
+                                        min_after = minH_grid;
+                                    if(max_after < maxH_grid)
+                                        max_after = maxH_grid;
+                                    
+                                    minmaxHeight[0]		= min_after;
+                                    minmaxHeight[1]		= max_after;
+                                }
+								printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
 								fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
 										row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
 							}
