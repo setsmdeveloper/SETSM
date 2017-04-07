@@ -110,7 +110,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.1.3\n");
+			printf("setsm version : 3.1.4\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -830,7 +830,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.1.3\n");
+				fprintf(pMetafile,"SETSM Version=3.1.4\n");
 			}
 			
 			time_t current_time;
@@ -1327,7 +1327,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
                     }
-                    else 
+                    if(!args.check_ortho)
                     {
                         char check_file[500];
                         FILE* pcheckFile;
@@ -1358,7 +1358,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     
                     if(iter_row_end < 2 && t_col_end < 2)
                     {
-                        printf("No matching results. Please check overlapped area of stereo pair\n");
+                        printf("No matching results. Please check overlapped area of stereo pair, or image textures\n");
                         exit(1);
                     }
                     
@@ -2488,21 +2488,27 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 							if(flag_start)
 							{
-								if(level != 0)
+                                float min_after, max_after;
+                                min_after	= (float)(minH_mps - pow(2, level)*2*MPP);		max_after	= (float)(maxH_mps + pow(2, level)*2*MPP);
+                                printf("minmax MP %f\t%f\n",min_after, max_after);
+								if(level <= 2)
 								{
-									float min_after, max_after;
-									min_after	= (float)(minH_mps - pow(2, level)*2*MPP);		max_after	= (float)(maxH_mps + pow(2, level)*2*MPP);
-									if(min_after > minH_grid)
-										min_after = minH_grid;
-									if(max_after < maxH_grid)
-										max_after = maxH_grid;
-									printf("minmax MP %f\t%f\n",min_after, max_after);
-									minmaxHeight[0]		= min_after;
-									minmaxHeight[1]		= max_after;
-									
-									printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
+                                    if(minmaxHeight[0] < min_after)
+                                    minmaxHeight[0]		= (float)(floor(min_after));
+                                    if(minmaxHeight[1] > max_after)
+                                        minmaxHeight[1]		= (float)(ceil(max_after));
 								}
-									
+                                else
+                                {
+                                    if(min_after > minH_grid)
+                                        min_after = minH_grid;
+                                    if(max_after < maxH_grid)
+                                        max_after = maxH_grid;
+                                    
+                                    minmaxHeight[0]		= min_after;
+                                    minmaxHeight[1]		= max_after;
+                                }
+								printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
 								fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
 										row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
 							}
