@@ -1,18 +1,12 @@
-# This Makefile should be used for building with the gnu compiler.
+TIFFPATH=/fs/project/PZS0530/setsm/libs/Owens/tiff-4.0.6
 
-# If libtiff is installed in a nonstandard location you must edit 
-# TIFFPATH and uncomment the following three lines.
-#TIFFPATH=/fs/project/PZS0530/setsm/tiff-4.0.3
-#TIFFINC=-I$(TIFFPATH)/include
-#TIFFLIB=-L$(TIFFPATH)/lib
+CC=icc
+CFLAGS=-g -std=c99 -O3 -qopenmp -xHost
 
-CC=gcc
-CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
+INCS=-I$(TIFFPATH)/include
+LDFLAGS=-L$(TIFFPATH)/lib
 
-INCS=$(TIFFINC)
-LDFLAGS=$(TIFFLIB)
-
-setsm : setsm_code.o
+setsm : setsm_code.o $(LINKER)
 	$(CC) $(CFLAGS) -o setsm setsm_code.o $(LDFLAGS) -lm -ltiff
 
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
@@ -23,4 +17,3 @@ setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
 clean :
 	rm -f setsm
 	rm -f *.o
-
