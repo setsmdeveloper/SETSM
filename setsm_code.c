@@ -253,6 +253,12 @@ int main(int argc,char *argv[])
 					args.DEM_space = atof(argv[i+1]);
 					printf("%f\n",args.DEM_space);
 					args.check_DEM_space = true;
+                    
+                    if(args.DEM_space < 1.0)
+                    {
+                        args.DEM_space = 1.0;
+                        printf("Minimum size of DEM grid is 1m. outres set 1.0\n");
+                    }
 				}
 			}
 			
@@ -880,8 +886,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             printf("image resolution %f\n",proinfo.resolution);
             
             if (!args.check_DEM_space)
+            {
                 proinfo.DEM_resolution = proinfo.resolution;
-			
+            }
+            
+            if(proinfo.DEM_resolution < 1.0)
+                proinfo.DEM_resolution = 1.0;
             
             if(!proinfo.check_checktiff && !args.check_ortho)
             {
@@ -1665,8 +1675,17 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							if(proinfo.IsRA)
 							{
 								dem_update_flag			= false;
-								py_resolution			= 15;
-								grid_resolution			= 15;
+								py_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+								grid_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+                                
+                                /*if(py_resolution > 105)
+                                {
+                                    py_resolution = 105;
+                                    grid_resolution = 105;
+                                }
+                                */
+                                printf("RA grid size %f\n",py_resolution);
+                                
 								if(!flag_start)
 								{
 									GridPT					= SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
@@ -3477,7 +3496,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             }
             else if(level <= 3)
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution <= 4)
                 {
                     *py_resolution	 = DEM_resolution;
                     *grid_resolution = DEM_resolution;
@@ -3485,7 +3504,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             }
             else
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 8)
                 {
                     *py_resolution	 = 8;
                     *grid_resolution = 8;
@@ -3496,7 +3515,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 		{
 			if(level == 1)
 			{
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 4)
                 {
                     *py_resolution	 = 4;
                     *grid_resolution = 4;
@@ -3505,7 +3524,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 			}
 			else if(level >= 2)
 			{
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 8)
                 {
                     *py_resolution	 = 8;
                     *grid_resolution = 8;
@@ -3518,7 +3537,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
         	}
 			else
 			{
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 8)
                 {
                     *py_resolution	 = 8;
                     *grid_resolution = 8;
@@ -3529,7 +3548,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
         {
             if(level == 1)
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 2)
                 {
                     *py_resolution	 = 2;
                     *grid_resolution = 2;
@@ -3538,7 +3557,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             }
             else if(level == 2)
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 4)
                 {
                     *py_resolution	 = 4;
                     *grid_resolution = 4;
@@ -3546,7 +3565,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             }
             else if(level >= 3)
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 8)
                 {
                     *py_resolution	 = 8;
                     *grid_resolution = 8;
@@ -3559,7 +3578,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             }
             else
             {
-                if(*py_resolution < DEM_resolution)
+                if(*py_resolution < 8)
                 {
                     *py_resolution	 = 8;
                     *grid_resolution = 8;
@@ -3573,7 +3592,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 			{
 				if(level == 1)
 				{
-                    if(*py_resolution < DEM_resolution)
+                    if(*py_resolution < 4)
                     {
                         *py_resolution	 = 4;
                         *grid_resolution = 4;
@@ -3587,7 +3606,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
        		}
 				else
 				{
-                    if(*py_resolution < DEM_resolution)
+                    if(*py_resolution < 8)
                     {
                         *py_resolution	 = 8;
                         *grid_resolution = 8;
@@ -3598,7 +3617,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
             {
                 if(level == 1)
                 {
-                    if(*py_resolution < DEM_resolution)
+                    if(*py_resolution < 2)
                     {
                         *py_resolution	 = 2;
                         *grid_resolution = 2;
@@ -3612,7 +3631,7 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
                 }
                 else
                 {
-                    if(*py_resolution < DEM_resolution)
+                    if(*py_resolution < 4)
                     {
                         *py_resolution	 = 4;
                         *grid_resolution = 4;
