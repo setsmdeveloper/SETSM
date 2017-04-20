@@ -110,7 +110,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.2.0\n");
+			printf("setsm version : 3.2.1\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -836,7 +836,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.2.0\n");
+				fprintf(pMetafile,"SETSM Version=3.2.1\n");
 			}
 			
 			time_t current_time;
@@ -3470,6 +3470,12 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
     *grid_resolution = *py_resolution;
     
     printf("pre resolution %f\t level %d\n",*py_resolution,level);
+    
+    if(*py_resolution > 32)
+    {
+        *py_resolution = (int)(*py_resolution/4.0);
+        *grid_resolution = *py_resolution;
+    }
     
 	if(*dem_update_flag)
 	{
