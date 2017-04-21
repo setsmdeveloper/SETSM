@@ -3964,7 +3964,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width	= cols[1] - cols[0];
 			data_size->height	= rows[1] - rows[0];
 
-			long int data_length = data_size->height*data_size->width;
+			long int data_length = (long int)data_size->height*(long int)data_size->width;
 			
 			printf("memory allocation %d\t%d\n",data_size->height,data_size->width);
 			
@@ -4056,7 +4056,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
-			long int data_length = data_size->height*data_size->width;
+			long int data_length = (long int)data_size->height*(long int)data_size->width;
 			printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
 			
 			out				= (uint16*)malloc(sizeof(uint16)*data_length);
