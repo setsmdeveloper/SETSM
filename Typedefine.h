@@ -100,8 +100,8 @@ typedef struct tagTransParam
 
 typedef struct tagCSize
 {
-	long int width;
-	long int height;
+	unsigned int width;
+	unsigned int height;
 } CSize;
 
 typedef struct tagNCCflag
