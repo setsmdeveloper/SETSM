@@ -110,7 +110,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.1.4\n");
+			printf("setsm version : 3.2.1\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -253,6 +253,12 @@ int main(int argc,char *argv[])
 					args.DEM_space = atof(argv[i+1]);
 					printf("%f\n",args.DEM_space);
 					args.check_DEM_space = true;
+                    
+                    if(args.DEM_space < 1.0)
+                    {
+                        args.DEM_space = 1.0;
+                        printf("Minimum size of DEM grid is 1m. outres set 1.0\n");
+                    }
 				}
 			}
 			
@@ -830,7 +836,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.1.4\n");
+				fprintf(pMetafile,"SETSM Version=3.2.1\n");
 			}
 			
 			time_t current_time;
@@ -838,14 +844,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			
 			current_time = time(NULL);
 			c_time_string = ctime(&current_time);
-			
-			if(!proinfo.check_checktiff && !args.check_ortho)
-			{
-				fprintf(pMetafile,"Creation Date=%s",c_time_string);
-				fprintf(pMetafile,"Image 1=%s\n",proinfo.LeftImagefilename);
-				fprintf(pMetafile,"Image 2=%s\n",proinfo.RightImagefilename);
-				fprintf(pMetafile,"Output Resolution=%f\n",proinfo.DEM_resolution);
-			}
 			
 			char temp_filepath[500];
 			double Image1_gsd_r,Image1_gsd_c,Image2_gsd_r,Image2_gsd_c;
@@ -874,6 +872,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     }
                     else if(proinfo.resolution < 1.25)
                         proinfo.resolution = 1.0;
+                    else
+                        proinfo.resolution = floor(proinfo.resolution);
                 }
                 else
                     proinfo.resolution = 0.5;
@@ -885,7 +885,22 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             
             printf("image resolution %f\n",proinfo.resolution);
             
-			
+            if (!args.check_DEM_space)
+            {
+                proinfo.DEM_resolution = proinfo.resolution;
+            }
+            
+            if(proinfo.DEM_resolution < 1.0)
+                proinfo.DEM_resolution = 1.0;
+            
+            if(!proinfo.check_checktiff && !args.check_ortho)
+            {
+                fprintf(pMetafile,"Creation Date=%s",c_time_string);
+                fprintf(pMetafile,"Image 1=%s\n",proinfo.LeftImagefilename);
+                fprintf(pMetafile,"Image 2=%s\n",proinfo.RightImagefilename);
+                fprintf(pMetafile,"Output Resolution=%f\n",proinfo.DEM_resolution);
+            }
+            
 			Res[0]		= proinfo.resolution;						Res[1]		= proinfo.DEM_resolution;
 			Image_res[0]= proinfo.resolution;						Image_res[1]= proinfo.resolution;
 
@@ -999,7 +1014,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         uint8 RA_row_iter = 1;
                         uint8 RA_col_iter = 1;
 
-                        tile_size			= 16000;
+                        tile_size			= 8000;
                         if(args.check_tilesize)
                             tile_size		= args.tilesize*2;
                         printf("tileszie %d\n",tile_size);
@@ -1011,7 +1026,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         {
                             if(args.RA_row == 100)
                             {
-                                tile_size			= 100000;
+                                tile_size			= 50000;
                                 check_RA_1000		= true;
                                 args.RA_row			= 1;
                             }
@@ -1207,7 +1222,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         
                         if(!check_load_RA)
                         {
-                            tile_size			= 100000;
+                            tile_size			= 50000;
                             
                             args.RA_row			= 1;
                     
@@ -1238,7 +1253,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     }
                     
                     proinfo.IsRA		= false;
-                    tile_size			= 8000;
+                    tile_size			= 4000;
                     if(args.check_tilesize)
                         tile_size		= args.tilesize;
                     printf("tilesize %d\n",tile_size);
@@ -1660,8 +1675,17 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							if(proinfo.IsRA)
 							{
 								dem_update_flag			= false;
-								py_resolution			= 15;
-								grid_resolution			= 15;
+								py_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+								grid_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+                                
+                                /*if(py_resolution > 105)
+                                {
+                                    py_resolution = 105;
+                                    grid_resolution = 105;
+                                }
+                                */
+                                printf("RA grid size %f\n",py_resolution);
+                                
 								if(!flag_start)
 								{
 									GridPT					= SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
@@ -1771,7 +1795,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								bool check_ortho_cal = false;
 								
 								uint8 ortho_level = 2;
-								if(proinfo.DEM_resolution == 8)
+								if(proinfo.DEM_resolution >= 8)
 									ortho_level = 3;
 								
 								if(level >= ortho_level)
@@ -3079,14 +3103,14 @@ void SetTiles(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, int
 {
 	int lengthOfX = Boundary[2] - Boundary[0];
 	int lengthOfY = Boundary[3] - Boundary[1];
-	int division_X = (int) (ceil(lengthOfX / (Res[0] * tile_size)));
-	int division_Y = (int) (ceil(lengthOfY / (Res[0] * tile_size)));
+	int division_X = (int) (ceil(lengthOfX / (float)(tile_size)));
+	int division_Y = (int) (ceil(lengthOfY / (float)(tile_size)));
 	*subX = floor((ceil(ceil(lengthOfX / division_X) / info.DEM_resolution) * info.DEM_resolution) / 2) * 2;
 	*subY = floor((ceil(ceil(lengthOfY / division_Y) / info.DEM_resolution) * info.DEM_resolution) / 2) * 2;
 	
 	*pyramid_step	= 4;
 
-	if(info.DEM_resolution	== 10)
+	if(info.DEM_resolution	>= 10)
 		*buffer_area	= (uint16)(*buffer_area * 1.5);
 
 	if(!IsSP)
@@ -3122,8 +3146,8 @@ void SetTiles_RA(ProInfo info, bool IsSP, bool IsRR, int *Boundary, float *Res, 
 {
 	int lengthOfX = Boundary[2] - Boundary[0];
 	int lengthOfY = Boundary[3] - Boundary[1];
-	int division_X = (int) (ceil(lengthOfX / (Res[0] * tile_size)));
-	int division_Y = (int) (ceil(lengthOfY / (Res[0] * tile_size)));
+	int division_X = (int) (ceil(lengthOfX / (float)(tile_size)));
+	int division_Y = (int) (ceil(lengthOfY / (float)(tile_size)));
 	*subX = floor((ceil(ceil(lengthOfX / division_X) / info.DEM_resolution) * info.DEM_resolution) / 2) * 2;
 	*subY = floor((ceil(ceil(lengthOfY / division_Y) / info.DEM_resolution) * info.DEM_resolution) / 2) * 2;
 	
@@ -3447,83 +3471,124 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
     
     printf("pre resolution %f\t level %d\n",*py_resolution,level);
     
+    if(*py_resolution > 32)
+    {
+        *py_resolution = (int)(*py_resolution/4.0);
+        *grid_resolution = *py_resolution;
+    }
+    
 	if(*dem_update_flag)
 	{
 		if(DEM_resolution >= 8)
 		{
-            *py_resolution	 = DEM_resolution;
-            *grid_resolution = DEM_resolution;
-		}
-		else if(DEM_resolution >= 4 && DEM_resolution < 8)
-		{
-            if(level <= 3)
+            if(*py_resolution < DEM_resolution)
             {
                 *py_resolution	 = DEM_resolution;
                 *grid_resolution = DEM_resolution;
             }
+            
+            if(level == 0)
+            {
+                *py_resolution	 = DEM_resolution;
+                *grid_resolution = DEM_resolution;
+            }
+        }
+		else if(DEM_resolution >= 4 && DEM_resolution < 8)
+		{
+            if(level == 0)
+            {
+                *py_resolution	 = DEM_resolution;
+                *grid_resolution = DEM_resolution;
+            }
+            else if(level <= 3)
+            {
+                if(*py_resolution <= 4)
+                {
+                    *py_resolution	 = DEM_resolution;
+                    *grid_resolution = DEM_resolution;
+                }
+            }
             else
             {
-                *py_resolution	 = 8;
-                *grid_resolution = 8;
+                if(*py_resolution < 8)
+                {
+                    *py_resolution	 = 8;
+                    *grid_resolution = 8;
+                }
             }
 		}
 		else if(DEM_resolution >= 2 && DEM_resolution < 4)
 		{
 			if(level == 1)
 			{
-				*py_resolution	 = 4;
-				*grid_resolution = 4;
+                if(*py_resolution < 4)
+                {
+                    *py_resolution	 = 4;
+                    *grid_resolution = 4;
+                }
 				
 			}
 			else if(level >= 2)
 			{
-                *py_resolution	 = 8;
-                *grid_resolution = 8;
+                if(*py_resolution < 8)
+                {
+                    *py_resolution	 = 8;
+                    *grid_resolution = 8;
+                }
 			}
 			else if(level == 0)
 			{
-                if(*py_resolution < DEM_resolution)
-                {
-                    *py_resolution	 = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
-			}
+                *py_resolution	 = DEM_resolution;
+                *grid_resolution = DEM_resolution;
+        	}
 			else
 			{
-                *py_resolution	 = 8;
-                *grid_resolution = 8;
+                if(*py_resolution < 8)
+                {
+                    *py_resolution	 = 8;
+                    *grid_resolution = 8;
+                }
 			}
 		}
         else if(DEM_resolution < 2)
         {
             if(level == 1)
             {
-                *py_resolution	 = 2;
-                *grid_resolution = 2;
+                if(*py_resolution < 2)
+                {
+                    *py_resolution	 = 2;
+                    *grid_resolution = 2;
+                }
                 
             }
             else if(level == 2)
             {
-                *py_resolution	 = 4;
-                *grid_resolution = 4;
+                if(*py_resolution < 4)
+                {
+                    *py_resolution	 = 4;
+                    *grid_resolution = 4;
+                }
             }
             else if(level >= 3)
             {
-                *py_resolution	 = 8;
-                *grid_resolution = 8;
+                if(*py_resolution < 8)
+                {
+                    *py_resolution	 = 8;
+                    *grid_resolution = 8;
+                }
             }
             else if(level == 0)
             {
-                if(*py_resolution < DEM_resolution)
-                {
-                    *py_resolution	 = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
+                *py_resolution	 = DEM_resolution;
+                *grid_resolution = DEM_resolution;
             }
             else
             {
-                *py_resolution	 = 8;
-                *grid_resolution = 8;
+                if(*py_resolution < 8)
+                {
+                    *py_resolution	 = 8;
+                    *grid_resolution = 8;
+                }
             }
         }
 		
@@ -3533,44 +3598,50 @@ F2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, float reso
 			{
 				if(level == 1)
 				{
-					*py_resolution	 = 4;
-					*grid_resolution = 4;
+                    if(*py_resolution < 4)
+                    {
+                        *py_resolution	 = 4;
+                        *grid_resolution = 4;
+                    }
 					
 				}
 				else if(level == 0)
 				{
-                    if(*py_resolution < DEM_resolution)
-                    {
-                        *py_resolution	 = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                    }
-				}
+                    *py_resolution	 = DEM_resolution;
+                    *grid_resolution = DEM_resolution;
+       		}
 				else
 				{
-					*py_resolution	 = 8;
-					*grid_resolution = 8;
+                    if(*py_resolution < 8)
+                    {
+                        *py_resolution	 = 8;
+                        *grid_resolution = 8;
+                    }
 				}
 			}
             else if(DEM_resolution < 2)
             {
                 if(level == 1)
                 {
-                    *py_resolution	 = 2;
-                    *grid_resolution = 2;
+                    if(*py_resolution < 2)
+                    {
+                        *py_resolution	 = 2;
+                        *grid_resolution = 2;
+                    }
                     
                 }
                 else if(level == 0)
                 {
-                    if(*py_resolution < DEM_resolution)
-                    {
-                        *py_resolution	 = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                    }
+                    *py_resolution	 = DEM_resolution;
+                    *grid_resolution = DEM_resolution;
                 }
                 else
                 {
-                    *py_resolution	 = 4;
-                    *grid_resolution = 4;
+                    if(*py_resolution < 4)
+                    {
+                        *py_resolution	 = 4;
+                        *grid_resolution = 4;
+                    }
                 }
             }
             
@@ -3893,7 +3964,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width	= cols[1] - cols[0];
 			data_size->height	= rows[1] - rows[0];
 
-			long int data_length = data_size->height*data_size->width;
+			long int data_length = (long int)data_size->height*(long int)data_size->width;
 			
 			printf("memory allocation %d\t%d\n",data_size->height,data_size->width);
 			
@@ -3985,7 +4056,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 
-			long int data_length = data_size->height*data_size->width;
+			long int data_length = (long int)data_size->height*(long int)data_size->width;
 			printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
 			
 			out				= (uint16*)malloc(sizeof(uint16)*data_length);
@@ -4565,7 +4636,7 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 			fscanf(pFile,"%s",temp_str);
 			if(strcmp(temp_str,"<IMAGE>") == 0)
 			{
-				for(i=0;i<16;i++)
+				for(i=0;i<21;i++)
 					fgets(temp_str,sizeof(temp_str),pFile);
 
 				fgets(linestr,sizeof(linestr),pFile);
@@ -4573,8 +4644,8 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 				pos2 = strtok(pos1,"<");
 				*gsd_r			= atof(pos2);
 
-				for(i=0;i<2;i++)
-					fgets(temp_str,sizeof(temp_str),pFile);
+				//for(i=0;i<2;i++)
+				//	fgets(temp_str,sizeof(temp_str),pFile);
 
 				fgets(linestr,sizeof(linestr),pFile);
 				pos1 = strstr(linestr,">")+1;
@@ -6291,6 +6362,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	
 	printf("mpp = %f\n",*meters_per_pixel);
 	
+    if(*meters_per_pixel > 5)
+        *meters_per_pixel = 5;
 	
 	printf("h,x,y =%f\t %f\t %f\t\n%f\t %f\t %f\n",minmaxHeight[0], temp_p1.m_X, temp_p1.m_Y, minmaxHeight[1],temp_p2.m_X, temp_p2.m_Y);
 	printf("mpp = %f\n",*meters_per_pixel);
@@ -6462,6 +6535,10 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	
 	
 	height_step = (float)(im_resolution/h_divide);
+    
+    if(height_step > 3)
+        height_step = 3;
+    
 	printf("height step %f\n",height_step);
 
 #pragma omp parallel for schedule(guided)
@@ -8349,6 +8426,9 @@ bool VerticalLineLocus_Ortho(float *F_Height,F3DPOINT ref1_pt, F3DPOINT ref2_pt,
 	
 	height_step = (float)(pow(2.0,(float)Pyramid_step)*meters_per_pixel/h_divide);
 	
+    //if(height_step > 10)
+    //    height_step = 10;
+    
 	start_H		= GridPT3[target_index].minHeight;
 	end_H		= GridPT3[target_index].maxHeight;
 	
@@ -9940,7 +10020,7 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 			}*/
 		if(pyramid_step <= 4 && pyramid_step >= 3)
 		{
-			if(iteration <= 4)
+			//if(iteration <= 4)
 				check_dh		= true;
 		}
 		else if(pyramid_step == 2)
@@ -10117,9 +10197,11 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 				up_3sigma		= height_th;	
 			}
 			
+            printf("height_th = %f\t3sigma = %f\theight_th_2 = %f\n",height_th,up_3sigma,height_th_2);
+            
 			if(pyramid_step	 <= 4)
 			{
-				if(pyramid_step <= 4 && pyramid_step >= 3 && iteration <= 4)
+				/*if(pyramid_step <= 4 && pyramid_step >= 3 && iteration <= 4)
 				{
 					if(up_3sigma < height_th)
 						height_th = up_3sigma;
@@ -10134,6 +10216,9 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 					if(up_3sigma < height_th)
 						height_th = up_3sigma;
 				}
+                */
+                if(up_3sigma < height_th)
+                    height_th = up_3sigma;
 			}
 		}
 		else
@@ -10970,6 +11055,11 @@ UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int num
 
 	printf("BufferOfHeight = %f\n",BufferOfHeight);
 	
+    if(BufferOfHeight > 100)
+        BufferOfHeight = 100;
+    
+    printf("BufferOfHeight = %f\n",BufferOfHeight);
+    
 	m_bHeight		= (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
 	
 //	#pragma omp parallel shared(GridPT3,pts,tris,num_triangles,m_bHeight,pyramid_step,iteration,gridspace,boundary,gridsize,TIN_Grid_Size_X,TIN_Grid_Size_Y,DEM_error) private(tcnt)
@@ -14726,6 +14816,8 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
             }
             else if(Image_resolution < 1.25)
                 Image_resolution = 1.0;
+            else
+                Image_resolution = floor(Image_resolution);
         }
         else
             Image_resolution = 0.5;
@@ -14765,12 +14857,20 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	// load DEM infor from hdr file.
 	DEM_size = Envihdr_reader_DEM_ortho(param, DEM_header, &DEM_minX, &DEM_maxY, &DEM_resolution);
 	
-	Ortho_resolution = args.DEM_space;
+    if (!args.check_DEM_space)
+        Ortho_resolution = DEM_resolution;
+    else
+        Ortho_resolution = args.DEM_space;
 	
 	resolution[0] = DEM_resolution;
 	resolution[1] = Image_resolution;
 	resolution[2] = Ortho_resolution;
-	
+    
+	if(fabs(resolution[1] - resolution[2]) <= 1)
+    {
+        resolution[1] = Ortho_resolution;
+    }
+    
 	OrthoGridFactor = resolution[2]/resolution[0];
 	
 	impyramid_step	= ceil(log(resolution[2]/resolution[1])/log(2));
@@ -15712,7 +15812,7 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
 			fscanf(pFile,"%s",temp_str);
 			if(strcmp(temp_str,"<IMAGE>") == 0)
 			{
-				for(i=0;i<16;i++)
+				for(i=0;i<21;i++)
 					fgets(temp_str,sizeof(temp_str),pFile);
 				
 				fgets(linestr,sizeof(linestr),pFile);
@@ -15720,8 +15820,8 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
 				pos2 = strtok(pos1,"<");
 				*gsd_r			= atof(pos2);
 				
-				for(i=0;i<2;i++)
-					fgets(temp_str,sizeof(temp_str),pFile);
+				//for(i=0;i<2;i++)
+				//	fgets(temp_str,sizeof(temp_str),pFile);
 				
 				fgets(linestr,sizeof(linestr),pFile);
 				pos1 = strstr(linestr,">")+1;
