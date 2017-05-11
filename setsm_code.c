@@ -2192,8 +2192,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												matching_change_rate = 0.001;
 											
 											if(level <= 1)
-												matching_change_rate = 0.001;
-											
+                                            {
+                                                if(iteration > 5)
+                                                    matching_change_rate = 0.001;
+                                            }
+                                            
 											if(proinfo.IsRA)
 												matching_change_rate = 0.001;
 											
@@ -2357,8 +2360,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											if(iteration > 9 || level == 0 )
 												matching_change_rate = 0.001;
 											
-											if(level <= 1)
-												matching_change_rate = 0.001;
+                                            if(level <= 1)
+                                            {
+                                                if(iteration > 5)
+                                                    matching_change_rate = 0.001;
+                                            }
 											
 											if(proinfo.IsRA)
 												matching_change_rate = 0.001;
@@ -3515,21 +3521,36 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
 	{
         if(resolution >= 0.4)
         {
-            if(level >= 3)
+            /*if(level >= 3)
             {
                 
             }
-            else if(level > 0)
+            else*/ if(level > 0)
             {
-                if(R_resolution > DEM_resolution)
+                /*if(DEM_resolution >= 2)
                 {
-                    if(R_resolution > 8)
-                        *py_resolution = 8;
+                    if(R_resolution > DEM_resolution)
+                    {
+                        if(R_resolution > 8)
+                            *py_resolution = 8;
+                        else
+                            *py_resolution	 = R_resolution;
+                    }
                     else
-                        *py_resolution	 = R_resolution;
+                        *py_resolution = DEM_resolution;
                 }
                 else
-                    *py_resolution = DEM_resolution;
+                {*/
+                    if((*py_resolution)*3 > DEM_resolution)
+                    {
+                        if((*py_resolution)*3 > 8)
+                            *py_resolution = 8;
+                        else
+                            *py_resolution	 = (*py_resolution)*3;
+                    }
+                    else
+                        *py_resolution = DEM_resolution;
+                //}
             }
             else if(level == 0)
             {
@@ -9808,7 +9829,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					count_Results[0]	= count_MPs;
 					count_Results[1]	= count_tri;
 					
-					printf("iter = %d\tMPs = %d\tBlunder = %d\tcount_tri = %d\n",count,blunder_count[0],count_blunders,count_tri);
+					printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\n",count,grid_resolution,blunder_count[0],count_blunders,count_tri);
 					
 					//blunder remove from TIN minmax height
 					int floor_ieration = 2;
