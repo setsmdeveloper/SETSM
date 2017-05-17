@@ -31,6 +31,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include "mpi.h"
 
 char *dirname(char *path);
 
@@ -731,7 +732,6 @@ int main(int argc,char *argv[])
 	}
 	
 	printf("# of allocated threads = %d\n",omp_get_max_threads());
-			
 	
 	return 0;
 }
@@ -774,6 +774,16 @@ char* SetOutpathName(char *_path)
 
 void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_LeftImagefilename, char *_save_filepath)
 {
+	char a;
+	char *pa = &a;
+	char **ppa = &pa;
+	int argc = 0;
+	MPI_Init(&argc, &ppa);
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	
+
 	char computation_file[500];
 	time_t total_ST = 0, total_ET = 0;
 	float total_gap;
@@ -1341,15 +1351,25 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
+						MPI_Finalize();
+						if(rank != 0){
+							exit(0);
+						}
                     }
                     if(!args.check_ortho)
                     {
+
+						MPI_Finalize();
+						if(rank != 0){
+							exit(0);
+						}
                         char check_file[500];
                         FILE* pcheckFile;
                         int max_row = 0;
                         int max_col = 0;
                         int row,col;
-                        for(row = 1; row < 100 ; row++)
+				    
+						for(row = 1; row < 100 ; row++)
                         {
                             for(col = 1; col < 100 ; col++)
                             {
@@ -1366,6 +1386,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         iter_row_end = max_row + 1;
                         t_col_end	 = max_col + 1;
+						
                     }
 
                     printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
@@ -1376,7 +1397,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         printf("No matching results. Please check overlapped area of stereo pair, or image textures\n");
                         exit(1);
                     }
-                    
+					
                     char str_DEMfile[500];
                     sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
                     
@@ -1405,8 +1426,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         gap = difftime(ET,ST);
                         printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
                     }
-                    
-                    char hdr_path[500];
+                   
+					char hdr_path[500];
                     CSize seeddem_size;
                     float tminX, tmaxY, tgrid_size;
                     sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
@@ -1416,11 +1437,10 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                                     
                     fclose(pMetafile);
-                     
+					
                 }
                 else
                     printf("out of boundary!! please check boundary infomation!!\n");
-                
                 sprintf(temp_filepath,"%s/tmp",proinfo.save_filepath);
             }
 		}
@@ -1446,11 +1466,21 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,int *ori_minmaxHeight,int *Boundary, int row_iter, int col_iter)
 {
+
+	int rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
 	int final_iteration = -1;
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
 
+	int row_length = iter_row_end-iter_row_start;
+	int col_length = t_col_end-t_col_start;
+	int iterations[col_length*row_length*2];
+	int length = 0;
+	
 	for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
 	{
 		if(proinfo.IsRR)
@@ -1463,6 +1493,22 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 		for(col = t_col_start ; col < t_col_end ; col+= col_iter)
 		{
+			iterations[2*length] = row;
+			iterations[2*length+1] = col;
+			length+=1;
+		}
+	}
+
+	int i;
+	for(i = 0; i < length; i += 1)
+	{
+		int should_add = 0;
+		if(i % size == rank){
+			should_add = 1;
+		}
+		if(should_add){
+			row = iterations[2*i];
+			col = iterations[2*i+1];
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
 			char *filename;
 			
@@ -1631,8 +1677,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 						
 						
 						F2DPOINT *GridPT = NULL;
-						
-						while(lower_level_match && level >= DEM_level)
+				    	while(lower_level_match && level >= DEM_level)
 						{
 							printf("level = %d",level);
 							
@@ -1736,7 +1781,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 							
 							Grid_wgs = ps2wgs(param,Size_Grid2D.width*Size_Grid2D.height,GridPT);
-							
+
 							if(proinfo.pre_DEMtif && !flag_start)
 							{
 								ratio = VerticalLineLocus_seeddem(SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], LRPCs, RRPCs,
@@ -1908,11 +1953,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								{
 									FILE* survey;
 									int i;
-									
 									if(check_ortho_cal && proinfo.IsRA != 1)
 									{
-										count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
-										survey	= fopen(filename_mps_fin,"r");
+								    	count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
+								    	survey	= fopen(filename_mps_fin,"r");
 									}
 									else
 										survey	= fopen(filename_mps,"r");
@@ -1942,7 +1986,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									{
 										TIN_split_level = 4;
 									}
-									
+						    
 									if(level == 0 && iteration == 3)
 									{
 										F3DPOINT *ptslists;
@@ -1956,6 +2000,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										fclose(survey);
 										
 										FILE *pFile = fopen(filename_mps,"w");
+						    
 										for(i=0;i<count_MPs;i++)
 										{
 											if(ptslists[i].flag != 1)
@@ -1989,7 +2034,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											int i;
 											
 											ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
-											
+									    
 											i = 0;
 											while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 											{
@@ -2019,8 +2064,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
 											}
 											
-											
-											if(level >= TIN_split_level || count_MPs < 10000)
+									    	if(level >= TIN_split_level || count_MPs < 10000)
 											{
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
@@ -2049,8 +2093,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											}
 											
 											free(scaled_ptslists);
-										
-										
+									    
 											fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
 											
 											printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
@@ -2618,7 +2661,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		Rimageparam[1] /= RA_count;
 	}
 	printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count,Rimageparam[0],Rimageparam[1]);
-
+	MPI_Barrier(MPI_COMM_WORLD);
 	return final_iteration;
 }
 
@@ -8827,7 +8870,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, F2DPOINT *GridPts_XY, UG
 	}
 
 	temp_fid			= fopen(filename_mps,"w");
-
 	if(Pyramid_step >= 5)
 		roh_next	= 0;
 	else if(Pyramid_step >= 2)
@@ -9408,6 +9450,9 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, int* Boundary, UGRID *Gr
 		}
 		
 		survey	= fopen(filename_mps_pre,"r");
+		if(!survey){
+			printf("was unable to open %s\n",filename_mps_pre);
+		}
 		if(survey)
 		{
 			int i=0;
@@ -10705,13 +10750,17 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, float* INCC, bool fl
 int SetttingFlagOfGrid(int *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,float grid_resolution,uint8 iteration,
 					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps)
 {
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
 	int total_count = 0;
 	float X,Y,Z;
 	int t_flag;
 	int i = 0;
+	printf("opening first two files\n\n");
 	FILE *fid = fopen(filename_mps_anchor,"r");
 	FILE *fid_all = fopen(filename_mps,"w");
-	
+
 	while( i < count_MPs_anchor && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
 	{
 		int grid_index;
