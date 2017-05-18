@@ -1081,7 +1081,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 fgets(bufstr,500,pFile_echo);
                                 if (strstr(bufstr,"RA param X")!=NULL)
                                 {
-                                    sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
+                                    sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Rimageparam[0],&Rimageparam[1]);
                                     if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
                                         check_load_RA = true;
                                 }
@@ -1123,7 +1123,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 fgets(bufstr,500,pFile_echo);
                                 if (strstr(bufstr,"RA param X")!=NULL)
                                 {
-                                    sscanf(bufstr,"RA param X = %f Y = %f\n",&Rimageparam[0],&Rimageparam[1]);
+                                    sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Rimageparam[0],&Rimageparam[1]);
                                     if(Rimageparam[0] != 0 && Rimageparam[1] != 0)
                                         check_load_RA = true;
                                 }
@@ -1172,13 +1172,13 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                             if (strstr(bufstr,"RA Params=")!=NULL)
                                             {
                                                 printf("%s\n",bufstr);
-                                                sscanf(bufstr,"RA Params=%f\t%f\n",&Rimageparam[0],&Rimageparam[1]);
+                                                sscanf(bufstr,"RA Params=%lf\t%lf\n",&Rimageparam[0],&Rimageparam[1]);
                                             }
                                             else if(strstr(bufstr,"SETSM Version=")!=NULL)
                                             {
                                                 printf("%s\n",bufstr);
                                                 double version;
-                                                sscanf(bufstr,"SETSM Version=%f\n",&version);
+                                                sscanf(bufstr,"SETSM Version=%lf\n",&version);
                                                 printf("version %f\n",version);
                                                 
                                                 if (version > 2.0128) {
@@ -1954,7 +1954,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									if (grid_resolution <= 8)
 									{
 										if(grid_resolution <= 8 && grid_resolution > 4)
-											TIN_split_level = 2;
+											TIN_split_level = 0;
 										else if(grid_resolution <= 4)
 											TIN_split_level = 2;
 									}
@@ -2212,7 +2212,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											if(proinfo.pre_DEMtif)
 											{
-												if(level >= 3)
+												if(level >= 4)
 													matching_change_rate = 0.001;
 											}
 											
@@ -2380,7 +2380,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											
 											if(proinfo.pre_DEMtif)
 											{
-												if(level >= 3)
+												if(level >= 4)
 													matching_change_rate = 0.001;
 											}
 											
@@ -3511,66 +3511,108 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
     
     printf("pre resolution %f\t level %d\t final_level_iteration %d\n",*py_resolution,level,final_level_iteration);
     
-    if(*py_resolution > 32)
-    {
-        *py_resolution = (int)(*py_resolution/4.0);
-        *grid_resolution = *py_resolution;
-    }
+    
     
 	if(*dem_update_flag)
 	{
-        if(resolution >= 0.4)
+        if(*py_resolution > 32)//low-res original imagery
         {
-            /*if(level >= 3)
+            *py_resolution = (int)(*py_resolution/4.0);
+            *grid_resolution = *py_resolution;
+        }
+        else
+        {
+            if(resolution >= 0.4)
             {
-                
-            }
-            else*/ if(level > 0)
-            {
-                /*if(DEM_resolution >= 2)
+                /*if(level >= 3)
                 {
-                    if(R_resolution > DEM_resolution)
+                    
+                }
+                else*/ if(level > 0)
+                {
+                    /*if(DEM_resolution >= 2)
                     {
-                        if(R_resolution > 8)
-                            *py_resolution = 8;
+                        if(R_resolution > DEM_resolution)
+                        {
+                            if(R_resolution > 8)
+                                *py_resolution = 8;
+                            else
+                                *py_resolution	 = R_resolution;
+                        }
                         else
-                            *py_resolution	 = R_resolution;
+                            *py_resolution = DEM_resolution;
                     }
                     else
+                    {*/
+                        if((*py_resolution)*3 > DEM_resolution) //low-res DEM more than 8m
+                        {
+                            if(DEM_resolution > 8)
+                            {
+                                *py_resolution = DEM_resolution;
+                            }
+                            else
+                            {
+                                if((*py_resolution)*3 > 8)
+                                    *py_resolution = 8;
+                                else
+                                    *py_resolution	 = (*py_resolution)*3;
+                            }
+                        }
+                        else
+                            *py_resolution = DEM_resolution;
+                    //}
+                }
+                else if(level == 0)
+                {
+                    if(final_level_iteration == 1)
+                    {
+                        if(*py_resolution < 2)
+                        {
+                            if((*py_resolution)*4 > DEM_resolution)
+                                *py_resolution	 = (*py_resolution)*4;
+                            else
+                                *py_resolution	 = DEM_resolution;
+                        }
+                        else
+                        {
+                            *py_resolution = DEM_resolution;
+                        }
+                    }
+                    else if(final_level_iteration == 2)
+                    {
+                        if(*py_resolution < 2)
+                        {
+                            if((*py_resolution)*2 > DEM_resolution)
+                                *py_resolution	 = (*py_resolution)*2;
+                            else
+                                *py_resolution	 = DEM_resolution;
+                        }
+                        else
+                        {
+                            *py_resolution = DEM_resolution;
+                        }
+                    }
+                    else
+                        *py_resolution	 = DEM_resolution;
+                }
+            }
+            else
+            {
+                /*if(level > 0)
+                {
+                    if(*py_resolution < DEM_resolution)
                         *py_resolution = DEM_resolution;
                 }
-                else
-                {*/
-                    if((*py_resolution)*3 > DEM_resolution)
-                    {
-                        if((*py_resolution)*3 > 8)
-                            *py_resolution = 8;
-                        else
-                            *py_resolution	 = (*py_resolution)*3;
-                    }
-                    else
-                        *py_resolution = DEM_resolution;
-                //}
-            }
-            else if(level == 0)
-            {
-                if(final_level_iteration == 1)
+                else*/ if(level == 0)
                 {
-                    if(*py_resolution < 2)
+                    if(final_level_iteration == 1)
                     {
                         if((*py_resolution)*4 > DEM_resolution)
                             *py_resolution	 = (*py_resolution)*4;
                         else
                             *py_resolution	 = DEM_resolution;
                     }
-                    else
-                    {
-                        *py_resolution = DEM_resolution;
-                    }
-                }
-                else if(final_level_iteration == 2)
-                {
-                    if(*py_resolution < 2)
+                    else if(final_level_iteration == 2)
                     {
                         if((*py_resolution)*2 > DEM_resolution)
                             *py_resolution	 = (*py_resolution)*2;
@@ -3578,39 +3620,8 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
                             *py_resolution	 = DEM_resolution;
                     }
                     else
-                    {
-                        *py_resolution = DEM_resolution;
-                    }
-                }
-                else
-                    *py_resolution	 = DEM_resolution;
-            }
-        }
-        else
-        {
-            /*if(level > 0)
-            {
-                if(*py_resolution < DEM_resolution)
-                    *py_resolution = DEM_resolution;
-            }
-            else*/ if(level == 0)
-            {
-                if(final_level_iteration == 1)
-                {
-                    if((*py_resolution)*4 > DEM_resolution)
-                        *py_resolution	 = (*py_resolution)*4;
-                    else
                         *py_resolution	 = DEM_resolution;
                 }
-                else if(final_level_iteration == 2)
-                {
-                    if((*py_resolution)*2 > DEM_resolution)
-                        *py_resolution	 = (*py_resolution)*2;
-                    else
-                        *py_resolution	 = DEM_resolution;
-                }
-                else
-                    *py_resolution	 = DEM_resolution;
             }
         }
         
@@ -3859,7 +3870,7 @@ UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize
 			GridPT3[i].Matched_height	= -1000.0;
 			GridPT3[i].ortho_ncc		= 0;
 			GridPT3[i].angle			= 0;
-			GridPT3[i].false_h_count	= 0;
+//			GridPT3[i].false_h_count	= 0;
 
 			GridPT3[i].minHeight		= (double)(minmaxHeight[0] - 0.5);
 			GridPT3[i].maxHeight		= (double)(minmaxHeight[1] + 0.5);
@@ -4318,9 +4329,9 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 }
 
 
-double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
+float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
 {
-	double *out;
+	float *out;
 	FILE *bin;
 	int check_ftype = 1; // 1 = tif, 2 = bin 
 	TIFF *tif = NULL;
@@ -4357,7 +4368,7 @@ double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSi
 			data_size->width	= cols[1] - cols[0];
 			data_size->height	= rows[1] - rows[0];
 			
-			out				= (double*)malloc(sizeof(double)*data_size->height*data_size->width);
+			out				= (float*)malloc(sizeof(float)*data_size->height*data_size->width);
 			
 			scanline		= TIFFScanlineSize(tif);
 			
@@ -4371,9 +4382,9 @@ double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSi
 					TIFFReadScanline(tif,buf,row,s);
 				for (row=rows[0];row<rows[1];row++)
 				{
-					double* t_data;
+					float* t_data;
 					TIFFReadScanline(tif,buf,row,s);
-					t_data = (double*)buf;
+					t_data = (float*)buf;
 #pragma omp parallel for private(a) schedule(guided)
 					for(a = cols[0];a<cols[1];a++)
 					{
@@ -4390,7 +4401,7 @@ double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSi
 			int tileL,count_W,count_L,starttileL,starttileW;
 			uint16 start_row,start_col,end_row,end_col;
 			tdata_t buf;
-			double* t_data;
+			float* t_data;
 			
 			TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
 			TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
@@ -4416,7 +4427,7 @@ double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSi
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 			
-			out				= (double*)malloc(sizeof(double)*data_size->height*data_size->width);
+			out				= (float*)malloc(sizeof(float)*data_size->height*data_size->width);
 			
 			buf				= _TIFFmalloc(TIFFTileSize(tif));
 			
@@ -4428,7 +4439,7 @@ double *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSi
 				for (col = 0; col < count_W; col ++)
 				{
 					TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
-					t_data = (double*)buf;
+					t_data = (float*)buf;
 #pragma omp parallel for private(i,j) schedule(guided)
 					for (i=0;i<tileL;i++)
 					{
@@ -4537,7 +4548,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 			if (strstr(bufstr,"Output Resolution=")!=NULL)
 			{
 				printf("%s\n",bufstr);
-				sscanf(bufstr,"Output Resolution=%f\n",&grid_size);
+				sscanf(bufstr,"Output Resolution=%lf\n",&grid_size);
 			}
 			else if (strstr(bufstr,"Output dimensions=")!=NULL)
 			{
@@ -4547,7 +4558,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 			else if (strstr(bufstr,"Upper left coordinates=")!=NULL)
 			{
 				printf("%s\n",bufstr);
-				sscanf(bufstr,"Upper left coordinates=%f\t%f\n",&minX,&maxY);
+				sscanf(bufstr,"Upper left coordinates=%lf\t%lf\n",&minX,&maxY);
 			}
 		}
 		fclose(pFile_meta);
@@ -4587,8 +4598,8 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 		}
 	}
 	
-	maxX	= minX + grid_size*seeddem_size.width;
-	minY	= maxY - grid_size*seeddem_size.height;
+	maxX	= minX + grid_size*((double)seeddem_size.width);
+	minY	= maxY - grid_size*((double)seeddem_size.height);
 	
 	printf("%d\n",seeddem_size.width);
 	printf("%d\n",seeddem_size.height);
@@ -4633,10 +4644,10 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 		
 		if(check_ftype == 2)
 		{
-			double *seeddem = NULL;
+			float *seeddem = NULL;
 			bin = fopen(GIMP_path,"rb");
-			seeddem = (double*)calloc(sizeof(double),seeddem_size.width*seeddem_size.height);
-			fread(seeddem,sizeof(double),seeddem_size.width*seeddem_size.height,bin);
+			seeddem = (float*)calloc(sizeof(float),seeddem_size.width*seeddem_size.height);
+			fread(seeddem,sizeof(float),seeddem_size.width*seeddem_size.height,bin);
 			
 			for (row = 0; row < Grid_size.height; row ++) {
 				for (col = 0; col < Grid_size.width; col ++) {
@@ -4709,7 +4720,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 		}
 		else
 		{
-			double *seeddem = NULL;
+			float *seeddem = NULL;
 			int cols[2];
 			int rows[2];
 			CSize data_size;
@@ -4726,7 +4737,8 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 			rows[1] = (int)((maxY - a_minY)/grid_size + 0.5);
 			
 			seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
-			
+			printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
+            
 			for (row = 0; row < Grid_size.height; row ++) {
 				for (col = 0; col < Grid_size.width; col ++) {
 					int index_grid = row*Grid_size.width + col;
@@ -6513,7 +6525,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	double temp_LIA[2] = {0,0};
 	
 	int numofpts;
-	D2DPOINT *all_left_im_cd, *all_right_im_cd;
+	F2DPOINT *all_left_im_cd, *all_right_im_cd;
 	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
@@ -6572,8 +6584,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
 	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
-	all_right_im_cd= (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
 	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
 	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 	
@@ -6633,8 +6645,10 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 				Left_Imagecoord_py	= OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
 				Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
 				
-				all_left_im_cd[pt_index_im] = Left_Imagecoord_py;
-				all_right_im_cd[pt_index_im]= Right_Imagecoord_py;
+				all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
+                all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
+				all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
+                all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
 				
 			}
 		}
@@ -7657,7 +7671,7 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 	double temp_LIA[2] = {0,0};
 	
 	int numofpts;
-	D2DPOINT *all_left_im_cd, *all_right_im_cd;
+	F2DPOINT *all_left_im_cd, *all_right_im_cd;
 	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
@@ -7682,8 +7696,8 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
 	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
-	all_right_im_cd= (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
 	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
 	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 
@@ -7736,8 +7750,10 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 				Left_Imagecoord_py	= OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
 				Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
 				
-				all_left_im_cd[pt_index_im] = Left_Imagecoord_py;
-				all_right_im_cd[pt_index_im]= Right_Imagecoord_py;
+				all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
+                all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
+				all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
+                all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
 			}
 		}
 	}
@@ -8147,7 +8163,7 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 	double temp_LIA[2] = {0,0};
 	
 	int numofpts;
-	D2DPOINT *all_left_im_cd, *all_right_im_cd;
+	F2DPOINT *all_left_im_cd, *all_right_im_cd;
 	int sub_imagesize_w, sub_imagesize_h;
 	int pixel_buffer = 1000;
 	int GNCC_level	= 3;
@@ -8176,8 +8192,8 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 	long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
 	printf("sub_imagesize_total %ld\n",sub_imagesize_total);
 	
-	all_left_im_cd = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
-	all_right_im_cd= (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
+	all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+	all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
 	if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
 	if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 	
@@ -8229,8 +8245,10 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 				Left_Imagecoord_py	= OriginalToPyramid_single(Left_Imagecoord,Lstartpos,blunder_selected_level);
 				Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,blunder_selected_level);
 				
-				all_left_im_cd[pt_index_im] = Left_Imagecoord_py;
-				all_right_im_cd[pt_index_im]= Right_Imagecoord_py;
+				all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
+                all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
+				all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
+                all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
 				
 			}
 			else {
@@ -9553,7 +9571,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 	if (grid_resolution <= 8)
 	{
 		if(grid_resolution <= 8 && grid_resolution > 4)
-			TIN_split_level = 2;
+			TIN_split_level = 0;
 		else if(grid_resolution <= 4)
 			TIN_split_level = 2;
 	}
@@ -11716,7 +11734,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 			
 			result[matlab_index].maxHeight					= GridPT3[matlab_index].maxHeight;
 			
-			result[matlab_index].false_h_count	= 0;
+//			result[matlab_index].false_h_count	= 0;
 			
 			if(pyramid_step >= 2)
 			{
@@ -11724,7 +11742,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 				{
 					
 					
-					if(GridPT3[matlab_index].false_h_count > 0)
+/*					if(GridPT3[matlab_index].false_h_count > 0)
 					{
 						result[matlab_index].false_h_count				= GridPT3[matlab_index].false_h_count;
 						
@@ -11733,18 +11751,18 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 							result[matlab_index].false_h[kkk] = GridPT3[matlab_index].false_h[kkk];
 						free(GridPT3[matlab_index].false_h);
 					}
-				}
+*/				}
 				else
 				{
 					
-					if(GridPT3[matlab_index].false_h_count > 0)
-						free(GridPT3[matlab_index].false_h);
+//					if(GridPT3[matlab_index].false_h_count > 0)
+//						free(GridPT3[matlab_index].false_h);
 				}
 			}
 			else
 			{
-				if(GridPT3[matlab_index].false_h_count > 0)
-					free(GridPT3[matlab_index].false_h);
+//				if(GridPT3[matlab_index].false_h_count > 0)
+//					free(GridPT3[matlab_index].false_h);
 			}
 			
 			if(m_bHeight[matlab_index] == 0)
@@ -11791,7 +11809,7 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 				resize_GridPT3[index].anchor_flag	= preGridPT3[pre_index].anchor_flag;
 				resize_GridPT3[index].ortho_ncc		= preGridPT3[pre_index].ortho_ncc;
 				resize_GridPT3[index].angle			= preGridPT3[pre_index].angle;
-				resize_GridPT3[index].false_h_count = 0;
+//				resize_GridPT3[index].false_h_count = 0;
 			}
 			else
 			{
@@ -11803,7 +11821,7 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 				resize_GridPT3[index].anchor_flag	= 0;
 				resize_GridPT3[index].ortho_ncc		= 0;
 				resize_GridPT3[index].angle			= 0;
-				resize_GridPT3[index].false_h_count = 0;
+//				resize_GridPT3[index].false_h_count = 0;
 			}
 		}
 	}
@@ -13269,7 +13287,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	fscanf(fheader,"%lf\t%lf\t%lf\t%d\t%d",&DEM_minX,&DEM_maxY,&dummy,&DEM_cols,&DEM_rows);
 	fclose(fheader);
 	
-	//remove(DEM_header);
+	remove(DEM_header);
 	
 	
 	for(i=0;i<row_count;i++)
@@ -13321,7 +13339,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		fclose(t_file);
 	}
 	fclose(fheader);
-	//remove(iterfile);
+	remove(iterfile);
 	
 	if(total_search_count > 0)
 	{
@@ -13333,7 +13351,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 			fscanf(t_file,"%lf\t%lf\n",&cal_gridpts_X[i],&cal_gridpts_Y[i]);
 		}
 		fclose(t_file);
-		//remove(t_savefile);
+		remove(t_savefile);
 	}
 	
 	for(i=0;i<row_count;i++)
@@ -13736,12 +13754,12 @@ CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, do
 		{
 			if(_param.projection == 1)
 			{
-				sscanf(bufstr, "map info = {%s %s %d%s %d%s %f%s %f%s %f%s %f%s %s %s\n", t_str1, t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+				sscanf(bufstr, "map info = {%s %s %d%s %d%s %lf%s %lf%s %lf%s %lf%s %s %s\n", t_str1, t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
 					   &(*grid_size), t_str, &(*grid_size), t_str, t_str, t_str);
 			}
 			else
 			{
-				sscanf(bufstr, "map info = {%s %d%s %d%s %f%s %f%s %f%s %f%s %d%s %s %s %s\n", t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
+				sscanf(bufstr, "map info = {%s %d%s %d%s %lf%s %lf%s %lf%s %lf%s %d%s %s %s %s\n", t_str2, &t_int1, t_str, &t_int2, t_str, &(*minX), t_str, &(*maxY), t_str,
 					   &(*grid_size), t_str, &(*grid_size), t_str, &t_int1, t_str, t_str, t_str, t_str);
 			}
 		}

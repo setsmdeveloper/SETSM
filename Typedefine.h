@@ -141,8 +141,8 @@ typedef struct UpdateGrid{
 	double Matched_height;//before blunder detection
 	double ortho_ncc;
 	double angle;
-	uint16 false_h_count;
-	double *false_h;
+//	uint16 false_h_count;
+//	double *false_h;
 	
 }UGRID;
 
