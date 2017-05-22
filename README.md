@@ -58,6 +58,7 @@ mkdir build
 cd build
 CC=icc cmake ..
 make
+make install
 ```
 
 Example 2:  Build with icc specifying a location for the TIFF library.
@@ -66,6 +67,7 @@ mkdir build
 cd build
 CC=icc cmake -DCMAKE_PREFIX_PATH=$HOME/libTIFF ..
 make
+make install
 ```
 
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
