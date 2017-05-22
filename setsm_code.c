@@ -6563,13 +6563,16 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	temp_GrP.m_Z = minmaxHeight[1];
 	temp_p2		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
 	
-	*meters_per_pixel = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));	
+	*meters_per_pixel = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
 	
 	printf("mpp = %f\n",*meters_per_pixel);
 	
     if(*meters_per_pixel > 5)
         *meters_per_pixel = 5;
 	
+    if(*meters_per_pixel < im_resolution)
+        *meters_per_pixel = im_resolution;
+    
 	printf("h,x,y =%f\t %f\t %f\t\n%f\t %f\t %f\n",minmaxHeight[0], temp_p1.m_X, temp_p1.m_Y, minmaxHeight[1],temp_p2.m_X, temp_p2.m_Y);
 	printf("mpp = %f\n",*meters_per_pixel);
 	
