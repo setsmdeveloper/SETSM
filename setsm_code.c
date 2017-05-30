@@ -796,7 +796,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		int final_iteration;
 		
 		double **LRPCs, **RRPCs, minLat, minLon;
-
+        ImageInfo leftimage_info;
+        ImageInfo rightimage_info;
+        
 		uint8 pre_DEM_level = 0;
 		uint8 DEM_level		= 0;
 		uint8 NumOfIAparam	= 2;
@@ -853,6 +855,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             {
                 LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
                 RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
+                
+                OpenXMLFile_orientation(proinfo.LeftRPCfilename,&leftimage_info);
+                OpenXMLFile_orientation(proinfo.RightRPCfilename,&rightimage_info);
+                
+                printf("leftimage info\n Mean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Intrack_angle,leftimage_info.Offnadir_angle);
+                printf("leftimage info\n Mean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Intrack_angle.rightimage_info.Offnadir_angle);
             }
             else
             {
@@ -5118,6 +5126,186 @@ double** OpenXMLFile_Pleiades(char* _filename)
             pos2 = NULL;
     }
     return out;
+}
+
+void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
+{
+    
+    FILE *pFile;
+    char temp_str[1000];
+    char linestr[1000];
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    char direction[100];
+    
+    double dx, dy;
+    double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
+    double UL[3], UR[3], LR[3], LL[3];
+    double angle;
+    
+    //printf("%s\n",_filename);
+    
+    pFile           = fopen(_filename,"r");
+    if(pFile)
+    {
+        bool check_br = false;
+        bool check_d = false;
+        
+        while(!feof(pFile) && (!check_br || !check_d))
+        {
+            fscanf(pFile,"%s",temp_str);
+            if(strcmp(temp_str,"<BAND_P>") == 0 && !check_br)
+            {
+                check_br = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                for(i=0;i<3;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    UL[i]			= atof(pos2);
+                    Iinfo->UL[i]    = UL[i];
+                    
+                }
+                //printf("UL %f %f \n",UL[0],UL[1]);
+                
+                for(i=0;i<3;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    UR[i]			= atof(pos2);
+                    Iinfo->UR[i]    = UR[i];
+                }
+                //printf("UR %f %f \n",UR[0],UR[1]);
+                
+                for(i=0;i<3;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    LR[i]			= atof(pos2);
+                    Iinfo->LR[i]    = LR[i];
+                }
+                //printf("LR %f %f \n",LR[0],LR[1]);
+                
+                for(i=0;i<3;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    LL[i]			= atof(pos2);
+                    Iinfo->LL[i]    = LL[i];
+                }
+                //printf("LL %f %f \n",LL[0],LL[1]);
+            }
+            
+            
+            if(strcmp(temp_str,"<IMAGE>") == 0 && !check_d)
+            {
+                check_d = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                //printf("scandirection %s\n",pos2);
+                sprintf(direction,"%s",pos2);
+                
+                for(i=0;i<24;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MSUNAz			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MSUNEl			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MSATAz			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MSATEl			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MIntrackangle			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MCrosstrackangle			= atof(pos2);
+                
+                
+                for(i=0;i<2;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                MOffnadirangle			= atof(pos2);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                Cloud			= atof(pos2);
+                
+            }
+        }
+        fclose(pFile);
+        
+        Iinfo->Mean_sun_azimuth_angle   = MSUNAz;
+        Iinfo->Mean_sun_elevation       = MSUNEl;
+        Iinfo->Mean_sat_azimuth_angle   = MSATAz;
+        Iinfo->Mean_sat_elevation       = MSATEl;
+        Iinfo->Intrack_angle            = MIntrackangle;
+        Iinfo->Crosstrack_angle         = MCrosstrackangle;
+        Iinfo->Offnadir_angle           = MOffnadirangle;
+        Iinfo->cloud                    = Cloud;
+
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+        if(token)
+            token = NULL;
+    }
 }
 
 void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, CSize* _imagesize, double* _Hinterval)

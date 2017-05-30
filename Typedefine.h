@@ -251,6 +251,28 @@ typedef struct ArgumentInfo{
 	
 } ARGINFO;
 
+typedef struct tagImageInfo
+{
+    int month;
+    int date;
+    int year;
+    int scandirection;
+    float Mean_sun_azimuth_angle;
+    float Mean_sun_elevation;
+    float Mean_sat_azimuth_angle;
+    float Mean_sat_elevation;
+    float Intrack_angle;
+    float Crosstrack_angle;
+    float Offnadir_angle;
+    float cloud;
+    float Image_ori;
+    float Image_ori_azi;
+    float dx,dy,f;
+    float UL[3], UR[3],LR[3],LL[3];
+    char filename[500];
+    char Ofilename[500];
+} ImageInfo;
+
 #endif
 
 #ifndef __VDEFS_H

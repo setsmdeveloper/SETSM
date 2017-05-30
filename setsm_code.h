@@ -90,6 +90,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary,CSize 
 
 double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c);
 double** OpenXMLFile_Pleiades(char* _filename);
+void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
 void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, CSize* _imagesize, double* _Hinterval);
 bool subsetImage(TransParam transparam, uint8 NumofIAparam, double **LRPCs, double *LImageParam, char *LImageFilename, double **RRPCs, double *RImageParam, char *RImageFilename, 
