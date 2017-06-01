@@ -78,16 +78,15 @@ typedef struct tagD3DPoint
 	double m_X;
 	double m_Y;
 	double m_Z;
-    uint8 flag;
 } D3DPOINT;
 
 typedef struct tagTransParam
 {
 	bool bHemisphere;
 	// a and b are radius and eccentricity of WGS84 ellipsoid, repectively.
-	double a, e;
+	float a, e;
 	// phi_c and lambda_0 are the latitude of true scale of standard parallel and meridian along positive Y axis, respectively.
-	double phi_c, lambda_0;
+	float phi_c, lambda_0;
 	double t_c, m_c;
 	int pm;
 	
@@ -116,43 +115,43 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-	double result0;
-	double result1;
-	double result2;
-	double result3;
-	double result4;
+	float result0;
+	float result1;
+	float result2;
+	float result3;
+	float result4;
 	int roh_count;
 	uint8 mag_tag;
-	double INCC;
-	double GNCC;
+	float INCC;
+	float GNCC;
 } NCCresult;
 
 typedef struct UpdateGrid{
-	double minHeight;
-	double maxHeight;
+	float minHeight;
+	float maxHeight;
 	
-	double t_minHeight;
-	double t_maxHeight;
+	float t_minHeight;
+	float t_maxHeight;
 	
-	double Height; //after blunder detection
+	float Height; //after blunder detection
 	uint8 Matched_flag;
-	double roh;
+	float roh;
 	uint8 anchor_flag;
-	double Matched_height;//before blunder detection
-	double ortho_ncc;
-	double angle;
-//	uint16 false_h_count;
-//	double *false_h;
+	float Matched_height;//before blunder detection
+	float ortho_ncc;
+	float angle;
+	uint16 false_h_count;
+	float *false_h;
 	
 }UGRID;
 
 typedef struct BlunderIP{
 	uint8 Pyramid_step;
 	CSize Size_Grid2D;
-	double* Boundary;
-	double gridspace;
+	int* Boundary;
+	float gridspace;
 	uint8 iteration;
-	double Hinterval;
+	float Hinterval;
 	bool height_check_flag;
 }BL;
 
@@ -168,15 +167,15 @@ typedef struct ProjectInfo{
 	char priori_DEM_tif[500];
 	char metafilename[500];
 	
-	double resolution;
-	double DEM_resolution;
-	double preDEM_space;
-	double cal_boundary[4];
-	double RA_param[2];
-	double seedDEMsigma;
+	float resolution;
+	float DEM_resolution;
+	float preDEM_space;
+	float cal_boundary[4];
+	float RA_param[2];
+	float seedDEMsigma;
 	
-	double minHeight;
-	double maxHeight;
+	float minHeight;
+	float maxHeight;
 	int start_row;
 	int end_row;
 	int start_col;
@@ -225,29 +224,29 @@ typedef struct ArgumentInfo{
 	char Outputpath[500];
 	char Outputpath_name[500];
 	int Threads_num;
-	double DEM_space;
+	float DEM_space;
 	char seedDEMfilename[500];
 	char metafilename[500];
-	double seedDEMsigma;
-	double minHeight;
-	double maxHeight;
+	float seedDEMsigma;
+	float minHeight;
+	float maxHeight;
 	int start_row;
 	int end_row;
 	int start_col;
 	int end_col;
-	double ra_line;
-	double ra_sample;
+	float ra_line;
+	float ra_sample;
 	int RA_row;
 	int RA_col;
 	int tilesize;
-	double Min_X, Max_X, Min_Y, Max_Y;
+	int Min_X, Max_X, Min_Y, Max_Y;
 	
 	int projection; //PS = 1, UTM = 2
     int utm_zone;
     int sensor_provider; //DG = 1, Pleiades = 2
-    double image_resolution;
+    float image_resolution;
     int ortho_count;
-    double overlap_length;
+    float overlap_length;
 	
 } ARGINFO;
 
@@ -276,8 +275,8 @@ typedef struct tagFreelist
 
 typedef struct tagPoint
 {
-	double x ;
-	double y ;
+	float x ;
+	float y ;
 } Point ;
 
 /* structure used both for sites and for vertices */
@@ -292,7 +291,7 @@ typedef struct tagSite
 
 typedef struct tagEdge
 {
-	double a, b, c ;
+	float a, b, c ;
 	Site * ep[2] ;
 	Site * reg[2] ;
 	int edgenbr ;
@@ -309,7 +308,7 @@ typedef struct tagHalfedge
 	int ELrefcnt ;
 	char ELpm ;
 	Site * vertex ;
-	double ystar ;
+	float ystar ;
 	struct tagHalfedge * PQnext ;
 } Halfedge ;
 
@@ -335,16 +334,16 @@ Edge * bisect(Site *, Site *) ;
 Site * intersect(Halfedge *, Halfedge *) ;
 int right_of(Halfedge *, Point *) ;
 void endpoint(Edge *, int, Site *) ;
-double dist(Site *, Site *) ;
+float dist(Site *, Site *) ;
 void makevertex(Site *) ;
 void deref(Site *) ;
 void ref(Site *) ;
-extern double deltax, deltay ;
+extern float deltax, deltay ;
 extern int nsites, nedges, sqrt_nsites, nvertices ;
 extern Freelist sfl, efl ;
 
 /* heap.c */
-void PQinsert(Halfedge *, Site *, double) ;
+void PQinsert(Halfedge *, Site *, float) ;
 void PQdelete(Halfedge *) ;
 int PQbucket(Halfedge *) ;
 int PQempty(void) ;
@@ -366,9 +365,9 @@ void free_all(void);
 
 /* output.c */
 void openpl(void) ;
-void line(double, double, double, double) ;
-void circle(double, double, double) ;
-void range(double, double, double, double) ;
+void line(float, float, float, float) ;
+void circle(float, float, float) ;
+void range(float, float, float, float) ;
 void out_bisector(Edge *) ;
 void out_ep(Edge *) ;
 void out_vertex(Site *) ;
