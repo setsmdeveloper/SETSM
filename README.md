@@ -70,6 +70,15 @@ make
 make install
 ```
 
+Example 3:  Build with icc specifying a location for make install.
+```
+mkdir build
+cd build
+CC=icc cmake -DCMAKE_INSTALL_PREFIX=./desired_location ..
+make
+make install
+```
+
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
 
 ## License
