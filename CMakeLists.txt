@@ -59,3 +59,6 @@ target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
 target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
 target_link_libraries (setsm m ${TIFF_LIBRARIES})
 list (APPEND CMAKE_C_FLAGS ${OpenMP_C_FLAGS}${OPENMP_OPTION})
+
+# Make install
+install(TARGETS setsm DESTINATION .)
