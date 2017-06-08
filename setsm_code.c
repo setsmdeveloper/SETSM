@@ -1668,7 +1668,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                         int total_tile;
                         double new_subBoundary_RA[4];
                         bool check_new_subBoundary_RA = false;
-                        
+                        double preBoundary[4];
                         if(lengthOfX < lengthOfY)
                         {
                             if(lengthOfY > tilesize_RA)
@@ -1698,15 +1698,27 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                             
                             if(proinfo.IsRA && check_new_subBoundary_RA)
                             {
+                                preBoundary[0] = subBoundary[0];
+                                preBoundary[1] = subBoundary[1];
+                                preBoundary[2] = subBoundary[2];
+                                preBoundary[3] = subBoundary[3];
+                                
                                 subBoundary[0] = new_subBoundary_RA[0];
                                 subBoundary[1] = new_subBoundary_RA[1];
                                 subBoundary[2] = new_subBoundary_RA[2];
                                 subBoundary[3] = new_subBoundary_RA[3];
                                 
-                                check_new_subBoundary_RA = false;
+                                RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
+                                
+                                subsetImage(param,NumOfIAparam,LRPCs,Limageparam,proinfo.LeftImagefilename,RRPCs,t_Rimageparam,proinfo.RightImagefilename,subBoundary,minmaxHeight,
+                                            &Lstartpos_ori,&Rstartpos_ori,Lsubsetfilename,Rsubsetfilename,&Lsubsetsize, &Rsubsetsize, fid,proinfo.check_checktiff);
+                                
+                                SetPySizes(data_size_l, data_size_r, Lsubsetsize, Rsubsetsize, level+1);
+                                
+                                Preprocessing(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level+1,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
                             }
                             
-                            printf("subBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
+                            printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
                             
 							double Th_roh, Th_roh_min, Th_roh_start, Th_roh_next;
 							double minH_mps, maxH_mps;
@@ -1730,6 +1742,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								blunder_selected_level = level;
 							else
 								blunder_selected_level = level + 1;
+                            
+                            
 							
 							printf("selected_bl %d\n",blunder_selected_level);
 							
@@ -1770,10 +1784,31 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							
 							if(flag_start)
 							{
-								printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
-								GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
-							}
+                                if(proinfo.IsRA)
+                                {
+                                    if(check_new_subBoundary_RA)
+                                    {
+                                        GridPT3 = ResizeGirdPT3_RA(pre_Size_Grid2D, Size_Grid2D, preBoundary,subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                                    
+                                        check_new_subBoundary_RA = false;
+                                        
+                                        printf("start ResizeGridPT3 with newBoundry pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
+                                    }
+                                    else
+                                    {
+                                        printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
+                                        GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                                    }
+                                }
+                                else
+                                {
+                                    printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
+                                    GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                                }
+                    		}
 							
+                            printf("end start ResizeGridPT3\n");
+                            
 							pre_Size_Grid2D.width = Size_Grid2D.width;
 							pre_Size_Grid2D.height = Size_Grid2D.height;
 							pre_grid_resolution = grid_resolution;
@@ -1785,6 +1820,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
 							double left_mag_var_B, left_mag_avg_B, right_mag_var_B, right_mag_avg_B;
 							
+                            printf("load subimages\n");
+                            
 							SubImages_L		= LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
 							SubImages_R		= LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
 							SubOriImages_L	= LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
@@ -1802,7 +1839,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							SubMagImages_BL		= LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
 							SubMagImages_BR		= LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[blunder_selected_level],blunder_selected_level,&right_mag_var_B,&right_mag_avg_B);
 
-							
+							printf("load subimages blunder_selected_level\n");
+                            
                             total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
                             
 							Grid_wgs = ps2wgs(param,Size_Grid2D.width*Size_Grid2D.height,GridPT);
@@ -2559,7 +2597,6 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                                     
                                                     //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
                                                 }
-                                                
                                                 //printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
                                                 //printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
                                                 //       subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
@@ -12146,6 +12183,57 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 	printf("after release preGirdPT3\n");
 	
 	return resize_GridPT3;
+}
+
+UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
+{
+    
+    UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
+    
+    for(int row=0;row<resize_Size.height;row++)
+    {
+        for(int col=0;col<resize_Size.width;col++)
+        {
+            long int index = row*resize_Size.width + col;
+            double X = resize_Grid[index].m_X;
+            double Y = resize_Grid[index].m_Y;
+            int pos_c = (int)((X - preBoundary[0])/pre_gridsize);
+            int pos_r = (int)((Y - preBoundary[1])/pre_gridsize);
+            long int pre_index = pos_r*preSize.width + pos_c;
+            if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height)
+            {
+                resize_GridPT3[index].minHeight		= preGridPT3[pre_index].minHeight;
+                resize_GridPT3[index].maxHeight		= preGridPT3[pre_index].maxHeight;
+                resize_GridPT3[index].Height		= preGridPT3[pre_index].Height;
+                resize_GridPT3[index].Matched_flag	= preGridPT3[pre_index].Matched_flag;
+                resize_GridPT3[index].roh			= preGridPT3[pre_index].roh;
+                resize_GridPT3[index].anchor_flag	= preGridPT3[pre_index].anchor_flag;
+                resize_GridPT3[index].ortho_ncc		= preGridPT3[pre_index].ortho_ncc;
+                resize_GridPT3[index].angle			= preGridPT3[pre_index].angle;
+                //				resize_GridPT3[index].false_h_count = 0;
+            }
+            else
+            {
+                resize_GridPT3[index].minHeight		= (double)(minmaxheight[0] - 0.5);
+                resize_GridPT3[index].maxHeight		= (double)(minmaxheight[1] + 0.5);
+                resize_GridPT3[index].Height		= -1000;
+                resize_GridPT3[index].Matched_flag	= 0;
+                resize_GridPT3[index].roh			= 0.0;
+                resize_GridPT3[index].anchor_flag	= 0;
+                resize_GridPT3[index].ortho_ncc		= 0;
+                resize_GridPT3[index].angle			= 0;
+                //				resize_GridPT3[index].false_h_count = 0;
+            }
+        }
+    }
+    
+    printf("before release preGirdPT3\n");
+    
+    free(preGridPT3);
+    
+    printf("after release preGirdPT3\n");
+    
+    return resize_GridPT3;
 }
 
 bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update)
