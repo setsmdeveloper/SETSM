@@ -2597,9 +2597,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                                     
                                                     //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
                                                 }
-                                                //printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                //printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
-                                                //       subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+                                                printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
+                                                printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
+                                                       subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+                                                
+                                                fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
                                                 
                                                 new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
                                                 new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
@@ -4218,7 +4220,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
         t_pts1			= ps2wgs_3D(transparam,8,t_pts);
 
 		ImageCoord		= GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
-
+        
 		for(i=0;i<8;i++)
 		{
 			if(minX > ImageCoord[i].m_X)
@@ -4229,6 +4231,8 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
 				minY	= ImageCoord[i].m_Y;
 			if(maxY < ImageCoord[i].m_Y)
 				maxY	= ImageCoord[i].m_Y;
+            
+            //printf("i %d\tImageCoord %f\t%f\n",i,ImageCoord[i].m_X,ImageCoord[i].m_Y);
       	}
 
 		buffer				= 200;
@@ -4257,6 +4261,8 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
 		if(rows[1]			> Imagesize->height - null_buffer)
 			rows[1]			= Imagesize->height - null_buffer;
 
+        //printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
+        
 		free(t_pts1);
 		free(ImageCoord);
 
@@ -6236,6 +6242,35 @@ D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imagepa
 		L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
 		P		= (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
 		H		= (_GP[i].m_Z - _rpc[0][4])/_rpc[1][4];
+        
+        //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        
+        if(L < -10.0 || L > 10.0)
+        {
+            if(_GP[i].m_X > 0)
+                _GP[i].m_X = _GP[i].m_X - 360;
+            else
+                _GP[i].m_X = _GP[i].m_X + 360;
+            
+            L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
+            
+            //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+            
+        }
+        if(P < -10.0 || P > 10.0)
+        {
+            if(_GP[i].m_Y > 0)
+                _GP[i].m_Y = _GP[i].m_Y - 360;
+            else
+                _GP[i].m_Y = _GP[i].m_Y + 360;
+            
+            P		= (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
+            
+            //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        }
+        
+        //printf("L P H %f\t%f\t%f\n",L,P,H);
+        
 		for(int j=0;j<4;j++)
 		{
 			Coeff[j]	= _rpc[j+2][0]*1.0			+ _rpc[j+2][1]*L			+ _rpc[j+2][2]*P
@@ -6284,6 +6319,27 @@ D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_i
 	L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
 	P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
 	H		= (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+    
+    if(L < -10.0 || L > 10.0)
+    {
+        if(_GP.m_X > 0)
+            _GP.m_X = _GP.m_X - 360;
+        else
+            _GP.m_X = _GP.m_X + 360;
+        
+        L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+    }
+    
+    if(P < -10.0 || P > 10.0)
+    {
+        if(_GP.m_Y > 0)
+            _GP.m_Y = _GP.m_Y - 360;
+        else
+            _GP.m_Y = _GP.m_Y + 360;
+        
+        P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+    }
+    
 	for(j=0;j<4;j++)
 	{
 		Coeff[j]	= _rpc[j+2][0]*1.0			+ _rpc[j+2][1]*L			+ _rpc[j+2][2]*P
@@ -6332,6 +6388,27 @@ D2DPOINT GetObjectToImageRPC_single_mpp(double **_rpc, uint8 _numofparam, double
     L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
     P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     H		= (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+    
+    if(L < -10.0 || L > 10.0)
+    {
+        if(_GP.m_X > 0)
+            _GP.m_X = _GP.m_X - 360;
+        else
+            _GP.m_X = _GP.m_X + 360;
+        
+        L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+    }
+    
+    if(P < -10.0 || P > 10.0)
+    {
+        if(_GP.m_Y > 0)
+            _GP.m_Y = _GP.m_Y - 360;
+        else
+            _GP.m_Y = _GP.m_Y + 360;
+        
+        P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+    }
+    
     for(j=0;j<4;j++)
     {
         Coeff[j]	= _rpc[j+2][0]*1.0			+ _rpc[j+2][1]*L			+ _rpc[j+2][2]*P
@@ -16051,6 +16128,27 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
 		L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
 		P		= (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
 		H		= (_GP[i].m_Z - _rpc[0][4])/_rpc[1][4];
+        
+        if(L < -10.0 || L > 10.0)
+        {
+            if(_GP[i].m_X > 0)
+                _GP[i].m_X = _GP[i].m_X - 360;
+            else
+                _GP[i].m_X = _GP[i].m_X + 360;
+            
+            L		= (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
+        }
+        
+        if(P < -10.0 || P > 10.0)
+        {
+            if(_GP[i].m_Y > 0)
+                _GP[i].m_Y = _GP[i].m_Y - 360;
+            else
+                _GP[i].m_Y = _GP[i].m_Y + 360;
+            
+            P		= (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
+        }
+        
 		Coeff	= (double*)malloc(sizeof(double)*4);
 
 		for(int j=0;j<4;j++)
@@ -16263,6 +16361,27 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
 	L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
 	P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
 	H		= (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+    
+    if(L < -10.0 || L > 10.0)
+    {
+        if(_GP.m_X > 0)
+            _GP.m_X = _GP.m_X - 360;
+        else
+            _GP.m_X = _GP.m_X + 360;
+        
+        L		= (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+    }
+    
+    if(P < -10.0 || P > 10.0)
+    {
+        if(_GP.m_Y > 0)
+            _GP.m_Y = _GP.m_Y - 360;
+        else
+            _GP.m_Y = _GP.m_Y + 360;
+        
+        P		= (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+    }
+    
 	Coeff	= (double*)malloc(sizeof(double)*4);
 
 	for(j=0;j<4;j++)
