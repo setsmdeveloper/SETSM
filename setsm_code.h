@@ -90,6 +90,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, int *Boundary,CSize Gri
 
 double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c);
 double** OpenXMLFile_Pleiades(char* _filename);
+void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
 void SetDEMBoundary(double** _rpcs, float* _res,TransParam _param, bool _hemisphere, int* _boundary, int* _minmaxheight, CSize* _imagesize, int* _Hinterval);
 bool subsetImage(TransParam transparam, uint8 NumofIAparam, double **LRPCs, float *LImageParam, char *LImageFilename, double **RRPCs, float *RImageParam, char *RImageFilename, 
@@ -192,7 +193,8 @@ bool SetHeightRange_blunder(float* minmaxHeight,F3DPOINT *pts, int numOfPts, UI3
 UGRID* SetHeightRange(bool pre_DEMtif, float* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
 					  float *minH_grid, float *maxH_grid, BL BL_param,F3DPOINT *pts, UI3DPOINT *tris,int IsRA, float MPP, char* save_path, uint8 tile_row, uint8 tile_col,bool check_level_end, float seedDEMsigma);
 
-UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, int* Boundary, F2DPOINT *resize_Grid, UGRID *preGridPT3, float pre_gridsize, float* minmaxheight);
+UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
+UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 
 void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration, float update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str);
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str);
