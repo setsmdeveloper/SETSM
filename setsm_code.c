@@ -1664,8 +1664,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                         double tilesize_RA = 20000;
                         double lengthOfX = subBoundary[2] - subBoundary[0];
                         double lengthOfY = subBoundary[3] - subBoundary[1];
-                        int division_X, division_Y;
-                        int total_tile;
+                        int division_X = 0, division_Y = 0;
+                        int total_tile = 0;
                         double new_subBoundary_RA[4];
                         bool check_new_subBoundary_RA = false;
                         double preBoundary[4];
