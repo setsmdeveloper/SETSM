@@ -1,0 +1,17 @@
+sudo: required
+dist: trusty
+
+language:
+  - cpp
+
+addons:
+  apt:
+    packages:
+    - g++
+    - libtiff5-dev
+
+before_script:
+  - gcc --version
+
+script:
+   - make -f Makefile.gcc -j2
