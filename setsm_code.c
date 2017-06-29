@@ -10673,11 +10673,19 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 				check_dh		= true;
 		}
 		else if(pyramid_step == 2)
+		{
 			if(BL_param.iteration <= 4)
+			{
 				check_dh		= true;
-			else if(pyramid_step <= 1)
-				if(iteration <= 2)
-					check_dh		= true;
+			}
+		}
+		else if(pyramid_step <= 1)
+		{
+		        if(iteration <= 2)
+			{
+		                check_dh		= true;
+			}
+		}
 		
 		boundary	= BL_param.Boundary;
 		gridsize.width	= BL_param.Size_Grid2D.width;
@@ -11204,18 +11212,18 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									{
 										if(IsRA == 1)
 										{
-											pts[order[t_o_min]].flag = 1;
+											pts[order[t_o_min]].flag = 3;
 										}
 										else
 										{
 											if(flag_blunder)
 											{
 												if(ortho_ncc[Index[t_o_min]] < ortho_ncc_th)
-													pts[order[t_o_min]].flag = 1;
+													pts[order[t_o_min]].flag = 3;
 											}
 											else
 												if(ortho_ncc[Index[t_o_min]] < ortho_ancc_th)
-													pts[order[t_o_min]].flag = 1;
+													pts[order[t_o_min]].flag = 3;
 											
 										}
 									}
@@ -11223,18 +11231,18 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									{
 										if(IsRA == 1)
 										{
-											pts[order[t_o_max]].flag = 1;
+											pts[order[t_o_max]].flag = 3;
 										}
 										else
 										{
 											if(flag_blunder)
 											{
 												if(ortho_ncc[Index[t_o_max]] < ortho_ncc_th)
-													pts[order[t_o_max]].flag = 1;
+													pts[order[t_o_max]].flag = 3;
 											}
 											else
 												if(ortho_ncc[Index[t_o_max]] < ortho_ancc_th)
-													pts[order[t_o_max]].flag = 1;
+													pts[order[t_o_max]].flag = 3;
 											
 										}
 									}
@@ -11332,6 +11340,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 			if(pts[tcnt].flag == 1)
 			{
 				blunder_count[1]++;
+			}
+			else if(pts[tcnt].flag == 3)
+			{
+			        blunder_count[1]++;
+			        pts[tcnt].flag = 1;
 			}
 			else
 			{
