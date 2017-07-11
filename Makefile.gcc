@@ -7,16 +7,21 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=gcc
-CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
+CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native -g
+CSWITCHES =-std=c99 -O3 -fopenmp -g -DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
+TRILIBDEFS = -DTRILIBRARY
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
 
-setsm : setsm_code.o
-	$(CC) $(CFLAGS) -o setsm setsm_code.o $(LDFLAGS) -lm -ltiff
+setsm : setsm_code.o triangle.o
+	$(CC) $(CFLAGS)  -o setsm setsm_code.o triangle.o $(LDFLAGS) -lm -ltiff
 
-setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
+setsm_code.o : Typedefine.h setsm_code.h setsm_code.c triangle.o
 	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
+
+triangle.o: triangle.c triangle.h
+	$(CC) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
 
 .PHONY: clean
 

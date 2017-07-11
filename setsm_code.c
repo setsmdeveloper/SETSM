@@ -24,7 +24,10 @@
  * Algorithmica 2, 153-174.
  */
 
+#define REAL double
+
 #include "setsm_code.h"
+#include "triangle.h"
 #include "math.h"
 #include <omp.h>
 #include <time.h>
@@ -10557,7 +10560,7 @@ void readsites(D3DPOINT *ptslists,int numofpts)
 		sites[nsites].sitenbr = nsites ;
 		sites[nsites++].refcnt = 0 ;
 	}
-
+	
 	qsort((void *)sites, nsites, sizeof(Site), scomp) ;
 	if (nsites > 0)
 	{
@@ -10597,20 +10600,79 @@ Site *readone(void)
 
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists)
 {
-	Site *(*next)() ;
+	struct triangulateio in, mid, out;
+    int x,y,i,j;
 
-	count_tri = 0;
-
-	sorted = triangulate = plot = debug = 0 ;
-	triangulate = 1;
-	freeinit(&sfl, sizeof(Site)) ;
+	/* Cannot triangulate with less than three points. */
+	if(numofpts < 3){
+        count_tri = 0;
+        return;
+    }
 	
-	readsites(ptslists,numofpts) ;
-	next = nextone ;
-	siteidx = 0 ;
-	geominit() ;
-	voronoi(next,trilists) ;
-	free_all();
+	/* Initialize and define input. */
+
+	in.numberofpoints = numofpts;
+	in.numberofpointattributes = 0;
+	in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+	
+	for (x = 0; x < numofpts; x++){
+		in.pointlist[2*x] = ptslists[x].m_X;
+		in.pointlist[2*x+1] = ptslists[x].m_Y;
+	}
+	
+	in.pointattributelist = (REAL *) malloc(in.numberofpoints *
+                                          in.numberofpointattributes *
+                                          sizeof(REAL));
+	in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
+	in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));	
+
+
+
+	
+	/* Make necessary initializations so that Triangle can return a */
+  	/*   triangulation in `mid'.*/
+
+  	mid.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
+  	/* Not needed if -N switch used or number of point attributes is zero: */
+  	mid.pointattributelist = (REAL *) NULL;
+  	mid.pointmarkerlist = (int *) NULL; /* Not needed if -N or -B switch used. */
+  	mid.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
+  	/* Not needed if -E switch used or number of triangle attributes is zero: */
+  	mid.triangleattributelist = (REAL *) NULL;
+  	mid.neighborlist = (int *) NULL;         /* Needed only if -n switch used. */
+  	/* Needed only if segments are output (-p or -c) and -P not used: */
+  	mid.segmentlist = (int *) NULL;
+  	/* Needed only if segments are output (-p or -c) and -P and -B not used: */
+  	mid.segmentmarkerlist = (int *) NULL;
+  	mid.edgelist = (int *) NULL;             /* Needed only if -e switch used. */
+  	mid.edgemarkerlist = (int *) NULL;   /* Needed if -e used and -B not used. */
+	/* Triangulate input. */
+	triangulate("zFYY", &in, &mid, (struct triangulateio *) NULL);
+	
+	/* Transfer output from mid to trilists. */
+	for (x = 0; x < mid.numberoftriangles; x++) {
+		trilists[x].m_X = (uint32)mid.trianglelist[x * 3 + 0];
+		trilists[x].m_Y = (uint32)mid.trianglelist[x * 3 + 1];
+		trilists[x].m_Z = (uint32)mid.trianglelist[x * 3 + 2];
+	}
+	count_tri = mid.numberoftriangles;
+	
+ 	/* Free all allocated arrays, including those allocated by Triangle. */
+
+	free(in.pointlist);
+  	free(in.pointattributelist);
+  	free(in.pointmarkerlist);
+  	free(in.regionlist);
+  	free(mid.pointlist);
+  	free(mid.pointattributelist);
+  	free(mid.pointmarkerlist);
+  	free(mid.trianglelist);
+  	free(mid.triangleattributelist);
+  	free(mid.neighborlist);
+  	free(mid.segmentlist);
+  	free(mid.segmentmarkerlist);
+  	free(mid.edgelist);
+  	free(mid.edgemarkerlist);
 }
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
@@ -10978,7 +11040,9 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 				ref_index	  = gridsize.width*t_row + t_col;
 
 				Gridpts[ref_index].anchor_flag = 0;
-				  
+				//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
+				//printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
+				//printf("th_ref_ncc = %f\n", th_ref_ncc);
 				if(!IsRA)
 				{
 					if(ortho_ncc[ref_index] < th_ref_ncc && pyramid_step >= 2)
@@ -11202,6 +11266,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									dh		  = h1 - h2;
 									if((dh > 0 && dh > height_th))
 									{
+										//printf("triangle: %d %d %d\n", order[t_o_min], order[t_o_mid], order[t_o_max]);
 										if(IsRA == 1)
 										{
 											pts[order[t_o_min]].flag = 1;
@@ -11221,6 +11286,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									}
 									else if((dh < 0 && fabs(dh) > height_th))
 									{
+										//printf("triangle: %d %d %d\n", order[t_o_min], order[t_o_mid], order[t_o_max]);
 										if(IsRA == 1)
 										{
 											pts[order[t_o_max]].flag = 1;
@@ -11244,7 +11310,9 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 						}
 					}
 				}
-				  
+				//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
+                //printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
+                //printf("ortho_ancc_th = %f\n", ortho_ancc_th);  
 				if(IsRA == 1)
 				{
 					if(check_neigh == true)
@@ -11292,6 +11360,9 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 					{
 						//#pragma omp critical
 						{
+							//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
+                			//printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
+                			//printf("ortho_ncc_th = %f\n", ortho_ncc_th);
 							if(flag_blunder)
 							{
 								if(pyramid_step >= 1)
@@ -15030,7 +15101,7 @@ void free_all(void)
 
 
 /*** OUTPUT.C ***/
-extern int triangulate, plot, debug, count_tri ;
+extern int triangulate1, plot, debug, count_tri ;
 extern double ymax, ymin, xmax, xmin ;
 extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
@@ -15059,12 +15130,12 @@ range(double pxmin, double pxmax, double pymin, double pymax)
 void
 out_bisector(Edge * e)
 {
-	if (triangulate && plot && !debug)
+	if (triangulate1 && plot && !debug)
 	{
 		line(e->reg[0]->coord.x, e->reg[0]->coord.y,
 			 e->reg[1]->coord.x, e->reg[1]->coord.y) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate1 && !plot && !debug)
 	{
 		printf("l %f %f %f\n", e->a, e->b, e->c) ;
 	}
@@ -15078,11 +15149,11 @@ out_bisector(Edge * e)
 void
 out_ep(Edge * e)
 {
-	if (!triangulate && plot)
+	if (!triangulate1 && plot)
 	{
 		clip_line(e) ;
 	}
-	if (!triangulate && !plot)
+	if (!triangulate1 && !plot)
 	{
 		printf("e %d", e->edgenbr);
 		printf(" %d ", e->ep[le] != (Site *)NULL ? e->ep[le]->sitenbr : -1) ;
@@ -15093,7 +15164,7 @@ out_ep(Edge * e)
 void
 out_vertex(Site * v)
 {
-	if (!triangulate && !plot && !debug)
+	if (!triangulate1 && !plot && !debug)
 	{
 		printf ("v %f %f\n", v->coord.x, v->coord.y) ;
 	}
@@ -15106,11 +15177,11 @@ out_vertex(Site * v)
 void
 out_site(Site * s)
 {
-	if (!triangulate && plot && !debug)
+	if (!triangulate1 && plot && !debug)
 	{
 		circle (s->coord.x, s->coord.y, cradius) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate1 && !plot && !debug)
 	{
 		printf("s %f %f\n", s->coord.x, s->coord.y) ;
 	}
@@ -15123,7 +15194,7 @@ out_site(Site * s)
 void
 out_triple(Site * s1, Site * s2, Site * s3)
 {
-	if (triangulate && !plot && !debug)
+	if (triangulate1 && !plot && !debug)
 	{
 		count_tri++;
 		fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
@@ -15348,7 +15419,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			
 			//out_triple(Site * s1, Site * s2, Site * s3)
 			
-			if (triangulate && !plot && !debug)
+			if (triangulate1 && !plot && !debug)
 			{
 				
 				trilists[count_tri].m_X = bot->sitenbr;
