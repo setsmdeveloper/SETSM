@@ -1668,7 +1668,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                         int total_tile = 0;
                         double new_subBoundary_RA[4];
                         bool check_new_subBoundary_RA = false;
-                        double preBoundary[4];
+                        double preBoundary[4] = {0};
                         if(lengthOfX < lengthOfY)
                         {
                             if(lengthOfY > tilesize_RA)
@@ -11840,9 +11840,9 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 				if (PixelMinXY[1] < 0)	
 					PixelMinXY[1] = 0;
 				
-				for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
+				for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
 				{
-					for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
+					for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
 					{
 						int Index= TIN_Grid_Size_X*Row + Col;
 
@@ -12049,15 +12049,20 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 	*minH_grid	= 100000.0;
 	*maxH_grid	= -100000.0;
 	
-	
+	double minH_temp = *minH_grid;
+	double maxH_temp = *maxH_grid;
+
+	UGRID *GridPT3_temp = (UGRID*)calloc(sizeof(UGRID),TIN_Grid_Size_X*TIN_Grid_Size_Y);
+	for (int counter = 0; counter < TIN_Grid_Size_X*TIN_Grid_Size_Y; counter++)
+	{
+	  GridPT3_temp[counter] = GridPT3[counter];
+	}
 	
 	// minmaxheight setup for no matched grids
-//#pragma omp parallel shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,m_bHeight,Total_Min_Z,Total_Max_Z,minH_grid,maxH_grid) private(Col_C,Row_R)
-	{
-//#pragma omp for
-		for (Col_C=0; Col_C < (int)(TIN_Grid_Size_X); Col_C++)
+#pragma omp parallel for shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,m_bHeight,Total_Min_Z,Total_Max_Z,minH_grid,maxH_grid) private(Col_C,Row_R) reduction(max:maxH_temp) reduction(min:minH_temp)
+		for (Row_R=0; Row_R < (int)(TIN_Grid_Size_Y); Row_R++)
 		{
-			for (Row_R=0; Row_R < (int)(TIN_Grid_Size_Y); Row_R++)
+			for (Col_C=0; Col_C < (int)(TIN_Grid_Size_X); Col_C++)
 			{
 				int Index = TIN_Grid_Size_X*Row_R + Col_C;
 				
@@ -12074,13 +12079,13 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 							if(Col_C + t_c >= 0 && Col_C + t_c < (int)(TIN_Grid_Size_X) && Row_R + t_r >= 0 && Row_R + t_r < (int)(TIN_Grid_Size_Y))
 							{
 								int t_index = (Col_C + t_c) + (Row_R + t_r)*TIN_Grid_Size_X;
-								if(GridPT3[t_index].Matched_flag != 0)
+								if(GridPT3_temp[t_index].Matched_flag != 0)
 								{
 									t_flag = true;
-									if(min_H > GridPT3[t_index].minHeight)
-										min_H	= GridPT3[t_index].minHeight;
-									if(max_H < GridPT3[t_index].maxHeight)
-										max_H	= GridPT3[t_index].maxHeight;										 
+									if(min_H > GridPT3_temp[t_index].minHeight)
+										min_H	= GridPT3_temp[t_index].minHeight;
+									if(max_H < GridPT3_temp[t_index].maxHeight)
+										max_H	= GridPT3_temp[t_index].maxHeight;										 
 								}
 							}
 						}
@@ -12122,14 +12127,18 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 				
 //#pragma omp critical
 				{
-					if(*minH_grid > GridPT3[Index].minHeight)
-						*minH_grid	= GridPT3[Index].minHeight;
-					if(*maxH_grid < GridPT3[Index].maxHeight)
-						*maxH_grid	= GridPT3[Index].maxHeight;
+					if(minH_temp > GridPT3[Index].minHeight)
+						minH_temp	= GridPT3[Index].minHeight;
+					if(maxH_temp < GridPT3[Index].maxHeight)
+						maxH_temp	= GridPT3[Index].maxHeight;
 				}
 			}
 		}
-	}
+
+	*minH_grid = minH_temp;
+	*maxH_grid = maxH_temp;
+
+	free(GridPT3_temp);
 	
 	printf("end grid set height!!\n");
 	
@@ -12137,7 +12146,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 	
 	result					= (UGRID*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(UGRID));
 	
-//#pragma omp parallel for shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,result,m_bHeight,Total_Min_Z,Total_Max_Z) private(k,j)
+#pragma omp parallel for shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,result,m_bHeight,Total_Min_Z,Total_Max_Z) private(k,j)
 	for(k=0;k<(int)(TIN_Grid_Size_Y);k++)
 	{
 		for(j=0;j<(int)(TIN_Grid_Size_X);j++)
@@ -12429,9 +12438,9 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
 				if (PixelMinXY[1] < 0)	
 					PixelMinXY[1] = 0;
 				
-				for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
+				for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
 				{
-					for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
+					for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
 					{
 						int Index= TIN_Grid_Size_X*Row + Col;
 						
