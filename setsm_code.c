@@ -7014,10 +7014,13 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
         all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
         if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
         if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
-        
-    #pragma omp parallel for schedule(guided)
-        for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-        {
+
+
+	if (all_left_im_cd != NULL && all_right_im_cd != NULL)
+	{
+#pragma omp parallel for schedule(guided)
+	  for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
+	  {
             int pts_row = (int)(floor(iter_count/sub_imagesize_w));
             int pts_col = iter_count % sub_imagesize_w;
             int pt_index;
@@ -7034,9 +7037,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
             pt_index	= t_row*Size_Grid2D.width + t_col;
             pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
             
-            if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-               t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height &&
-                all_left_im_cd != NULL && all_right_im_cd != NULL)
+            if(pt_index < Size_Grid2D.width * Size_Grid2D.height && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
             {
                 if(GridPT3[pt_index].Height != -1000)
                 {
@@ -7070,7 +7071,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                     
                 }
             }
-        }
+	  }
+	}
     }
     
     
@@ -7427,18 +7429,21 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 								if(flag.rotate_flag)
 									rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
 								
+								double cos0 = cos(-rot_theta);
+								double sin0 = sin(-rot_theta);
+								
 								for(row = -Half_template_size; row <= Half_template_size ; row++)
 								{
 									for(col = -Half_template_size; col <= Half_template_size ; col++)
 									{
-										double radius  = sqrt((double)(row*row + col*col));
-										if(radius <= Half_template_size-1)
+										int radius2  =  row*row + col*col;
+										if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
 										{
 											double pos_row_left		 = (Left_CR + row);
 											double pos_col_left		 = (Left_CC + col);
 											
-											double temp_col		   = (cos(-rot_theta)*col - sin(-rot_theta)*row);
-											double temp_row		   = (sin(-rot_theta)*col + cos(-rot_theta)*row);
+											double temp_col		   = (cos0*col - sin0*row);
+											double temp_row		   = (sin0*col + cos0*row);
 											double pos_row_right	 = (Right_CR + temp_row);
 											double pos_col_right	 = (Right_CC + temp_col);
 											
@@ -7525,27 +7530,29 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 														Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
 														Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
 														
-													}
-												}
+													
 												
-												size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
-												if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-												{
-													if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-													{
-														Sum_LR_3  = Sum_LR_3 + LR;
-														Sum_L_3	  = Sum_L_3	 + left_patch;
-														Sum_R_3	  = Sum_R_3	 + right_patch;
-														Sum_L2_3  = Sum_L2_3 + L2;
-														Sum_R2_3  = Sum_R2_3 + R2;
-														Count_N[2]++;
+												
+														size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
+														if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+														{
+														  if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+														  {
+														    Sum_LR_3  = Sum_LR_3 + LR;
+														    Sum_L_3	  = Sum_L_3	 + left_patch;
+														    Sum_R_3	  = Sum_R_3	 + right_patch;
+														    Sum_L2_3  = Sum_L2_3 + L2;
+														    Sum_R2_3  = Sum_R2_3 + R2;
+														    Count_N[2]++;
 														
-														Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
-														Sum_L_3_mag	  = Sum_L_3_mag	 + left_mag_patch;
-														Sum_R_3_mag	  = Sum_R_3_mag	 + right_mag_patch;
-														Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
-														Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+														    Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+														    Sum_L_3_mag	  = Sum_L_3_mag	 + left_mag_patch;
+														    Sum_R_3_mag	  = Sum_R_3_mag	 + right_mag_patch;
+														    Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+														    Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
 														
+														  }
+														}
 													}
 												}
 												
@@ -7690,30 +7697,32 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                                             Sum_R_2_mag_ortho	= Sum_R_2_mag_ortho	 + right_mag_patch;
                                                             Sum_L2_2_mag_ortho	= Sum_L2_2_mag_ortho + L2_mag;
                                                             Sum_R2_2_mag_ortho	= Sum_R2_2_mag_ortho + R2_mag;
-                                                            
-                                                        }
-                                                    }
+							}              
+						    }
                                                     
-                                                    size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
-                                                    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                    {
-                                                        if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                        {
-                                                            Sum_LR_3_ortho	= Sum_LR_3_ortho + LR;
-                                                            Sum_L_3_ortho	= Sum_L_3_ortho	 + left_patch;
-                                                            Sum_R_3_ortho	= Sum_R_3_ortho	 + right_patch;
-                                                            Sum_L2_3_ortho	= Sum_L2_3_ortho + L2;
-                                                            Sum_R2_3_ortho	= Sum_R2_3_ortho + R2;
-                                                            Count_N_ortho[2]++;
+                                                    
+						    size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
+						    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+						    {
+						      if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+						      {
+							Sum_LR_3_ortho	= Sum_LR_3_ortho + LR;
+							Sum_L_3_ortho	= Sum_L_3_ortho	 + left_patch;
+							Sum_R_3_ortho	= Sum_R_3_ortho	 + right_patch;
+							Sum_L2_3_ortho	= Sum_L2_3_ortho + L2;
+							Sum_R2_3_ortho	= Sum_R2_3_ortho + R2;
+							Count_N_ortho[2]++;
                                                             
-                                                            Sum_LR_3_mag_ortho	= Sum_LR_3_mag_ortho + LR_mag;
-                                                            Sum_L_3_mag_ortho	= Sum_L_3_mag_ortho	 + left_mag_patch;
-                                                            Sum_R_3_mag_ortho	= Sum_R_3_mag_ortho	 + right_mag_patch;
-                                                            Sum_L2_3_mag_ortho	= Sum_L2_3_mag_ortho + L2_mag;
-                                                            Sum_R2_3_mag_ortho	= Sum_R2_3_mag_ortho + R2_mag;
+							Sum_LR_3_mag_ortho	= Sum_LR_3_mag_ortho + LR_mag;
+							Sum_L_3_mag_ortho	= Sum_L_3_mag_ortho	 + left_mag_patch;
+							Sum_R_3_mag_ortho	= Sum_R_3_mag_ortho	 + right_mag_patch;
+							Sum_L2_3_mag_ortho	= Sum_L2_3_mag_ortho + L2_mag;
+							Sum_R2_3_mag_ortho	= Sum_R2_3_mag_ortho + R2_mag;
                                                             
-                                                        }
-                                                    }
+						      }
+						    }
+							
+						    
                                                 }
                                             }
 										}
@@ -7731,11 +7740,13 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de			  = sqrt(val1*val2);
-								de2			  = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
 								
 								if( val1*val2 > 0)
-									ncc_1			= de2/de;
+								{
+								  de			  = sqrt(val1*val2);
+								  de2			  = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
+								  ncc_1			= de2/de;
+								}
 								else
 									ncc_1			= -1.0;
 								
@@ -7749,10 +7760,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de			  = sqrt(val1*val2);
-								de2			  = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
 								if( val1*val2 > 0)
-									ncc_1_mag			= de2/de;
+								{
+								  de			  = sqrt(val1*val2);
+								  de2			  = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
+								  ncc_1_mag			= de2/de;
+								}
 								else
 									ncc_1_mag			= -1.0;
 								
@@ -7767,10 +7780,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de					= sqrt(val1*val2);
-								de2					= (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
 								if( val1*val2 > 0)
-									ncc_2		  = de2/de;
+								{
+								  de					= sqrt(val1*val2);
+								  de2					= (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+								  ncc_2		  = de2/de;
+								}
 								else
 									ncc_2			= -1.0;
 								
@@ -7784,10 +7799,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de					= sqrt(val1*val2);
-								de2					= (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
 								if( val1*val2 > 0)
-									ncc_2_mag		  = de2/de;
+								{
+								  de					= sqrt(val1*val2);
+								  de2					= (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+								  ncc_2_mag		  = de2/de;
+								}
 								else
 									ncc_2_mag			= -1.0;
 								
@@ -7803,10 +7820,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de					= sqrt(val1*val2);
-								de2					= (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
 								if( val1*val2 > 0)
-									ncc_3		  = de2/de;
+								{
+								  de					= sqrt(val1*val2);
+								  de2					= (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+								  ncc_3		  = de2/de;
+								}
 								else
 									ncc_3			= -1.0;
 								
@@ -7820,10 +7839,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 										val2 = 0.00001;
 								}
 								
-								de					= sqrt(val1*val2);
-								de2					= (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
 								if( val1*val2 > 0)
-									ncc_3_mag		  = de2/de;
+								{
+								  de					= sqrt(val1*val2);
+								  de2					= (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+								  ncc_3_mag		  = de2/de;
+								}
 								else
 									ncc_3_mag			= -1.0;
 								
@@ -7840,10 +7861,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de			  = sqrt(val1*val2);
-                                de2			  = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_1_ortho			  = de2/de;
+				{
+				  de			  = sqrt(val1*val2);
+				  de2			  = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
+				  ncc_1_ortho			  = de2/de;
+				}
                                 else
                                     ncc_1_ortho			  = -1.0;
                                 
@@ -7858,10 +7881,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de			  = sqrt(val1*val2);
-                                de2			  = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_1_mag_ortho			  = de2/de;
+				{
+				  de			  = sqrt(val1*val2);
+				  de2			  = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
+				  ncc_1_mag_ortho			  = de2/de;
+				}
                                 else
                                     ncc_1_mag_ortho			  = -1.0;
                                 
@@ -7876,10 +7901,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de					= sqrt(val1*val2);
-                                de2					= (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_2_ortho			= de2/de;
+				{
+				  de					= sqrt(val1*val2);
+				  de2					= (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
+				  ncc_2_ortho			= de2/de;
+				}
                                 else
                                     ncc_2_ortho			  = -1.0;
                                 
@@ -7893,10 +7920,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de					= sqrt(val1*val2);
-                                de2					= (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_2_mag_ortho			= de2/de;
+				{
+				  de					= sqrt(val1*val2);
+				  de2					= (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+				  ncc_2_mag_ortho			= de2/de;
+				}
                                 else
                                     ncc_2_mag_ortho			  = -1.0;
                                 
@@ -7912,10 +7941,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de					= sqrt(val1*val2);
-                                de2					= (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_3_ortho			= de2/de;
+				{
+				  de					= sqrt(val1*val2);
+				  de2					= (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
+				  ncc_3_ortho			= de2/de;
+				}
                                 else
                                     ncc_3_ortho			  = -1.0;
                                 
@@ -7929,10 +7960,12 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                         val2 = 0.00001;
                                 }
                                 
-                                de					= sqrt(val1*val2);
-                                de2					= (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
                                 if( val1*val2 > 0)
-                                    ncc_3_mag_ortho			= de2/de;
+				{
+				  de					= sqrt(val1*val2);
+				  de2					= (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+				  ncc_3_mag_ortho			= de2/de;
+				}
                                 else
                                     ncc_3_mag_ortho			  = -1.0;
                                 
@@ -8035,11 +8068,6 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 								pre_GNCC_roh		   = temp_GNCC_roh;
 								nccresult[grid_index].roh_count ++;
 							
-								if(max_1stroh < temp_rho)
-								{
-									max_1stroh = temp_rho;
-									max_1stheight = iter_height;
-								}
 							}
 						}
 					}
@@ -9451,7 +9479,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 	double PPM			= MPP; 
 	printf("PPM of select MPs = %f\n",PPM);
 	double roh_next;
-	int row,col;
+
 	double minimum_Th = 0.1;
 	
 	if(Pyramid_step == 0)
@@ -9478,8 +9506,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 
 	if(Pyramid_step >= 5)
 		roh_next	= 0;
-	else if(Pyramid_step >= 2)
-		roh_next	= (double)(0.05);
 	else
 		roh_next	= (double)(0.05);
 	
