@@ -31,6 +31,9 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#ifdef buildMPI
+#include "mpi.h"
+#endif
 
 char *dirname(char *path);
 
@@ -775,6 +778,16 @@ char* SetOutpathName(char *_path)
 
 void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_LeftImagefilename, char *_save_filepath)
 {
+#ifdef buildMPI
+	char a;
+	char *pa = &a;
+	char **ppa = &pa;
+	int argc = 0;
+	MPI_Init(&argc, &ppa);
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+
 	char computation_file[500];
 	time_t total_ST = 0, total_ET = 0;
 	double total_gap;
@@ -1361,6 +1374,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
                     }
+#ifdef buildMPI
+		    MPI_Finalize();
+		    if(rank != 0){
+		      exit(0);
+		    }
+#endif
                     if(!args.check_ortho)
                     {
                         char check_file[500];
@@ -1470,11 +1489,21 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter)
 {
+#ifdef buildMPI
+	int rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+#endif
 	int final_iteration = -1;
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
-
+#ifdef buildMPI
+	int row_length = iter_row_end-iter_row_start;
+	int col_length = t_col_end-t_col_start;
+	int iterations[col_length*row_length*2];
+	int length = 0;
+#endif
 	for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
 	{
 		if(proinfo.IsRR)
@@ -1487,6 +1516,26 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 		for(col = t_col_start ; col < t_col_end ; col+= col_iter)
 		{
+#ifdef buildMPI
+			iterations[2*length] = row;
+			iterations[2*length+1] = col;
+			length+=1;
+		}
+	}
+
+	int i;
+	for(i = 0; i < length; i += 1)
+	{
+		int should_add = 0;
+
+		if(i % size == rank){
+			should_add = 1;
+		}
+
+		if(should_add){
+			row = iterations[2*i];
+			col = iterations[2*i+1];
+#endif
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
 			char *filename;
 			
@@ -2810,8 +2859,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		Rimageparam[0] /= RA_count;
 		Rimageparam[1] /= RA_count;
 	}
+#ifdef buildMPI
+	MPI_Bcast(Rimageparam, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
 	printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count,Rimageparam[0],Rimageparam[1]);
-
 	return final_iteration;
 }
 
@@ -11393,6 +11444,10 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
 					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps)
 {
+#ifdef buildMPI
+	int rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
 	int total_count = 0;
 	double X,Y,Z;
 	int t_flag;
