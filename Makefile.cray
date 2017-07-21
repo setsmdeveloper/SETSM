@@ -17,10 +17,10 @@ INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
 
 setsm : setsm_code.o
-	$(CC) $(CFLAGS) $(CPP_OPTIONS) -o setsm setsm_code.o $(LDFLAGS) -lm -ltiff
+	$(CC) $(CFLAGS) -o setsm setsm_code.o $(LDFLAGS) -lm -ltiff
 
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
-	$(CC) $(CFLAGS) $(CPP_OPTIONS) $(INCS) -c setsm_code.c
+	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
 
 MPI : setsm_code_mpi.o
 	$(MPICC) $(MPICFLAGS) -o setsm setsm_code_mpi.o $(LDFLAGS) -lm -ltiff
