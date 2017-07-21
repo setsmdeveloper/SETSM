@@ -45,6 +45,11 @@ correct path to the TIFF library.  SETSM can then be built simply by typing:
 make
 ```
 
+Additionally, you can build SETSM with MPI by following the above steps then instead typing:
+```
+make MPI
+```
+
 ### Building and installing SETSM using CMake
 
 A CMake build is provided as an alternative to the Makefile method described 
@@ -75,6 +80,15 @@ Example 3:  Build with icc specifying a location for make install.
 mkdir build
 cd build
 CC=icc cmake -DCMAKE_INSTALL_PREFIX=./desired_location ..
+make
+make install
+```
+
+Example 4: Build with mvapich2.
+```
+mkdir build
+cd build
+CC=mpicc MPI=on cmake ..
 make
 make install
 ```
