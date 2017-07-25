@@ -2142,7 +2142,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -2241,7 +2241,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -2421,7 +2421,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -9893,8 +9893,8 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 					{
 						if(ptslists[t_i].flag != 1 && ptslists[t_i].flag != 2)
 						{
-							temp_selected_ptslists[count_MPs_nums].m_X = scaled_ptslists[t_i].m_X;
-							temp_selected_ptslists[count_MPs_nums].m_Y = scaled_ptslists[t_i].m_Y;
+							temp_selected_ptslists[count_MPs_nums].m_X = ptslists[t_i].m_X;
+							temp_selected_ptslists[count_MPs_nums].m_Y = ptslists[t_i].m_Y;
 							temp_selected_ptslists[count_MPs_nums].m_Z = t_i;
 							
 							count_MPs_nums++;
@@ -9910,8 +9910,8 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 					{
 						if(ptslists[t_i].flag != 1)
 						{
-							temp_selected_ptslists[count_MPs_nums].m_X = scaled_ptslists[t_i].m_X;
-							temp_selected_ptslists[count_MPs_nums].m_Y = scaled_ptslists[t_i].m_Y;
+							temp_selected_ptslists[count_MPs_nums].m_X = ptslists[t_i].m_X;
+							temp_selected_ptslists[count_MPs_nums].m_Y = ptslists[t_i].m_Y;
 							temp_selected_ptslists[count_MPs_nums].m_Z = t_i;
 							
 							count_MPs_nums++;
@@ -10135,7 +10135,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 					
 					sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-					TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+					TINCreate(ptslists,bufstr,count_MPs,t_trilists);
 					
 					trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 					i = 0;
@@ -10226,8 +10226,8 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 							{
 								if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
 								{
-									input_tri_pts[t_tri_counts].m_X = scaled_ptslists[i].m_X;
-									input_tri_pts[t_tri_counts].m_Y = scaled_ptslists[i].m_Y;
+									input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+									input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
 									check_id[t_tri_counts]			= i;
 									
 									t_tri_counts++;
@@ -10237,8 +10237,8 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 							{
 								if(ptslists[i].flag != 1)
 								{
-									input_tri_pts[t_tri_counts].m_X = scaled_ptslists[i].m_X;
-									input_tri_pts[t_tri_counts].m_Y = scaled_ptslists[i].m_Y;
+									input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+									input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
 									check_id[t_tri_counts]			= i;
 									
 									t_tri_counts++;
@@ -10331,8 +10331,8 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 								{
 									if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
 									{
-										input_tri_pts[t_tri_counts].m_X = scaled_ptslists[i].m_X;
-										input_tri_pts[t_tri_counts].m_Y = scaled_ptslists[i].m_Y;
+										input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+										input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
 										check_id[t_tri_counts]			= i;
 										
 										t_tri_counts++;
@@ -10342,8 +10342,8 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 								{
 									if(ptslists[i].flag != 1)
 									{
-										input_tri_pts[t_tri_counts].m_X = scaled_ptslists[i].m_X;
-										input_tri_pts[t_tri_counts].m_Y = scaled_ptslists[i].m_Y;
+										input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+										input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
 										check_id[t_tri_counts]			= i;
 										
 										t_tri_counts++;
@@ -10503,7 +10503,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	return count;
 }
 
-
+/*
 int scomp(const void * vs1, const void * vs2)
 {
 	Point * s1 = (Point *)vs1 ;
@@ -10526,11 +10526,11 @@ int scomp(const void * vs1, const void * vs2)
 		return (1) ;
 	}
 	return (0) ;
-}
+}*/
 
 /*** return a single in-storage site ***/
 
-Site *nextone(void)
+/*Site *nextone(void)
 {
 	Site * s ;
 
@@ -10543,11 +10543,11 @@ Site *nextone(void)
 	{
 		return ((Site *)NULL) ;
 	}
-}
+}*/
 
 /*** read all sites, sort, and compute xmin, xmax, ymin, ymax ***/
 
-void readsites(D3DPOINT *ptslists,int numofpts)
+/*void readsites(D3DPOINT *ptslists,int numofpts)
 {
 	int i ;
 	nsites = 0 ;
@@ -10560,7 +10560,7 @@ void readsites(D3DPOINT *ptslists,int numofpts)
 		sites[nsites].sitenbr = nsites ;
 		sites[nsites++].refcnt = 0 ;
 	}
-	
+
 	qsort((void *)sites, nsites, sizeof(Site), scomp) ;
 	if (nsites > 0)
 	{
@@ -10580,11 +10580,11 @@ void readsites(D3DPOINT *ptslists,int numofpts)
 		ymin = sites[0].coord.y ;
 		ymax = sites[nsites-1].coord.y ;
 	}
-}
+}*/
 
 /*** read one site ***/
 
-Site *readone(void)
+/*Site *readone(void)
 {
 	Site * s ;
 
@@ -10596,83 +10596,116 @@ Site *readone(void)
 		return ((Site *)NULL ) ;
 	}
 	return (s) ;
-}
+}*/
 
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists)
 {
-	struct triangulateio in, mid, out;
-    int x,y,i,j;
+	//clock_t start = clock(), mid1, mid2, mid3, end;
 
-	/* Cannot triangulate with less than three points. */
+	struct triangulateio in, out;
+    int x;
+	double v12[2], v13[2], Normal;
+    D3DPOINT pt1, pt2, pt3;
+	
 	if(numofpts < 3){
         count_tri = 0;
         return;
     }
-	
-	/* Initialize and define input. */
 
-	in.numberofpoints = numofpts;
-	in.numberofpointattributes = 0;
-	in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-	
-	for (x = 0; x < numofpts; x++){
-		in.pointlist[2*x] = ptslists[x].m_X;
-		in.pointlist[2*x+1] = ptslists[x].m_Y;
-	}
-	
+	/* Define input points. */
+
+    in.numberofpoints = numofpts;
+    in.numberofpointattributes = 0;
+    in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
+
+	#pragma omp parallel for private(x) schedule(guided)
+    for (x = 0; x < numofpts; x++){
+        in.pointlist[2*x] = ptslists[x].m_X;
+        in.pointlist[2*x+1] = ptslists[x].m_Y;
+    }
+
 	in.pointattributelist = (REAL *) malloc(in.numberofpoints *
                                           in.numberofpointattributes *
                                           sizeof(REAL));
-	in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
-	in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));	
+    in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
+    in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));
 
-
-
-	
 	/* Make necessary initializations so that Triangle can return a */
-  	/*   triangulation in `mid'.*/
+    /*   triangulation in `out'.  */
 
-  	mid.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
-  	/* Not needed if -N switch used or number of point attributes is zero: */
-  	mid.pointattributelist = (REAL *) NULL;
-  	mid.pointmarkerlist = (int *) NULL; /* Not needed if -N or -B switch used. */
-  	mid.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
-  	/* Not needed if -E switch used or number of triangle attributes is zero: */
-  	mid.triangleattributelist = (REAL *) NULL;
-  	mid.neighborlist = (int *) NULL;         /* Needed only if -n switch used. */
-  	/* Needed only if segments are output (-p or -c) and -P not used: */
-  	mid.segmentlist = (int *) NULL;
-  	/* Needed only if segments are output (-p or -c) and -P and -B not used: */
-  	mid.segmentmarkerlist = (int *) NULL;
-  	mid.edgelist = (int *) NULL;             /* Needed only if -e switch used. */
-  	mid.edgemarkerlist = (int *) NULL;   /* Needed if -e used and -B not used. */
-	/* Triangulate input. */
-	triangulate("zFYY", &in, &mid, (struct triangulateio *) NULL);
-	
-	/* Transfer output from mid to trilists. */
-	for (x = 0; x < mid.numberoftriangles; x++) {
-		trilists[x].m_X = (uint32)mid.trianglelist[x * 3 + 0];
-		trilists[x].m_Y = (uint32)mid.trianglelist[x * 3 + 1];
-		trilists[x].m_Z = (uint32)mid.trianglelist[x * 3 + 2];
+    out.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
+    /* Not needed if -N switch used or number of point attributes is zero: */
+    out.pointattributelist = (REAL *) NULL;
+    out.pointmarkerlist = (int *) NULL; /* Not needed if -N or -B switch used. */
+    out.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
+    /* Not needed if -E switch used or number of triangle attributes is zero: */
+    out.triangleattributelist = (REAL *) NULL;
+    out.neighborlist = (int *) NULL;         /* Needed only if -n switch used. */
+    /* Needed only if segments are output (-p or -c) and -P not used: */
+    out.segmentlist = (int *) NULL;
+    /* Needed only if segments are output (-p or -c) and -P and -B not used: */
+    out.segmentmarkerlist = (int *) NULL;
+    out.edgelist = (int *) NULL;             /* Needed only if -e switch used. */
+    out.edgemarkerlist = (int *) NULL;   /* Needed if -e used and -B not used. */
+    //mid1 = clock();
+	triangulate("zQ", &in, &out, (struct triangulateio *) NULL);
+	//mid2 = clock();
+	/* Transfer output to trilists */
+	#pragma omp parallel for private(x) schedule(guided)
+	for (x = 0; x < out.numberoftriangles; x++) {
+        trilists[x].m_X = (uint32)out.trianglelist[x * 3 + 0];
+        trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
+        trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
+/*
+        pt1 = ptslists[trilists[x].m_X];
+        pt2 = ptslists[trilists[x].m_Y];
+        pt3 = ptslists[trilists[x].m_Z];
+
+        v12[0]  = pt2.m_X-pt1.m_X;
+        v12[1]  = pt2.m_Y-pt1.m_Y;
+
+        v13[0]  = pt3.m_X-pt1.m_X;
+        v13[1]  = pt3.m_Y-pt1.m_Y;
+
+        Normal = v12[0]*v13[1] - v12[1]*v13[0];
+        if (Normal > 0) {
+        	trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
+        	trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
+        }*/
 	}
-	count_tri = mid.numberoftriangles;
 	
- 	/* Free all allocated arrays, including those allocated by Triangle. */
+	count_tri = out.numberoftriangles;
+	//mid3 = clock();
+	/* Free all allocated arrays, including those allocated by Triangle. */
 
-	free(in.pointlist);
-  	free(in.pointattributelist);
-  	free(in.pointmarkerlist);
-  	free(in.regionlist);
-  	free(mid.pointlist);
-  	free(mid.pointattributelist);
-  	free(mid.pointmarkerlist);
-  	free(mid.trianglelist);
-  	free(mid.triangleattributelist);
-  	free(mid.neighborlist);
-  	free(mid.segmentlist);
-  	free(mid.segmentmarkerlist);
-  	free(mid.edgelist);
-  	free(mid.edgemarkerlist);
+    free(in.pointlist);
+    free(in.pointattributelist);
+    free(in.pointmarkerlist);
+    free(in.regionlist);
+    free(out.pointlist);
+    free(out.pointattributelist);
+    free(out.pointmarkerlist);
+    free(out.trianglelist);
+    free(out.triangleattributelist);
+	free(out.neighborlist);
+    free(out.segmentlist);
+    free(out.segmentmarkerlist);
+    free(out.edgelist);
+    free(out.edgemarkerlist);
+
+	//end = clock();
+/*
+    int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
+    printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
+	msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
+    printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
+	msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
+    printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
+	msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
+    printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
+	msec = (end - start) * 1000 / CLOCKS_PER_SEC;
+    printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
+*/
 }
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
@@ -11040,9 +11073,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 				ref_index	  = gridsize.width*t_row + t_col;
 
 				Gridpts[ref_index].anchor_flag = 0;
-				//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
-				//printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
-				//printf("th_ref_ncc = %f\n", th_ref_ncc);
+				  
 				if(!IsRA)
 				{
 					if(ortho_ncc[ref_index] < th_ref_ncc && pyramid_step >= 2)
@@ -11266,7 +11297,6 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									dh		  = h1 - h2;
 									if((dh > 0 && dh > height_th))
 									{
-										//printf("triangle: %d %d %d\n", order[t_o_min], order[t_o_mid], order[t_o_max]);
 										if(IsRA == 1)
 										{
 											pts[order[t_o_min]].flag = 1;
@@ -11286,7 +11316,6 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 									}
 									else if((dh < 0 && fabs(dh) > height_th))
 									{
-										//printf("triangle: %d %d %d\n", order[t_o_min], order[t_o_mid], order[t_o_max]);
 										if(IsRA == 1)
 										{
 											pts[order[t_o_max]].flag = 1;
@@ -11310,9 +11339,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 						}
 					}
 				}
-				//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
-                //printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
-                //printf("ortho_ancc_th = %f\n", ortho_ancc_th);  
+				  
 				if(IsRA == 1)
 				{
 					if(check_neigh == true)
@@ -11360,9 +11387,6 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 					{
 						//#pragma omp critical
 						{
-							//printf("pts[%d] (%.20g, %.20g)\n", index, ref_index_pt.m_X, ref_index_pt.m_Y);
-                			//printf("ortho_ncc[%d] = %f\n", ref_index, ortho_ncc[ref_index]);
-                			//printf("ortho_ncc_th = %f\n", ortho_ncc_th);
 							if(flag_blunder)
 							{
 								if(pyramid_step >= 1)
@@ -14496,7 +14520,7 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
 }
 
 //edgelist.c
-int ELhashsize ;
+/*int ELhashsize ;
 Site * bottomsite ;
 Freelist hfl ;
 Halfedge * ELleftend, * ELrightend, **ELhash ;
@@ -14547,9 +14571,9 @@ ELinsert(Halfedge * lb, Halfedge * new)
 	(lb->ELright)->ELleft = new ;
 	lb->ELright = new ;
 }
-
+*/
 /* Get entry from hash table, pruning any deleted nodes */
-
+/*
 Halfedge *
 ELgethash(int b)
 {
@@ -14563,9 +14587,9 @@ ELgethash(int b)
 	if ((he == (Halfedge *)NULL) || (he->ELedge != (Edge *)DELETED))
 	{
 		return (he) ;
-	}
+	}*/
 	/* Hash table points to deleted half edge.	Patch as necessary. */
-	ELhash[b] = (Halfedge *)NULL ;
+/*	ELhash[b] = (Halfedge *)NULL ;
 	if ((--(he->ELrefcnt)) == 0)
 	{
 		makefree((Freenode *)he, (Freelist *)&hfl) ;
@@ -14578,9 +14602,9 @@ ELleftbnd(Point * p)
 {
 	int i, bucket ;
 	Halfedge * he ;
-	
+*/	
 	/* Use hash table to get close to desired halfedge */
-	bucket = (p->x - xmin) / deltax * ELhashsize ;
+/*	bucket = (p->x - xmin) / deltax * ELhashsize ;
 	if (bucket < 0)
 	{
 		bucket = 0 ;
@@ -14605,9 +14629,9 @@ ELleftbnd(Point * p)
 		}
 		totalsearch += i ;
 	}
-	ntry++ ;
+	ntry++ ;*/
 	/* Now search linear list of halfedges for the corect one */
-	if (he == ELleftend || (he != ELrightend && right_of(he,p)))
+/*	if (he == ELleftend || (he != ELrightend && right_of(he,p)))
 	{
 		do	{
 			he = he->ELright ;
@@ -14619,9 +14643,9 @@ ELleftbnd(Point * p)
 		do	{
 			he = he->ELleft ;
 		} while (he != ELleftend && !right_of(he,p)) ;
-	}
+	}*/
 	/*** Update hash table and reference counts ***/
-	if ((bucket > 0) && (bucket < ELhashsize-1))
+	/*if ((bucket > 0) && (bucket < ELhashsize-1))
 	{
 		if (ELhash[bucket] != (Halfedge *)NULL)
 		{
@@ -14632,11 +14656,11 @@ ELleftbnd(Point * p)
 	}
 	return (he) ;
 }
-
+*/
 /*** This delete routine can't reclaim node, since pointers from hash
 	 : table may be present.
 ***/
-
+/*
 void
 ELdelete(Halfedge * he)
 {
@@ -14678,12 +14702,12 @@ rightreg(Halfedge * he)
 	return (he->ELpm == le ? he->ELedge->reg[re] :
 			he->ELedge->reg[le]) ;
 }
-
+*/
 
 
 
 /*** GEOMETRY.C ***/
-double deltax, deltay ;
+/*double deltax, deltay ;
 int nedges, sqrt_nsites, nvertices ;
 Freelist efl ;
 
@@ -14783,9 +14807,9 @@ intersect(Halfedge * el1, Halfedge * el2)
 	v->coord.y = yint ;
 	return (v) ;
 }
-
+*/
 /*** returns 1 if p is to right of halfedge e ***/
-
+/*
 int
 right_of(Halfedge * el, Point * p)
 {
@@ -14840,8 +14864,8 @@ right_of(Halfedge * el, Point * p)
 			}
 		}
 	}
-	else  /*** e->b == 1.0 ***/
-	{
+	else*/  /*** e->b == 1.0 ***/
+/*	{
 		yl = e->c - e->a * p->x ;
 		t1 = p->y - yl ;
 		t2 = p->x - topsite->coord.x ;
@@ -14899,10 +14923,10 @@ ref(Site * v)
 }
 
 
-
+*/
 
 /*** HEAP.C ***/
-int PQmin, PQcount, PQhashsize ;
+/*int PQmin, PQcount, PQhashsize ;
 Halfedge * PQhash ;
 
 void
@@ -15015,11 +15039,11 @@ PQinitialize(void)
 	}
 }
 
-
+*/
 
 
 /*** MEMORY.C ***/
-extern int sqrt_nsites, siteidx ;
+/*extern int sqrt_nsites, siteidx ;
 char** memory_map;
 int nallocs = 0;
 
@@ -15098,10 +15122,10 @@ void free_all(void)
 }
 
 
-
+*/
 
 /*** OUTPUT.C ***/
-extern int triangulate1, plot, debug, count_tri ;
+/*extern int triangulate, plot, debug, count_tri ;
 extern double ymax, ymin, xmax, xmin ;
 extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
@@ -15130,12 +15154,12 @@ range(double pxmin, double pxmax, double pymin, double pymax)
 void
 out_bisector(Edge * e)
 {
-	if (triangulate1 && plot && !debug)
+	if (triangulate && plot && !debug)
 	{
 		line(e->reg[0]->coord.x, e->reg[0]->coord.y,
 			 e->reg[1]->coord.x, e->reg[1]->coord.y) ;
 	}
-	if (!triangulate1 && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf("l %f %f %f\n", e->a, e->b, e->c) ;
 	}
@@ -15149,11 +15173,11 @@ out_bisector(Edge * e)
 void
 out_ep(Edge * e)
 {
-	if (!triangulate1 && plot)
+	if (!triangulate && plot)
 	{
 		clip_line(e) ;
 	}
-	if (!triangulate1 && !plot)
+	if (!triangulate && !plot)
 	{
 		printf("e %d", e->edgenbr);
 		printf(" %d ", e->ep[le] != (Site *)NULL ? e->ep[le]->sitenbr : -1) ;
@@ -15164,7 +15188,7 @@ out_ep(Edge * e)
 void
 out_vertex(Site * v)
 {
-	if (!triangulate1 && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf ("v %f %f\n", v->coord.x, v->coord.y) ;
 	}
@@ -15177,11 +15201,11 @@ out_vertex(Site * v)
 void
 out_site(Site * s)
 {
-	if (!triangulate1 && plot && !debug)
+	if (!triangulate && plot && !debug)
 	{
 		circle (s->coord.x, s->coord.y, cradius) ;
 	}
-	if (!triangulate1 && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf("s %f %f\n", s->coord.x, s->coord.y) ;
 	}
@@ -15194,7 +15218,7 @@ out_site(Site * s)
 void
 out_triple(Site * s1, Site * s2, Site * s3)
 {
-	if (triangulate1 && !plot && !debug)
+	if (triangulate && !plot && !debug)
 	{
 		count_tri++;
 		fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
@@ -15338,19 +15362,19 @@ clip_line(Edge * e)
 }
 
 
-
+*/
 
 
 /*** VORONOI.C ***/
-extern Site * bottomsite ;
+/*extern Site * bottomsite ;
 extern Halfedge * ELleftend, * ELrightend ;
-
+*/
 /*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
 	 : deltax, deltay (can all be estimates).
 	 : Performance suffers if they are wrong; better to make nsites,
 	 : deltax, and deltay too big than too small.  (?)
 ***/
-
+/*
 void
 voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 {
@@ -15374,9 +15398,9 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 		if (newsite != (Site *)NULL && (PQempty()
 										|| newsite -> coord.y < newintstar.y
 										|| (newsite->coord.y == newintstar.y
-											&& newsite->coord.x < newintstar.x))) {/* new site is
+											&& newsite->coord.x < newintstar.x))) {*//* new site is
 																					  smallest */
-			{
+/*			{
 				out_site(newsite) ;
 			}
 			lbnd = ELleftbnd(&(newsite->coord)) ;
@@ -15401,8 +15425,8 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			}
 			newsite = (*nextsite)() ;
 		}
-		else if (!PQempty())   /* intersection is smallest */
-		{
+		else if (!PQempty())  */ /* intersection is smallest */
+/*	{
 			lbnd = PQextractmin() ;
 			llbnd = ELleft(lbnd) ;
 			rbnd = ELright(lbnd) ;
@@ -15419,7 +15443,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			
 			//out_triple(Site * s1, Site * s2, Site * s3)
 			
-			if (triangulate1 && !plot && !debug)
+			if (triangulate && !plot && !debug)
 			{
 				
 				trilists[count_tri].m_X = bot->sitenbr;
@@ -15429,7 +15453,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 				
 				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;
-			}
+			}*/
 			/*if (debug)
 			  {
 			  printf("circle through left=%d right=%d bottom=%d\n",
@@ -15437,7 +15461,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			  }
 			*/
 			
-			
+			/*
 			v = lbnd->vertex ;
 			makevertex(v) ;
 			endpoint(lbnd->ELedge, lbnd->ELpm, v);
@@ -15485,7 +15509,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 	}
 	
 }
-
+*/
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair)
 {
