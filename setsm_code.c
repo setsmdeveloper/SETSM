@@ -5655,12 +5655,9 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
 		int pm = _param.pm;
 		double t_c = _param.t_c;
 		double m_c = _param.m_c;
-		D2DPOINT *m_sWGS;
 		D2DPOINT *m_sPS;
 		
 		if (m_NumOfPts > 0) {
-			m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
-			memcpy(m_sWGS, _wgs, sizeof(D2DPOINT) * m_NumOfPts);
 			m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -5668,12 +5665,9 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
 		
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
-			m_sWGS[i].m_X = (double) (m_sWGS[i].m_X * pm * DegToRad);
-			m_sWGS[i].m_Y = (double) (m_sWGS[i].m_Y * pm * DegToRad);
-			
-			double lambda = m_sWGS[i].m_X;
-			double phi = m_sWGS[i].m_Y;
-			
+			double lambda = (double) (_wgs[i].m_X * pm * DegToRad);
+			double phi= (double) (_wgs[i].m_Y * pm * DegToRad);
+		        
 			double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
 			double rho = a * m_c * t / t_c;
 			
@@ -5681,8 +5675,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
 			m_sPS[i].m_X = (double) (pm * rho * sin(lambda - lambda_0));
 			m_sPS[i].m_Y = (double) (-pm * rho * cos(lambda - lambda_0));
 		}
-		
-		free(m_sWGS);
+	        
 		return m_sPS;
 	}
 	else
@@ -5833,12 +5826,9 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
 		int pm = _param.pm;
 		double t_c = _param.t_c;
 		double m_c = _param.m_c;
-		D3DPOINT *m_sWGS;
 		D3DPOINT *m_sPS;
 		
 		if (m_NumOfPts > 0) {
-			m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
-			memcpy(m_sWGS, _wgs, sizeof(D3DPOINT) * m_NumOfPts);
 			m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -5846,10 +5836,8 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
 		
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
-			m_sWGS[i].m_X = m_sWGS[i].m_X * pm * DegToRad;
-			m_sWGS[i].m_Y = m_sWGS[i].m_Y * pm * DegToRad;
-			double lambda = m_sWGS[i].m_X;
-			double phi = m_sWGS[i].m_Y;
+		  double lambda = _wgs[i].m_X * pm * DegToRad;
+		  double phi = _wgs[i].m_Y * pm * DegToRad;
 			
 			double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
 			double rho = a * m_c * t / t_c;
@@ -5857,10 +5845,9 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
 			double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
 			m_sPS[i].m_X = pm * rho * sin(lambda - lambda_0);
 			m_sPS[i].m_Y = -pm * rho * cos(lambda - lambda_0);
-			m_sPS[i].m_Z = m_sWGS[i].m_Z;
+			m_sPS[i].m_Z = _wgs[i].m_Z;
 		}
-		
-		free(m_sWGS);
+	        
 		return m_sPS;
 	}
 	else
@@ -5936,13 +5923,10 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 		int pm = _param.pm;
 		double t_c = _param.t_c;
 		double m_c = _param.m_c;
-		
-		D2DPOINT *m_sPS;
+	        
 		D2DPOINT *m_sWGS;
 		
 		if (m_NumOfPts > 0) {
-			m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
-			memcpy(m_sPS, _ps, sizeof(D2DPOINT) * m_NumOfPts);
 			m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -5955,17 +5939,17 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 		
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
-			m_sPS[i].m_X = m_sPS[i].m_X * pm;
-			m_sPS[i].m_Y = m_sPS[i].m_Y * pm;
+		  double x = _ps[i].m_X * pm;
+		  double y = _ps[i].m_Y * pm;
 			
-			double rho = sqrt(pow(m_sPS[i].m_X, 2) + pow(m_sPS[i].m_Y, 2));
+		  double rho = sqrt(pow(x, 2) + pow(y, 2));
 			double t = rho * t_c / (a * m_c);
 			
 			double chi = PI / 2 - 2 * atan(t);
 			double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
 				(7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
 			
-			double lambda = lambda_0 + atan2(m_sPS[i].m_X, -m_sPS[i].m_Y);
+			double lambda = lambda_0 + atan2(x, -y);
 			phi = pm * phi;
 			lambda = pm * lambda;
 			
@@ -5978,8 +5962,7 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 			m_sWGS[i].m_Y = RadToDeg * phi;
 			m_sWGS[i].m_X = RadToDeg * lambda;
 		}
-		
-		free(m_sPS);
+	        
 		return m_sWGS;
 	}
 	else
@@ -5990,13 +5973,10 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 		double e2 = _param.e2;
 		double e2cuadrada = _param.e2cuadrada;
 		double c = _param.c;
-		
-		D2DPOINT *m_sPS;
+	        
 		D2DPOINT *m_sWGS;
 		
 		if (m_NumOfPts > 0) {
-			m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
-			memcpy(m_sPS, _ps, sizeof(D2DPOINT) * m_NumOfPts);
 			m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -6006,8 +5986,8 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
 			
-			double x = m_sPS[i].m_X;
-			double y = m_sPS[i].m_Y;
+			double x = _ps[i].m_X;
+			double y = _ps[i].m_Y;
 			
 			double X = x - 500000;
 			double Y = y;
@@ -6043,7 +6023,6 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
 			m_sWGS[i].m_Y = latitude;
 			m_sWGS[i].m_X = longitude;
 		}
-		free(m_sPS);
 		return m_sWGS;
 		
 	}
@@ -6164,13 +6143,10 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 		int pm = _param.pm;
 		double t_c = _param.t_c;
 		double m_c = _param.m_c;
-		
-		D3DPOINT *m_sPS;
+	        
 		D3DPOINT *m_sWGS;
 		
 		if (m_NumOfPts > 0) {
-			m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
-			memcpy(m_sPS, _ps, sizeof(D3DPOINT) * m_NumOfPts);
 			m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -6183,17 +6159,17 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 		
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
-			m_sPS[i].m_X = m_sPS[i].m_X * pm;
-			m_sPS[i].m_Y = m_sPS[i].m_Y * pm;
+		  double x = _ps[i].m_X * pm;
+		  double y = _ps[i].m_Y * pm;
 			
-			double rho = sqrt(pow(m_sPS[i].m_X, 2) + pow(m_sPS[i].m_Y, 2));
+			double rho = sqrt(pow(x, 2) + pow(y, 2));
 			double t = rho * t_c / (a * m_c);
 			
 			double chi = PI / 2 - 2 * atan(t);
 			double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
 				(7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
 			
-			double lambda = lambda_0 + atan2(m_sPS[i].m_X, -m_sPS[i].m_Y);
+			double lambda = lambda_0 + atan2(x, -y);
 			phi = pm * phi;
 			lambda = pm * lambda;
 			if (lambda > PI) {
@@ -6204,10 +6180,9 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 			
 			m_sWGS[i].m_Y = RadToDeg * phi;
 			m_sWGS[i].m_X = RadToDeg * lambda;
-			m_sWGS[i].m_Z = m_sPS[i].m_Z;
+			m_sWGS[i].m_Z = _ps[i].m_Z;
 		}
-		
-		free(m_sPS);
+	        
 		return m_sWGS;
 	}
 	else
@@ -6218,13 +6193,10 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 		double e2 = _param.e2;
 		double e2cuadrada = _param.e2cuadrada;
 		double c = _param.c;
-		
-		D3DPOINT *m_sPS;
+	        
 		D3DPOINT *m_sWGS;
 		
 		if (m_NumOfPts > 0) {
-			m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
-			memcpy(m_sPS, _ps, sizeof(D3DPOINT) * m_NumOfPts);
 			m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
 		} else {
 			return false;
@@ -6234,8 +6206,8 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 #pragma omp parallel for schedule(guided)
 		for (int i = 0; i < m_NumOfPts; i++) {
 			
-			double x = m_sPS[i].m_X;
-			double y = m_sPS[i].m_Y;
+			double x = _ps[i].m_X;
+			double y = _ps[i].m_Y;
 			
 			double X = x - 500000;
 			double Y = y;
@@ -6270,9 +6242,8 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
 			
 			m_sWGS[i].m_Y = latitude;
 			m_sWGS[i].m_X = longitude;
-			m_sWGS[i].m_Z = m_sPS[i].m_Z;
+			m_sWGS[i].m_Z = _ps[i].m_Z;
 		}
-		free(m_sPS);
 		return m_sWGS;
 	}
 	
