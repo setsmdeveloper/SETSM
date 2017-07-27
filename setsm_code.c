@@ -1523,7 +1523,42 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		}
 	}
 
-	int i;
+	int i,j;
+
+	int iterationsCopy[col_length*row_length*2];
+	for (i = 0; i < length*2; i++)
+	  {
+	    iterationsCopy[i] = iterations[i];
+	  }
+	
+	int temp[col_length*row_length*2];
+	int midrow = ceil(row_length / 2.0);
+	int midcol = ceil(col_length / 2.0);
+
+	for (i = 0; i < length*2; i += 2)
+	  {
+	    int closest = 0;
+	    int closest_dist = midrow + midcol;
+	    for (j = 0; j < length*2; j += 2)
+	      {
+		int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
+		if (new_dist <= closest_dist)
+		  {
+		    closest_dist = new_dist;
+		    closest = j;
+		  }
+	      }
+	    temp[i] = iterations[closest];
+	    temp[i+1] = iterations[closest+1];
+	    iterations[closest] = -1;
+	    iterations[closest+1] = -1;
+	  }
+
+	for (i = 0; i < length*2; i++)
+	  {
+	    iterations[i] = temp[i];
+	  }
+
 	for(i = 0; i < length; i += 1)
 	{
 		int should_add = 0;
@@ -8116,8 +8151,8 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 {
 	printf("minmax %f %f\n",minmaxHeight[0],minmaxHeight[1]);
 	
-	double* nccresult1;
-	double* orthoheight;
+	//double* nccresult1;
+	//double* orthoheight;
 	
 	int Half_template_size = (int)(Template_size/2.0);
 	
@@ -8163,8 +8198,8 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 	
 	numofpts = Size_Grid2D.height*Size_Grid2D.width;
 	
-	nccresult1 = (double*)calloc(sizeof(double),numofpts);
-	orthoheight	 = (double*)calloc(sizeof(double),numofpts);
+	//nccresult1 = (double*)calloc(sizeof(double),numofpts);
+	//orthoheight	 = (double*)calloc(sizeof(double),numofpts);
 	
 	im_resolution = im_resolution*pow(2,Pyramid_step);
 	
@@ -8217,7 +8252,7 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 				temp_GP.m_Y	  = temp_GP_p.m_Y;
 				temp_GP.m_Z	  = GridPT3[pt_index].Height;
 				
-				orthoheight[pt_index] = temp_GP.m_Z;
+				//orthoheight[pt_index] = temp_GP.m_Z;
 				
 				temp_LIA[0] = 0.0;
 				temp_LIA[1] = 0.0;
@@ -8288,7 +8323,7 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 			double val1, val2, de, de2;
 			
 			double nccresult = -10.0;
-			nccresult1[pt_index] = -10.0;
+			//nccresult1[pt_index] = -10.0;
 			
 			if(GridPT3[pt_index].Height != -1000)
 				count_total+=1;
@@ -8550,7 +8585,7 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 			{
 				nccresult = -1;
 			}
-			nccresult1[pt_index] = nccresult;
+			//nccresult1[pt_index] = nccresult;
 			
 			if(nccresult < 0.3)
 			{
@@ -8581,8 +8616,8 @@ double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double 
 	if (all_left_im_cd) free(all_left_im_cd);
 	if (all_right_im_cd) free(all_right_im_cd);
 			   
-	free(orthoheight);
-	free(nccresult1);
+	//free(orthoheight);
+	//free(nccresult1);
 	printf("%d %d\n",count_low,count_total);
 	
 	return (double)(count_low)/(double)(count_total)*100;
@@ -8594,9 +8629,9 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 							   uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
 							   char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary,uint8* left_ori, uint8* right_ori,int blunder_selected_level, bool bblunder)
 {
-	uint16* orthoimage_l, *orthoimage_r;
+  //uint16* orthoimage_l, *orthoimage_r;
 	
-	double* orthoheight;
+  //double* orthoheight;
 	
     //if(Pyramid_step >= 1)
     {
@@ -8654,11 +8689,11 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 	
 	numofpts = Size_Grid2D.height*Size_Grid2D.width;
 	
-	orthoimage_l = (uint16*)calloc(sizeof(uint16),numofpts);
-	orthoimage_r = (uint16*)calloc(sizeof(uint16),numofpts);
+	//orthoimage_l = (uint16*)calloc(sizeof(uint16),numofpts);
+	//orthoimage_r = (uint16*)calloc(sizeof(uint16),numofpts);
 	
 	
-	orthoheight	 = (double*)calloc(sizeof(double),numofpts);
+	//orthoheight	 = (double*)calloc(sizeof(double),numofpts);
 	
 	im_resolution = im_resolution*pow(2,blunder_selected_level);
 	
@@ -8712,7 +8747,7 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 				temp_GP.m_Y	  = temp_GP_p.m_Y;
 				temp_GP.m_Z	  = GridPT3[pt_index].Height;
 				
-				orthoheight[pt_index] = temp_GP.m_Z;
+				//orthoheight[pt_index] = temp_GP.m_Z;
 				
 				temp_LIA[0] = 0.0;
 				temp_LIA[1] = 0.0;
@@ -8729,7 +8764,7 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 				
 			}
 			else {
-				orthoheight[pt_index]	= -1000;
+			  //orthoheight[pt_index]	= -1000;
 			}
 		}
 	}
@@ -8944,8 +8979,8 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 									
 									if(row == 0 && col == 0)
 									{
-										orthoimage_l[pt_index] = (int)(left_patch);
-										orthoimage_r[pt_index] = (int)(right_patch);
+									  //orthoimage_l[pt_index] = (int)(left_patch);
+									  //orthoimage_r[pt_index] = (int)(right_patch);
 
 									}
 								}
@@ -9078,9 +9113,9 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
 	if (all_left_im_cd) free(all_left_im_cd);
 	if (all_right_im_cd) free(all_right_im_cd);
 	
-	free(orthoimage_l);
-	free(orthoimage_r);
-	free(orthoheight);
+	//free(orthoimage_l);
+	//free(orthoimage_r);
+	//free(orthoheight);
 	
 	return true;
 }
@@ -9196,11 +9231,10 @@ bool VerticalLineLocus_Ortho(double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt
 		if (PixelMinXY[1] < 0)	
 			PixelMinXY[1] = 0;
 		
-		for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
-		{
-			for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
-			{
-				
+		for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
+		  {
+		    for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
+		      {	
 				double CurGPXY[2]={0.};
 				double Z = 0.0;
 				bool rtn = false;
