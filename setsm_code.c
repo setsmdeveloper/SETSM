@@ -783,7 +783,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 	char *pa = &a;
 	char **ppa = &pa;
 	int argc = 0;
-	MPI_Init(&argc, &ppa);
+	int provided = 1;
+	MPI_Init_thread(&argc, &ppa, MPI_THREAD_FUNNELED, &provided);
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
