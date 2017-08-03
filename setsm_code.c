@@ -4101,7 +4101,7 @@ UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize
 	{
 		
 		total_grid_counts		= Size_Grid2D.height*Size_Grid2D.width;
-		GridPT3					= (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
+		GridPT3					= (UGRID*)malloc(sizeof(UGRID)*total_grid_counts);
 
 #pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight,Th_roh) private(i)
 		for(i=0;i<total_grid_counts;i++)
@@ -4892,7 +4892,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 		{
 			float *seeddem = NULL;
 			bin = fopen(GIMP_path,"rb");
-			seeddem = (float*)calloc(sizeof(float),seeddem_size.width*seeddem_size.height);
+			seeddem = (float*)malloc(sizeof(float)*seeddem_size.width*seeddem_size.height);
 			fread(seeddem,sizeof(float),seeddem_size.width*seeddem_size.height,bin);
 			
 			for (row = 0; row < Grid_size.height; row ++) {
@@ -10004,7 +10004,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
  
 			D3DPOINT *selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs_nums);
 			
-			uint32 *temp_array = (uint32*)calloc(sizeof(uint32),count_MPs_nums);
+			uint32 *temp_array = (uint32*)malloc(sizeof(uint32)*count_MPs_nums);
 			
 			for(t_i=0;t_i<count_MPs_nums;t_i++)
 			{
@@ -10242,7 +10242,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					int count_blunders = 0;
 					double mt_minmaxheight[2];
 					double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-					double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+					double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
 					blunder_count[0] = 0;
 					blunder_count[1] = 0;
 					
@@ -10296,7 +10296,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
 					{
 						D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
-						uint32 *check_id		= (uint32*)calloc(sizeof(uint32),blunder_count[0]);
+						uint32 *check_id		= (uint32*)malloc(sizeof(uint32)*blunder_count[0]);
 						FILE *pTri;
 						
 						int t_tri_counts = 0;
@@ -10366,7 +10366,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
 						
 						double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-						double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+						double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
 						
 						VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
 												  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size,
@@ -10401,7 +10401,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
 						{
 							D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),non_blunder_count);
-							uint32 *check_id		= (uint32*)calloc(sizeof(uint32),non_blunder_count);
+							uint32 *check_id		= (uint32*)malloc(sizeof(uint32)*non_blunder_count);
 							FILE *pTri;
 							
 							int t_tri_counts = 0;
@@ -10501,7 +10501,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 				}
 
 				double* ortho_ncc = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
-				double* INCC = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
+				double* INCC = (double*)malloc(sizeof(double)*Size_Grid2D.height*Size_Grid2D.width);
 				
 				VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
 										  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size, 
@@ -10558,7 +10558,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	double blunder_dh = 0;
 	double mt_minmaxheight[2];
 	double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-	double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+	double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
 	
 	blunder_param.Boundary	= Boundary;
 	blunder_param.gridspace	= grid_resolution;
@@ -12139,7 +12139,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 	double minH_temp = *minH_grid;
 	double maxH_temp = *maxH_grid;
 
-	UGRID *GridPT3_temp = (UGRID*)calloc(sizeof(UGRID),TIN_Grid_Size_X*TIN_Grid_Size_Y);
+	UGRID *GridPT3_temp = (UGRID*)malloc(sizeof(UGRID)*TIN_Grid_Size_X*TIN_Grid_Size_Y);
 	for (int counter = 0; counter < TIN_Grid_Size_X*TIN_Grid_Size_Y; counter++)
 	{
 	  GridPT3_temp[counter] = GridPT3[counter];
@@ -12323,7 +12323,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
 {
 	
-	UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
+	UGRID *resize_GridPT3 = (UGRID *)malloc(sizeof(UGRID)*resize_Size.height*resize_Size.width);
 	
 	for(int row=0;row<resize_Size.height;row++)
 	{
@@ -12374,7 +12374,7 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
 {
     
-    UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
+    UGRID *resize_GridPT3 = (UGRID *)malloc(sizeof(UGRID)*resize_Size.height*resize_Size.width);
     
     for(int row=0;row<resize_Size.height;row++)
     {
@@ -12794,17 +12794,17 @@ int AdjustParam(uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT Lsta
 	
 	int ii,kk;
 
-	subA	= (double**)calloc(9,sizeof(double*));
-	TsubA	= (double**)calloc(6,sizeof(double*));
-	InverseSubA	= (double**)calloc(6,sizeof(double*));
+	subA	= (double**)malloc(9*sizeof(double*));
+	TsubA	= (double**)malloc(6*sizeof(double*));
+	InverseSubA	= (double**)malloc(6*sizeof(double*));
 
 	for(ii=0;ii<9;ii++)
 	{
-		subA[ii]	= (double*)calloc(6,sizeof(double));
+		subA[ii]	= (double*)malloc(6*sizeof(double));
 		if(ii < 6)
 		{
-			TsubA[ii]		= (double*)calloc(9,sizeof(double));
-			InverseSubA[ii]	= (double*)calloc(6,sizeof(double));
+			TsubA[ii]		= (double*)malloc(9*sizeof(double));
+			InverseSubA[ii]	= (double*)malloc(6*sizeof(double));
 		}
 	}
 
@@ -12992,7 +12992,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 	
 	diff_theta = Ori_diff;
 
-	double *result_rho	= (double*)calloc(9,sizeof(double));
+	double *result_rho	= (double*)malloc(9*sizeof(double));
 	double *XX			= (double*)calloc(6,sizeof(double));
 	double *ATLT		= (double*)calloc(6,sizeof(double));
 	int i, j, k;
@@ -13523,7 +13523,7 @@ double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fi
 
 	DEM_size.width		= (int)(ceil( (double)(boundary[2] - boundary[0]) /grid_size ));
 	DEM_size.height		= (int)(ceil( (double)(boundary[3] - boundary[1]) /grid_size ));
-	DEM = (double*)calloc(DEM_size.height*DEM_size.width,sizeof(double));
+	DEM = (double*)malloc(DEM_size.height*DEM_size.width*sizeof(double));
 	
     printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
     
@@ -13537,7 +13537,7 @@ double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fi
 	{
 		DEMinter_size.width = (int)(ceil((boundary[2] - boundary[0])/info.DEM_resolution));
 		DEMinter_size.height= (int)(ceil((boundary[3] - boundary[1])/info.DEM_resolution));
-		DEMinter = (double*)calloc(DEMinter_size.height*DEMinter_size.width,sizeof(double));
+		DEMinter = (double*)malloc(DEMinter_size.height*DEMinter_size.width*sizeof(double));
 
 #pragma omp parallel for private(index_file) schedule(guided)
 		for(index_file = 0 ; index_file < DEMinter_size.height*DEMinter_size.width ; index_file++)
@@ -13867,9 +13867,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
 	
 	
-	value = (float*)calloc(sizeof(float),row_count*col_count);
-	value_pt = (unsigned char*)calloc(sizeof(unsigned char),row_count*col_count);
-	pt_save	 = (NNXY*)calloc(sizeof(NNXY),row_count*col_count);
+	value = (float*)malloc(sizeof(float)*row_count*col_count);
+	value_pt = (unsigned char*)malloc(sizeof(unsigned char)*row_count*col_count);
+	pt_save	 = (NNXY*)malloc(sizeof(NNXY)*row_count*col_count);
 	
 	t_ndata = ndata;
 	
