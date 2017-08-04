@@ -787,6 +787,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 	MPI_Init_thread(&argc, &ppa, MPI_THREAD_FUNNELED, &provided);
 	int rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	if (rank == 0)
+	{
+	  int size;
+	  MPI_Comm_size(MPI_COMM_WORLD, &size);
+	  printf("MPI: Number of processes: %d\n", size);
+	}
 #endif
 
 	char computation_file[500];
@@ -1523,7 +1529,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			length+=1;
 		}
 	}
-
+	//Reorder list of tiles for static load balancing
 	int i,j;
 
 	int iterationsCopy[col_length*row_length*2];
@@ -1571,6 +1577,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		if(should_add){
 			row = iterations[2*i];
 			col = iterations[2*i+1];
+			printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
 			char *filename;
