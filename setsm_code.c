@@ -113,7 +113,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.2.4\n");
+			printf("setsm version : 3.2.5\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -859,7 +859,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.2.4\n");
+				fprintf(pMetafile,"SETSM Version=3.2.5\n");
 			}
 			
 			time_t current_time;
@@ -868,19 +868,27 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			current_time = time(NULL);
 			c_time_string = ctime(&current_time);
 			
-			char temp_filepath[500];
-			double Image1_gsd_r,Image1_gsd_c,Image2_gsd_r,Image2_gsd_c;
-
+            char temp_filepath[500];
+            double Image1_gsd_r,Image1_gsd_c,Image2_gsd_r,Image2_gsd_c, Image1_gsd, Image2_gsd;
+            ImageGSD GSD_image1, GSD_image2;
+            
             if(args.sensor_provider == 1)
             {
-                LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c);
-                RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c);
+                LRPCs		= OpenXMLFile(proinfo.LeftRPCfilename,&Image1_gsd_r,&Image1_gsd_c,&Image1_gsd);
+                RRPCs		= OpenXMLFile(proinfo.RightRPCfilename,&Image2_gsd_r,&Image2_gsd_c,&Image2_gsd);
+                
+                GSD_image1.row_GSD = Image1_gsd_r;
+                GSD_image1.col_GSD = Image1_gsd_c;
+                GSD_image1.pro_GSD = Image1_gsd;
+                GSD_image2.row_GSD = Image2_gsd_r;
+                GSD_image2.col_GSD = Image2_gsd_c;
+                GSD_image2.pro_GSD = Image2_gsd;
                 
                 OpenXMLFile_orientation(proinfo.LeftRPCfilename,&leftimage_info);
                 OpenXMLFile_orientation(proinfo.RightRPCfilename,&rightimage_info);
                 
-                printf("leftimage info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
-                printf("rightimage info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
+                printf("leftimage info\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
+                printf("rightimage info\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
             }
             else
             {
@@ -1463,8 +1471,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                     fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                     
-                    fprintf(pMetafile,"Image 1 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
-                    fprintf(pMetafile,"Image 2 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
+                    fprintf(pMetafile,"Image 1 info\nImage_1_Mean_row_GSD = %f\nImage_1_Mean_col_GSD = %f\nImage_1_Mean_GSD = %f\nImage_1_Mean_sun_azimuth_angle = %f\nImage_1_Mean_sun_elevation = %f\nImage_1_Mean_sat_azimuth_angle = %f\nImage_1_Mean_sat_elevation = %f\nImage_1_Intrack_angle = %f\nImage_1_Crosstrack_angle = %f\nImage_1_Offnadir_angle = %f\n",Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
+                    fprintf(pMetafile,"Image 2 info\nImage_2_Mean_row_GSD = %f\nImage_2_Mean_col_GSD = %f\nImage_2_Mean_GSD = %f\nImage_2_Mean_sun_azimuth_angle = %f\nImage_2_Mean_sun_elevation = %f\nImage_2_Mean_sat_azimuth_angle = %f\nImage_2_Mean_sat_elevation = %f\nImage_2_Intrack_angle = %f\nImage_2_Crosstrack_angle = %f\nImage_2_Offnadir_angle = %f\n",Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
                     fclose(pMetafile);
                      
                 }
@@ -2635,7 +2643,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									if(proinfo.IsRA && level <= 3)
 									{
 										int RA_iter_counts = 0;
-										RA_iter_counts = AdjustParam(level, count_results[0], filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
+										RA_iter_counts = AdjustParam(level, count_MPs, filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
 																	 Template_size, SubImages_L, data_size_l[level], SubImages_R, data_size_r[level], SubOriImages_L, SubOriImages_R, param,
 																	 bin_angle, pyramid_step, Hemisphere, proinfo.save_filepath, proinfo.tmpdir);
 										fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
@@ -5060,7 +5068,7 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 }
 
 
-double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
+double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd)
 {
 	double** out = NULL;
 
@@ -5098,7 +5106,11 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c)
 				pos1 = strstr(linestr,">")+1;
 				pos2 = strtok(pos1,"<");
 				*gsd_c			= atof(pos2);
-
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd			= atof(pos2);
 			}
 
 			if(strcmp(temp_str,"<RPB>")==0)
