@@ -88,7 +88,7 @@ void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_ar
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
 void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
 
-double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c);
+double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c, double* gsd);
 double** OpenXMLFile_Pleiades(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 

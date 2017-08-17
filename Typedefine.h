@@ -280,6 +280,13 @@ typedef struct tagImageInfo
     char Ofilename[500];
 } ImageInfo;
 
+typedef struct tagImageGSD
+{
+    float row_GSD;
+    float col_GSD;
+    float pro_GSD;
+} ImageGSD;
+
 #endif
 
 #ifndef __VDEFS_H
