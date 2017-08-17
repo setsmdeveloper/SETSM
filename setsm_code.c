@@ -2643,7 +2643,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									if(proinfo.IsRA && level <= 3)
 									{
 										int RA_iter_counts = 0;
-										RA_iter_counts = AdjustParam(level, count_results[0], filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
+										RA_iter_counts = AdjustParam(level, count_MPs, filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
 																	 Template_size, SubImages_L, data_size_l[level], SubImages_R, data_size_r[level], SubOriImages_L, SubOriImages_R, param,
 																	 bin_angle, pyramid_step, Hemisphere, proinfo.save_filepath, proinfo.tmpdir);
 										fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
@@ -4116,7 +4116,7 @@ UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize
 	{
 		
 		total_grid_counts		= Size_Grid2D.height*Size_Grid2D.width;
-		GridPT3					= (UGRID*)malloc(sizeof(UGRID)*total_grid_counts);
+		GridPT3					= (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
 
 #pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight,Th_roh) private(i)
 		for(i=0;i<total_grid_counts;i++)
@@ -5106,7 +5106,7 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd)
 				pos1 = strstr(linestr,">")+1;
 				pos2 = strtok(pos1,"<");
 				*gsd_c			= atof(pos2);
-
+                
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
@@ -7092,66 +7092,62 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
         if (all_left_im_cd == NULL) printf("all_left_im_cd is NULL\n");
         if (all_right_im_cd == NULL) printf("all_right_im_cd is NULL\n");
 
-
-	if (all_left_im_cd != NULL && all_right_im_cd != NULL)
-	{
+		if (all_left_im_cd != NULL && all_right_im_cd != NULL)
+		{
 #pragma omp parallel for schedule(guided)
-	  for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-	  {
-            int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-            int pts_col = iter_count % sub_imagesize_w;
-            int pt_index;
-            double t_X, t_Y;
-            int t_col, t_row;
-            long int pt_index_im;
+			for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
+			{
+            	int pts_row = (int)(floor(iter_count/sub_imagesize_w));
+            	int pts_col = iter_count % sub_imagesize_w;
+            	int pt_index;
+            	double t_X, t_Y;
+            	int t_col, t_row;
+            	long int pt_index_im;
             
-            t_X		= subBoundary[0] + pts_col*im_resolution;
-            t_Y		= subBoundary[1] + pts_row*im_resolution;
+            	t_X		= subBoundary[0] + pts_col*im_resolution;
+            	t_Y		= subBoundary[1] + pts_row*im_resolution;
             
-            t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
-            t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
+            	t_col	= (int)((t_X - subBoundary[0])/DEM_resolution);
+            	t_row	= (int)((t_Y - subBoundary[1])/DEM_resolution);
             
-            pt_index	= t_row*Size_Grid2D.width + t_col;
-            pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+            	pt_index	= t_row*Size_Grid2D.width + t_col;
+            	pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
             
-            if(pt_index < Size_Grid2D.width * Size_Grid2D.height && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
-            {
-                if(GridPT3[pt_index].Height != -1000)
-                {
-                    double temp_LIA[2];
-                    D3DPOINT temp_GP;
-                    D2DPOINT temp_GP_p;
-                    D2DPOINT Left_Imagecoord, Right_Imagecoord;
-                    D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
+            	if(pt_index < Size_Grid2D.width * Size_Grid2D.height && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+            	{
+                	if(GridPT3[pt_index].Height != -1000)
+                	{
+                    	double temp_LIA[2];
+                    	D3DPOINT temp_GP;
+                    	D2DPOINT temp_GP_p;
+                    	D2DPOINT Left_Imagecoord, Right_Imagecoord;
+                    	D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
                     
-                    temp_GP_p.m_X = t_X;
-                    temp_GP_p.m_Y = t_Y;
+                    	temp_GP_p.m_X = t_X;
+                    	temp_GP_p.m_Y = t_Y;
                     
-                    temp_GP_p	  = ps2wgs_single(param,temp_GP_p);
-                    temp_GP.m_X	  = temp_GP_p.m_X;
-                    temp_GP.m_Y	  = temp_GP_p.m_Y;
-                    temp_GP.m_Z	  = GridPT3[pt_index].Height;
+                    	temp_GP_p	  = ps2wgs_single(param,temp_GP_p);
+                    	temp_GP.m_X	  = temp_GP_p.m_X;
+                    	temp_GP.m_Y	  = temp_GP_p.m_Y;
+                    	temp_GP.m_Z	  = GridPT3[pt_index].Height;
                     
+                    	temp_LIA[0] = 0.0;
+                    	temp_LIA[1] = 0.0;
+                    	Left_Imagecoord		= GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP);
+                    	Right_Imagecoord	= GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP);
                     
-                    temp_LIA[0] = 0.0;
-                    temp_LIA[1] = 0.0;
-                    Left_Imagecoord		= GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP);
-                    Right_Imagecoord	= GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP);
+                    	Left_Imagecoord_py	= OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
+                    	Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
                     
-                    Left_Imagecoord_py	= OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
-                    Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
-                    
-                    all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
-                    all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
-                    all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
-                    all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
-                    
-                }
-            }
-	  }
-	}
+                    	all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
+                    	all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
+                    	all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
+                    	all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
+                	}
+            	}
+			}
+		}
     }
-    
     
 	if(Pyramid_step >= 4)
 	{
@@ -7606,29 +7602,28 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 														Sum_R_2_mag	  = Sum_R_2_mag	 + right_mag_patch;
 														Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
 														Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
-                                                    }
-                                                }
-													
-                                                size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
+													}
+												}
+														
+												size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
 												if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
 												{
-                                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                    {
-													    Sum_LR_3  = Sum_LR_3 + LR;
-													    Sum_L_3	  = Sum_L_3	 + left_patch;
-													    Sum_R_3	  = Sum_R_3	 + right_patch;
-													    Sum_L2_3  = Sum_L2_3 + L2;
-													    Sum_R2_3  = Sum_R2_3 + R2;
-													    Count_N[2]++;
+													if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+													{
+														Sum_LR_3  = Sum_LR_3 + LR;
+														Sum_L_3	  = Sum_L_3	 + left_patch;
+														Sum_R_3	  = Sum_R_3	 + right_patch;
+														Sum_L2_3  = Sum_L2_3 + L2;
+														Sum_R2_3  = Sum_R2_3 + R2;
+														Count_N[2]++;
 														
-													    Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
-													    Sum_L_3_mag	  = Sum_L_3_mag	 + left_mag_patch;
-													    Sum_R_3_mag	  = Sum_R_3_mag	 + right_mag_patch;
-													    Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
-													    Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
-														
+														Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+														Sum_L_3_mag	  = Sum_L_3_mag	 + left_mag_patch;
+														Sum_R_3_mag	  = Sum_R_3_mag	 + right_mag_patch;
+														Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+														Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
 													}
-                                                }
+												}
 												
 												if(row == 0 && col == 0)
 												{
@@ -10258,7 +10253,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					int count_blunders = 0;
 					double mt_minmaxheight[2];
 					double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-					double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
+					double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
 					blunder_count[0] = 0;
 					blunder_count[1] = 0;
 					
@@ -10312,7 +10307,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
 					{
 						D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
-						uint32 *check_id		= (uint32*)malloc(sizeof(uint32)*blunder_count[0]);
+						uint32 *check_id		= (uint32*)calloc(sizeof(uint32),blunder_count[0]);
 						FILE *pTri;
 						
 						int t_tri_counts = 0;
@@ -10382,7 +10377,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
 						
 						double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-						double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
+						double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
 						
 						VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
 												  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size,
@@ -10417,7 +10412,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
 						{
 							D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),non_blunder_count);
-							uint32 *check_id		= (uint32*)malloc(sizeof(uint32)*non_blunder_count);
+							uint32 *check_id		= (uint32*)calloc(sizeof(uint32),non_blunder_count);
 							FILE *pTri;
 							
 							int t_tri_counts = 0;
@@ -10517,7 +10512,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 				}
 
 				double* ortho_ncc = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
-				double* INCC = (double*)malloc(sizeof(double)*Size_Grid2D.height*Size_Grid2D.width);
+				double* INCC = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
 				
 				VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
 										  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size, 
@@ -10574,7 +10569,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	double blunder_dh = 0;
 	double mt_minmaxheight[2];
 	double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-	double* INCC = (double*)malloc(Size_Grid2D.height*Size_Grid2D.width*sizeof(double));
+	double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
 	
 	blunder_param.Boundary	= Boundary;
 	blunder_param.gridspace	= grid_resolution;
@@ -11143,7 +11138,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 						}
 						  
 						if(reference_index < num_points && target_index_0 < num_points && target_index_1 < num_points &&
-						   reference_index >= 0 && target_index_0 >= 0 && target_index_1 >= 0)
+						   target_index_0 >= 0 && target_index_1 >= 0)
 						{
 							pt0	= pts[reference_index];
 							pt1	= pts[target_index_0];
@@ -12339,7 +12334,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
 {
 	
-	UGRID *resize_GridPT3 = (UGRID *)malloc(sizeof(UGRID)*resize_Size.height*resize_Size.width);
+	UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
 	
 	for(int row=0;row<resize_Size.height;row++)
 	{
@@ -12390,7 +12385,7 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
 {
     
-    UGRID *resize_GridPT3 = (UGRID *)malloc(sizeof(UGRID)*resize_Size.height*resize_Size.width);
+    UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
     
     for(int row=0;row<resize_Size.height;row++)
     {
@@ -13008,7 +13003,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 	
 	diff_theta = Ori_diff;
 
-	double *result_rho	= (double*)malloc(9*sizeof(double));
+	double *result_rho	= (double*)calloc(9,sizeof(double));
 	double *XX			= (double*)calloc(6,sizeof(double));
 	double *ATLT		= (double*)calloc(6,sizeof(double));
 	int i, j, k;
