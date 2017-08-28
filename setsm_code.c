@@ -1417,8 +1417,46 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 }
                             }
                         }
-                        iter_row_end = max_row + 1;
-                        t_col_end	 = max_col + 1;
+                        
+                        if (args.check_tiles_SR)
+                            iter_row_start	  = args.start_row;
+                        
+                        if (args.check_tiles_ER)
+                            iter_row_end	  = args.end_row;
+                        else
+                        {
+                            if (proinfo.check_tiles_ER)
+                                iter_row_end	  = proinfo.end_row;
+                            else
+                            {
+                                iter_row_end = max_row + 1;
+                            }
+                        }
+                        
+                        if (args.check_tiles_SC)
+                            t_col_start		  = args.start_col;
+                        
+                        if (args.check_tiles_EC)
+                            t_col_end		  = args.end_col;
+                        else
+                        {
+                            if (proinfo.check_tiles_EC)
+                                t_col_end		  = proinfo.end_col;
+                            else
+                            {
+                                t_col_end	 = max_col + 1;
+                            }
+                        }
+                        
+                        if (proinfo.check_tiles_SR)
+                            iter_row_start	  = proinfo.start_row;
+                        
+                        
+                        if (proinfo.check_tiles_SC)
+                            t_col_start		  = proinfo.start_col;
+                        
+                        
+                        
                     }
 
                     printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
@@ -1443,7 +1481,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         ST = time(0);
                         printf("Tile merging start final iteration %d!!\n",final_iteration);
                         int buffer_tile = 420;
-                        mt_grid_size = MergeTiles(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration);
+                        mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration);
                         
                         mt_grid_size = proinfo.DEM_resolution;
                         
@@ -1456,7 +1494,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
                         printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
                         
-                        NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
+                        NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
                         ET = time(0);
                         gap = difftime(ET,ST);
                         printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
@@ -13424,7 +13462,7 @@ void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level
 	}
 }
 
-double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration)
+double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration)
 {
 	FILE *poutDEM;
 	FILE *poutMatchtag;
@@ -13457,63 +13495,67 @@ double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fi
 	boundary[3] = -10000000.0;
 
 #pragma omp parallel for private(index_file) schedule(guided)
-	for(index_file = 0 ; index_file < row_end*col_end ; index_file++)
+	for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
 	{
 		int row,col;
 		
 		row = (int)(floor(index_file/col_end));
 		col = index_file%col_end;
 		
-		FILE *pfile;
-		char t_str[500];
-		sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info.save_filepath,row,col,find_level,find_iter);
-		pfile	= fopen(t_str,"r");
-		if(pfile)
-		{
-			fseek(pfile,0,SEEK_END);
-			size = ftell(pfile);
-			if(size > 0)
-			{
-				char h_t_str[500];
-				FILE *p_hfile;
-				//sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
-				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
-				p_hfile		= fopen(h_t_str,"r");
-				if(p_hfile)
-				{
-					int iter;
-					for(iter=0;iter<header_line;iter++)
-					{
-						int t_row,t_col,t_level,t_col_size,t_row_size;
-						double t_grid_size;
-						double t_boundary[4];
-						fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-							   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
-						if(iter == header_line-1)
-						{
-							grid_size = t_grid_size;
-							t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
-							t_boundary[3] = t_boundary[1] + t_grid_size*t_row_size;
+        if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
+        {
+            FILE *pfile;
+            char t_str[500];
+            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+            pfile	= fopen(t_str,"r");
+            if(pfile)
+            {
+                printf("matched tiles %s\n",t_str);
+                fseek(pfile,0,SEEK_END);
+                size = ftell(pfile);
+                if(size > 0)
+                {
+                    char h_t_str[500];
+                    FILE *p_hfile;
+                    //sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
+                    p_hfile		= fopen(h_t_str,"r");
+                    if(p_hfile)
+                    {
+                        int iter;
+                        for(iter=0;iter<header_line;iter++)
+                        {
+                            int t_row,t_col,t_level,t_col_size,t_row_size;
+                            double t_grid_size;
+                            double t_boundary[4];
+                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
+                            if(iter == header_line-1)
+                            {
+                                grid_size = t_grid_size;
+                                t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
+                                t_boundary[3] = t_boundary[1] + t_grid_size*t_row_size;
 
-#pragma omp critical
-							{
-								if(boundary[0] > t_boundary[0])
-									boundary[0]		= t_boundary[0];
-								if(boundary[1] > t_boundary[1])
-									boundary[1]		= t_boundary[1];
+    #pragma omp critical
+                                {
+                                    if(boundary[0] > t_boundary[0])
+                                        boundary[0]		= t_boundary[0];
+                                    if(boundary[1] > t_boundary[1])
+                                        boundary[1]		= t_boundary[1];
 
-								if(boundary[2] < t_boundary[2])
-									boundary[2]		= t_boundary[2];
-								if(boundary[3] < t_boundary[3])
-									boundary[3]		= t_boundary[3];
-							}
-						}
-					}
-					fclose(p_hfile);
-				}
-			}
-			fclose(pfile);
-		}
+                                    if(boundary[2] < t_boundary[2])
+                                        boundary[2]		= t_boundary[2];
+                                    if(boundary[3] < t_boundary[3])
+                                        boundary[3]		= t_boundary[3];
+                                }
+                            }
+                        }
+                        fclose(p_hfile);
+                    }
+                }
+                fclose(pfile);
+            }
+        }
 	}
 /*
 	boundary[0] = (int)(boundary[0]/40.0)*40 - 40;
@@ -13568,80 +13610,84 @@ double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fi
 		row = (int)(floor(index_file/col_end));
 		col = index_file%col_end;
 		
-		sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info.save_filepath,row,col,find_level,find_iter);
-		pfile	= fopen(t_str,"r");
-		if(pfile)
-		{
-			fseek(pfile,0,SEEK_END);
-			size = ftell(pfile);
-			fseek(pfile,0L,SEEK_SET);
-			if(size > 0)
-			{
-				char h_t_str[500];
-				FILE *p_hfile, *p_hvfile;
-				
-				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
-				p_hfile		= fopen(h_t_str,"r");
-				if(p_hfile)
-				{
-					int iter;
-					char hv_t_str[500];
-					int row_size,col_size;
-					double t_boundary[4];
-					for(iter=0;iter<header_line;iter++)
-					{
-						int t_row,t_col,t_level;
-						double t_grid_size;
-						
-						fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-							   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
-					}	
-					sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info.save_filepath,row,col,find_level,find_iter);
-					
-					p_hvfile	= fopen(hv_t_str,"r");
-					if(p_hvfile)
-					{
-						int index_total;
-						for(index_total = 0; index_total < row_size*col_size ; index_total++)
-						{
-							int iter_row,iter_col;
-							iter_row = floor(index_total/col_size);
-							iter_col = index_total%col_size;
-							{
+        if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
+        {
+        
+            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info.save_filepath,row,col,find_level,find_iter);
+            pfile	= fopen(t_str,"r");
+            if(pfile)
+            {
+                fseek(pfile,0,SEEK_END);
+                size = ftell(pfile);
+                fseek(pfile,0L,SEEK_SET);
+                if(size > 0)
+                {
+                    char h_t_str[500];
+                    FILE *p_hfile, *p_hvfile;
+                    
+                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
+                    p_hfile		= fopen(h_t_str,"r");
+                    if(p_hfile)
+                    {
+                        int iter;
+                        char hv_t_str[500];
+                        int row_size,col_size;
+                        double t_boundary[4];
+                        for(iter=0;iter<header_line;iter++)
+                        {
+                            int t_row,t_col,t_level;
+                            double t_grid_size;
+                            
+                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                        }	
+                        sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info.save_filepath,row,col,find_level,find_iter);
+                        
+                        p_hvfile	= fopen(hv_t_str,"r");
+                        if(p_hvfile)
+                        {
+                            int index_total;
+                            for(index_total = 0; index_total < row_size*col_size ; index_total++)
+                            {
+                                int iter_row,iter_col;
+                                iter_row = floor(index_total/col_size);
+                                iter_col = index_total%col_size;
+                                {
 
-								double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
-								double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
-								int index = (int)(t_row*DEM_size.width + t_col + 0.01);
-                                
-                             	double DEM_value;
-								fscanf(p_hvfile,"%lf\t",&DEM_value);
-                                
-                                //if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
-                                //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM_value,index);
-                                
-								if(index >= 0 && index < DEM_size.width*DEM_size.height &&
-								   iter_row > buffer && iter_row < row_size - buffer &&
-								   iter_col > buffer && iter_col < col_size - buffer)
-								{
-									if(DEM_value > -1000 && DEM_value != 0)
-										DEM[index] = DEM_value;
-                                    //else if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
-                                    //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM[index],index);
+                                    double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
+                                    double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
+                                    int index = (int)(t_row*DEM_size.width + t_col + 0.01);
                                     
+                                    double DEM_value;
+                                    fscanf(p_hvfile,"%lf\t",&DEM_value);
                                     
-								}
-							}
-							fscanf(p_hvfile,"\n");
-						}
-						
-						fclose(p_hvfile);
-					}
-					
-					fclose(p_hfile);
-				}
-			}
-			fclose(pfile);
-		}
+                                    //if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
+                                    //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM_value,index);
+                                    
+                                    if(index >= 0 && index < DEM_size.width*DEM_size.height &&
+                                       iter_row > buffer && iter_row < row_size - buffer &&
+                                       iter_col > buffer && iter_col < col_size - buffer)
+                                    {
+                                        if(DEM_value > -1000 && DEM_value != 0)
+                                            DEM[index] = DEM_value;
+                                        //else if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
+                                        //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM[index],index);
+                                        
+                                        
+                                    }
+                                }
+                                fscanf(p_hvfile,"\n");
+                            }
+                            
+                            fclose(p_hvfile);
+                        }
+                        
+                        fclose(p_hfile);
+                    }
+                }
+                fclose(pfile);
+            }
+        }
 	}
 	
 	if(check_gs)
@@ -13740,7 +13786,7 @@ double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int fi
 	return grid_size;
 }
 
-void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration)
+void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration)
 {
 	double dummy;
 	int i0, cnthold,i,j,index;
@@ -13817,43 +13863,47 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		row = (int)(floor(index_file/col_end));
 		col = index_file%col_end;
 		
-		sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
-		
-		pfile	= fopen(t_str,"r");
-		if(pfile)
-		{
-            //printf("row %d\tcol %d\n",row,col);
-			long int size;
-			fseek(pfile,0,SEEK_END);
-			size = ftell(pfile);
-			fseek(pfile,0L,SEEK_SET);
-			if(size > 0)
-			{
-				double X,Y,Z;
-				while(fscanf(pfile,"%lf\t%lf\t%lf\n",&X,&Y,&Z) != EOF)
-				{
-//#pragma omp critical
-					{
-						if(minX > X)
-							minX	 = X;
-						if(minY > Y)
-							minY	 = Y;
-						
-						if(maxX < X)
-							maxX	 = X;
-						if(maxY < Y)
-							maxY	 = Y;
-						if(minHeight > Z)
-							minHeight = Z;
-						if(maxHeight < Z)
-							maxHeight = Z;
-					}
-					
-					ndata = ndata + 1;
-				}
-			}
-			fclose(pfile);
-		}
+        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
+        {
+            
+            sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
+            
+            pfile	= fopen(t_str,"r");
+            if(pfile)
+            {
+                //printf("row %d\tcol %d\n",row,col);
+                long int size;
+                fseek(pfile,0,SEEK_END);
+                size = ftell(pfile);
+                fseek(pfile,0L,SEEK_SET);
+                if(size > 0)
+                {
+                    double X,Y,Z;
+                    while(fscanf(pfile,"%lf\t%lf\t%lf\n",&X,&Y,&Z) != EOF)
+                    {
+    //#pragma omp critical
+                        {
+                            if(minX > X)
+                                minX	 = X;
+                            if(minY > Y)
+                                minY	 = Y;
+                            
+                            if(maxX < X)
+                                maxX	 = X;
+                            if(maxY < Y)
+                                maxY	 = Y;
+                            if(minHeight > Z)
+                                minHeight = Z;
+                            if(maxHeight < Z)
+                                maxHeight = Z;
+                        }
+                        
+                        ndata = ndata + 1;
+                    }
+                }
+                fclose(pfile);
+            }
+        }
 	}
 	
     printf("end loading matched pts\n");
@@ -13982,80 +14032,84 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		row = (int)(floor(index_file/col_end));
 		col = index_file%col_end;
 		
-		sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
-		
-		pfile	= fopen(t_str,"r");
-		if(pfile)
-		{
-            //printf("matched row %d\tcol %d\n",row,col);
+        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
+        {
             
-			long int size;
-			fseek(pfile,0,SEEK_END);
-			size = ftell(pfile);
-			fseek(pfile,0L,SEEK_SET);
-			if(size > 0)
-			{
-				double pos_row, pos_col, clip_pos_row,clip_pos_col;
-				double t_x, t_y, t_z;
-				char h_t_str[500];
-				
-				FILE* p_hfile;
-				
-				sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",save_path,row,col);
-				p_hfile		= fopen(h_t_str,"r");
-				if(p_hfile)
-				{
-                    //printf("header row %d\tcol %d\n",row,col);
-					int iter;
-					char hv_t_str[500];
-					int row_size,col_size;
-					double t_boundary[4];
-					for(iter=0;iter<header_line;iter++)
-					{
-						int t_row,t_col,t_level;
-						double t_grid_size;
-						
-						fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-							   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
-                        
-                        //printf("%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
-					}	
-					
-					while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
-					{
-						pos_col = (t_x - minX)/grid;
-						pos_row = (maxY - t_y)/grid;
-						
-						clip_pos_col = (t_x - t_boundary[0])/mt_grid;
-						clip_pos_row = (t_y - t_boundary[1])/mt_grid;
-						
-						
-						if(pos_row >= 0 && pos_row < row_count && pos_col >= 0 && pos_col < col_count && 
-						   clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip && 
-						   clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
-						{
-							int t_index = (int)((pos_row)*col_count + pos_col + 0.01);
-							value[t_index] = t_z;
-							value_pt[t_index] = 1;
-							pt_save[t_index].X = t_x;
-							pt_save[t_index].Y = t_y;
-							pt_save[t_index].Z = t_z;
-						}
-					}
-                    fclose(p_hfile);
-				}
-                else
+            sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
+            
+            pfile	= fopen(t_str,"r");
+            if(pfile)
+            {
+                //printf("matched row %d\tcol %d\n",row,col);
+                
+                long int size;
+                fseek(pfile,0,SEEK_END);
+                size = ftell(pfile);
+                fseek(pfile,0L,SEEK_SET);
+                if(size > 0)
                 {
-                    printf("No header file exist : %s\n",h_t_str);
-                    printf("Removed %s\n",t_str);
-                    printf("Please reprocess!!\n");
-                    remove(t_str);
-                    exit(1);
+                    double pos_row, pos_col, clip_pos_row,clip_pos_col;
+                    double t_x, t_y, t_z;
+                    char h_t_str[500];
+                    
+                    FILE* p_hfile;
+                    
+                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",save_path,row,col);
+                    p_hfile		= fopen(h_t_str,"r");
+                    if(p_hfile)
+                    {
+                        //printf("header row %d\tcol %d\n",row,col);
+                        int iter;
+                        char hv_t_str[500];
+                        int row_size,col_size;
+                        double t_boundary[4];
+                        for(iter=0;iter<header_line;iter++)
+                        {
+                            int t_row,t_col,t_level;
+                            double t_grid_size;
+                            
+                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                            
+                            //printf("%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
+                        }	
+                        
+                        while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
+                        {
+                            pos_col = (t_x - minX)/grid;
+                            pos_row = (maxY - t_y)/grid;
+                            
+                            clip_pos_col = (t_x - t_boundary[0])/mt_grid;
+                            clip_pos_row = (t_y - t_boundary[1])/mt_grid;
+                            
+                            
+                            if(pos_row >= 0 && pos_row < row_count && pos_col >= 0 && pos_col < col_count && 
+                               clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip && 
+                               clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
+                            {
+                                int t_index = (int)((pos_row)*col_count + pos_col + 0.01);
+                                value[t_index] = t_z;
+                                value_pt[t_index] = 1;
+                                pt_save[t_index].X = t_x;
+                                pt_save[t_index].Y = t_y;
+                                pt_save[t_index].Z = t_z;
+                            }
+                        }
+                        fclose(p_hfile);
+                    }
+                    else
+                    {
+                        printf("No header file exist : %s\n",h_t_str);
+                        printf("Removed %s\n",t_str);
+                        printf("Please reprocess!!\n");
+                        remove(t_str);
+                        exit(1);
+                    }
+                    
                 }
-				
-			}
-			fclose(pfile);
-		}
+                fclose(pfile);
+            }
+        }
 	}
 
     
