@@ -5109,184 +5109,214 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
 {
-	double** out = NULL;
-
-	FILE *pFile;
-	char temp_str[1000];
-	char linestr[1000];
-	int i;
-	char* pos1;
-	char* pos2;
-	char* token = NULL;
-
-	double aa;
-	bool band_check = false;
+    double** out = NULL;
     
-	pFile			= fopen(_filename,"r");
-	if(pFile)
-	{
-		out = (double**)malloc(sizeof(double*)*7);
-		while(!feof(pFile))
-		{
-			fscanf(pFile,"%s",temp_str);
+    FILE *pFile;
+    char temp_str[1000];
+    char linestr[1000];
+    char linestr1[1000];
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    char* token1 = NULL;
+    
+    double aa;
+    bool band_check = false;
+    
+    pFile			= fopen(_filename,"r");
+    if(pFile)
+    {
+        out = (double**)malloc(sizeof(double*)*7);
+        while(!feof(pFile))
+        {
+            fscanf(pFile,"%s",temp_str);
             if(strcmp(temp_str,"<BAND_P>") == 0 && !band_check)
             {
-                for(i=0;i<13;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                bool check_end = false;
+                int t_count = 0;
+                while(!check_end && t_count < 20)
+                {
+                    t_count++;
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    if(strcmp(token,"<ABSCALFACTOR") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->abscalfactor			= atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->effbw			= atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<TDILEVEL") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->tdi			= atof(pos2);
+                        check_end = true;
+                    }
+                }
                 
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->abscalfactor			= atof(pos2);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->effbw			= atof(pos2);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->tdi			= atof(pos2);
-                
-                band_check = true;
+                if(check_end)
+                    band_check = true;
             }
             
-			if(strcmp(temp_str,"<IMAGE>") == 0)
-			{
-				for(i=0;i<21;i++)
-					fgets(temp_str,sizeof(temp_str),pFile);
-
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				*gsd_r			= atof(pos2);
-
-				//for(i=0;i<2;i++)
-				//	fgets(temp_str,sizeof(temp_str),pFile);
-
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				*gsd_c			= atof(pos2);
+            if(strcmp(temp_str,"<IMAGE>") == 0)
+            {
+                fgets(temp_str,sizeof(temp_str),pFile);
                 
+                bool check_end = false;
+                int t_count = 0;
+                while(!check_end && t_count < 30)
+                {
+                    t_count++;
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_r			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_c			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANPRODUCTGSD") == 0)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd			= atof(pos2);
+                        check_end = true;
+                    }
+                }
+            }
+            
+            if(strcmp(temp_str,"<RPB>")==0)
+            {
+                for(i=0;i<5;i++)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                
+                out[6] = (double*)malloc(sizeof(double)*2);
+                for(i=0;i<2;i++)
+                {
+                    
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[6][i]			= atof(pos2);
+                    
+                }
+                
+                out[0] = (double*)malloc(sizeof(double)*5);
+                for(i=0;i<5;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][i]			= atof(pos2);
+                }
+                aa						= out[0][2];
+                out[0][2]				= out[0][3];
+                out[0][3]				= aa;
+                
+                out[1] = (double*)malloc(sizeof(double)*5);
+                for(i=0;i<5;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][i]			= atof(pos2);
+                }
+                
+                aa						= out[1][2];
+                out[1][2]				= out[1][3];
+                out[1][3]				= aa;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                out[2] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
-                *gsd			= atof(pos2);
-			}
-
-			if(strcmp(temp_str,"<RPB>")==0)
-			{
-				for(i=0;i<5;i++)
-					fgets(temp_str,sizeof(temp_str),pFile);
-				
-				out[6] = (double*)malloc(sizeof(double)*2);
-				for(i=0;i<2;i++)
-				{
-					
-					fgets(linestr,sizeof(linestr),pFile);
-					pos1 = strstr(linestr,">")+1;
-					pos2 = strtok(pos1,"<");
-					out[6][i]			= atof(pos2);
-					
-				}
-				
-				out[0] = (double*)malloc(sizeof(double)*5);
-				for(i=0;i<5;i++)
-				{
-					fgets(linestr,sizeof(linestr),pFile);
-					pos1 = strstr(linestr,">")+1;
-					pos2 = strtok(pos1,"<");
-					out[0][i]			= atof(pos2);
-				}
-				aa						= out[0][2];
-				out[0][2]				= out[0][3];
-				out[0][3]				= aa;
-				   
-				out[1] = (double*)malloc(sizeof(double)*5);
-				for(i=0;i<5;i++)
-				{
-					fgets(linestr,sizeof(linestr),pFile);
-					pos1 = strstr(linestr,">")+1;
-					pos2 = strtok(pos1,"<");
-					out[1][i]			= atof(pos2);
-				}
-				
-				aa						= out[1][2];
-				out[1][2]				= out[1][3];
-				out[1][3]				= aa;
-				
-				fgets(temp_str,sizeof(temp_str),pFile);
-				out[2] = (double*)malloc(sizeof(double)*20);
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				token = strtok(pos2," ");
-				i=0;
-				while(token != NULL)
-				{
-					out[2][i]			= atof(token);
-					token = strtok(NULL," ");
-					i++;
-				}
-				
-				fgets(temp_str,sizeof(temp_str),pFile);
-				fgets(temp_str,sizeof(temp_str),pFile);
-				out[3] = (double*)malloc(sizeof(double)*20);
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				token = strtok(pos2," ");
-				i=0;
-				while(token != NULL)
-				{
-					out[3][i]			= atof(token);
-					token = strtok(NULL," ");
-					i++;
-				}
-
-				fgets(temp_str,sizeof(temp_str),pFile);
-				fgets(temp_str,sizeof(temp_str),pFile);
-				out[4] = (double*)malloc(sizeof(double)*20);
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				token = strtok(pos2," ");
-				i=0;
-				while(token != NULL)
-				{
-					out[4][i]			= atof(token);
-					token = strtok(NULL," ");
-					i++;
-				}
-
-				fgets(temp_str,sizeof(temp_str),pFile);
-				fgets(temp_str,sizeof(temp_str),pFile);
-				out[5] = (double*)malloc(sizeof(double)*20);
-				fgets(linestr,sizeof(linestr),pFile);
-				pos1 = strstr(linestr,">")+1;
-				pos2 = strtok(pos1,"<");
-				token = strtok(pos2," ");
-				i=0;
-				while(token != NULL)
-				{
-					out[5][i]			= atof(token);
-					token = strtok(NULL," ");
-					i++;
-				}
-			}
-		}
-		fclose(pFile);
-
-		if(pos1)
-			pos1 = NULL;
-		if(pos2)
-			pos2 = NULL;
-		if(token)
-			token = NULL;
-	}
-	return out;
+                token = strtok(pos2," ");
+                i=0;
+                while(token != NULL)
+                {
+                    out[2][i]			= atof(token);
+                    token = strtok(NULL," ");
+                    i++;
+                }
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                out[3] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token = strtok(pos2," ");
+                i=0;
+                while(token != NULL)
+                {
+                    out[3][i]			= atof(token);
+                    token = strtok(NULL," ");
+                    i++;
+                }
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                out[4] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token = strtok(pos2," ");
+                i=0;
+                while(token != NULL)
+                {
+                    out[4][i]			= atof(token);
+                    token = strtok(NULL," ");
+                    i++;
+                }
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                out[5] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token = strtok(pos2," ");
+                i=0;
+                while(token != NULL)
+                {
+                    out[5][i]			= atof(token);
+                    token = strtok(NULL," ");
+                    i++;
+                }
+            }
+        }
+        fclose(pFile);
+        
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+        if(token)
+            token = NULL;
+    }
+    return out;
 }
 
 
@@ -5454,10 +5484,12 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     FILE *pFile;
     char temp_str[1000];
     char linestr[1000];
+    char linestr1[1000];
     int i;
     char* pos1;
     char* pos2;
     char* token = NULL;
+    char* token1 = NULL;
     char direction[100];
     
     double dx, dy;
@@ -5523,91 +5555,77 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
                 //printf("LL %f %f \n",LL[0],LL[1]);
             }
             
-            
             if(strcmp(temp_str,"<IMAGE>") == 0 && !check_d)
             {
                 check_d = true;
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                //printf("scandirection %s\n",pos2);
-                sprintf(direction,"%s",pos2);
-                
-                for(i=0;i<24;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MSUNAz			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MSUNEl			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MSATAz			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MSATEl			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MIntrackangle			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MCrosstrackangle			= atof(pos2);
-                
-                
-                for(i=0;i<2;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                MOffnadirangle			= atof(pos2);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                Cloud			= atof(pos2);
-                
+                bool check_end = false;
+                int t_count = 0;
+                while(!check_end && t_count < 60)
+                {
+                    t_count++;
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    
+                    if(strcmp(token,"<MEANSUNAZ") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSUNAz			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANSUNEL") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSUNEl			= atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<MEANSATAZ") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSATAz			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANSATEL") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSATEl			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANINTRACKVIEWANGLE") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MIntrackangle			= atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<MEANCROSSTRACKVIEWANGLE") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MCrosstrackangle			= atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANOFFNADIRVIEWANGLE") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MOffnadirangle			= atof(pos2);
+                    }
+                    if(strcmp(token,"<CLOUDCOVER") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        Cloud			= atof(pos2);
+                        
+                        check_end = true;
+                    }
+                }
             }
         }
+        
         fclose(pFile);
         
         Iinfo->Mean_sun_azimuth_angle   = MSUNAz;
@@ -5618,7 +5636,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         Iinfo->Crosstrack_angle         = MCrosstrackangle;
         Iinfo->Offnadir_angle           = MOffnadirangle;
         Iinfo->cloud                    = Cloud;
-
+        
         if(pos1)
             pos1 = NULL;
         if(pos2)
@@ -5627,6 +5645,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
             token = NULL;
     }
 }
+
 
 void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, CSize* _imagesize, double* _Hinterval)
 {
