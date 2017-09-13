@@ -83,20 +83,21 @@ typedef struct tagD3DPoint
 
 typedef struct tagTransParam
 {
-	bool bHemisphere;
+	double t_c, m_c;
+	//UTM param
+	double sa, sb, e2, e2cuadrada, c;
 	// a and b are radius and eccentricity of WGS84 ellipsoid, repectively.
 	double a, e;
 	// phi_c and lambda_0 are the latitude of true scale of standard parallel and meridian along positive Y axis, respectively.
 	double phi_c, lambda_0;
-	double t_c, m_c;
-	int pm;
 	
-	//UTM param
-	double sa, sb, e2, e2cuadrada, c;
+	int pm;
 	int zone;
-	char direction[10];
 	int projection;
     int utm_zone;
+	
+	char direction[10];
+	bool bHemisphere;
 } TransParam;
 
 typedef struct tagCSize
@@ -121,10 +122,13 @@ typedef struct tagNCCresult
 	double result2;
 	double result3;
 	double result4;
-	int roh_count;
-	uint8 mag_tag;
+	
 	double INCC;
 	double GNCC;
+	
+	int roh_count;
+	uint8 mag_tag;
+	
 } NCCresult;
 
 typedef struct UpdateGrid{
@@ -135,28 +139,44 @@ typedef struct UpdateGrid{
 	double t_maxHeight;
 	
 	double Height; //after blunder detection
-	uint8 Matched_flag;
 	double roh;
-	uint8 anchor_flag;
 	double Matched_height;//before blunder detection
 	double ortho_ncc;
 	double angle;
-//	uint16 false_h_count;
 //	double *false_h;
-	
+
+//	uint16 false_h_count;
+	uint8 Matched_flag;
+	uint8 anchor_flag;
 }UGRID;
 
 typedef struct BlunderIP{
-	uint8 Pyramid_step;
 	CSize Size_Grid2D;
-	double* Boundary;
 	double gridspace;
+	double Hinterval; 
+	double* Boundary;
+	uint8 Pyramid_step;
 	uint8 iteration;
-	double Hinterval;
 	bool height_check_flag;
 }BL;
 
 typedef struct ProjectInfo{
+	double resolution;
+	double DEM_resolution;
+	double preDEM_space;
+	double cal_boundary[4];
+	double RA_param[2];
+	double seedDEMsigma;
+	
+	double minHeight;
+	double maxHeight;
+	
+	int start_row;
+	int end_row;
+	int start_col;
+	int end_col;
+	int threads_num;
+	
 	char LeftImagefilename[500];
 	char RightImagefilename[500];
 	char LeftRPCfilename[500];
@@ -168,20 +188,6 @@ typedef struct ProjectInfo{
 	char priori_DEM_tif[500];
 	char metafilename[500];
 	
-	double resolution;
-	double DEM_resolution;
-	double preDEM_space;
-	double cal_boundary[4];
-	double RA_param[2];
-	double seedDEMsigma;
-	
-	double minHeight;
-	double maxHeight;
-	int start_row;
-	int end_row;
-	int start_col;
-	int end_col;
-	
 	bool check_minH;
 	bool check_maxH;
 	bool check_tiles_SR;
@@ -192,15 +198,43 @@ typedef struct ProjectInfo{
 	bool check_boundary;
 	bool check_checktiff;
     bool check_ortho;
+	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
-
-	int threads_num;
-	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
 } ProInfo;
 
 typedef struct ArgumentInfo{
+	double DEM_space;
+	double seedDEMsigma;
+	double minHeight;
+	double maxHeight;
+	double ra_line;
+	double ra_sample;
+	double Min_X, Max_X, Min_Y, Max_Y;
+	double image_resolution;
+	double overlap_length;
+	
 	int check_arg; // 0 : no input, 1: 3 input
+	int Threads_num;
+	int start_row;
+	int end_row;
+	int start_col;
+	int end_col;
+	int RA_row;
+	int RA_col;
+	int tilesize;
+	int projection; //PS = 1, UTM = 2
+    int utm_zone;
+    int sensor_provider; //DG = 1, Pleiades = 2
+    int ortho_count;
+	
+    char Image1[500];
+	char Image2[500];
+	char Outputpath[500];
+	char Outputpath_name[500];
+	char seedDEMfilename[500];
+	char metafilename[500];
+	
 	bool check_DEM_space;
 	bool check_Threads_num;
 	bool check_seeddem;
@@ -220,43 +254,10 @@ typedef struct ArgumentInfo{
 	bool check_checktiff;
     bool check_ortho;
     bool check_imageresolution;
-	char Image1[500];
-	char Image2[500];
-	char Outputpath[500];
-	char Outputpath_name[500];
-	int Threads_num;
-	double DEM_space;
-	char seedDEMfilename[500];
-	char metafilename[500];
-	double seedDEMsigma;
-	double minHeight;
-	double maxHeight;
-	int start_row;
-	int end_row;
-	int start_col;
-	int end_col;
-	double ra_line;
-	double ra_sample;
-	int RA_row;
-	int RA_col;
-	int tilesize;
-	double Min_X, Max_X, Min_Y, Max_Y;
-	
-	int projection; //PS = 1, UTM = 2
-    int utm_zone;
-    int sensor_provider; //DG = 1, Pleiades = 2
-    double image_resolution;
-    int ortho_count;
-    double overlap_length;
-	
 } ARGINFO;
 
 typedef struct tagImageInfo
 {
-    int month;
-    int date;
-    int year;
-    int scandirection;
     float Mean_sun_azimuth_angle;
     float Mean_sun_elevation;
     float Mean_sat_azimuth_angle;
@@ -269,9 +270,29 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
+	
+	int month;
+    int date;
+    int year;
+    int scandirection;
+    
     char filename[500];
     char Ofilename[500];
 } ImageInfo;
+
+typedef struct tagImageGSD
+{
+    float row_GSD;
+    float col_GSD;
+    float pro_GSD;
+} ImageGSD;
+
+typedef struct tagBandInfo
+{
+    float abscalfactor;
+    float effbw;
+    float tdi;
+} BandInfo;
 
 #endif
 
@@ -325,14 +346,14 @@ typedef struct tagEdge
 
 typedef struct tagHalfedge
 {
+	double ystar ;
+	int ELrefcnt ;
 	struct tagHalfedge * ELleft ;
 	struct tagHalfedge * ELright ;
-	Edge * ELedge ;
-	int ELrefcnt ;
-	char ELpm ;
-	Site * vertex ;
-	double ystar ;
 	struct tagHalfedge * PQnext ;
+	Edge * ELedge ;
+	Site * vertex ;
+	char ELpm ;
 } Halfedge ;
 
 /* edgelist.c */
@@ -403,5 +424,4 @@ void clip_line(Edge *) ;
 void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
 
 #endif	
-
 

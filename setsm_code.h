@@ -88,7 +88,7 @@ void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_ar
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
 void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
 
-double** OpenXMLFile(char* _filename,double* gsd_r, double* gsd_c);
+double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
@@ -194,6 +194,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 					  double *minH_grid, double *maxH_grid, BL BL_param,D3DPOINT *pts, UI3DPOINT *tris,int IsRA, double MPP, char* save_path, uint8 tile_row, uint8 tile_col,bool check_level_end, double seedDEMsigma);
 
 UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
+UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 
 void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str);
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str);
@@ -205,11 +206,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, double *rimageparam, D2DPOINT Lstartpos, D2DPOINT Rstartpos,
 						  D2DPOINT pos_xy, double minH, double maxH, CSize Lsize, CSize Rsize, int H_template_size, int pyramid_step);
 void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);
-double MergeTiles(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration);
+double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration);
 
 double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 
-void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration);
+void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile,int row_start, int col_start, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration);
 
 void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type);
 CSize Envihdr_reader(char *filename);

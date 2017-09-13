@@ -9,7 +9,9 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=cc
+MPICC=mpicc
 CFLAGS=
+MPICFLAGS=$(CFLAGS) -DbuildMPI
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
@@ -19,6 +21,12 @@ setsm : setsm_code.o
 
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
 	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
+
+MPI : setsm_code_mpi.o
+	$(MPICC) $(MPICFLAGS) -o setsm setsm_code_mpi.o $(LDFLAGS) -lm -ltiff
+
+setsm_code_mpi.o : Typedefine.h setsm_code.h setsm_code.c
+	$(MPICC) $(MPICFLAGS) $(INCS) -o setsm_code_mpi.o -c setsm_code.c
 
 .PHONY: clean
 
