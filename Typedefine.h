@@ -287,6 +287,13 @@ typedef struct tagImageGSD
     float pro_GSD;
 } ImageGSD;
 
+typedef struct tagBandInfo
+{
+    float abscalfactor;
+    float effbw;
+    float tdi;
+} BandInfo;
+
 #endif
 
 #ifndef __VDEFS_H
