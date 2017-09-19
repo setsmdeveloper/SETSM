@@ -1391,6 +1391,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
                     }
 #ifdef buildMPI
+			MPI_Barrier(MPI_COMM_WORLD);
 		    MPI_Finalize();
 		    if(rank != 0){
 		      exit(0);
@@ -11563,10 +11564,6 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
 					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps)
 {
-#ifdef buildMPI
-	int rank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif
 	int total_count = 0;
 	double X,Y,Z;
 	int t_flag;
