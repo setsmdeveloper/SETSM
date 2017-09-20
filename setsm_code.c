@@ -1537,6 +1537,16 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 	time_fid			= fopen(computation_file,"w");
 	fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
 	fclose(time_fid);
+
+#ifdef buildMPI
+	// Make sure to finalize
+	int finalized;
+	MPI_Finalized(&finalized);
+	if (!finalized)
+	{
+		MPI_Finalize();
+	}
+#endif
 }
 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
