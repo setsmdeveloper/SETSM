@@ -7,11 +7,11 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=gcc
-TRIFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native -g
 CSWITCHES =-std=c99 -O3 -fopenmp -g -DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
 TRILIBDEFS = -DTRILIBRARY
 MPICC=mpicc
 CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
+TRIFLAGS=$(CFLAGS) -g
 MPICFLAGS=$(CFLAGS) -DbuildMPI
 
 INCS=$(TIFFINC)
