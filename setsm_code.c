@@ -1391,11 +1391,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
                     }
 #ifdef buildMPI
-			MPI_Barrier(MPI_COMM_WORLD);
-		    MPI_Finalize();
-		    if(rank != 0){
-		      exit(0);
-		    }
+					MPI_Barrier(MPI_COMM_WORLD);
+					MPI_Finalize();
+					if(rank != 0)
+					{
+						exit(0);
+					}
 #endif
                     if(!args.check_ortho)
                     {
@@ -1537,7 +1538,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 	time_fid			= fopen(computation_file,"w");
 	fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
 	fclose(time_fid);
-
 #ifdef buildMPI
 	// Make sure to finalize
 	int finalized;
@@ -1547,6 +1547,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		MPI_Finalize();
 	}
 #endif
+
 }
 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
@@ -13647,26 +13648,26 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 
 	DEM_size.width		= (int)(ceil( (double)(boundary[2] - boundary[0]) /grid_size ));
 	DEM_size.height		= (int)(ceil( (double)(boundary[3] - boundary[1]) /grid_size ));
-	DEM = (double*)malloc(DEM_size.height*DEM_size.width*sizeof(double));
+	DEM = (double*)malloc((long)DEM_size.height*(long)DEM_size.width*sizeof(double));
 	
     printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
     
-#pragma omp parallel for private(index_file) schedule(guided)
-	for(index_file = 0 ; index_file < DEM_size.height*DEM_size.width ; index_file++)
+#pragma omp parallel for schedule(guided)
+	for(long index = 0 ; index < (long)DEM_size.height*(long)DEM_size.width ; index++)
 	{
-		DEM[index_file] = -9999;
+		DEM[index] = -9999;
 	}
 
 	if(check_gs)
 	{
 		DEMinter_size.width = (int)(ceil((boundary[2] - boundary[0])/info.DEM_resolution));
 		DEMinter_size.height= (int)(ceil((boundary[3] - boundary[1])/info.DEM_resolution));
-		DEMinter = (double*)malloc(DEMinter_size.height*DEMinter_size.width*sizeof(double));
+		DEMinter = (double*)malloc((long)DEMinter_size.height*(long)DEMinter_size.width*sizeof(double));
 
-#pragma omp parallel for private(index_file) schedule(guided)
-		for(index_file = 0 ; index_file < DEMinter_size.height*DEMinter_size.width ; index_file++)
+#pragma omp parallel for schedule(guided)
+		for(long index = 0 ; index < (long)DEMinter_size.height*(long)DEMinter_size.width ; index++)
 		{
-			DEMinter[index_file] = -9999;
+			DEMinter[index] = -9999;
 		}
 	}
 
@@ -13717,7 +13718,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                         p_hvfile	= fopen(hv_t_str,"r");
                         if(p_hvfile)
                         {
-                            int index_total;
+                            long index_total;
                             for(index_total = 0; index_total < row_size*col_size ; index_total++)
                             {
                                 int iter_row,iter_col;
@@ -13727,7 +13728,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 
                                     double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
                                     double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
-                                    int index = (int)(t_row*DEM_size.width + t_col + 0.01);
+                                    long index = (long)(t_row*DEM_size.width + t_col + 0.01);
                                     
                                     double DEM_value;
                                     fscanf(p_hvfile,"%lf\t",&DEM_value);
@@ -13735,7 +13736,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                                     //if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
                                     //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM_value,index);
                                     
-                                    if(index >= 0 && index < DEM_size.width*DEM_size.height &&
+                                    if(index >= 0 && index < (long)DEM_size.width*(long)DEM_size.height &&
                                        iter_row > buffer && iter_row < row_size - buffer &&
                                        iter_col > buffer && iter_col < col_size - buffer)
                                     {
@@ -13763,8 +13764,8 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 	
 	if(check_gs)
 	{
-		int index;
-		for(index = 0; index < DEMinter_size.height*DEMinter_size.width ; index++)
+		long index;
+		for(index = 0; index < (long)DEMinter_size.height*(long)DEMinter_size.width ; index++)
 		{
 			int row		= (int)(floor(index/DEMinter_size.width));
 			int col		= index%DEMinter_size.width;
@@ -13787,18 +13788,18 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 
 			if(row_o >= 0 && row_o + 1 < DEM_size.height && col_o >= 0 && col_o +1 < DEM_size.width)
 			{
-				int index_1		=  row_o_i	 *DEM_size.width +	col_o_i;
-				int index_2		=  row_o_i	 *DEM_size.width + (col_o_i + 1);
-				int index_3		= (row_o_i+1)*DEM_size.width +	col_o_i;
-				int index_4		= (row_o_i+1)*DEM_size.width + (col_o_i + 1);
+				long index_1		=  (long)row_o_i	 *(long)DEM_size.width +	(long)col_o_i;
+				long index_2		=  (long)row_o_i	 *(long)DEM_size.width + (long)(col_o_i + 1);
+				long index_3		= (long)(row_o_i+1)*(long)DEM_size.width +	(long)col_o_i;
+				long index_4		= (long)(row_o_i+1)*(long)DEM_size.width + (long)(col_o_i + 1);
 
 				double value = s1*DEM[index_4] + s2*DEM[index_3] + s3*DEM[index_2] + s4*DEM[index_1];
-				DEMinter[row*DEMinter_size.width + col] = value;
+				DEMinter[(long)row*(long)DEMinter_size.width + (long)col] = value;
 			}
 			else
 			{
-				double value = DEM[(int)(row_o)*DEM_size.width + (int)(col_o)];
-				DEMinter[row*DEMinter_size.width + col] = value;
+				double value = DEM[(long)(row_o)*(long)DEM_size.width + (long)(col_o)];
+				DEMinter[(long)row*(long)DEMinter_size.width + (long)col] = value;
 			}
 		}
 
@@ -13808,7 +13809,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 		{
 			for (col = 0; col < DEMinter_size.width; col++) 
 			{
-				fprintf(poutDEM,"%f\t",DEMinter[row*DEMinter_size.width + col]);
+				fprintf(poutDEM,"%f\t",DEMinter[(long)row*(long)DEMinter_size.width + (long)col]);
 			}
 			fprintf(poutDEM,"\r\n");
 		}
@@ -13835,7 +13836,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 		{
 			for (col = 0; col < DEM_size.width; col++) 
 			{
-				fprintf(poutDEM,"%f\t",DEM[row*DEM_size.width + col]);
+				fprintf(poutDEM,"%f\t",DEM[(long)row*(long)DEM_size.width + (long)col]);
 			}
 			fprintf(poutDEM,"\r\n");
 		}
@@ -13888,10 +13889,10 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	int buffer_row	 = 5;
 	int t_ndata;
 	int ndim,ndim1,ndata;
-	int total_search_count = 0;
-	int total_mt_count = 0;
-	int total_check_count = 0;
-	int total_null_cell = 0;
+	long total_search_count = 0;
+	long total_mt_count = 0;
+	long total_check_count = 0;
+	long total_null_cell = 0;
 	int threads_num;
 	int guided_size;
 	double *cal_gridpts_X = NULL;
@@ -13999,9 +14000,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
 	
 	
-	value = (float*)malloc(sizeof(float)*row_count*col_count);
-	value_pt = (unsigned char*)malloc(sizeof(unsigned char)*row_count*col_count);
-	pt_save	 = (NNXY*)malloc(sizeof(NNXY)*row_count*col_count);
+	value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+	value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
+	pt_save	 = (NNXY*)malloc(sizeof(NNXY)*(long)row_count*(long)col_count);
 	
 	t_ndata = ndata;
 	
@@ -14016,7 +14017,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	for(i=0;i<row_count;i++)
 	{
 		for(j=0;j<col_count;j++)
-			value[i*col_count + j] = -9999;
+			value[(long)i*(long)col_count + (long)j] = -9999;
 	}
 	
 	if ((fheader = fopen(iterfile,"r")) != NULL)
@@ -14025,7 +14026,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		
 		t_file = fopen(t_savefile,"w");
 		
-		for(i=0;i<DEM_cols*DEM_rows;i++)
+		for(long ix=0;ix<(long)DEM_cols*(long)DEM_rows;ix++)
 		{
 			int row,col;
 			double t_z;
@@ -14044,9 +14045,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 				d_row = ((maxY - t_y)/grid);
 				d_col = ((t_x - minX)/grid);
                 
-                int t_index = (int)(d_row*col_count + d_col + 0.01);
+                long t_index = (long)((long)d_row*(long)col_count + (long)d_col + 0.01);
                 
-                if(t_index < col_count*row_count && d_row < row_count && d_col < col_count)
+                if(t_index < (long)col_count*(long)row_count && d_row < row_count && d_col < col_count)
                 {
                     value[t_index] = t_z;
                     value_pt[t_index] = 0;
@@ -14069,9 +14070,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		cal_gridpts_X	 = (double*)malloc(sizeof(double)*total_search_count);
 		cal_gridpts_Y	 = (double*)malloc(sizeof(double)*total_search_count);
 		t_file = fopen(t_savefile,"r");
-		for(i=0;i<total_search_count;i++)
+		for(long ix=0;ix<total_search_count;ix++)
 		{
-			fscanf(t_file,"%lf\t%lf\n",&cal_gridpts_X[i],&cal_gridpts_Y[i]);
+			fscanf(t_file,"%lf\t%lf\n",&cal_gridpts_X[ix],&cal_gridpts_Y[ix]);
 		}
 		fclose(t_file);
 		remove(t_savefile);
@@ -14081,9 +14082,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	{
 		for(j=0;j<col_count;j++)
 		{
-			pt_save[i*col_count + j].X = -999999999;
-			pt_save[i*col_count + j].Y = -999999999;
-			pt_save[i*col_count + j].Z = -9999;
+			pt_save[(long)i*(long)col_count + (long)j].X = -999999999;
+			pt_save[(long)i*(long)col_count + (long)j].Y = -999999999;
+			pt_save[(long)i*(long)col_count + (long)j].Z = -9999;
 		}
 	}
 	
@@ -14158,7 +14159,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
                                clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip && 
                                clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
                             {
-                                int t_index = (int)((pos_row)*col_count + pos_col + 0.01);
+                                long t_index = (long)((pos_row)*col_count + pos_col + 0.01);
                                 value[t_index] = t_z;
                                 value_pt[t_index] = 1;
                                 pt_save[t_index].X = t_x;
@@ -14185,24 +14186,24 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 
     
 	printf("start null\n");
-	int count_null_cell = 0;
+	long count_null_cell = 0;
 	int check_while = 0;
 	while(check_while == 0)
 	{
 		count_null_cell = 0;
 	
 //#pragma omp parallel for shared(value,value_pt,col_count,row_count) private(index) reduction(+:count_null_cell)
-		for (index = 0; index < col_count*row_count; index++) 
+		for (long index = 0; index < col_count*row_count; index++) 
 		{
 			int row, col;
 			int check_size;
-			int count_cell;
+			long count_cell;
 			int t_i, t_j;
 			double sum_h;
 			row = (int)(floor(index/col_count));
 			col = index%col_count;
 		
-			if (value_pt[row*col_count + col] == 0 && value[row*col_count + col] > -9999)
+			if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
 			{
 			
 				check_size = 1;
@@ -14216,10 +14217,10 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 						int index_col = col + t_j;
 						if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
 						{
-							if(value_pt[index_row*col_count + index_col] == 1)
+							if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
 							{
 								count_cell++;
-								sum_h += value[index_row*col_count + index_col];
+								sum_h += value[(long)index_row*(long)col_count + (long)index_col];
 							}
 						}
 					}
@@ -14229,17 +14230,17 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 					double t_x, t_y;
 					double pos_col,pos_row;
 					
-					value_pt[row*col_count + col] = 1;
-					value[row*col_count + col]	  = (sum_h)/(count_cell);
+					value_pt[(long)row*(long)col_count + (long)col] = 1;
+					value[(long)row*(long)col_count + (long)col]	  = (sum_h)/(count_cell);
 					
 					t_x = minX + col*grid;
 					t_y = maxY - row*grid;
 					
-					if(pt_save[row*col_count + col].Z == -9999)
+					if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
 					{
-						pt_save[row*col_count + col].X = t_x;
-						pt_save[row*col_count + col].Y = t_y;
-						pt_save[row*col_count + col].Z = value[row*col_count + col]; 
+						pt_save[(long)row*(long)col_count + (long)col].X = t_x;
+						pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
+						pt_save[(long)row*(long)col_count + (long)col].Z = value[(long)row*(long)col_count + (long)col]; 
 					}
 					count_null_cell ++;
 				}
@@ -14257,7 +14258,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
     
 	if(total_search_count > 0)
 	{
-		int count = 0;
+		long  count = 0;
 #pragma omp parallel for private(count) schedule(guided)
 		for(count = 0;count < total_search_count;count++)
 		{
@@ -14330,15 +14331,15 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	
     printf("end interpolation\n");
 	//smoothing
-	float *value_sm = (float*)malloc(sizeof(float)*col_count*row_count);
+	float *value_sm = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
 				
 //#pragma omp parallel for shared(value,value_sm,col_count,row_count) private(index)
-	for (index = 0; index < col_count*row_count; index++) 
+	for (long index = 0; index < (long)col_count*(long)row_count; index++) 
 	{
 		int row, col;
 		int check_size;
-		int count_cell;
-		int null_count_cell;
+		long count_cell;
+		long null_count_cell;
 		int t_i, t_j;
 		double sum_h, null_sum_h;
 		
@@ -14357,18 +14358,18 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 				int index_col = col + t_j;
 				if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
 				{
-					if(value[index_row*col_count + index_col] != -9999)
+					if(value[(long)index_row*(long)col_count + (long)index_col] != -9999)
 					{
 						count_cell++;
-						sum_h += value[index_row*col_count + index_col];
+						sum_h += value[(long)index_row*(long)col_count + (long)index_col];
 					}
 					
-					if (value[row*col_count + col] == -9999)
+					if (value[(long)row*(long)col_count + (long)col] == -9999)
 					{
-						if(value[index_row*col_count + index_col] != -9999 && t_i != 0 && t_j != 0)
+						if(value[(long)index_row*(long)col_count + (long)index_col] != -9999 && t_i != 0 && t_j != 0)
 						{
 							null_count_cell++;
-							null_sum_h += value[index_row*col_count + index_col];
+							null_sum_h += value[(long)index_row*(long)col_count + (long)index_col];
 						}
 					}
 
@@ -14377,30 +14378,30 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		}
 		
 		if(count_cell > 0)
-			value_sm[row*col_count + col] = sum_h / count_cell;
+			value_sm[(long)row*(long)col_count + (long)col] = sum_h / count_cell;
 		else
-			value_sm[row*col_count + col] = value[row*col_count + col];
+			value_sm[(long)row*(long)col_count + (long)col] = value[(long)row*(long)col_count + (long)col];
 		
 		if(null_count_cell > 6)
-			value_sm[row*col_count + col] = null_sum_h / null_count_cell;
+			value_sm[(long)row*(long)col_count + (long)col] = null_sum_h / null_count_cell;
 	}
 	printf("end smoothing\n");
     
 	free(value);
-	value = (float*)malloc(sizeof(float)*col_count*row_count);
-	memcpy(value,value_sm,sizeof(float)*col_count*row_count);
+	value = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
+	memcpy(value,value_sm,sizeof(float)*(long)col_count*(long)row_count);
 	free(value_sm);
 	
-	printf("end loading mpts, %d\t%d\t%f\t%f\t%d\t%d!!\n",total_search_count,buffer_clip,minHeight,maxHeight,total_mt_count,total_check_count);
+	printf("end loading mpts, %ld\t%d\t%f\t%f\t%ld\t%ld!!\n",total_search_count,buffer_clip,minHeight,maxHeight,total_mt_count,total_check_count);
 	
 	sprintf(outfile, "%s/%s_dem.raw", save_path, Outputpath_name);
 	fout	= fopen(outfile,"wb");
-	fwrite(value,sizeof(float),row_count*col_count,fout);
+	fwrite(value,sizeof(float),(long)row_count*(long)col_count,fout);
 	fclose(fout);
 	
 	sprintf(outfile, "%s/%s_matchtag.raw", save_path, Outputpath_name);
 	fout	= fopen(outfile,"wb");
-	fwrite(value_pt,sizeof(unsigned char),row_count*col_count,fout);
+	fwrite(value_pt,sizeof(unsigned char),(long)row_count*(long)col_count,fout);
 	fclose(fout);
 	
 	sprintf(DEM_header, "%s/%s_dem.hdr", save_path, Outputpath_name);
