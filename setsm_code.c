@@ -1550,6 +1550,46 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 }
 
+int reorder_list(int iterations[], int length, int col_length, int row_length)
+{
+	int i,j;
+
+	int iterationsCopy[col_length*row_length*2];
+	for (i = 0; i < length*2; i++)
+	{
+	    iterationsCopy[i] = iterations[i];
+	}
+	
+	int temp[col_length*row_length*2];
+	int midrow = ceil(row_length / 2.0);
+	int midcol = ceil(col_length / 2.0);
+
+	for (i = 0; i < length*2; i += 2)
+	{
+	    int closest = 0;
+	    int closest_dist = midrow + midcol;
+	    for (j = 0; j < length*2; j += 2)
+	    {
+			int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
+			if (new_dist <= closest_dist)
+			{
+		    	closest_dist = new_dist;
+		    	closest = j;
+			}
+	    }
+	    temp[i] = iterations[closest];
+	    temp[i+1] = iterations[closest+1];
+	    iterations[closest] = -1;
+	    iterations[closest+1] = -1;
+	}
+
+	for (i = 0; i < length*2; i++)
+	{
+	    iterations[i] = temp[i];
+	}
+	return length;
+}
+
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
@@ -1564,12 +1604,13 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
+
 #ifdef BUILDMPI
 	int row_length = iter_row_end-iter_row_start;
 	int col_length = t_col_end-t_col_start;
 	int iterations[col_length*row_length*2];
 	int length = 0;
-#endif
+
 	for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
 	{
 		if(proinfo.IsRR)
@@ -1582,51 +1623,19 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 		for(col = t_col_start ; col < t_col_end ; col+= col_iter)
 		{
-#ifdef BUILDMPI
 			iterations[2*length] = row;
 			iterations[2*length+1] = col;
 			length+=1;
 		}
 	}
 	//Reorder list of tiles for static load balancing
-	int i,j;
+	reorder_list(iterations, length, col_length, row_length);
+#endif
 
-	int iterationsCopy[col_length*row_length*2];
-	for (i = 0; i < length*2; i++)
-	  {
-	    iterationsCopy[i] = iterations[i];
-	  }
-	
-	int temp[col_length*row_length*2];
-	int midrow = ceil(row_length / 2.0);
-	int midcol = ceil(col_length / 2.0);
-
-	for (i = 0; i < length*2; i += 2)
-	  {
-	    int closest = 0;
-	    int closest_dist = midrow + midcol;
-	    for (j = 0; j < length*2; j += 2)
-	      {
-		int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
-		if (new_dist <= closest_dist)
-		  {
-		    closest_dist = new_dist;
-		    closest = j;
-		  }
-	      }
-	    temp[i] = iterations[closest];
-	    temp[i+1] = iterations[closest+1];
-	    iterations[closest] = -1;
-	    iterations[closest+1] = -1;
-	  }
-
-	for (i = 0; i < length*2; i++)
-	  {
-	    iterations[i] = temp[i];
-	  }
-
-	for(i = 0; i < length; i += 1)
+	int i;
+	for(i = 0; i < (iter_row_end-iter_row_start)*(t_col_end-t_col_start); i += 1)
 	{
+#ifdef BUILDMPI
 		int should_add = 0;
 
 		if(i % size == rank){
@@ -2955,7 +2964,6 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				}
 			}
 		}
-	}
 	if(proinfo.IsRA && RA_count > 0)
 	{
 		Rimageparam[0] /= RA_count;
