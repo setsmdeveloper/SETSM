@@ -1550,7 +1550,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 }
 
-int reorder_list(int iterations[], int length, int col_length, int row_length)
+int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
 {
 	int i,j;
 
@@ -1605,7 +1605,6 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 	int row,col;
 	int RA_count		= 0;
 
-#ifdef BUILDMPI
 	int row_length = iter_row_end-iter_row_start;
 	int col_length = t_col_end-t_col_start;
 	int iterations[col_length*row_length*2];
@@ -1629,22 +1628,25 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		}
 	}
 	//Reorder list of tiles for static load balancing
-	reorder_list(iterations, length, col_length, row_length);
-#endif
+	reorder_list_of_tiles(iterations, length, col_length, row_length);
 
 	int i;
-	for(i = 0; i < (iter_row_end-iter_row_start)*(t_col_end-t_col_start); i += 1)
+	for(i = 0; i < length; i += 1)
 	{
 #ifdef BUILDMPI
-		int should_add = 0;
+			int should_add = 0;
 
-		if(i % size == rank){
-			should_add = 1;
-		}
+			if(i % size == rank){
+				should_add = 1;
+			}
+		
+			if (!should_add)
+				continue;	
+#endif
 
-		if(should_add){
 			row = iterations[2*i];
 			col = iterations[2*i+1];
+#ifdef BUILDMPI
 			printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
 			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
@@ -2963,7 +2965,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 					}
 				}
 			}
-		}
+	}
 	if(proinfo.IsRA && RA_count > 0)
 	{
 		Rimageparam[0] /= RA_count;
