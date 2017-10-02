@@ -31,7 +31,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
-#ifdef buildMPI
+#ifdef BUILDMPI
 #include "mpi.h"
 #endif
 
@@ -778,7 +778,7 @@ char* SetOutpathName(char *_path)
 
 void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_LeftImagefilename, char *_save_filepath)
 {
-#ifdef buildMPI
+#ifdef BUILDMPI
 	char a;
 	char *pa = &a;
 	char **ppa = &pa;
@@ -1390,7 +1390,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                          Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
                     }
-#ifdef buildMPI
+#ifdef BUILDMPI
 					MPI_Barrier(MPI_COMM_WORLD);
 					MPI_Finalize();
 					if(rank != 0)
@@ -1538,7 +1538,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 	time_fid			= fopen(computation_file,"w");
 	fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
 	fclose(time_fid);
-#ifdef buildMPI
+#ifdef BUILDMPI
 	// Make sure to finalize
 	int finalized;
 	MPI_Finalized(&finalized);
@@ -1555,7 +1555,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
 				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter)
 {
-#ifdef buildMPI
+#ifdef BUILDMPI
 	int rank, size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -1564,7 +1564,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 	bool lower_level_match;
 	int row,col;
 	int RA_count		= 0;
-#ifdef buildMPI
+#ifdef BUILDMPI
 	int row_length = iter_row_end-iter_row_start;
 	int col_length = t_col_end-t_col_start;
 	int iterations[col_length*row_length*2];
@@ -1582,7 +1582,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 		for(col = t_col_start ; col < t_col_end ; col+= col_iter)
 		{
-#ifdef buildMPI
+#ifdef BUILDMPI
 			iterations[2*length] = row;
 			iterations[2*length+1] = col;
 			length+=1;
@@ -2961,7 +2961,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		Rimageparam[0] /= RA_count;
 		Rimageparam[1] /= RA_count;
 	}
-#ifdef buildMPI
+#ifdef BUILDMPI
 	MPI_Bcast(Rimageparam, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
 	printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count,Rimageparam[0],Rimageparam[1]);

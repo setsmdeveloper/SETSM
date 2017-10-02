@@ -47,7 +47,7 @@ make
 
 Additionally, you can build SETSM with MPI by following the above steps then instead typing:
 ```
-make MPI
+make setsm_mpi
 ```
 
 ### Building and installing SETSM using CMake

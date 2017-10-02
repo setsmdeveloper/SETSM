@@ -9,7 +9,7 @@
 CC=pgcc
 MPICC=mpicc
 CFLAGS=-c99 -O3 -mp=allcores -fast
-MPICFLAGS=$(CFLAGS) -DbuildMPI
+MPICFLAGS=$(CFLAGS) -DBUILDMPI
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
@@ -20,7 +20,7 @@ setsm : setsm_code.o
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
 	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
 
-MPI : setsm_code_mpi.o
+setsm_mpi : setsm_code_mpi.o
 	$(MPICC) $(MPICFLAGS) -o setsm setsm_code_mpi.o $(LDFLAGS) -lm -ltiff
 
 setsm_code_mpi.o : Typedefine.h setsm_code.h setsm_code.c
