@@ -1317,16 +1317,16 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         if(param.projection == 1)
                         {
                             if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
                             } else {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
                             }
                         }
                         else {
                             if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +North %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +north=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
                             } else {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +South %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +south=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
                             }
                         }
                     }
