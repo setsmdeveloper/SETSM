@@ -1550,6 +1550,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 }
 
+#ifdef BUILDMPI
+// Reorder tiles for static load balancing with MPI
 int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
 {
 	int i,j;
@@ -1589,6 +1591,7 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 	}
 	return length;
 }
+#endif
 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
@@ -1627,1344 +1630,1318 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			length+=1;
 		}
 	}
-	//Reorder list of tiles for static load balancing
-	reorder_list_of_tiles(iterations, length, col_length, row_length);
+
+#ifdef BUILDMPI
+	if (!proinfo.IsRR)
+	{
+		//Reorder list of tiles for static load balancing
+		reorder_list_of_tiles(iterations, length, col_length, row_length);
+	}
+#endif
 
 	int i;
 	for(i = 0; i < length; i += 1)
 	{
-#ifdef BUILDMPI
-			int should_add = 0;
+		row = iterations[2*i];
+		col = iterations[2*i+1];
 
-			if(i % size == rank){
-				should_add = 1;
-			}
-		
-			if (!should_add)
-				continue;	
+#ifdef BUILDMPI
+		if (i % size != rank)
+			continue;	
+		printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
 
-			row = iterations[2*i];
-			col = iterations[2*i+1];
-#ifdef BUILDMPI
-			printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
-#endif
-			char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
-			char *filename;
+		char save_file[500], Lsubsetfilename[500], Rsubsetfilename[500];
+		char *filename;
 			
-			FILE *fid = NULL;
-			FILE *fid_header = NULL;
-			FILE *fid_RAinfo = NULL;
+		FILE *fid = NULL;
+		FILE *fid_header = NULL;
+		FILE *fid_RAinfo = NULL;
+
+		double minmaxHeight[2];
+		double subBoundary[4];
+		double t_Rimageparam[2] = {0.0};
+
+		D2DPOINT Lstartpos_ori, Rstartpos_ori;
+
+		CSize Lsubsetsize, Rsubsetsize;
+
+		bool check_cal = false;
+		if(proinfo.IsRA)
+			check_cal = true;
+		else {
 			
-			double minmaxHeight[2];
-			double subBoundary[4];
-			double t_Rimageparam[2] = {0.0};
-
-			D2DPOINT Lstartpos_ori, Rstartpos_ori;
-
-			CSize Lsubsetsize, Rsubsetsize;
-
-			bool check_cal = false;
-			if(proinfo.IsRA)
+			char check_file[500];
+			sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
+			FILE* pcheckFile;
+			pcheckFile = fopen(check_file,"r");
+			if(!pcheckFile)
 				check_cal = true;
-			else {
+		}
+
+		if(check_cal)
+		{
+			printf("start cal tile\n");
+			total_count += 1;
+			
+			if(proinfo.IsRA)
+			{
+				if(!proinfo.check_checktiff)
+				{
+					sprintf(save_file,"%s/txt/RA_echo_result_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
+					fid			= fopen(save_file,"w");
+					fprintf(fid,"RA param X = %f\tY = %f\n",t_Rimageparam[0],t_Rimageparam[1]);
+
+					sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
+					fid_header	= fopen(save_file,"w");
+				}
+			}
+			else
+			{
+				t_Rimageparam[0]	= Rimageparam[0];
+				t_Rimageparam[1]	= Rimageparam[1];
 				
-				char check_file[500];
-				sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
-				FILE* pcheckFile;
-				pcheckFile = fopen(check_file,"r");
-				if(!pcheckFile)
-					check_cal = true;
+				if(!proinfo.check_checktiff)
+				{
+					sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
+					fid			= fopen(save_file,"w");
+					fprintf(fid,"RA param X = %f\tY = %f\n",t_Rimageparam[0],t_Rimageparam[1]);
+
+					sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
+					fid_header	= fopen(save_file,"w");
+				}
 			}
 
-			if(check_cal)
+			minmaxHeight[0]		= ori_minmaxHeight[0];
+			minmaxHeight[1]		= ori_minmaxHeight[1];
+			//minmaxHeight[0]		-= 100;
+			if(minmaxHeight[0] < -100)
+				minmaxHeight[0] = -100;
+
+			printf("minmaxH = %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
+			SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
+
+			printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
+			filename = GetFileName(proinfo.LeftImagefilename);
+			filename = remove_ext(filename);
+			sprintf(Lsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,row,col);
+			filename = GetFileName(proinfo.RightImagefilename);
+			filename = remove_ext(filename);
+			sprintf(Rsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,row,col);
+
+			printf("subsetimage\n");
+			
+			if(subsetImage(param,NumOfIAparam,LRPCs,Limageparam,proinfo.LeftImagefilename,RRPCs,t_Rimageparam,proinfo.RightImagefilename,subBoundary,minmaxHeight,
+						   &Lstartpos_ori,&Rstartpos_ori,Lsubsetfilename,Rsubsetfilename,&Lsubsetsize, &Rsubsetsize, fid,proinfo.check_checktiff))
 			{
-				printf("start cal tile\n");
-				total_count += 1;
-				
-				
-				if(proinfo.IsRA)
+				bool check_tile_pr = true;
+				if(check_tile_array)
 				{
-					if(!proinfo.check_checktiff)
+					if(proinfo.NumOfTile_row >= row && proinfo.NumOfTile_col >= col)
 					{
-						sprintf(save_file,"%s/txt/RA_echo_result_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
-						fid			= fopen(save_file,"w");
-						fprintf(fid,"RA param X = %f\tY = %f\n",t_Rimageparam[0],t_Rimageparam[1]);
-
-						sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
-						fid_header	= fopen(save_file,"w");
+						if(tile_array[proinfo.NumOfTile_col*row + col])
+							check_tile_pr	= true;
+						else
+							check_tile_pr	= false;
 					}
+					else
+						check_tile_pr		= false;
 				}
-				else
+
+				printf("Completion of subsetImage!!\n");
+
+				if( Lsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Lsubsetsize.width > Template_size/2*pow(2,pyramid_step) &&
+					Rsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Rsubsetsize.width > Template_size/2*pow(2,pyramid_step) &&
+					check_tile_pr)
 				{
-					t_Rimageparam[0]	= Rimageparam[0];
-					t_Rimageparam[1]	= Rimageparam[1];
+					double pre_3sigma= 1000;
+					double pre_mean	= 1000;
+					double ratio = 0;
+					double py_resolution = 0;
+					double grid_resolution = 0;
+					double pre_grid_resolution = 0;
 					
-					if(!proinfo.check_checktiff)
+					bool flag_start, dem_update_flag;
+
+					int level			  = pyramid_step;
+					uint8 sub_total_count	= 0;
+					
+					CSize Size_Grid2D, pre_Size_Grid2D;
+
+					CSize *data_size_l, *data_size_r;
+					UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
+					
+					
+					time_t PreST = 0, PreET = 0;
+					double Pregab;
+					
+					lower_level_match	= true;
+					flag_start			= false;
+					if(proinfo.IsRA)
+						dem_update_flag		= false;
+					else
+						dem_update_flag		= true;
+
+					
+					Size_Grid2D.height	= 0;
+					Size_Grid2D.width	= 0;
+					data_size_l = (CSize*)malloc(sizeof(CSize)*(level+1));
+					data_size_r = (CSize*)malloc(sizeof(CSize)*(level+1));
+
+					sub_total_count = CalTotalIteration(DEM_level,level);
+					SetPySizes(data_size_l, data_size_r, Lsubsetsize, Rsubsetsize, level);
+
+					PreST = time(0);
+					printf("row = %d/%d\tcol = %d/%d\tPreprocessing start!!\n",row,iter_row_end,col,t_col_end);
+					Preprocessing(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
+					PreET = time(0);
+					Pregab = difftime(PreET,PreST);
+					printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
+					
+					PreST = time(0);
+					printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
+					
+					int blunder_selected_level;
+					int pre_blunder_selected_level;
+					if(proinfo.DEM_resolution == 8)
+						pre_blunder_selected_level = 4;
+					else if(proinfo.DEM_resolution == 4)
+						pre_blunder_selected_level = 3;
+					else if(proinfo.DEM_resolution == 2)
+						pre_blunder_selected_level = 2;
+					else if(proinfo.DEM_resolution == 1)
+						pre_blunder_selected_level = 1;
+					else
+						pre_blunder_selected_level = 0;
+					
+					D2DPOINT *GridPT = NULL;
+                    int final_level_iteration = 1;
+                        
+                    int total_matching_candidate_pts = 0;
+                    double matching_rate = 0;
+                        
+                    bool check_RA_divide = false;
+                    double tilesize_RA = 20000;
+                    double lengthOfX = subBoundary[2] - subBoundary[0];
+                    double lengthOfY = subBoundary[3] - subBoundary[1];
+                    int division_X = 0, division_Y = 0;
+                    int total_tile = 0;
+                    double new_subBoundary_RA[4];
+                    bool check_new_subBoundary_RA = false;
+                    double preBoundary[4] = {0};
+                    if(lengthOfX < lengthOfY)
+                    {
+                        if(lengthOfY > tilesize_RA)
+                        {
+                            check_RA_divide = true;
+                            division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
+                            division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
+                            total_tile = division_X*division_Y;
+                        }
+                    }
+                    else
+                    {
+                        if(lengthOfX > tilesize_RA)
+                        {
+                            check_RA_divide = true;
+                            division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
+                            division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
+                            total_tile = division_X*division_Y;
+                        }
+                    }
+                 
+                    printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
+                    
+                  	while(lower_level_match && level >= DEM_level)
 					{
-						sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
-						fid			= fopen(save_file,"w");
-						fprintf(fid,"RA param X = %f\tY = %f\n",t_Rimageparam[0],t_Rimageparam[1]);
+                    	printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
+                           
+                        if(proinfo.IsRA && check_new_subBoundary_RA)
+                        {
+                            preBoundary[0] = subBoundary[0];
+                            preBoundary[1] = subBoundary[1];
+                            preBoundary[2] = subBoundary[2];
+                            preBoundary[3] = subBoundary[3];
+                            
+                            subBoundary[0] = new_subBoundary_RA[0];
+                            subBoundary[1] = new_subBoundary_RA[1];
+                            subBoundary[2] = new_subBoundary_RA[2];
+                            subBoundary[3] = new_subBoundary_RA[3];
+                            
+                            RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
+                            
+                            subsetImage(param,NumOfIAparam,LRPCs,Limageparam,proinfo.LeftImagefilename,RRPCs,t_Rimageparam,proinfo.RightImagefilename,subBoundary,minmaxHeight,
+                                        &Lstartpos_ori,&Rstartpos_ori,Lsubsetfilename,Rsubsetfilename,&Lsubsetsize, &Rsubsetsize, fid,proinfo.check_checktiff);
+                            
+                            SetPySizes(data_size_l, data_size_r, Lsubsetsize, Rsubsetsize, level+1);
+                            
+                            Preprocessing(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level+1,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
+                        }
+                        
+                        printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
+                        
+						double Th_roh, Th_roh_min, Th_roh_start, Th_roh_next;
+						double minH_mps, maxH_mps;
+						double minH_grid, maxH_grid;
+						double MPP;
+						
+						uint8 iteration;
 
-						sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo.save_filepath,row,col);
-						fid_header	= fopen(save_file,"w");
-					}
-				}
+						D2DPOINT Lstartpos, Rstartpos;
+						D2DPOINT BLstartpos, BRstartpos;
+						
+						uint16 *SubImages_L, *SubImages_R;
+						uint8  *SubOriImages_L, *SubOriImages_R;
+						uint16 *SubMagImages_L, *SubMagImages_R;
+						uint16 *SubImages_BL, *SubImages_BR;
+						uint16 *SubMagImages_BL, *SubMagImages_BR;
+						
+						D2DPOINT *Grid_wgs;
+						
+						if(level == 4)
+							blunder_selected_level = level;
+						else
+							blunder_selected_level = level + 1;
+							
+						printf("selected_bl %d\n",blunder_selected_level);
+						
+						SetThs(level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,proinfo.pre_DEMtif,proinfo.IsRA,proinfo.seedDEMsigma,proinfo.DEM_resolution);
+							
+						Lstartpos.m_X		= (double)(Lstartpos_ori.m_X/pow(2,level));		Lstartpos.m_Y		= (double)(Lstartpos_ori.m_Y/pow(2,level));
+						Rstartpos.m_X		= (double)(Rstartpos_ori.m_X/pow(2,level));		Rstartpos.m_Y		= (double)(Rstartpos_ori.m_Y/pow(2,level));
 
-				minmaxHeight[0]		= ori_minmaxHeight[0];
-				minmaxHeight[1]		= ori_minmaxHeight[1];
-				//minmaxHeight[0]		-= 100;
-				if(minmaxHeight[0] < -100)
-					minmaxHeight[0] = -100;
-
-				printf("minmaxH = %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
-				SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
-
-				printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
-				filename = GetFileName(proinfo.LeftImagefilename);
-				filename = remove_ext(filename);
-				sprintf(Lsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,row,col);
-				filename = GetFileName(proinfo.RightImagefilename);
-				filename = remove_ext(filename);
-				sprintf(Rsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,row,col);
-
-				printf("subsetimage\n");
-				
-				if(subsetImage(param,NumOfIAparam,LRPCs,Limageparam,proinfo.LeftImagefilename,RRPCs,t_Rimageparam,proinfo.RightImagefilename,subBoundary,minmaxHeight,
-							   &Lstartpos_ori,&Rstartpos_ori,Lsubsetfilename,Rsubsetfilename,&Lsubsetsize, &Rsubsetsize, fid,proinfo.check_checktiff))
-				{
-					bool check_tile_pr = true;
-					if(check_tile_array)
-					{
-						if(proinfo.NumOfTile_row >= row && proinfo.NumOfTile_col >= col)
+						BLstartpos.m_X		 = (double)(Lstartpos_ori.m_X/pow(2,blunder_selected_level));		BLstartpos.m_Y		 = (double)(Lstartpos_ori.m_Y/pow(2,blunder_selected_level));
+						BRstartpos.m_X		 = (double)(Rstartpos_ori.m_X/pow(2,blunder_selected_level));		BRstartpos.m_Y		 = (double)(Rstartpos_ori.m_Y/pow(2,blunder_selected_level));
+						
+						if(proinfo.IsRA)
 						{
-							if(tile_array[proinfo.NumOfTile_col*row + col])
-								check_tile_pr	= true;
-							else
-								check_tile_pr	= false;
+							dem_update_flag			= false;
+							py_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+							grid_resolution			= Image_res[0]*pow(2,pyramid_step+1);
+                               
+                            printf("RA grid size %f\n",py_resolution);
+                               
+							//if(!flag_start)
+							{
+								GridPT					= SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
+                                   
+                                printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
+							}
 						}
 						else
-							check_tile_pr		= false;
-					}
+							GridPT	= SetGrids(&dem_update_flag, flag_start, level, final_level_iteration, proinfo.resolution, &Size_Grid2D, proinfo.pre_DEMtif,proinfo.priori_DEM_tif, proinfo.DEM_resolution, minmaxHeight,&py_resolution, &grid_resolution, subBoundary);
 
-					printf("Completion of subsetImage!!\n");
-
-					if( Lsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Lsubsetsize.width > Template_size/2*pow(2,pyramid_step) &&
-						Rsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Rsubsetsize.width > Template_size/2*pow(2,pyramid_step) &&
-						check_tile_pr)
-					{
-						double pre_3sigma= 1000;
-						double pre_mean	= 1000;
-						double ratio = 0;
-						double py_resolution = 0;
-						double grid_resolution = 0;
-						double pre_grid_resolution = 0;
-						
-						bool flag_start, dem_update_flag;
-
-						int level			  = pyramid_step;
-						uint8 sub_total_count	= 0;
-						
-						CSize Size_Grid2D, pre_Size_Grid2D;
-
-						CSize *data_size_l, *data_size_r;
-						UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
-						
-						
-						time_t PreST = 0, PreET = 0;
-						double Pregab;
-						
-						lower_level_match	= true;
-						flag_start			= false;
-						if(proinfo.IsRA)
-							dem_update_flag		= false;
-						else
-							dem_update_flag		= true;
-
-						
-						Size_Grid2D.height	= 0;
-						Size_Grid2D.width	= 0;
-						data_size_l = (CSize*)malloc(sizeof(CSize)*(level+1));
-						data_size_r = (CSize*)malloc(sizeof(CSize)*(level+1));
-
-
-						sub_total_count = CalTotalIteration(DEM_level,level);
-						SetPySizes(data_size_l, data_size_r, Lsubsetsize, Rsubsetsize, level);
-
-						PreST = time(0);
-						printf("row = %d/%d\tcol = %d/%d\tPreprocessing start!!\n",row,iter_row_end,col,t_col_end);
-						Preprocessing(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
-						PreET = time(0);
-						Pregab = difftime(PreET,PreST);
-						printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-						
-						PreST = time(0);
-						printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
-						
-						
-						int blunder_selected_level;
-						int pre_blunder_selected_level;
-						if(proinfo.DEM_resolution == 8)
-							pre_blunder_selected_level = 4;
-						else if(proinfo.DEM_resolution == 4)
-							pre_blunder_selected_level = 3;
-						else if(proinfo.DEM_resolution == 2)
-							pre_blunder_selected_level = 2;
-						else if(proinfo.DEM_resolution == 1)
-							pre_blunder_selected_level = 1;
-						else
-							pre_blunder_selected_level = 0;
-						
-						
-						D2DPOINT *GridPT = NULL;
-                        int final_level_iteration = 1;
-                        
-                        int total_matching_candidate_pts = 0;
-                        double matching_rate = 0;
-                        
-                        bool check_RA_divide = false;
-                        double tilesize_RA = 20000;
-                        double lengthOfX = subBoundary[2] - subBoundary[0];
-                        double lengthOfY = subBoundary[3] - subBoundary[1];
-                        int division_X = 0, division_Y = 0;
-                        int total_tile = 0;
-                        double new_subBoundary_RA[4];
-                        bool check_new_subBoundary_RA = false;
-                        double preBoundary[4] = {0};
-                        if(lengthOfX < lengthOfY)
-                        {
-                            if(lengthOfY > tilesize_RA)
-                            {
-                                check_RA_divide = true;
-                                division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
-                                division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
-                                total_tile = division_X*division_Y;
-                            }
-                        }
-                        else
-                        {
-                            if(lengthOfX > tilesize_RA)
-                            {
-                                check_RA_divide = true;
-                                division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
-                                division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
-                                total_tile = division_X*division_Y;
-                            }
-                        }
-                  
-                        printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
-                        
-                  		while(lower_level_match && level >= DEM_level)
+						if(!flag_start)
 						{
-                      		printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
-                            
-                            if(proinfo.IsRA && check_new_subBoundary_RA)
+							printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo.pre_DEMtif,proinfo.priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
+							GridPT3 = SetGrid3PT(param, dem_update_flag, flag_start, Size_Grid2D, Th_roh, level, minmaxHeight,subBoundary,grid_resolution,proinfo.priori_DEM_tif,proinfo.pre_DEMtif,proinfo.seedDEMsigma,proinfo.IsRA,proinfo.metafilename);
+						}
+						
+						if(flag_start)
+						{
+                            if(proinfo.IsRA)
                             {
-                                preBoundary[0] = subBoundary[0];
-                                preBoundary[1] = subBoundary[1];
-                                preBoundary[2] = subBoundary[2];
-                                preBoundary[3] = subBoundary[3];
-                                
-                                subBoundary[0] = new_subBoundary_RA[0];
-                                subBoundary[1] = new_subBoundary_RA[1];
-                                subBoundary[2] = new_subBoundary_RA[2];
-                                subBoundary[3] = new_subBoundary_RA[3];
-                                
-                                RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
-                                
-                                subsetImage(param,NumOfIAparam,LRPCs,Limageparam,proinfo.LeftImagefilename,RRPCs,t_Rimageparam,proinfo.RightImagefilename,subBoundary,minmaxHeight,
-                                            &Lstartpos_ori,&Rstartpos_ori,Lsubsetfilename,Rsubsetfilename,&Lsubsetsize, &Rsubsetsize, fid,proinfo.check_checktiff);
-                                
-                                SetPySizes(data_size_l, data_size_r, Lsubsetsize, Rsubsetsize, level+1);
-                                
-                                Preprocessing(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level+1,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
-                            }
-                            
-                            printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
-                            
-							double Th_roh, Th_roh_min, Th_roh_start, Th_roh_next;
-							double minH_mps, maxH_mps;
-							double minH_grid, maxH_grid;
-							double MPP;
-							
-							uint8 iteration;
-
-							D2DPOINT Lstartpos, Rstartpos;
-							D2DPOINT BLstartpos, BRstartpos;
-							
-							uint16 *SubImages_L, *SubImages_R;
-							uint8  *SubOriImages_L, *SubOriImages_R;
-							uint16 *SubMagImages_L, *SubMagImages_R;
-							uint16 *SubImages_BL, *SubImages_BR;
-							uint16 *SubMagImages_BL, *SubMagImages_BR;
-							
-							D2DPOINT *Grid_wgs;
-							
-							if(level == 4)
-								blunder_selected_level = level;
-							else
-								blunder_selected_level = level + 1;
-                            
-                            
-							
-							printf("selected_bl %d\n",blunder_selected_level);
-							
-							SetThs(level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,proinfo.pre_DEMtif,proinfo.IsRA,proinfo.seedDEMsigma,proinfo.DEM_resolution);
-							
-							
-							
-							Lstartpos.m_X		= (double)(Lstartpos_ori.m_X/pow(2,level));		Lstartpos.m_Y		= (double)(Lstartpos_ori.m_Y/pow(2,level));
-							Rstartpos.m_X		= (double)(Rstartpos_ori.m_X/pow(2,level));		Rstartpos.m_Y		= (double)(Rstartpos_ori.m_Y/pow(2,level));
-
-							BLstartpos.m_X		 = (double)(Lstartpos_ori.m_X/pow(2,blunder_selected_level));		BLstartpos.m_Y		 = (double)(Lstartpos_ori.m_Y/pow(2,blunder_selected_level));
-							BRstartpos.m_X		 = (double)(Rstartpos_ori.m_X/pow(2,blunder_selected_level));		BRstartpos.m_Y		 = (double)(Rstartpos_ori.m_Y/pow(2,blunder_selected_level));
-
-							
-							if(proinfo.IsRA)
-							{
-								dem_update_flag			= false;
-								py_resolution			= Image_res[0]*pow(2,pyramid_step+1);
-								grid_resolution			= Image_res[0]*pow(2,pyramid_step+1);
-                                
-                                printf("RA grid size %f\n",py_resolution);
-                                
-								//if(!flag_start)
-								{
-									GridPT					= SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
-                                    
-                                    printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
-								}
-							}
-							else
-								GridPT	= SetGrids(&dem_update_flag, flag_start, level, final_level_iteration, proinfo.resolution, &Size_Grid2D, proinfo.pre_DEMtif,proinfo.priori_DEM_tif, proinfo.DEM_resolution, minmaxHeight,&py_resolution, &grid_resolution, subBoundary);
-
-							if(!flag_start)
-							{
-								printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo.pre_DEMtif,proinfo.priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
-								GridPT3 = SetGrid3PT(param, dem_update_flag, flag_start, Size_Grid2D, Th_roh, level, minmaxHeight,subBoundary,grid_resolution,proinfo.priori_DEM_tif,proinfo.pre_DEMtif,proinfo.seedDEMsigma,proinfo.IsRA,proinfo.metafilename);
-							}
-							
-							if(flag_start)
-							{
-                                if(proinfo.IsRA)
+                                if(check_new_subBoundary_RA)
                                 {
-                                    if(check_new_subBoundary_RA)
-                                    {
-                                        GridPT3 = ResizeGirdPT3_RA(pre_Size_Grid2D, Size_Grid2D, preBoundary,subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                                    GridPT3 = ResizeGirdPT3_RA(pre_Size_Grid2D, Size_Grid2D, preBoundary,subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                                
+                                    check_new_subBoundary_RA = false;
                                     
-                                        check_new_subBoundary_RA = false;
-                                        
-                                        printf("start ResizeGridPT3 with newBoundry pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
-                                    }
-                                    else
-                                    {
-                                        printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
-                                        GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
-                                    }
+                                    printf("start ResizeGridPT3 with newBoundry pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
                                 }
                                 else
                                 {
                                     printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
                                     GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
                                 }
-                    		}
-							
-                            printf("end start ResizeGridPT3\n");
-                            
-							pre_Size_Grid2D.width = Size_Grid2D.width;
-							pre_Size_Grid2D.height = Size_Grid2D.height;
-							pre_grid_resolution = grid_resolution;
-							
-							fprintf(fid,"level = %d, Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
-							
-							fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
+                            }
+                            else
+                            {
+                                printf("start ResizeGridPT3 pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
+                                GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
+                            }
+                		}
+			
+                        printf("end start ResizeGridPT3\n");
+                        
+						pre_Size_Grid2D.width = Size_Grid2D.width;
+						pre_Size_Grid2D.height = Size_Grid2D.height;
+						pre_grid_resolution = grid_resolution;
+						
+						fprintf(fid,"level = %d, Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
+						
+						fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
 
-							double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
-							double left_mag_var_B, left_mag_avg_B, right_mag_var_B, right_mag_avg_B;
-							
-                            printf("load subimages\n");
-                            
-							SubImages_L		= LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
-							SubImages_R		= LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
-							SubOriImages_L	= LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
-							SubOriImages_R	= LoadPyramidOriImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
-							SubMagImages_L	= LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level,&left_mag_var,&left_mag_avg);
-							SubMagImages_R	= LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level,&right_mag_var,&right_mag_avg);
+						double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
+						double left_mag_var_B, left_mag_avg_B, right_mag_var_B, right_mag_avg_B;
+						
+                        printf("load subimages\n");
+                        
+						SubImages_L		= LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
+						SubImages_R		= LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
+						SubOriImages_L	= LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
+						SubOriImages_R	= LoadPyramidOriImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
+						SubMagImages_L	= LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level,&left_mag_var,&left_mag_avg);
+						SubMagImages_R	= LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level,&right_mag_var,&right_mag_avg);
 
-							printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
-							
-							double mag_avg = (left_mag_avg + right_mag_avg)/2.0;
-							double mag_var = (left_mag_var + right_mag_var)/2.0;
-							
-							SubImages_BL		= LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[blunder_selected_level],blunder_selected_level);
-							SubImages_BR		= LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[blunder_selected_level],blunder_selected_level);
-							SubMagImages_BL		= LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
-							SubMagImages_BR		= LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[blunder_selected_level],blunder_selected_level,&right_mag_var_B,&right_mag_avg_B);
+						printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
+						
+						double mag_avg = (left_mag_avg + right_mag_avg)/2.0;
+						double mag_var = (left_mag_var + right_mag_var)/2.0;
+						
+						SubImages_BL		= LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[blunder_selected_level],blunder_selected_level);
+						SubImages_BR		= LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[blunder_selected_level],blunder_selected_level);
+						SubMagImages_BL		= LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
+						SubMagImages_BR		= LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[blunder_selected_level],blunder_selected_level,&right_mag_var_B,&right_mag_avg_B);
 
-							printf("load subimages blunder_selected_level\n");
-                            
-                            total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
-                            
-							Grid_wgs = ps2wgs(param,Size_Grid2D.width*Size_Grid2D.height,GridPT);
+						printf("load subimages blunder_selected_level\n");
+                           
+                        total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
+                           
+						Grid_wgs = ps2wgs(param,Size_Grid2D.width*Size_Grid2D.height,GridPT);
+						
+						if(proinfo.pre_DEMtif && !flag_start)
+						{
+							ratio = VerticalLineLocus_seeddem(SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], LRPCs, RRPCs,
+															  Limagesize, data_size_l[level], SubImages_L, Rimagesize, data_size_r[level], SubImages_R, Template_size, 
+															  Size_Grid2D, param, GridPT, Grid_wgs, GridPT3,
+															  NumOfIAparam, t_Rimageparam, level, Lstartpos, Rstartpos, 
+															  proinfo.save_filepath, row, col, 1,1,subBoundary,minmaxHeight,proinfo.seedDEMsigma);
+							printf("ratio %f\n",ratio);
+						}
 							
-							if(proinfo.pre_DEMtif && !flag_start)
+						if(ratio > 70)
+						{
+							SetThs_ratio(level, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,proinfo.pre_DEMtif,proinfo.IsRA,proinfo.DEM_resolution);
+							
+							printf("%f \t %f\n",Th_roh,Th_roh_min);
+						}
+						
+						iteration		= 1;
+                        if(level == 0)
+                            iteration = final_level_iteration;
+                        
+						int pre_matched_pts=10;
+						double matching_change_rate = 100;
+						double rate_th = 0.00999999;
+						int max_iteration = 10 - (4 - level)*2;
+						if(max_iteration < 3)
+							max_iteration = 3;
+						
+						NCCresult *nccresult;
+						nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
+						
+                        if(level == 0 &&  iteration == 3)
+                            matching_change_rate = 0.001;
+                        
+                         while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
+						{
+							printf("%f \t %f\n",Th_roh,Th_roh_min);
+							
+							double pre_3sigma, pre_mean;
+							double Th_roh_update = 0;
+
+							NCCflag flag;
+
+							BL blunder_param;
+
+							char filename_mps[500];
+							char filename_mps_mid[500];
+							char filename_mps_fin[500];
+							char filename_mps_pre[500];
+							char filename_mps_anchor[500];
+							char filename_mps_aft[500];
+								
+							char filename_tri[500];
+							char v_temp_path[500];
+								
+							int count_results[2];
+							int count_results_anchor[2];
+							int count_MPs;
+							int count_blunder;
+							bool update_flag = false;
+							bool check_ortho_cal = false;
+								
+							uint8 ortho_level = 2;
+							if(proinfo.DEM_resolution >= 8)
+								ortho_level = 3;
+							
+							if(level >= ortho_level)
 							{
-								ratio = VerticalLineLocus_seeddem(SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], LRPCs, RRPCs,
-																  Limagesize, data_size_l[level], SubImages_L, Rimagesize, data_size_r[level], SubImages_R, Template_size, 
-																  Size_Grid2D, param, GridPT, Grid_wgs, GridPT3,
-																  NumOfIAparam, t_Rimageparam, level, Lstartpos, Rstartpos, 
-																  proinfo.save_filepath, row, col, 1,1,subBoundary,minmaxHeight,proinfo.seedDEMsigma);
-								printf("ratio %f\n",ratio);
+								check_ortho_cal = true;
+							}
+							else
+								check_ortho_cal = false;
+								
+							printf("ortho level = %d\n",ortho_level);
+							
+							pre_3sigma	= 0;	pre_mean	= 0;
+							
+							if(level > 1)
+							{
+								flag.rotate_flag	 = 1;		flag.multi_flag		 = 1;		flag.multi_flag_sum	 = 1;		flag.inter_flag		 = 1;
+							}
+							else
+							{
+								flag.rotate_flag	 = 1;		flag.multi_flag		 = 1;		flag.multi_flag_sum	 = 1;		flag.inter_flag		 = 1;		  
+							}
+
+							if(iteration > 1)
+								flag.weight_flag	 = 1;
+							else
+								flag.weight_flag	 = 0;
+
+							fprintf(fid,"Starting computation of NCC\n iteration = %u\tTh_roh = %f\tTh_roh_start = %f\tGrid size %d %d\n",
+									iteration, Th_roh,Th_roh_start,Size_Grid2D.width,Size_Grid2D.height);
+
+							printf("sub size %d\t%d\t%d\t%d\n",data_size_l[level].width,data_size_l[level].height,data_size_r[level].width,data_size_r[level].height);
+								
+							if(proinfo.IsRA)
+							{
+								sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,row,col,level,iteration);
+								sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo.save_filepath,row,col,level,iteration);
+							}
+							else
+							{
+								sprintf(filename_mps,"%s/txt/matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,row,col,level,iteration);
+								sprintf(filename_mps_fin,"%s/txt/matched_pts_%d_%d_%d_%d_fin.txt",proinfo.save_filepath,row,col,level,iteration);
+								sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo.save_filepath,row,col,level,iteration);
+								sprintf(filename_mps_aft,"%s/txt/matched_pts_%d_%d_%d_%d_aft.txt",proinfo.save_filepath,row,col,level,iteration);
+								sprintf(filename_mps_anchor,"%s/txt/matched_pts_%d_%d_%d_%d_anchor.txt",proinfo.save_filepath,row,col,level,iteration);
 							}
 							
-							if(ratio > 70)
-							{
-								SetThs_ratio(level, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,proinfo.pre_DEMtif,proinfo.IsRA,proinfo.DEM_resolution);
+							sprintf(v_temp_path,"%s/tmp/vv_tmp",proinfo.save_filepath);
+							
+							printf("template size =%d\n",Template_size);
+							
+							VerticalLineLocus(nccresult,SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0],LRPCs,RRPCs,Limagesize,data_size_l[level],SubImages_L,Rimagesize,data_size_r[level],SubImages_R,Template_size,Size_Grid2D,
+											  param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Rimageparam,minmaxHeight,level,Lstartpos,Rstartpos,iteration,SubOriImages_L,SubOriImages_R,bin_angle,1,0,fid,true,Hemisphere,
+											  proinfo.save_filepath,row,col,subBoundary,proinfo.pre_DEMtif,v_temp_path,&MPP,proinfo.IsRA,mag_avg,mag_var);
+							
+							printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
+
+							minH_mps = 1000000;
+							maxH_mps = -1000000;
+
+							count_MPs = SelectMPs(nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
+												  iteration,0,filename_mps_pre,proinfo.pre_DEMtif,proinfo.IsRA,MPP,proinfo.DEM_resolution,Image_res[0],final_level_iteration);
+							printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
 								
-								printf("%f \t %f\n",Th_roh,Th_roh_min);
+							if (check_ortho_cal && proinfo.IsRA != 1)
+							{
+								//anchor points
+								count_blunder = DecisionMPs(false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,proinfo.save_filepath,
+															Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
+															SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
+															Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+															param, Grid_wgs,GridPT,
+															NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
+															proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
+								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
+
+								//blunder detection
+								count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,proinfo.save_filepath,
+															Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+															SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
+															Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+															param, Grid_wgs,GridPT,
+															NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
+															proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
+								
+								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
+							}
+							else
+							{
+								count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,proinfo.save_filepath,
+															Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+															SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
+															Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+															param, Grid_wgs,GridPT,
+															NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
+															proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
+								count_MPs		= count_results[0];
+								printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
 							}
 							
-							iteration		= 1;
-                            if(level == 0)
-                                iteration = final_level_iteration;
-                            
-							int pre_matched_pts=10;
-							double matching_change_rate = 100;
-							double rate_th = 0.00999999;
-							int max_iteration = 10 - (4 - level)*2;
-							if(max_iteration < 3)
-								max_iteration = 3;
-							
-							NCCresult *nccresult;
-							nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
-							
-                            if(level == 0 &&  iteration == 3)
-                                matching_change_rate = 0.001;
-                            
-                         	while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
+							fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
+
+							printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
+								   count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
+								
+							if(lower_level_match)
 							{
-								printf("%f \t %f\n",Th_roh,Th_roh_min);
+								FILE* survey;
+								int i;
 								
-
-								double pre_3sigma, pre_mean;
-								double Th_roh_update = 0;
-
-								NCCflag flag;
-
-								BL blunder_param;
-
-								char filename_mps[500];
-								char filename_mps_mid[500];
-								char filename_mps_fin[500];
-								char filename_mps_pre[500];
-								char filename_mps_anchor[500];
-								char filename_mps_aft[500];
-								
-								char filename_tri[500];
-								char v_temp_path[500];
-								
-								int count_results[2];
-								int count_results_anchor[2];
-								int count_MPs;
-								int count_blunder;
-								bool update_flag = false;
-								bool check_ortho_cal = false;
-								
-								uint8 ortho_level = 2;
-								if(proinfo.DEM_resolution >= 8)
-									ortho_level = 3;
-								
-								if(level >= ortho_level)
+								if(check_ortho_cal && proinfo.IsRA != 1)
 								{
-									check_ortho_cal = true;
+									count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
+									survey	= fopen(filename_mps_fin,"r");
 								}
 								else
-									check_ortho_cal = false;
+									survey	= fopen(filename_mps,"r");
 								
-								printf("ortho level = %d\n",ortho_level);
+								blunder_param.Boundary	= subBoundary;
+								blunder_param.gridspace	= grid_resolution;
+								blunder_param.height_check_flag = true;
+								blunder_param.Hinterval = Hinterval;
+								blunder_param.iteration = iteration;
+								blunder_param.Pyramid_step = level;
 								
-								pre_3sigma	= 0;	pre_mean	= 0;
-								
-
-								if(level > 1)
+								blunder_param.Size_Grid2D.width = Size_Grid2D.width;
+								blunder_param.Size_Grid2D.height = Size_Grid2D.height;
+																	
+								int TIN_split_level = 0;
+								if (grid_resolution <= 8)
 								{
-									flag.rotate_flag	 = 1;		flag.multi_flag		 = 1;		flag.multi_flag_sum	 = 1;		flag.inter_flag		 = 1;
+									if(grid_resolution <= 8 && grid_resolution > 4)
+										TIN_split_level = 0;
+									else if(grid_resolution <= 4)
+										TIN_split_level = 2;
 								}
-								else
-								{
-									flag.rotate_flag	 = 1;		flag.multi_flag		 = 1;		flag.multi_flag_sum	 = 1;		flag.inter_flag		 = 1;		  
-								}
-
-								if(iteration > 1)
-									flag.weight_flag	 = 1;
-								else
-									flag.weight_flag	 = 0;
-
-								fprintf(fid,"Starting computation of NCC\n iteration = %u\tTh_roh = %f\tTh_roh_start = %f\tGrid size %d %d\n",
-										iteration, Th_roh,Th_roh_start,Size_Grid2D.width,Size_Grid2D.height);
-
-								printf("sub size %d\t%d\t%d\t%d\n",data_size_l[level].width,data_size_l[level].height,data_size_r[level].width,data_size_r[level].height);
 								
 								if(proinfo.IsRA)
 								{
-									sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,row,col,level,iteration);
-									sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo.save_filepath,row,col,level,iteration);
+									TIN_split_level = 4;
+								}
+								
+								if(level == 0 && iteration == 3)
+								{
+									D3DPOINT *ptslists;
+									ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+									
+									i = 0;
+									while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+									{
+										i++;
+									}
+									fclose(survey);
+									
+									FILE *pFile = fopen(filename_mps,"w");
+									for(i=0;i<count_MPs;i++)
+									{
+										if(ptslists[i].flag != 1)
+										{
+											if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
+												fprintf(pFile,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+										}
+										//i++;
+									}
+									fclose(pFile);
+									
+									if(!proinfo.IsRA)
+										echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
+									
+									free(ptslists);
 								}
 								else
 								{
-									sprintf(filename_mps,"%s/txt/matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,row,col,level,iteration);
-									sprintf(filename_mps_fin,"%s/txt/matched_pts_%d_%d_%d_%d_fin.txt",proinfo.save_filepath,row,col,level,iteration);
-									sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo.save_filepath,row,col,level,iteration);
-									sprintf(filename_mps_aft,"%s/txt/matched_pts_%d_%d_%d_%d_aft.txt",proinfo.save_filepath,row,col,level,iteration);
-									sprintf(filename_mps_anchor,"%s/txt/matched_pts_%d_%d_%d_%d_anchor.txt",proinfo.save_filepath,row,col,level,iteration);
-								}
-								
-								sprintf(v_temp_path,"%s/tmp/vv_tmp",proinfo.save_filepath);
-								
-								printf("template size =%d\n",Template_size);
-								
-								VerticalLineLocus(nccresult,SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0],LRPCs,RRPCs,Limagesize,data_size_l[level],SubImages_L,Rimagesize,data_size_r[level],SubImages_R,Template_size,Size_Grid2D,
-												  param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Rimageparam,minmaxHeight,level,Lstartpos,Rstartpos,iteration,SubOriImages_L,SubOriImages_R,bin_angle,1,0,fid,true,Hemisphere,
-												  proinfo.save_filepath,row,col,subBoundary,proinfo.pre_DEMtif,v_temp_path,&MPP,proinfo.IsRA,mag_avg,mag_var);
-								
-								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
-
-								minH_mps = 1000000;
-								maxH_mps = -1000000;
-
-								count_MPs = SelectMPs(nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
-													  iteration,0,filename_mps_pre,proinfo.pre_DEMtif,proinfo.IsRA,MPP,proinfo.DEM_resolution,Image_res[0],final_level_iteration);
-								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
-								
-								if (check_ortho_cal && proinfo.IsRA != 1)
-								{
-									//anchor points
-									count_blunder = DecisionMPs(false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,proinfo.save_filepath,
-																Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
-																SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-																Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
-																param, Grid_wgs,GridPT,
-																NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
-																proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
-									printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
-
-									//blunder detection
-									count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,proinfo.save_filepath,
-																Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-																SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-																Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
-																param, Grid_wgs,GridPT,
-																NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
-																proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
-									
-									printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
-								}
-								else
-								{
-									count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,proinfo.save_filepath,
-																Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-																SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-																Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
-																param, Grid_wgs,GridPT,
-																NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
-																proinfo.save_filepath,row,col,proinfo.pre_DEMtif,proinfo.IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo.seedDEMsigma,proinfo.DEM_resolution);
-									count_MPs		= count_results[0];
-									printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
-								}
-
-								
-								fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
-
-								printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
-									   count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
-
-								
-								
-								if(lower_level_match)
-								{
-									FILE* survey;
-									int i;
-									
 									if(check_ortho_cal && proinfo.IsRA != 1)
 									{
-										count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
-										survey	= fopen(filename_mps_fin,"r");
-									}
-									else
-										survey	= fopen(filename_mps,"r");
-									
-									
-									blunder_param.Boundary	= subBoundary;
-									blunder_param.gridspace	= grid_resolution;
-									blunder_param.height_check_flag = true;
-									blunder_param.Hinterval = Hinterval;
-									blunder_param.iteration = iteration;
-									blunder_param.Pyramid_step = level;
-									
-									blunder_param.Size_Grid2D.width = Size_Grid2D.width;
-									blunder_param.Size_Grid2D.height = Size_Grid2D.height;
-
-																	
-									int TIN_split_level = 0;
-									if (grid_resolution <= 8)
-									{
-										if(grid_resolution <= 8 && grid_resolution > 4)
-											TIN_split_level = 0;
-										else if(grid_resolution <= 4)
-											TIN_split_level = 2;
-									}
-									
-									if(proinfo.IsRA)
-									{
-										TIN_split_level = 4;
-									}
-									
-									if(level == 0 && iteration == 3)
-									{
+										char bufstr[500];
 										D3DPOINT *ptslists;
+										
+										FILE *pTri;
+										double maxX_ptslists = -100000000;
+										double maxY_ptslists = -100000000;
+										double minX_ptslists =	100000000;
+										double minY_ptslists =	100000000;
+										double distX_ptslists, distY_ptslists;
+										double Scale_ptslists = 1000;
+										int i;
+										
 										ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
 										
 										i = 0;
 										while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
 										{
+											if(maxX_ptslists < ptslists[i].m_X)
+												maxX_ptslists = ptslists[i].m_X;
+											if(maxY_ptslists < ptslists[i].m_Y)
+												maxY_ptslists = ptslists[i].m_Y;
+											if(minX_ptslists > ptslists[i].m_X)
+												minX_ptslists = ptslists[i].m_X;
+											if(minY_ptslists > ptslists[i].m_Y)
+												minY_ptslists = ptslists[i].m_Y;
+											i++;
+										}
+										
+										fclose(survey);
+										
+										D3DPOINT *scaled_ptslists;
+										UI3DPOINT *trilists;
+										
+										scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+										
+										distX_ptslists = maxX_ptslists - minX_ptslists;
+										distY_ptslists = maxY_ptslists - minY_ptslists;
+										for(i=0;i<count_MPs;i++)
+										{
+											scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+											scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+										}
+										
+										if(level >= TIN_split_level || count_MPs < 10000)
+										{
+											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+											
+											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
+											TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+											
+											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+											i = 0;
+											for(i=0;i<count_tri;i++)
+											{
+												trilists[i].m_X = t_trilists[i].m_X;
+												trilists[i].m_Y = t_trilists[i].m_Y;
+												trilists[i].m_Z = t_trilists[i].m_Z;
+											}
+											
+											free(t_trilists);
+										
+										}
+										else
+										{
+											int iter_row,iter_col;
+											
+											trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
+																	 scaled_ptslists,
+																	 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+										}
+										
+										free(scaled_ptslists);
+									
+										fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
+										
+										printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
+										
+										count_results[0] = Ortho_blunder(ptslists, count_MPs, trilists,count_tri, update_flag,&minH_grid,&maxH_grid,blunder_param,
+																		 SubMagImages_L,SubMagImages_R,SubImages_L,SubImages_R,
+																		 grid_resolution, Image_res[0],LRPCs,RRPCs,
+																		 data_size_l[level],data_size_r[level],Size_Grid2D,param,NumOfIAparam,
+																		 t_Rimageparam,minmaxHeight,level,MPP,
+																		 Lstartpos,Rstartpos,iteration,GridPT3,filename_mps,proinfo.save_filepath);
+										free(trilists);
+										
+										printf("end ortho_blunder %d\n",count_results[0]);
+										
+										int matched_pts = 0;
+										i = 0;
+										{
+											FILE *fid_all = fopen(filename_mps,"w");
+											for(i=0;i<count_MPs;i++)
+											{
+												int t_col, t_row,grid_index;
+												t_col		  = (int)((ptslists[i].m_X - subBoundary[0])/grid_resolution + 0.5);
+												t_row		  = (int)((ptslists[i].m_Y - subBoundary[1])/grid_resolution + 0.5);
+												grid_index	   = Size_Grid2D.width*t_row + t_col;
+												
+												fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+												i++;
+												matched_pts++;
+											}
+											fclose(fid_all);
+										}
+										
+										free(ptslists);
+											
+										printf("load ortho_blunder pts %d\n",matched_pts);
+										count_MPs = matched_pts;
+										
+										survey	= fopen(filename_mps,"r");
+										ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+										
+										i = 0;
+										while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+										{
+											if(maxX_ptslists < ptslists[i].m_X)
+												maxX_ptslists = ptslists[i].m_X;
+											if(maxY_ptslists < ptslists[i].m_Y)
+												maxY_ptslists = ptslists[i].m_Y;
+											if(minX_ptslists > ptslists[i].m_X)
+												minX_ptslists = ptslists[i].m_X;
+											if(minY_ptslists > ptslists[i].m_Y)
+												minY_ptslists = ptslists[i].m_Y;
+											
 											i++;
 										}
 										fclose(survey);
 										
-										FILE *pFile = fopen(filename_mps,"w");
+										scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+										
+										distX_ptslists = maxX_ptslists - minX_ptslists;
+										distY_ptslists = maxY_ptslists - minY_ptslists;
 										for(i=0;i<count_MPs;i++)
 										{
-											if(ptslists[i].flag != 1)
-											{
-												if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
-													fprintf(pFile,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-											}
-											//i++;
+											scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+											scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
 										}
-										fclose(pFile);
 										
-										if(!proinfo.IsRA)
-											echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
-										
-										free(ptslists);
-									}
-									else
-									{
-										if(check_ortho_cal && proinfo.IsRA != 1)
+										if(level >= TIN_split_level || count_MPs < 10000)
 										{
-											char bufstr[500];
-											D3DPOINT *ptslists;
+											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 											
-											FILE *pTri;
-											double maxX_ptslists = -100000000;
-											double maxY_ptslists = -100000000;
-											double minX_ptslists =	100000000;
-											double minY_ptslists =	100000000;
-											double distX_ptslists, distY_ptslists;
-											double Scale_ptslists = 1000;
-											int i;
+											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
+											TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
 											
-											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
+											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+											for(i=0;i<count_tri;i++)
 											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												i++;
+												trilists[i].m_X = t_trilists[i].m_X;
+												trilists[i].m_Y = t_trilists[i].m_Y;
+												trilists[i].m_Z = t_trilists[i].m_Z;
 											}
 											
-											fclose(survey);
-											
-											D3DPOINT *scaled_ptslists;
-											UI3DPOINT *trilists;
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
-											
-											
-											if(level >= TIN_split_level || count_MPs < 10000)
-											{
-												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+											free(t_trilists);
 												
-												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
-												
-												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-												i = 0;
-												for(i=0;i<count_tri;i++)
-												{
-													trilists[i].m_X = t_trilists[i].m_X;
-													trilists[i].m_Y = t_trilists[i].m_Y;
-													trilists[i].m_Z = t_trilists[i].m_Z;
-												}
-												
-												free(t_trilists);
-												
-											}
-											else
-											{
-												int iter_row,iter_col;
-												
-												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
-											}
-											
-											free(scaled_ptslists);
-										
-										
-											fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
-											
-											printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
-											
-											count_results[0] = Ortho_blunder(ptslists, count_MPs, trilists,count_tri, update_flag,&minH_grid,&maxH_grid,blunder_param,
-																			 SubMagImages_L,SubMagImages_R,SubImages_L,SubImages_R,
-																			 grid_resolution, Image_res[0],LRPCs,RRPCs,
-																			 data_size_l[level],data_size_r[level],Size_Grid2D,param,NumOfIAparam,
-																			 t_Rimageparam,minmaxHeight,level,MPP,
-																			 Lstartpos,Rstartpos,iteration,GridPT3,filename_mps,proinfo.save_filepath);
-											free(trilists);
-											
-											
-											printf("end ortho_blunder %d\n",count_results[0]);
-											
-											int matched_pts = 0;
-											i = 0;
-											{
-												FILE *fid_all = fopen(filename_mps,"w");
-												for(i=0;i<count_MPs;i++)
-												{
-													int t_col, t_row,grid_index;
-													t_col		  = (int)((ptslists[i].m_X - subBoundary[0])/grid_resolution + 0.5);
-													t_row		  = (int)((ptslists[i].m_Y - subBoundary[1])/grid_resolution + 0.5);
-													grid_index	   = Size_Grid2D.width*t_row + t_col;
-													
-													fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-													i++;
-													matched_pts++;
-												}
-												fclose(fid_all);
-											}
-											
-											free(ptslists);
-											
-											printf("load ortho_blunder pts %d\n",matched_pts);
-											count_MPs = matched_pts;
-											
-											survey	= fopen(filename_mps,"r");
-											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
-											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												
-												i++;
-											}
-											fclose(survey);
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
-											
-											
-											if(level >= TIN_split_level || count_MPs < 10000)
-											{
-												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-												
-												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
-												
-												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-												i = 0;
-												for(i=0;i<count_tri;i++)
-												{
-													trilists[i].m_X = t_trilists[i].m_X;
-													trilists[i].m_Y = t_trilists[i].m_Y;
-													trilists[i].m_Z = t_trilists[i].m_Z;
-												}
-												
-												free(t_trilists);
-												
-											}
-											else
-											{
-												int iter_row,iter_col;
-												
-												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
-											}
-											
-											free(scaled_ptslists);
-											
-											count_blunder = DecisionMPs_setheight(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo.save_filepath,
-																				  Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-																				  SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-																				  Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
-																				  param, Grid_wgs,GridPT,
-																				  NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
-																				  proinfo.save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages_L,SubOriImages_R,blunder_selected_level);
-
-											printf("end decision_setheight\n");
-											
-                                            if(pre_matched_pts == 0)
-                                                matching_change_rate = 0;
-                                            else
-                                                matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-											
-											printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
-											pre_matched_pts = count_MPs;
-											
-											if(iteration > 9 || level == 0 )
-												matching_change_rate = 0.001;
-											
-											if(level <= 1)
-                                            {
-                                                if(iteration > 5)
-                                                    matching_change_rate = 0.001;
-                                            }
-                                            
-											if(proinfo.IsRA)
-												matching_change_rate = 0.001;
-											
-											if(proinfo.DEM_resolution >= 8)
-											{
-												if(level <= 2)
-													matching_change_rate = 0.001;
-												//if(level == 3 && iteration > 4)
-												//	matching_change_rate = 0.001;
-												
-												matching_change_rate = 0.001;
-											}
-											
-											if(proinfo.pre_DEMtif)
-											{
-												if(level >= 4)
-													matching_change_rate = 0.001;
-											}
-											
-											
-											if(Th_roh >= Th_roh_min)
-											{
-												if(level == 0)
-													Th_roh_update		= (double)(Th_roh - 0.50);
-												else if(level == 1)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else if(level == 2)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else if(level == 3)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else
-												{
-													if(proinfo.IsRA)
-														Th_roh_update		= (double)(Th_roh - 0.10);
-													else
-														Th_roh_update		= (double)(Th_roh - 0.06);
-													
-												}
-											}
-											
-											bool check_level_end = false;
-											if(level != 0)
-											{
-												if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
-												{
-													check_level_end = true;
-													
-													if(dem_update_flag)
-														update_flag		= true;
-													else
-														update_flag		= false;
-												}
-												else
-													update_flag			= false;
-											}
-											else
-												update_flag				= false;
-											
-											if(level == 0)
-                                            {
-                                                Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-                                                printf("update GridPT3\n");
-                                            }
-                                            else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
-											{
-												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-												printf("update GridPT3\n");
-											}
-											else
-												GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-											
-											free(trilists);
-											free(ptslists);
-											
-											final_iteration = iteration;
 										}
 										else
 										{
-											char bufstr[500];
-											D3DPOINT *ptslists;
+											int iter_row,iter_col;
 											
-											FILE *pTri;
-											double maxX_ptslists = -100000000;
-											double maxY_ptslists = -100000000;
-											double minX_ptslists =	100000000;
-											double minY_ptslists =	100000000;
-											double distX_ptslists, distY_ptslists;
-											double Scale_ptslists = 1000;
-											int i;
-											
-											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											
-											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												
-												i++;
-											}
-											fclose(survey);
-											
-											D3DPOINT *scaled_ptslists;
-											UI3DPOINT *trilists;
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
-											
-											
-											if(level >= TIN_split_level || count_MPs < 10000)
-											{
-												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-												
-												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
-												
-												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-												i = 0;
-												for(i=0;i<count_tri;i++)
-												{
-													trilists[i].m_X = t_trilists[i].m_X;
-													trilists[i].m_Y = t_trilists[i].m_Y;
-													trilists[i].m_Z = t_trilists[i].m_Z;
-												}
-												
-												free(t_trilists);
-											}
-											else
-											{
-												int iter_row,iter_col;
-												
-												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
-											}
-											
-											free(scaled_ptslists);
-                                            
-                                            if(pre_matched_pts == 0)
-                                                matching_change_rate = 0;
-                                            else
-                                                matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-											
-											printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
-											pre_matched_pts = count_results[0];
-											
-											if(iteration > 9 || level == 0 )
-												matching_change_rate = 0.001;
-											
-                                            if(level <= 1)
-                                            {
-                                                if(iteration > 5)
-                                                    matching_change_rate = 0.001;
-                                            }
-											
-											if(proinfo.IsRA)
-												matching_change_rate = 0.001;
-											
-											if(proinfo.DEM_resolution >= 8)
-											{
-												if(level <= 2)
-													matching_change_rate = 0.001;
-												//if(level == 3 && iteration > 4)
-												//	matching_change_rate = 0.001;
-												matching_change_rate = 0.001;
-											}
-											
-											if(proinfo.pre_DEMtif)
-											{
-												if(level >= 4)
-													matching_change_rate = 0.001;
-											}
-											
-											if(Th_roh >= Th_roh_min)
-											{
-												if(level == 0)
-													Th_roh_update		= (double)(Th_roh - 0.50);
-												else if(level == 1)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else if(level == 2)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else if(level == 3)
-													Th_roh_update		= (double)(Th_roh - 0.10);
-												else
-												{
-													if(proinfo.IsRA)
-														Th_roh_update		= (double)(Th_roh - 0.10);
-													else
-														Th_roh_update		= (double)(Th_roh - 0.06);
-												}
-											}
-											
-											bool check_level_end = false;
-											
-											if(level != 0)
-											{
-												if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
-												{
-													check_level_end = true;
-													
-													if(dem_update_flag)
-														update_flag		= true;
-													else
-														update_flag		= false;
-												}
-												else
-													update_flag			= false;
-											}
-											else
-												update_flag				= false;
-
-                                            if(level == 0)
-                                            {
-                                                Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-                                                printf("update GridPT3\n");
-                                            }
-											else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
-											{
-												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-												printf("update GridPT3\n");
-											}
-											else
-												GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
-											
-											free(trilists);
-											free(ptslists);
-                                      	}
-									}
-									printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",row,col,level,iteration);
-									
-									
-									fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-											row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
-									printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-										   row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
-
-									if(proinfo.IsRA && level <= 3)
-									{
-										int RA_iter_counts = 0;
-										RA_iter_counts = AdjustParam(level, count_MPs, filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
-																	 Template_size, SubImages_L, data_size_l[level], SubImages_R, data_size_r[level], SubOriImages_L, SubOriImages_R, param,
-																	 bin_angle, pyramid_step, Hemisphere, proinfo.save_filepath, proinfo.tmpdir);
-										fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
-										printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
-										
-										if (level <= 1)
-										{
-											//sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath,row,col);
-											sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath);
-											fid_RAinfo	= fopen(save_file,"w");
-											fprintf(fid_RAinfo,"%f\t%f\n",t_Rimageparam[0],t_Rimageparam[1]);
-											fclose(fid_RAinfo);
+											trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
+																	 scaled_ptslists,
+																	 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
 										}
-									}
-                                    
-                                    if(proinfo.IsRA)
-                                    {
-                                        if(check_RA_divide)
+										
+										free(scaled_ptslists);
+										
+										count_blunder = DecisionMPs_setheight(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo.save_filepath,
+																			  Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+																			  SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
+																			  Limagesize,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+																			  param, Grid_wgs,GridPT,
+																			  NumOfIAparam, t_Rimageparam, BLstartpos, BRstartpos,
+																			  proinfo.save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages_L,SubOriImages_R,blunder_selected_level);
+
+										printf("end decision_setheight\n");
+										
+                                        if(pre_matched_pts == 0)
+                                            matching_change_rate = 0;
+                                        else
+                                            matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
+											
+										printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
+										pre_matched_pts = count_MPs;
+										
+										if(iteration > 9 || level == 0 )
+											matching_change_rate = 0.001;
+										
+										if(level <= 1)
                                         {
-                                            if(level <= 3 && iteration > 2)
-                                            {
-                                                FILE *fid_pts		= fopen(filename_mps,"r");
-                                                double t_X,t_Y,t_Z;
-                                                bool t_flag;
-                                                int* t_count = (int*)calloc(sizeof(int),total_tile);
-                                                
-                                                for(int k=0;k<count_results[0];k++)
-                                                {
-                                                    fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
-                                                    
-                                                    int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
-                                                    int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
-                                                    
-                                                    t_count[t_col+division_X*t_row] ++;
-                                                }
-                                                fclose(fid_pts);
-                                                
-                                                int saved_count = 0;
-                                                int selected_X = 0;
-                                                int selected_Y = 0;
-                                                int total_count = 0;
-                                                for(int k=0;k<total_tile;k++)
-                                                {
-                                                    if(t_count[k] > saved_count)
-                                                    {
-                                                        saved_count = t_count[k];
-                                                        selected_Y  = floor(k/division_X);
-                                                        selected_X  = k % division_X;
-                                                    }
-                                                    total_count += t_count[k];
-                                                    
-                                                    //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
-                                                }
-                                                printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
-                                                       subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
-                                                
-                                                fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                
-                                                new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
-                                                new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
-                                                new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
-                                                new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
-                                                
-                                                check_new_subBoundary_RA = true;
-                                                check_RA_divide = false;
-                                                
-                                                free(t_count);
+                                            if(iteration > 5)
+                                                matching_change_rate = 0.001;
+                                        }
+                                        
+										if(proinfo.IsRA)
+											matching_change_rate = 0.001;
+										
+										if(proinfo.DEM_resolution >= 8)
+										{
+											if(level <= 2)
+												matching_change_rate = 0.001;
+											//if(level == 3 && iteration > 4)
+											//	matching_change_rate = 0.001;
+											
+											matching_change_rate = 0.001;
+										}
+										
+										if(proinfo.pre_DEMtif)
+										{
+											if(level >= 4)
+												matching_change_rate = 0.001;
+										}
+										
+										if(Th_roh >= Th_roh_min)
+										{
+											if(level == 0)
+												Th_roh_update		= (double)(Th_roh - 0.50);
+											else if(level == 1)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else if(level == 2)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else if(level == 3)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else
+											{
+												if(proinfo.IsRA)
+													Th_roh_update		= (double)(Th_roh - 0.10);
+												else
+													Th_roh_update		= (double)(Th_roh - 0.06);
+												
+											}
+										}
+										
+										bool check_level_end = false;
+										if(level != 0)
+										{
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											{
+												check_level_end = true;
+												
+												if(dem_update_flag)
+													update_flag		= true;
+												else
+													update_flag		= false;
+											}
+											else
+												update_flag			= false;
+										}
+										else
+											update_flag				= false;
+										
+										if(level == 0)
+                                        {
+                                            Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+                                            printf("update GridPT3\n");
+                                        }
+                                        else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
+										{
+											Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+											printf("update GridPT3\n");
+										}
+										else
+											GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+										
+										free(trilists);
+										free(ptslists);
+										
+										final_iteration = iteration;
+									}
+									else
+									{
+										char bufstr[500];
+										D3DPOINT *ptslists;
+										
+										FILE *pTri;
+										double maxX_ptslists = -100000000;
+										double maxY_ptslists = -100000000;
+										double minX_ptslists =	100000000;
+										double minY_ptslists =	100000000;
+										double distX_ptslists, distY_ptslists;
+										double Scale_ptslists = 1000;
+										int i;
+										
+										ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+										
+										i = 0;
+										while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+										{
+											if(maxX_ptslists < ptslists[i].m_X)
+												maxX_ptslists = ptslists[i].m_X;
+											if(maxY_ptslists < ptslists[i].m_Y)
+												maxY_ptslists = ptslists[i].m_Y;
+											if(minX_ptslists > ptslists[i].m_X)
+												minX_ptslists = ptslists[i].m_X;
+											if(minY_ptslists > ptslists[i].m_Y)
+												minY_ptslists = ptslists[i].m_Y;
+											
+											i++;
+										}
+										fclose(survey);
+										
+										D3DPOINT *scaled_ptslists;
+										UI3DPOINT *trilists;
+										
+										scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+										
+										distX_ptslists = maxX_ptslists - minX_ptslists;
+										distY_ptslists = maxY_ptslists - minY_ptslists;
+										for(i=0;i<count_MPs;i++)
+										{
+											scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+											scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+										}
+										
+										if(level >= TIN_split_level || count_MPs < 10000)
+										{
+											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+											
+											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
+											TINCreate(scaled_ptslists,bufstr,count_MPs,t_trilists);
+											
+											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+											i = 0;
+											for(i=0;i<count_tri;i++)
+											{
+												trilists[i].m_X = t_trilists[i].m_X;
+												trilists[i].m_Y = t_trilists[i].m_Y;
+												trilists[i].m_Z = t_trilists[i].m_Z;
+											}
+											
+											free(t_trilists);
+										}
+										else
+										{
+											int iter_row,iter_col;
+											
+											trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
+																	 scaled_ptslists,
+																	 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+										}
+											
+										free(scaled_ptslists);
+                                           
+                                        if(pre_matched_pts == 0)
+                                             matching_change_rate = 0;
+                                         else
+                                             matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
+										
+										printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
+										pre_matched_pts = count_results[0];
+										
+										if(iteration > 9 || level == 0 )
+											matching_change_rate = 0.001;
+										
+                                        if(level <= 1)
+                                        {
+                                            if(iteration > 5)
+                                                matching_change_rate = 0.001;
+                                        }
+									
+										if(proinfo.IsRA)
+											matching_change_rate = 0.001;
+										
+										if(proinfo.DEM_resolution >= 8)
+										{
+											if(level <= 2)
+												matching_change_rate = 0.001;
+											//if(level == 3 && iteration > 4)
+											//	matching_change_rate = 0.001;
+											matching_change_rate = 0.001;
+										}
+										
+										if(proinfo.pre_DEMtif)
+										{
+											if(level >= 4)
+												matching_change_rate = 0.001;
+										}
+										
+										if(Th_roh >= Th_roh_min)
+										{
+											if(level == 0)
+												Th_roh_update		= (double)(Th_roh - 0.50);
+											else if(level == 1)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else if(level == 2)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else if(level == 3)
+												Th_roh_update		= (double)(Th_roh - 0.10);
+											else
+											{
+												if(proinfo.IsRA)
+													Th_roh_update		= (double)(Th_roh - 0.10);
+												else
+													Th_roh_update		= (double)(Th_roh - 0.06);
+											}
+										}
+										
+										bool check_level_end = false;
+										
+										if(level != 0)
+										{
+											if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+											{
+												check_level_end = true;
+												
+												if(dem_update_flag)
+													update_flag		= true;
+												else
+													update_flag		= false;
+											}
+											else
+												update_flag			= false;
+										}
+										else
+											update_flag				= false;
+
+                                        if(level == 0)
+                                        {
+                                            Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+                                            printf("update GridPT3\n");
+                                        }
+										else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
+										{
+											Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+											printf("update GridPT3\n");
+										}
+										else
+											GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+										
+										free(trilists);
+										free(ptslists);
+                                    }
+								}
+								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",row,col,level,iteration);
+								
+								fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
+										row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
+								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
+									   row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
+
+								if(proinfo.IsRA && level <= 3)
+								{
+									int RA_iter_counts = 0;
+									RA_iter_counts = AdjustParam(level, count_MPs, filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Rimageparam, flag,
+																 Template_size, SubImages_L, data_size_l[level], SubImages_R, data_size_r[level], SubOriImages_L, SubOriImages_R, param,
+																 bin_angle, pyramid_step, Hemisphere, proinfo.save_filepath, proinfo.tmpdir);
+									fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
+									printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Rimageparam[0],t_Rimageparam[1]);
+									
+									if (level <= 1)
+									{
+										//sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath,row,col);
+										sprintf(save_file,"%s/txt/RAinfo.txt",proinfo.save_filepath);
+										fid_RAinfo	= fopen(save_file,"w");
+										fprintf(fid_RAinfo,"%f\t%f\n",t_Rimageparam[0],t_Rimageparam[1]);
+										fclose(fid_RAinfo);
+									}
+								}
+                                    
+                                if(proinfo.IsRA)
+                                {
+                                    if(check_RA_divide)
+                                    {
+                                        if(level <= 3 && iteration > 2)
+                                        {
+                                            FILE *fid_pts		= fopen(filename_mps,"r");
+                                            double t_X,t_Y,t_Z;
+                                            bool t_flag;
+                                            int* t_count = (int*)calloc(sizeof(int),total_tile);
                                             
+                                            for(int k=0;k<count_results[0];k++)
+                                            {
+                                                fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
+                                                
+                                                int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
+                                                int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
+                                                
+                                                t_count[t_col+division_X*t_row] ++;
                                             }
+                                            fclose(fid_pts);
+                                            
+                                            int saved_count = 0;
+                                            int selected_X = 0;
+                                            int selected_Y = 0;
+                                            int total_count = 0;
+                                            for(int k=0;k<total_tile;k++)
+                                            {
+                                                if(t_count[k] > saved_count)
+                                                {
+                                                    saved_count = t_count[k];
+                                                    selected_Y  = floor(k/division_X);
+                                                    selected_X  = k % division_X;
+                                                }
+                                                total_count += t_count[k];
+                                                
+                                                //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
+                                            }
+                                            printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
+                                            printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
+                                                   subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+                                            
+                                            fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
+                                            
+                                            new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
+                                            new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
+                                            new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
+                                            new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
+                                            
+                                            check_new_subBoundary_RA = true;
+                                            check_RA_divide = false;
+                                            
+                                            free(t_count);
+                                        
                                         }
                                     }
-                                    
-                                    //matching_rate = (double)count_results[0]/(double)total_matching_candidate_pts;
-                                    
-                                    //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
-								}
-								if (level == 0 && iteration == 3)
-								{
-									remove(filename_mps_pre);
-									if(level >= ortho_level && proinfo.IsRA != 1)
-									{
-										remove(filename_mps_aft);
-										remove(filename_mps_fin);
-										remove(filename_mps_anchor);
-									
-									}
-								}
-								else 
-								{
-									remove(filename_mps);
-									remove(filename_mps_pre);
-									if(level >= ortho_level && proinfo.IsRA != 1)
-									{
-										remove(filename_mps_aft);
-										remove(filename_mps_fin);
-										remove(filename_mps_anchor);
-									}
-								}
-								
-								
-								if(lower_level_match)
-								{
-									flag_start			= true;
-									iteration++;
-								}
-
-								if(level == 0)
-									Th_roh			= (double)(Th_roh - 0.50);
-								else if(level == 1)
-									Th_roh			= (double)(Th_roh - 0.10);
-								else if(level == 2)
-									Th_roh			= (double)(Th_roh - 0.10);
-								else if(level == 3)
-									Th_roh			= (double)(Th_roh - 0.10);
-								else
-								{
-									if(proinfo.IsRA)
-										Th_roh			= (double)(Th_roh - 0.10);
-									else
-										Th_roh			= (double)(Th_roh - 0.06);
-								}
-
-								if(lower_level_match)
-								{
-									if(Th_roh < Th_roh_min && matching_change_rate > rate_th)
-									{
-										if(level == 0)
-											Th_roh			= (double)(Th_roh + 0.10);
-										else if(level == 1)
-											Th_roh			= (double)(Th_roh + 0.10);
-										else if(level == 2)
-											Th_roh			= (double)(Th_roh + 0.10);
-										else if(level == 3)
-											Th_roh			= (double)(Th_roh + 0.10);
-										else
-										{
-											if(proinfo.IsRA)
-												Th_roh			= (double)(Th_roh + 0.10);
-											else
-												Th_roh			= (double)(Th_roh + 0.06);
-										}
-									}
-								}
-								
-								if (!lower_level_match && Th_roh < Th_roh_min)
-								{
-									iteration++;
-									matching_change_rate = 0.001;
-									Th_roh_min = 0.4;
-								}
-                                
-                                if(level == 0)
-                                    final_level_iteration = iteration;
-							}
-
-							if(flag_start)
-							{
-                                double min_after, max_after;
-                                min_after	= (double)(minH_mps - pow(2, level)*2*MPP);		max_after	= (double)(maxH_mps + pow(2, level)*2*MPP);
-                                printf("minmax MP %f\t%f\n",min_after, max_after);
-								if(level <= 2)
-								{
-                                    if(minmaxHeight[0] < min_after)
-                                    minmaxHeight[0]		= (double)(floor(min_after));
-                                    if(minmaxHeight[1] > max_after)
-                                        minmaxHeight[1]		= (double)(ceil(max_after));
-								}
-                                else
-                                {
-                                    if(min_after > minH_grid)
-                                        min_after = minH_grid;
-                                    if(max_after < maxH_grid)
-                                        max_after = maxH_grid;
-                                    
-                                    minmaxHeight[0]		= min_after;
-                                    minmaxHeight[1]		= max_after;
                                 }
-								printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
-								fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
-										row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
+                                    
+                                //matching_rate = (double)count_results[0]/(double)total_matching_candidate_pts;
+                                
+                                //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
 							}
-							
-							printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%%) = %4.2f%% !!\n",row,iter_row_end,col,t_col_end,(double)(pyramid_step+1 - level)/(double)(pyramid_step+1)*100);
-							
-                            if(level > 0)
-                                level	= level - 1;
-
-                            if(level == 0 && final_level_iteration == 4)
-                                level = -1;
-							
-							if(proinfo.IsRA)
+							if (level == 0 && iteration == 3)
 							{
-								//if(!lower_level_match || level < DEM_level)
-									free(GridPT);
-								
-								if(!lower_level_match)
+								remove(filename_mps_pre);
+								if(level >= ortho_level && proinfo.IsRA != 1)
 								{
-									lower_level_match	= true;
-									flag_start			= false;
+									remove(filename_mps_aft);
+									remove(filename_mps_fin);
+									remove(filename_mps_anchor);
+								
 								}
 							}
+							else 
+							{
+								remove(filename_mps);
+								remove(filename_mps_pre);
+								if(level >= ortho_level && proinfo.IsRA != 1)
+								{
+									remove(filename_mps_aft);
+									remove(filename_mps_fin);
+									remove(filename_mps_anchor);
+								}
+							}
+							
+							if(lower_level_match)
+							{
+								flag_start			= true;
+								iteration++;
+							}
+
+							if(level == 0)
+								Th_roh			= (double)(Th_roh - 0.50);
+							else if(level == 1)
+								Th_roh			= (double)(Th_roh - 0.10);
+							else if(level == 2)
+								Th_roh			= (double)(Th_roh - 0.10);
+							else if(level == 3)
+								Th_roh			= (double)(Th_roh - 0.10);
 							else
 							{
-								if(!lower_level_match && level > 1)
-								{
-									lower_level_match	= true;
-									flag_start			= false;
-								}
-								free(GridPT);
+								if(proinfo.IsRA)
+									Th_roh			= (double)(Th_roh - 0.10);
+								else
+									Th_roh			= (double)(Th_roh - 0.06);
 							}
 
-                            printf("release Grid_wgs, nccresult\n");
-							free(Grid_wgs);
-							free(nccresult);
+							if(lower_level_match)
+							{
+								if(Th_roh < Th_roh_min && matching_change_rate > rate_th)
+								{
+									if(level == 0)
+										Th_roh			= (double)(Th_roh + 0.10);
+									else if(level == 1)
+										Th_roh			= (double)(Th_roh + 0.10);
+									else if(level == 2)
+										Th_roh			= (double)(Th_roh + 0.10);
+									else if(level == 3)
+										Th_roh			= (double)(Th_roh + 0.10);
+									else
+									{
+										if(proinfo.IsRA)
+											Th_roh			= (double)(Th_roh + 0.10);
+										else
+											Th_roh			= (double)(Th_roh + 0.06);
+									}
+								}
+							}
 							
-                            printf("release subImage L\n");
-							free(SubImages_L);
-							free(SubImages_BL);
-							free(SubOriImages_L);
-							
-                            printf("release subImage R\n");
-							free(SubImages_R);
-							free(SubImages_BR);
-							free(SubOriImages_R);
-
-                            printf("release subimage Mag\n\n\n");
-							free(SubMagImages_L);
-							free(SubMagImages_R);
-							free(SubMagImages_BL);
-							free(SubMagImages_BR);
+							if (!lower_level_match && Th_roh < Th_roh_min)
+							{
+								iteration++;
+								matching_change_rate = 0.001;
+								Th_roh_min = 0.4;
+							}
+                               
+                            if(level == 0)
+                                final_level_iteration = iteration;
 						}
-                        printf("relese data size\n");
-						free(data_size_l);
-						free(data_size_r);
-						free(GridPT3);
-						
-                        printf("release GridTP3\n");
-						PreET = time(0);
-						Pregab = difftime(PreET,PreST);
-						printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-						
-					}
-				}
-				fclose(fid);
-				fclose(fid_header);
 
-				RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
-				
-				if(proinfo.IsRA)
-				{
-					if(t_Rimageparam[0] != 0 && t_Rimageparam[1] != 0)
-					{
-						RA_count++;
-						Rimageparam[0] += t_Rimageparam[0];
-						Rimageparam[1] += t_Rimageparam[1];
+						if(flag_start)
+						{
+                            double min_after, max_after;
+                            min_after	= (double)(minH_mps - pow(2, level)*2*MPP);		max_after	= (double)(maxH_mps + pow(2, level)*2*MPP);
+                            printf("minmax MP %f\t%f\n",min_after, max_after);
+							if(level <= 2)
+							{
+                                if(minmaxHeight[0] < min_after)
+                                    minmaxHeight[0]		= (double)(floor(min_after));
+                                if(minmaxHeight[1] > max_after)
+                                    minmaxHeight[1]		= (double)(ceil(max_after));
+							}
+                            else
+                            {
+                                if(min_after > minH_grid)
+                                    min_after = minH_grid;
+                                if(max_after < maxH_grid)
+                                    max_after = maxH_grid;
+                                
+                                minmaxHeight[0]		= min_after;
+                                minmaxHeight[1]		= max_after;
+                            }
+							printf("minmax %f\t%f\t\n", minmaxHeight[0],minmaxHeight[1]);
+							fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
+									row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
+						}
+						
+						printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%%) = %4.2f%% !!\n",row,iter_row_end,col,t_col_end,(double)(pyramid_step+1 - level)/(double)(pyramid_step+1)*100);
+						
+                        if(level > 0)
+                            level	= level - 1;
+
+                        if(level == 0 && final_level_iteration == 4)
+                            level = -1;
+			
+						if(proinfo.IsRA)
+						{
+							//if(!lower_level_match || level < DEM_level)
+								free(GridPT);
+							
+							if(!lower_level_match)
+							{
+								lower_level_match	= true;
+								flag_start			= false;
+							}
+						}
+						else
+						{
+							if(!lower_level_match && level > 1)
+							{
+								lower_level_match	= true;
+								flag_start			= false;
+							}
+							free(GridPT);
+						}
+
+                        printf("release Grid_wgs, nccresult\n");
+						free(Grid_wgs);
+						free(nccresult);
+						
+                        printf("release subImage L\n");
+						free(SubImages_L);
+						free(SubImages_BL);
+						free(SubOriImages_L);
+						
+                        printf("release subImage R\n");
+						free(SubImages_R);
+						free(SubImages_BR);
+						free(SubOriImages_R);
+
+                        printf("release subimage Mag\n\n\n");
+						free(SubMagImages_L);
+						free(SubMagImages_R);
+						free(SubMagImages_BL);
+						free(SubMagImages_BR);
 					}
+                    printf("relese data size\n");
+					free(data_size_l);
+					free(data_size_r);
+					free(GridPT3);
+					
+                    printf("release GridTP3\n");
+					PreET = time(0);
+					Pregab = difftime(PreET,PreST);
+					printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
+					
 				}
 			}
+			fclose(fid);
+			fclose(fid_header);
+
+			RemoveFiles(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,0,0);
+			
+			if(proinfo.IsRA)
+			{
+				if(t_Rimageparam[0] != 0 && t_Rimageparam[1] != 0)
+				{
+					RA_count++;
+					Rimageparam[0] += t_Rimageparam[0];
+					Rimageparam[1] += t_Rimageparam[1];
+				}
+			}
+		}
 	}
 	if(proinfo.IsRA && RA_count > 0)
 	{
