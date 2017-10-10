@@ -45,7 +45,7 @@ correct path to the TIFF library.  SETSM can then be built simply by typing:
 make
 ```
 
-### Parallel SETSM with MPI (Message-Passing Interface)
+#### Parallel SETSM with MPI (Message-Passing Interface)
 To build SETSM for parallel computing with MPI, follow the above steps then use:
 ```
 make setsm_mpi
