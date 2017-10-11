@@ -5183,6 +5183,30 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                     strcpy(linestr1,linestr);
                     token1 = strstr(linestr,"<");
                     token = strtok(token1,">");
+                    bool b_rowgsd = false;
+                    bool b_colgsd = false;
+                    if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_r			= atof(pos2);
+                        b_rowgsd = true;
+                    }
+                    if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_c			= atof(pos2);
+                        b_colgsd = true;
+                    }
+                    if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd			= atof(pos2);
+                    }
+
                     if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
                     {
                         pos1 = strstr(linestr1,">")+1;
@@ -5203,6 +5227,9 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                         *gsd			= atof(pos2);
                         check_end = true;
                     }
+                    
+                    if(b_rowgsd && b_colgsd)
+                        check_end = true;
                 }
             }
             
