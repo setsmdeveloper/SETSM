@@ -1556,13 +1556,7 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 {
 	int i,j;
 
-	int iterationsCopy[col_length*row_length*2];
-	for (i = 0; i < length*2; i++)
-	{
-	    iterationsCopy[i] = iterations[i];
-	}
-	
-	int temp[col_length*row_length*2];
+	int *temp = (int*)malloc(col_length*row_length*2*sizeof(int));
 	int midrow = ceil(row_length / 2.0);
 	int midcol = ceil(col_length / 2.0);
 
@@ -1589,6 +1583,7 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 	{
 	    iterations[i] = temp[i];
 	}
+	free(temp);
 	return length;
 }
 #endif
@@ -1610,19 +1605,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
 	int row_length = iter_row_end-iter_row_start;
 	int col_length = t_col_end-t_col_start;
-	int iterations[col_length*row_length*2];
+	int *iterations = (int*)malloc(col_length*row_length*2*sizeof(int));
 	int length = 0;
 
 	for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
 	{
-		if(proinfo.IsRR)
-		{
-			if(row == iter_row_start)
-				t_col_start = proinfo.start_col;
-			else
-				t_col_start = 1;
-		}
-
 		for(col = t_col_start ; col < t_col_end ; col+= col_iter)
 		{
 			iterations[2*length] = row;
@@ -1632,11 +1619,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 	}
 
 #ifdef BUILDMPI
-	if (!proinfo.IsRR)
-	{
-		//Reorder list of tiles for static load balancing
-		reorder_list_of_tiles(iterations, length, col_length, row_length);
-	}
+	//Reorder list of tiles for static load balancing
+	reorder_list_of_tiles(iterations, length, col_length, row_length);
 #endif
 
 	int i;
@@ -1646,6 +1630,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 		col = iterations[2*i+1];
 
 #ifdef BUILDMPI
+		// Skip this tile if it belongs to a different MPI rank
 		if (i % size != rank)
 			continue;	
 		printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
@@ -2943,6 +2928,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 			}
 		}
 	}
+	free(iterations);
 	if(proinfo.IsRA && RA_count > 0)
 	{
 		Rimageparam[0] /= RA_count;
