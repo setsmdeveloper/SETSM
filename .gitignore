@@ -1,5 +1,6 @@
 *.o
 setsm
+setsm_mpi
 *.optrpt
 Makefile
 

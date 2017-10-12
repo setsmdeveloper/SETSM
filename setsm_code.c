@@ -1458,8 +1458,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         if (proinfo.check_tiles_SC)
                             t_col_start		  = proinfo.start_col;
                         
-                        
-                        
                     }
 
                     printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
