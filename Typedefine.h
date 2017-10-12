@@ -278,6 +278,8 @@ typedef struct tagImageInfo
     
     char filename[500];
     char Ofilename[500];
+    char imagetime[500];
+    char SatID[500];
 } ImageInfo;
 
 typedef struct tagImageGSD

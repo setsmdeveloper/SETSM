@@ -113,7 +113,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.2.7\n");
+			printf("setsm version : 3.2.8\n");
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -859,7 +859,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.2.7\n");
+				fprintf(pMetafile,"SETSM Version=3.2.8\n");
 			}
 			
 			time_t current_time;
@@ -888,8 +888,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                 OpenXMLFile_orientation(proinfo.LeftRPCfilename,&leftimage_info);
                 OpenXMLFile_orientation(proinfo.RightRPCfilename,&rightimage_info);
                 
-                printf("leftimage info\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
-                printf("rightimage info\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                printf("leftimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
+                printf("rightimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
             }
             else
             {
@@ -1317,16 +1317,16 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         if(param.projection == 1)
                         {
                             if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
                             } else {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no+defs'\n");
+                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
                             }
                         }
                         else {
                             if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +North %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +north=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
                             } else {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone %d +South %s +datum=WGS84 +unit=m +no+defs'\n",param.zone,param.direction);
+                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +south=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
                             }
                         }
                     }
@@ -1510,8 +1510,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                     fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                     
-                    fprintf(pMetafile,"Image 1 info\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
-                    fprintf(pMetafile,"Image 2 info\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                    fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
+                    fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
                     fclose(pMetafile);
                      
                 }
@@ -5103,6 +5103,7 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
     char* pos2;
     char* token = NULL;
     char* token1 = NULL;
+    char* token2 = NULL;
     
     double aa;
     bool band_check = false;
@@ -5111,8 +5112,254 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
     if(pFile)
     {
         out = (double**)malloc(sizeof(double*)*7);
+        out[0] = (double*)malloc(sizeof(double)*5);
+        out[1] = (double*)malloc(sizeof(double)*5);
+        out[6] = (double*)malloc(sizeof(double)*2);
+        
         while(!feof(pFile))
         {
+            fgets(linestr,sizeof(linestr),pFile);
+            strcpy(linestr1,linestr);
+            token1 = strstr(linestr,"<");
+            token = strtok(token1,">");
+            if(strcmp(token,"<ABSCALFACTOR") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                band->abscalfactor			= atof(pos2);
+                printf("abscalfactor %f\n",band->abscalfactor);
+            }
+            
+            if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                band->effbw			= atof(pos2);
+                printf("effbw %f\n",band->effbw);
+            }
+            
+            if(strcmp(token,"<TDILEVEL") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                band->tdi			= atof(pos2);
+                printf("tdi %f\n",band->tdi);
+            }
+            
+            if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_r			= atof(pos2);
+                printf("collect row %f\n",*gsd_r);
+            }
+            if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_c			= atof(pos2);
+                printf("collect col %f\n",*gsd_c);
+            }
+            if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd			= atof(pos2);
+                printf("collect gsd %f\n",*gsd);
+            }
+            
+            if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_r			= atof(pos2);
+                printf("product row %f\n",*gsd_r);
+            }
+            if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_c			= atof(pos2);
+                printf("product col %f\n",*gsd_c);
+            }
+            if(strcmp(token,"<MEANPRODUCTGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd			= atof(pos2);
+                printf("product gsd %f\n",*gsd);
+            }
+            
+            
+            if(strcmp(token,"<ERRBIAS") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[6][0]			= atof(pos2);
+                printf("ERRBIAS %f\n",out[6][0]);
+            }
+            if(strcmp(token,"<ERRRAND") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[6][1]			= atof(pos2);
+            }
+            if(strcmp(token,"<LINEOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][0]			= atof(pos2);
+            }
+            if(strcmp(token,"<SAMPOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][1]			= atof(pos2);
+            }
+            if(strcmp(token,"<LATOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][2]			= atof(pos2);
+            }
+            if(strcmp(token,"<LONGOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][3]			= atof(pos2);
+            }
+            if(strcmp(token,"<HEIGHTOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][4]			= atof(pos2);
+            }
+            
+            
+            if(strcmp(token,"<LINESCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][0]			= atof(pos2);
+            }
+            if(strcmp(token,"<SAMPSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][1]			= atof(pos2);
+            }
+            if(strcmp(token,"<LATSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][2]			= atof(pos2);
+            }
+            if(strcmp(token,"<LONGSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][3]			= atof(pos2);
+            }
+            if(strcmp(token,"<HEIGHTSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][4]			= atof(pos2);
+            }
+         
+            
+            if(strcmp(token,"<LINENUMCOEFList") == 0)
+            {
+                out[2] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token2 = strtok(pos2," ");
+                
+                
+                i=0;
+                while(token2 != NULL && i<20)
+                {
+                    out[2][i]			= atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[2][i] %f\n",out[2][i]);
+                    
+                    i++;
+                    
+                    
+                }
+            }
+            if(strcmp(token,"<LINEDENCOEFList") == 0)
+            {
+                out[3] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token2 = strtok(pos2," ");
+                i=0;
+                while(token != NULL && i<20)
+                {
+                    out[3][i]			= atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[3][i] %f\n",out[3][i]);
+                    
+                    i++;
+                }
+            }
+            if(strcmp(token,"<SAMPNUMCOEFList") == 0)
+            {
+                out[4] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token2 = strtok(pos2," ");
+                
+                printf("token2 %s\n",token2);
+                
+                i=0;
+                while(token != NULL && i<20)
+                {
+                    out[4][i]			= atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[4][i] %f\n",out[4][i]);
+                    
+                    i++;
+                }
+            }
+            if(strcmp(token,"<SAMPDENCOEFList") == 0)
+            {
+                out[5] = (double*)malloc(sizeof(double)*20);
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                token2 = strtok(pos2," ");
+                i=0;
+                while(token != NULL && i<20)
+                {
+                    out[5][i]			= atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[5][i] %f\n",out[5][i]);
+                    
+                    i++;
+                }
+            }
+            /*
             fscanf(pFile,"%s",temp_str);
             if(strcmp(temp_str,"<BAND_P>") == 0 && !band_check)
             {
@@ -5166,6 +5413,30 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                     strcpy(linestr1,linestr);
                     token1 = strstr(linestr,"<");
                     token = strtok(token1,">");
+                    bool b_rowgsd = false;
+                    bool b_colgsd = false;
+                    if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_r			= atof(pos2);
+                        b_rowgsd = true;
+                    }
+                    if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_c			= atof(pos2);
+                        b_colgsd = true;
+                    }
+                    if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd			= atof(pos2);
+                    }
+
                     if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
                     {
                         pos1 = strstr(linestr1,">")+1;
@@ -5186,10 +5457,13 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                         *gsd			= atof(pos2);
                         check_end = true;
                     }
+                    
+                    if(b_rowgsd && b_colgsd)
+                        check_end = true;
                 }
             }
             
-            if(strcmp(temp_str,"<RPB>")==0)
+            if(strcmp(linestr,"<RPB>")==0)
             {
                 for(i=0;i<5;i++)
                     fgets(temp_str,sizeof(temp_str),pFile);
@@ -5202,7 +5476,7 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
                     out[6][i]			= atof(pos2);
-                    
+                    printf("Err %f\n",out[6][i]);
                 }
                 
                 out[0] = (double*)malloc(sizeof(double)*5);
@@ -5212,6 +5486,8 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
                     out[0][i]			= atof(pos2);
+                    
+                    printf("param %f\n",out[0][i]);
                 }
                 aa						= out[0][2];
                 out[0][2]				= out[0][3];
@@ -5289,7 +5565,17 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
                     i++;
                 }
             }
+             */
         }
+        
+        aa						= out[0][2];
+        out[0][2]				= out[0][3];
+        out[0][3]				= aa;
+        
+        aa						= out[1][2];
+        out[1][2]				= out[1][3];
+        out[1][3]				= aa;
+        
         fclose(pFile);
         
         if(pos1)
@@ -5468,6 +5754,9 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     char temp_str[1000];
     char linestr[1000];
     char linestr1[1000];
+    char imagetime[1000];
+    char SatID[1000];
+    
     int i;
     char* pos1;
     char* pos2;
@@ -5553,6 +5842,18 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
                     token1 = strstr(linestr,"<");
                     token = strtok(token1,">");
                     
+                    if(strcmp(token,"<SATID") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        sprintf(SatID,"%s",pos2);
+                    }
+                    if(strcmp(token,"<FIRSTLINETIME") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        sprintf(imagetime,"%s",pos2);
+                    }
                     if(strcmp(token,"<MEANSUNAZ") == 0)
                     {
                         pos1 = strstr(linestr1,">")+1;
@@ -5619,6 +5920,8 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         Iinfo->Crosstrack_angle         = MCrosstrackangle;
         Iinfo->Offnadir_angle           = MOffnadirangle;
         Iinfo->cloud                    = Cloud;
+        sprintf(Iinfo->imagetime,"%s",imagetime);
+        sprintf(Iinfo->SatID,"%s",SatID);
         
         if(pos1)
             pos1 = NULL;
