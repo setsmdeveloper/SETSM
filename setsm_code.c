@@ -1384,18 +1384,17 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 int pts_col = index % Tcols;
                                 fprintf(pFile_info,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
+                            printf("end writing tiles info\n");
+                            fclose(pFile_info);
                         }
-                        printf("end writing tiles info\n");
-                        fclose(pFile_info);
+                        
                         printf("end fclose1\n");
                         free(tiles);
                         free(Theight);
                         printf("free\n");
+                        fclose(pFile);
+                        printf("end fclose2\n");
                     }
-                    fclose(pFile);
-                    printf("end fclose2\n");
-                    
-                    
                     
                     
                     if (args.check_RA_line)
