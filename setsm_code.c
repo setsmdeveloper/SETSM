@@ -1357,18 +1357,21 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
                             int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
                             
-                            printf("row col %d\t%d\n",temp_row,temp_col);
-                            int index = temp_row*Tcols + temp_col;
-                            tiles[index] ++;
-                            if(Theight[index].m_X > ptslists.m_Z)
-                                Theight[index].m_X = ptslists.m_Z;
-                            if(Theight[index].m_Y < ptslists.m_Z)
-                                Theight[index].m_Y = ptslists.m_Z;
-                            
-                            i++;
+                            if(temp_col >= t_t_col_start && temp_col <t_t_col_end && temp_row >= t_iter_row_start && temp_row < t_iter_row_end)
+                            {
+                                printf("row col %d\t%d\n",temp_row,temp_col);
+                                int index = temp_row*Tcols + temp_col;
+                                tiles[index] ++;
+                                if(Theight[index].m_X > ptslists.m_Z)
+                                    Theight[index].m_X = ptslists.m_Z;
+                                if(Theight[index].m_Y < ptslists.m_Z)
+                                    Theight[index].m_Y = ptslists.m_Z;
+                                
+                                i++;
+                            }
                         }
                         
-                        printf("end loading RA matched\n");
+                        printf("end loading RA matched %d\n",i);
                         
                         FILE* pFile_info1;
                         char str_rafile_ttt[500];
