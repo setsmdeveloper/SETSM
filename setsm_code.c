@@ -1380,7 +1380,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             fprintf(pFile_info1,"NumberOfRows_Tile\t%d\n",Trows);
                             fprintf(pFile_info1,"NumberOfCols_Tile\t%d\n",Tcols);
                             fprintf(pFile_info1,"TotalRA_matchedpts\t%d\n",final_count_MPs);
-                            fprintf(pFile_info1,"row\tcol\tMPs\tPeroverTMPs\tPeroverTile\tHeightRange\n");
+                            fprintf(pFile_info1,"row\tcol\tMPs\tPerOverTMPs\tPerOverTile\tHeightRange\n");
                             for(int index = 0 ; index < Trows*Tcols ; index++)
                             {
                                 int pts_row = (int)(floor(index/Tcols));
