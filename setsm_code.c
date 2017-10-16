@@ -1336,7 +1336,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         
                         i = 0;
-                        while( i < count_MPs && (fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
+                        while( i < final_count_MPs && (fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
                             int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
                             int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
@@ -1352,6 +1352,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         
                         FILE* pFile_info;
+                        char str_rafile[500];
                         sprintf(str_rafile,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
                         pFile_info		= fopen(str_rafile,"w");
                         if(pFile_info)
@@ -1482,7 +1483,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                          subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,&final_count_MPs;);
+                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,&final_count_MPs);
                     }
 #ifdef buildMPI
 		    MPI_Finalize();
