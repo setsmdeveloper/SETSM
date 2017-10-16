@@ -1338,8 +1338,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         D3DPOINT ptslists;
                         int Trows = t_iter_row_end - t_iter_row_start;
                         int Tcols = t_t_col_end - t_t_col_start;
-                        int* tiles = (int*)calloc(sizeof(int),Trows*Tcols);
-                        D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*Trows*Tcols);
+                        int* tiles = (int*)calloc(sizeof(int),(Trows+1)*(Tcols+1));
+                        D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(Trows+1)*(Tcols+1));
                         
                         for(int index = 0 ; index < Trows*Tcols ; index++)
                         {
@@ -1357,6 +1357,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
                             int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
                             
+                            printf("row col %d\t%d\n",temp_row,temp_col);
                             int index = temp_row*Tcols + temp_col;
                             tiles[index] ++;
                             if(Theight[index].m_X > ptslists.m_Z)
@@ -1386,7 +1387,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 fprintf(pFile_info1,"%d\t%d\t%d\t%lf\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
                             printf("end writing tiles info\n");
-                            //fclose(pFile_info1);
+                            fclose(pFile_info1);
                         }
                         
                         printf("end fclose1\n");
