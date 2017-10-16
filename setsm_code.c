@@ -1294,6 +1294,18 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     {
                         uint8 t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end;
                         tile_size			= 4000;
+                        if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
+                        {
+                            if(Boundary_size.width > Boundary_size.height)
+                                tile_size = Boundary_size.width;
+                            else
+                                tile_size = Boundary_size.height;
+                        }
+                        
+                        if(args.check_tilesize)
+                            tile_size		= args.tilesize;
+                        printf("tilesize %d\n",tile_size);
+                        
                         
                         SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area,
                                  &t_iter_row_start, &t_iter_row_end, &t_t_col_start, &t_t_col_end, &subX, &subY);
@@ -1358,14 +1370,14 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         pFile_info		= fopen(str_rafile,"w");
                         if(pFile_info)
                         {
-                            fprintf(pFile_info,"NumberOfRows_Tile/t%d\n",Trows);
-                            fprintf(pFile_info,"NumberOfCols_Tile/t%d\n",Tcols);
+                            fprintf(pFile_info,"NumberOfRows_Tile\t%d\n",Trows);
+                            fprintf(pFile_info,"NumberOfCols_Tile\t%d\n",Tcols);
                             
                             for(int index = 0 ; index < Trows*Tcols ; index++)
                             {
                                 int pts_row = (int)(floor(index/Tcols));
                                 int pts_col = index % Tcols;
-                                fprintf(pFile_info,"%d/t%d\t%d\t%f\n",Trows+1,Tcols+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
+                                fprintf(pFile_info,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
                         }
                         fclose(pFile_info);
