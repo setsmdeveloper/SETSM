@@ -1288,6 +1288,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     //calculation tile info after RA computation
                     char filename_mps[500];
                     sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,1,1,0,3);
+                    printf("RA_matched file %s\n",filename_mps);
                     FILE *pFile = fopen(filename_mps,"r");
                     if(pFile)
                     {
