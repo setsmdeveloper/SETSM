@@ -1034,6 +1034,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     uint8 pyramid_step;
                     uint8 Template_size	= 15;
                     uint16 buffer_area	= 400;
+                    int final_count_MPs;
                     
                     uint8 iter_row_start, iter_row_end, t_col_start, t_col_end;
                     int	 total_count = 0, tile_size = 0;
@@ -1273,12 +1274,105 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             t_col_start		= 1;
                             t_col_end		= t_col_start + 1;
                             
+                            
+                            
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                              LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter);
+                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,&final_count_MPs);
                         }
                     }
+                    
+                    
+                    
+                    //calculation tile info after RA computation
+                    char filename_mps[500];
+                    sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo.save_filepath,1,1,0,3);
+                    FILE *pFile = fopen(filename_mps,"r");
+                    if(pFile)
+                    {
+                        int t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end;
+                        tile_size			= 4000;
+                        
+                        SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area,
+                                 &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
+                        
+                        if (args.check_tiles_SR)
+                            t_iter_row_start	  = args.start_row;
+                        
+                        if (args.check_tiles_ER)
+                            t_iter_row_end	  = args.end_row;
+                        
+                        if (args.check_tiles_SC)
+                            t_t_col_start		  = args.start_col;
+                        
+                        if (args.check_tiles_EC)
+                            t_t_col_end		  = args.end_col;
+                        
+                        if (proinfo.check_tiles_SR)
+                            t_iter_row_start	  = proinfo.start_row;
+                        
+                        if (proinfo.check_tiles_ER)
+                            t_iter_row_end	  = proinfo.end_row;
+                        
+                        if (proinfo.check_tiles_SC)
+                            t_t_col_start		  = proinfo.start_col;
+                        
+                        if (proinfo.check_tiles_EC)
+                            t_t_col_end		  = proinfo.end_col;
+                        
+                        D3DPOINT ptslists;
+                        int Trows = t_iter_row_end - t_iter_row_start + 1;
+                        int Tcols = t_t_col_end - t_t_col_start + 1;
+                        int* tiles = (int*)calloc(sizeof(int)*Trows*Tcols);
+                        D2DPOINT* Theihgt = (D2DPOINT*)malloc(sizeof(D2DPOINT),Trows*Tcols);
+                        
+                        for(int index = 0 ; index < Trows*Tcols ; index++)
+                        {
+                            int pts_row = (int)(floor(index/Tcols));
+                            int pts_col = index % Tcols;
+                            Theight[index].m_X = 999999;
+                            Theight[index].m_Y = -999999;
+                        }
+                        
+                        i = 0;
+                        while( i < count_MPs && (fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
+                        {
+                            int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
+                            int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
+                            
+                            int index = temp_row*Tcols + temp_col;
+                            tiles[index] ++;
+                            if(Theight[index].m_X > ptslists.m_Z)
+                                Theight[index].m_X = ptslists.m_Z;
+                            if(Theight[index].m_Y < ptslists.m_Z)
+                                Theight[index].m_Y = ptslists.m_Z;
+                            
+                            i++;
+                        }
+                        
+                        FILE* pFile_info;
+                        sprintf(str_rafile,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
+                        pFile_info		= fopen(str_rafile,"w");
+                        if(pFile_info)
+                        {
+                            fprintf(pFile_info,"NumberOfRows_Tile/t%d\n",Trows);
+                            fprintf(pFile_info,"NumberOfCols_Tile/t%d\n",Tcols);
+                            
+                            for(int index = 0 ; index < Trows*Tcols ; index++)
+                            {
+                                int pts_row = (int)(floor(index/Tcols));
+                                int pts_col = index % Tcols;
+                                fprintf(pFile_info,"%d/t%d\t%d\t%f\n",Trows+1,Tcols+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
+                            }
+                        }
+                        fclose(pFile_info);
+                    }
+                    fclose(pFile);
+                    
+                    
+                    
+                    
                     
                     if (args.check_RA_line)
                         Rimageparam[0] = args.ra_line;
@@ -1388,7 +1482,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                          subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
+                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,&final_count_MPs;);
                     }
 #ifdef buildMPI
 		    MPI_Finalize();
@@ -1541,7 +1635,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter)
+				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter, int *final_count_MPs)
 {
 #ifdef buildMPI
 	int rank, size;
@@ -2224,6 +2318,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
 										
 										free(ptslists);
+                                        
+                                        *final_count_MPs = count_MPs;
 									}
 									else
 									{
