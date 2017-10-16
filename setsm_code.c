@@ -1370,9 +1370,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         printf("end loading RA matched\n");
                         
                         FILE* pFile_info;
-                        char str_rafile[500];
-                        sprintf(str_rafile,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
-                        pFile_info		= fopen(str_rafile,"w");
+                        char str_rafile_ttt[500];
+                        sprintf(str_rafile_ttt,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
+                        pFile_info		= fopen(str_rafile_ttt,"w");
                         if(pFile_info)
                         {
                             fprintf(pFile_info,"NumberOfRows_Tile\t%d\n",Trows);
@@ -1387,9 +1387,10 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         printf("end writing tiles info\n");
                         fclose(pFile_info);
+                        printf("end fclose1\n");
                         free(tiles);
                         free(Theight);
-                        printf("end fclose1\n");
+                        printf("free\n");
                     }
                     fclose(pFile);
                     printf("end fclose2\n");
