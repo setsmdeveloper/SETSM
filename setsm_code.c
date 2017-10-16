@@ -1376,7 +1376,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         {
                             fprintf(pFile_info1,"NumberOfRows_Tile\t%d\n",Trows);
                             fprintf(pFile_info1,"NumberOfCols_Tile\t%d\n",Tcols);
-                            
+                            fprintf(pFile_info1,"TotalRA_matchedpts\t%d\n",final_count_MPs);
                             for(int index = 0 ; index < Trows*Tcols ; index++)
                             {
                                 int pts_row = (int)(floor(index/Tcols));
@@ -1386,7 +1386,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     diff_h = Theight[index].m_Y-Theight[index].m_X;
                                 else
                                     diff_h = 0;
-                                fprintf(pFile_info1,"%d\t%d\t%d\t%f\t%lf\n",pts_row+1,pts_col+1,tiles[index],(double)tiles[index]/(double)final_count_MPs,diff_h);
+                                fprintf(pFile_info1,"%d\t%d\t%d\t%f\t%lf\n",pts_row+1,pts_col+1,tiles[index],(double)tiles[index]/(double)final_count_MPs*100,diff_h);
                             }
                             fclose(pFile_info1);
                         }
