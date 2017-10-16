@@ -1367,6 +1367,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             i++;
                         }
                         
+                        printf("end loading RA matched\n");
+                        
                         FILE* pFile_info;
                         char str_rafile[500];
                         sprintf(str_rafile,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
@@ -1383,6 +1385,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 fprintf(pFile_info,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
                         }
+                        printf("end writing tiles info\n");
                         fclose(pFile_info);
                     }
                     fclose(pFile);
