@@ -1338,8 +1338,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         D3DPOINT ptslists;
                         int Trows = t_iter_row_end - t_iter_row_start;
                         int Tcols = t_t_col_end - t_t_col_start;
-                        int* tiles = (int*)calloc(sizeof(int),(Trows+1)*(Tcols+1));
-                        D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(Trows+1)*(Tcols+1));
+                        int* tiles = (int*)calloc(sizeof(int),(Trows)*(Tcols));
+                        D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(Trows)*(Tcols));
                         
                         for(int index = 0 ; index < Trows*Tcols ; index++)
                         {
@@ -1355,13 +1355,13 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         while( /*i < final_count_MPs && */(fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
                             //printf("XYZ %f\t%f\t%f\n",ptslists.m_X,ptslists.m_Y,ptslists.m_Z);
-                            int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
-                            int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
+                            int temp_col = floor((ptslists.m_X - Boundary[0])/subX)+1;
+                            int temp_row = floor((ptslists.m_Y - Boundary[1])/subY)+1;
                             
-                            if(temp_col >= t_t_col_start && temp_col <t_t_col_end && temp_row >= t_iter_row_start && temp_row < t_iter_row_end)
+                            if(temp_col >= t_t_col_start && temp_col < t_t_col_end && temp_row >= t_iter_row_start && temp_row < t_iter_row_end)
                             {
                                 //printf("row col %d\t%d\n",temp_row,temp_col);
-                                int index = temp_row*Tcols + temp_col;
+                                int index = (temp_row-1)*Tcols + (temp_col-1);
                                 tiles[index] ++;
                                 if(Theight[index].m_X > ptslists.m_Z)
                                     Theight[index].m_X = ptslists.m_Z;
