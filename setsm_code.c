@@ -1324,8 +1324,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         D3DPOINT ptslists;
                         int Trows = t_iter_row_end - t_iter_row_start + 1;
                         int Tcols = t_t_col_end - t_t_col_start + 1;
-                        int* tiles = (int*)calloc(sizeof(int)*Trows*Tcols);
-                        D2DPOINT* Theihgt = (D2DPOINT*)malloc(sizeof(D2DPOINT),Trows*Tcols);
+                        int* tiles = (int*)calloc(sizeof(int),Trows*Tcols);
+                        D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*Trows*Tcols);
                         
                         for(int index = 0 ; index < Trows*Tcols ; index++)
                         {
