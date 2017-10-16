@@ -1,6 +1,7 @@
 #ifndef __VORONOI_H
 #define __VORONOI_H
 
+#include "tiff.h"
 #ifndef NULL
 #define NULL 0
 #endif
@@ -23,6 +24,7 @@ typedef struct tagPoint
     {
     double x ;
     double y ;
+
     } Point ;
 
 /* structure used both for sites and for vertices */
@@ -58,6 +60,13 @@ typedef struct tagHalfedge
     struct tagHalfedge * PQnext ;
     } Halfedge ;
 
+typedef struct tagUI3DPoint
+{
+	uint32 m_X;
+	uint32 m_Y;
+	uint32 m_Z;
+} UI3DPOINT;
+
 /* edgelist.c */
 void ELinitialize(void) ;
 Halfedge * HEcreate(Edge *, int) ;
@@ -85,8 +94,8 @@ void makevertex(Site *) ;
 void deref(Site *) ;
 void ref(Site *) ;
 extern double deltax, deltay ;
-extern int nedges, sqrt_nsites, nvertices ;
-extern Freelist efl ;
+extern int nsites, nedges, sqrt_nsites, nvertices ;
+extern Freelist sfl, efl ;
 
 /* heap.c */
 void PQinsert(Halfedge *, Site *, double) ;
@@ -98,6 +107,11 @@ Halfedge * PQextractmin(void) ;
 void PQinitialize(void) ;
 extern int PQmin, PQcount, PQhashsize ;
 extern Halfedge * PQhash ;
+
+/* main.c */
+extern int sorted, triangulate, plot, debug, siteidx,count_tri;
+extern double xmin, xmax, ymin, ymax;
+extern Site * sites;
 
 /* memory.c */
 void freeinit(Freelist *, int) ;

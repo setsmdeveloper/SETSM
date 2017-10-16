@@ -11,20 +11,21 @@ CSWITCHES =-std=c99 -O3 -fopenmp -g -DLINUX -I/usr/X11R6/include -L/usr/X11R6/li
 TRILIBDEFS = -DTRILIBRARY
 MPICC=mpicc
 CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
-TRIFLAGS=$(CFLAGS) -g
+GFLAGS=$(CFLAGS) -g
 MPICFLAGS=$(CFLAGS) -DbuildMPI
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
 
 setsm : setsm_code.o triangle.o
-	$(CC) $(TRIFLAGS)  -o setsm setsm_code.o triangle.o $(LDFLAGS) -lm -ltiff
+	$(CC) $(GFLAGS)  -o setsm setsm_code.o triangle.o $(LDFLAGS) -lm -ltiff
 
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c triangle.o
-	$(CC) $(TRIFLAGS) $(INCS) -c setsm_code.c
+	$(CC) $(GFLAGS) $(INCS) -c setsm_code.c
 
 triangle.o: triangle.c triangle.h
 	$(CC) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
+
 MPI : setsm_code_mpi.o
 	$(MPICC) $(MPICFLAGS) -o setsm setsm_code_mpi.o $(LDFLAGS) -lm -ltiff
 

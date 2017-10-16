@@ -1,10 +1,13 @@
 /*** VORONOI.C ***/
 
 #include "voronoi.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 extern Site * bottomsite ;
 extern Halfedge * ELleftend, * ELrightend ;
-
 /*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
 	 : deltax, deltay (can all be estimates).
 	 : Performance suffers if they are wrong; better to make nsites,
@@ -90,12 +93,12 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;
 			}
-			if (debug)
+			/*if (debug)
 			  {
 			  printf("circle through left=%d right=%d bottom=%d\n",
 			  s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 			  }
-			
+			*/	
 			
 			
 			v = lbnd->vertex ;

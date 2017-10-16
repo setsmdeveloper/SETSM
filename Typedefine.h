@@ -296,8 +296,8 @@ typedef struct tagBandInfo
 
 #endif
 
-#ifndef __VDEFS_H
-#define __VDEFS_H
+#ifndef __VORONOI_H
+#define __VORONOI_H
 
 #ifndef NULL
 #define NULL 0
@@ -424,4 +424,3 @@ void clip_line(Edge *) ;
 void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
 
 #endif	
-

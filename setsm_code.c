@@ -27,7 +27,6 @@
 #define REAL double
 
 #include "setsm_code.h"
-#include "triangle.h"
 #include "math.h"
 #include <omp.h>
 #include <time.h>
@@ -37,7 +36,8 @@
 #ifdef buildMPI
 #include "mpi.h"
 #endif
-
+#include "voronoi.h"
+//#include "triangle.h"
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
@@ -2175,14 +2175,17 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								{
 									FILE* survey;
 									int i;
+									char filename_survey[500];
 									
 									if(check_ortho_cal && proinfo.IsRA != 1)
 									{
 										count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
 										survey	= fopen(filename_mps_fin,"r");
+										strncpy(filename_survey,filename_mps_fin,500);
 									}
 									else
 										survey	= fopen(filename_mps,"r");
+										strncpy(filename_survey,filename_mps,500);
 									
 									
 									blunder_param.Boundary	= subBoundary;
@@ -2247,44 +2250,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											D3DPOINT *ptslists;
 											
 											FILE *pTri;
-											double maxX_ptslists = -100000000;
-											double maxY_ptslists = -100000000;
-											double minX_ptslists =	100000000;
-											double minY_ptslists =	100000000;
-											double distX_ptslists, distY_ptslists;
-											double Scale_ptslists = 1000;
-											int i;
 											
 											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
 											
-											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												i++;
-											}
-											
-											fclose(survey);
-											
-											D3DPOINT *scaled_ptslists;
 											UI3DPOINT *trilists;
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
 											
 											
 											if(level >= TIN_split_level || count_MPs < 10000)
@@ -2292,7 +2261,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists,filename_survey);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -2311,11 +2280,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												int iter_row,iter_col;
 												
 												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_survey);
 											}
 											
-											free(scaled_ptslists);
 										
 										
 											fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
@@ -2356,42 +2323,14 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											printf("load ortho_blunder pts %d\n",matched_pts);
 											count_MPs = matched_pts;
 											
-											survey	= fopen(filename_mps,"r");
 											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
-											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												
-												i++;
-											}
-											fclose(survey);
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
-											
 											
 											if(level >= TIN_split_level || count_MPs < 10000)
 											{
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists,filename_survey);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -2410,11 +2349,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												int iter_row,iter_col;
 												
 												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_survey);
 											}
 											
-											free(scaled_ptslists);
 											
 											count_blunder = DecisionMPs_setheight(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo.save_filepath,
 																				  Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
@@ -2525,45 +2462,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											D3DPOINT *ptslists;
 											
 											FILE *pTri;
-											double maxX_ptslists = -100000000;
-											double maxY_ptslists = -100000000;
-											double minX_ptslists =	100000000;
-											double minY_ptslists =	100000000;
-											double distX_ptslists, distY_ptslists;
-											double Scale_ptslists = 1000;
-											int i;
-											
 											ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
 											
 											
-											i = 0;
-											while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-											{
-												if(maxX_ptslists < ptslists[i].m_X)
-													maxX_ptslists = ptslists[i].m_X;
-												if(maxY_ptslists < ptslists[i].m_Y)
-													maxY_ptslists = ptslists[i].m_Y;
-												if(minX_ptslists > ptslists[i].m_X)
-													minX_ptslists = ptslists[i].m_X;
-												if(minY_ptslists > ptslists[i].m_Y)
-													minY_ptslists = ptslists[i].m_Y;
-												
-												i++;
-											}
-											fclose(survey);
-											
-											D3DPOINT *scaled_ptslists;
 											UI3DPOINT *trilists;
-											
-											scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-											
-											distX_ptslists = maxX_ptslists - minX_ptslists;
-											distY_ptslists = maxY_ptslists - minY_ptslists;
-											for(i=0;i<count_MPs;i++)
-											{
-												scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-												scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-											}
 											
 											
 											if(level >= TIN_split_level || count_MPs < 10000)
@@ -2571,7 +2473,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 												
 												sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-												TINCreate(ptslists,bufstr,count_MPs,t_trilists);
+												TINCreate(ptslists,bufstr,count_MPs,t_trilists,filename_survey);
 												
 												trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 												i = 0;
@@ -2589,11 +2491,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 												int iter_row,iter_col;
 												
 												trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																		 scaled_ptslists,
-																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_survey);
 											}
 											
-											free(scaled_ptslists);
                                             
                                             if(pre_matched_pts == 0)
                                                 matching_change_rate = 0;
@@ -9962,9 +9862,8 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 
 
 UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
-						 D3DPOINT *scaled_ptslists,
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
-						 int *re_total_tri_counts)
+						 int *re_total_tri_counts,char *filename_survey)
 {
 	double interval_X, interval_Y;
 	double interval_buffer;
@@ -10145,7 +10044,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 			UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
 			
 			sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
-			TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists);
+			TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists,filename_survey);
 			
 			i = 0;
 			for(i=0;i<count_tri;i++)
@@ -10302,47 +10201,16 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 			D3DPOINT *ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
 			
 			
-			double maxX_ptslists = -100000000;
-			double maxY_ptslists = -100000000;
-			double minX_ptslists =	100000000;
-			double minY_ptslists =	100000000;
-			double distX_ptslists, distY_ptslists;
-			double Scale_ptslists = 1000;
-			
-			while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-			{
-				if(maxX_ptslists < ptslists[i].m_X)
-					maxX_ptslists = ptslists[i].m_X;
-				if(maxY_ptslists < ptslists[i].m_Y)
-					maxY_ptslists = ptslists[i].m_Y;
-				if(minX_ptslists > ptslists[i].m_X)
-					minX_ptslists = ptslists[i].m_X;
-				if(minY_ptslists > ptslists[i].m_Y)
-					minY_ptslists = ptslists[i].m_Y;
-				
-				i++;
-			}
-			
 			if( !(Pyramid_step == 0 && iteration == 3) )
 			{
-				D3DPOINT *scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
 				UI3DPOINT *trilists;
-				
-				distX_ptslists = maxX_ptslists - minX_ptslists;
-				distY_ptslists = maxY_ptslists - minY_ptslists;
-				
-				for(i=0;i<count_MPs;i++)
-				{
-					scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-					scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
-				}
 				
 				if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
 				{
 					UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 					
 					sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-					TINCreate(ptslists,bufstr,count_MPs,t_trilists);
+					TINCreate(ptslists,bufstr,count_MPs,t_trilists,filename_mps_pre);
 					
 					trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 					i = 0;
@@ -10358,8 +10226,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 				else
 				{
 					trilists = TINgeneration(false,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-											 scaled_ptslists,
-											 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+											 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_mps_pre);
 				}
 				// TIN generation end
 				
@@ -10457,7 +10324,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
 						
 						sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-						TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists);
+						TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,filename_mps_pre);
 						
 						free(input_tri_pts);
 						
@@ -10476,8 +10343,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					else
 					{
 						trilists = TINgeneration(!flag,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-												 scaled_ptslists,
-												 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+												 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_mps_pre);
 					}
 					printf("end TIN\n");
 					
@@ -10561,7 +10427,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 							UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
 							
 							sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-							TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists);
+							TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,filename_mps_pre);
 							
 							free(input_tri_pts);
  
@@ -10580,8 +10446,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						else
 						{
 							trilists = TINgeneration(!flag,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-													 scaled_ptslists,
-													 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+													 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri,filename_mps_pre);
 						}
 						printf("2 end TIN\n");
 						
@@ -10601,7 +10466,6 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						fclose(pfile);
 					}
 				}
-				free(scaled_ptslists);
 				
 				FILE *pfile = fopen(filename_mps,"w");
 				int tcnt = 0;
@@ -10710,7 +10574,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	return count;
 }
 
-/*
+#ifdef VLIBRARY
 int scomp(const void * vs1, const void * vs2)
 {
 	Point * s1 = (Point *)vs1 ;
@@ -10733,11 +10597,11 @@ int scomp(const void * vs1, const void * vs2)
 		return (1) ;
 	}
 	return (0) ;
-}*/
+}
 
 /*** return a single in-storage site ***/
 
-/*Site *nextone(void)
+Site *nextone(void)
 {
 	Site * s ;
 
@@ -10750,11 +10614,11 @@ int scomp(const void * vs1, const void * vs2)
 	{
 		return ((Site *)NULL) ;
 	}
-}*/
+}
 
 /*** read all sites, sort, and compute xmin, xmax, ymin, ymax ***/
 
-/*void readsites(D3DPOINT *ptslists,int numofpts)
+void readsites(D3DPOINT *ptslists,int numofpts)
 {
 	int i ;
 	nsites = 0 ;
@@ -10787,11 +10651,11 @@ int scomp(const void * vs1, const void * vs2)
 		ymin = sites[0].coord.y ;
 		ymax = sites[nsites-1].coord.y ;
 	}
-}*/
+}
 
 /*** read one site ***/
 
-/*Site *readone(void)
+Site *readone(void)
 {
 	Site * s ;
 
@@ -10803,10 +10667,63 @@ int scomp(const void * vs1, const void * vs2)
 		return ((Site *)NULL ) ;
 	}
 	return (s) ;
-}*/
+}
+#endif
 
-void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists)
+void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,char *filename_survey)
 {
+#ifdef VLIBRARY
+	Site *(*next)();
+	count_tri = 0;
+	FILE* survey;	
+	sorted = triangulate = plot = debug = 0;
+	triangulate = 1;
+	freeinit(&sfl, sizeof(Site));
+
+	double maxX_ptslists = -100000000;
+	double maxY_ptslists = -100000000;
+	double minX_ptslists =	100000000;
+	double minY_ptslists =	100000000;
+	double distX_ptslists, distY_ptslists;
+	double Scale_ptslists = 1000;
+		
+	survey	= fopen(filename_survey,"r");
+	i = 0;
+	while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+	{
+		if(maxX_ptslists < ptslists[i].m_X)
+			maxX_ptslists = ptslists[i].m_X;
+		if(maxY_ptslists < ptslists[i].m_Y)
+			maxY_ptslists = ptslists[i].m_Y;
+		if(minX_ptslists > ptslists[i].m_X)
+			minX_ptslists = ptslists[i].m_X;
+		if(minY_ptslists > ptslists[i].m_Y)
+			minY_ptslists = ptslists[i].m_Y;
+		
+		i++;
+	}
+
+	fclose(survey);
+	
+	D3DPOINT *scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+	
+	distX_ptslists = maxX_ptslists - minX_ptslists;
+	distY_ptslists = maxY_ptslists - minY_ptslists;
+	
+	for(i=0;i<count_MPs;i++)
+	{
+		scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+		scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+	}
+	
+	readsites(scaled_ptslists,numofpts);
+	next = nextone;
+	siteidx = 0;
+	geominit();
+	voronoi(next,trilists);
+	free_all();
+
+#elif TRILIBRARY
 	//clock_t start = clock(), mid1, mid2, mid3, end;
 
 	struct triangulateio in, out;
@@ -10913,6 +10830,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
 	msec = (end - start) * 1000 / CLOCKS_PER_SEC;
     printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
 */
+#endif
 }
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
