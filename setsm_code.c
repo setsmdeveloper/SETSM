@@ -1292,7 +1292,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     FILE *pFile = fopen(filename_mps,"r");
                     if(pFile)
                     {
-                        int t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end;
+                        uint8 t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end;
                         tile_size			= 4000;
                         
                         SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area,
