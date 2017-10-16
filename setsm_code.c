@@ -14305,8 +14305,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 			int row,col;
 			double t_z;
 			double t_x, t_y;
-			row = (int)(floor(i/DEM_cols));
-			col = i%DEM_cols;
+			row = (int)(floor(ix/DEM_cols));
+			col = ix%DEM_cols;
 			
 			t_x = DEM_minX + col*mt_grid;
 			t_y = DEM_maxY - row*mt_grid;
@@ -14532,9 +14532,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
     
 	if(total_search_count > 0)
 	{
-		long  count = 0;
-#pragma omp parallel for private(count) schedule(guided)
-		for(count = 0;count < total_search_count;count++)
+#pragma omp parallel for schedule(guided)
+		for(long count = 0;count < total_search_count;count++)
 		{
 			double pos_row, pos_col, pos_row_mt, pos_col_mt;
 			int check = 0;
