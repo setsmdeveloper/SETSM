@@ -1372,6 +1372,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         char str_rafile_ttt[500];
                         sprintf(str_rafile_ttt,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
                         pFile_info1		= fopen(str_rafile_ttt,"w");
+                        double row_grid = subY/16.0;
+                        double col_grid = subX/16.0;
+                        
                         if(pFile_info1)
                         {
                             fprintf(pFile_info1,"NumberOfRows_Tile\t%d\n",Trows);
@@ -1386,7 +1389,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     diff_h = Theight[index].m_Y-Theight[index].m_X;
                                 else
                                     diff_h = 0;
-                                fprintf(pFile_info1,"%d\t%d\t%d\t%f\t%lf\n",pts_row+1,pts_col+1,tiles[index],(double)tiles[index]/(double)final_count_MPs*100,diff_h);
+                                fprintf(pFile_info1,"%d\t%d\t%d\t%f\t%lf\t%lf\n",pts_row+1,pts_col+1,tiles[index],(double)tiles[index]/(double)final_count_MPs*100,(double)tiles[index]/(row_grid*col_grid),diff_h);
                             }
                             fclose(pFile_info1);
                         }
