@@ -1382,6 +1382,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             {
                                 int pts_row = (int)(floor(index/Tcols));
                                 int pts_col = index % Tcols;
+                                printf("row col %d\t%d\n",pts_row,pts_col);
                                 fprintf(pFile_info1,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
                             printf("end writing tiles info\n");
