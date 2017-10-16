@@ -1369,23 +1369,23 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         
                         printf("end loading RA matched\n");
                         
-                        FILE* pFile_info;
+                        FILE* pFile_info1;
                         char str_rafile_ttt[500];
                         sprintf(str_rafile_ttt,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
-                        pFile_info		= fopen(str_rafile_ttt,"w");
-                        if(pFile_info)
+                        pFile_info1		= fopen(str_rafile_ttt,"w");
+                        if(pFile_info1)
                         {
-                            fprintf(pFile_info,"NumberOfRows_Tile\t%d\n",Trows);
-                            fprintf(pFile_info,"NumberOfCols_Tile\t%d\n",Tcols);
+                            fprintf(pFile_info1,"NumberOfRows_Tile\t%d\n",Trows);
+                            fprintf(pFile_info1,"NumberOfCols_Tile\t%d\n",Tcols);
                             
                             for(int index = 0 ; index < Trows*Tcols ; index++)
                             {
                                 int pts_row = (int)(floor(index/Tcols));
                                 int pts_col = index % Tcols;
-                                fprintf(pFile_info,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
+                                fprintf(pFile_info1,"%d\t%d\t%d\t%f\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
                             }
                             printf("end writing tiles info\n");
-                            fclose(pFile_info);
+                            fclose(pFile_info1);
                         }
                         
                         printf("end fclose1\n");
