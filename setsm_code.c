@@ -1353,7 +1353,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         i = 0;
                         while( /*i < final_count_MPs && */(fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
-                            printf("XYZ %f\t%f\t%f\n",ptslists.m_X,ptslists.m_Y,ptslists.m_Z);
+                            //printf("XYZ %f\t%f\t%f\n",ptslists.m_X,ptslists.m_Y,ptslists.m_Z);
                             int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
                             int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
                             
@@ -1387,9 +1387,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         printf("end writing tiles info\n");
                         fclose(pFile_info);
+                        free(tiles);
+                        free(Theight);
                     }
                     fclose(pFile);
-                    
+                    printf("end fclose\n");
                     
                     
                     
