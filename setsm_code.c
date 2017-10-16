@@ -1296,7 +1296,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         tile_size			= 4000;
                         
                         SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area,
-                                 &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
+                                 &t_iter_row_start, &t_iter_row_end, &t_t_col_start, &t_t_col_end, &subX, &subY);
                         
                         if (args.check_tiles_SR)
                             t_iter_row_start	  = args.start_row;
