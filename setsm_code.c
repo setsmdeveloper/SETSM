@@ -1389,9 +1389,10 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         fclose(pFile_info);
                         free(tiles);
                         free(Theight);
+                        printf("end fclose1\n");
                     }
                     fclose(pFile);
-                    printf("end fclose\n");
+                    printf("end fclose2\n");
                     
                     
                     
