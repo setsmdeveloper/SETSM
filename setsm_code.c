@@ -1334,7 +1334,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         if (proinfo.check_tiles_EC)
                             t_t_col_end		  = proinfo.end_col;
                         
-                        printf("pts %d\trow %d\t%d\tcol %d\t%d\t subXY %f\t%f\n",final_count_MPs,t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end,subX,subY);
                         D3DPOINT ptslists;
                         int Trows = t_iter_row_end - t_iter_row_start;
                         int Tcols = t_t_col_end - t_t_col_start;
@@ -1345,13 +1344,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         {
                             int pts_row = (int)(floor(index/Tcols));
                             int pts_col = index % Tcols;
-                            printf("row col %d\t%d\n",pts_row,pts_col);
                             Theight[index].m_X = 999999;
                             Theight[index].m_Y = -999999;
                         }
                         
-                        i = 0;
-                        printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                        final_count_MPs = 0;
                         while( /*i < final_count_MPs && */(fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
                             //printf("XYZ %f\t%f\t%f\n",ptslists.m_X,ptslists.m_Y,ptslists.m_Z);
@@ -1367,12 +1364,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     Theight[index].m_X = ptslists.m_Z;
                                 if(Theight[index].m_Y < ptslists.m_Z)
                                     Theight[index].m_Y = ptslists.m_Z;
-                                
-                                i++;
                             }
+                            final_count_MPs++;
                         }
-                        
-                        printf("end loading RA matched %d\n",i);
                         
                         FILE* pFile_info1;
                         char str_rafile_ttt[500];
@@ -1387,19 +1381,19 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             {
                                 int pts_row = (int)(floor(index/Tcols));
                                 int pts_col = index % Tcols;
-                                printf("row col %d\t%d\n",pts_row,pts_col);
-                                fprintf(pFile_info1,"%d\t%d\t%d\t%lf\n",pts_row+1,pts_col+1,tiles[index],Theight[index].m_Y-Theight[index].m_X);
+                                double diff_h;
+                                if(tiles[index] > 0)
+                                    diff_h = Theight[index].m_Y-Theight[index].m_X;
+                                else
+                                    diff_h = 0;
+                                fprintf(pFile_info1,"%d\t%d\t%f\t%lf\n",pts_row+1,pts_col+1,(double)tiles[index]/(double)final_count_MPs,diff_h);
                             }
-                            printf("end writing tiles info\n");
                             fclose(pFile_info1);
                         }
                         
-                        printf("end fclose1\n");
                         free(tiles);
                         free(Theight);
-                        printf("free\n");
                         fclose(pFile);
-                        printf("end fclose2\n");
                     }
                     
                     
