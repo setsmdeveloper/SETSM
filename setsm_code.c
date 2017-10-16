@@ -1351,6 +1351,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         
                         i = 0;
+                        printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
                         while( /*i < final_count_MPs && */(fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
                             //printf("XYZ %f\t%f\t%f\n",ptslists.m_X,ptslists.m_Y,ptslists.m_Z);
@@ -1359,7 +1360,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             
                             if(temp_col >= t_t_col_start && temp_col <t_t_col_end && temp_row >= t_iter_row_start && temp_row < t_iter_row_end)
                             {
-                                printf("row col %d\t%d\n",temp_row,temp_col);
+                                //printf("row col %d\t%d\n",temp_row,temp_col);
                                 int index = temp_row*Tcols + temp_col;
                                 tiles[index] ++;
                                 if(Theight[index].m_X > ptslists.m_Z)
