@@ -1334,9 +1334,10 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         if (proinfo.check_tiles_EC)
                             t_t_col_end		  = proinfo.end_col;
                         
+                        printf("pts %d\trow %d\t%d\tcol %d\t%d\t subXY %f\t%f\n",final_count_MPs,t_iter_row_start,t_iter_row_end,t_t_col_start,t_t_col_end,subX,subY);
                         D3DPOINT ptslists;
-                        int Trows = t_iter_row_end - t_iter_row_start + 1;
-                        int Tcols = t_t_col_end - t_t_col_start + 1;
+                        int Trows = t_iter_row_end - t_iter_row_start;
+                        int Tcols = t_t_col_end - t_t_col_start;
                         int* tiles = (int*)calloc(sizeof(int),Trows*Tcols);
                         D2DPOINT* Theight = (D2DPOINT*)malloc(sizeof(D2DPOINT)*Trows*Tcols);
                         
@@ -1344,12 +1345,13 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         {
                             int pts_row = (int)(floor(index/Tcols));
                             int pts_col = index % Tcols;
+                            printf("row col %d\t%d\n",pts_row,pts_col);
                             Theight[index].m_X = 999999;
                             Theight[index].m_Y = -999999;
                         }
                         
                         i = 0;
-                        while( i < final_count_MPs && (fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
+                        while( /*i < final_count_MPs && */(fscanf(pFile,"%lf %lf %lf\n",&ptslists.m_X,&ptslists.m_Y,&ptslists.m_Z)) != EOF )
                         {
                             int temp_col = floor((ptslists.m_X - Boundary[0])/subX);
                             int temp_row = floor((ptslists.m_Y - Boundary[1])/subY);
