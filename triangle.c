@@ -4294,7 +4294,7 @@ struct behavior *b;
   /* Initialize the pool of vertices. */
   poolinit(&m->vertices, vertexsize, VERTEXPERBLOCK,
            m->invertices > VERTEXPERBLOCK ? m->invertices : VERTEXPERBLOCK,
-           sizeof(REAL));
+           (int)sizeof(REAL));
 }
 
 /*****************************************************************************/
@@ -4358,7 +4358,7 @@ struct behavior *b;
   if (b->usesegments) {
     /* Initialize the pool of subsegments.  Take into account all eight */
     /*   pointers and one boundary marker.                              */
-    poolinit(&m->subsegs, 8 * sizeof(triangle) + sizeof(int),
+    poolinit(&m->subsegs, (int)(8 * sizeof(triangle) + sizeof(int)),
              SUBSEGPERBLOCK, SUBSEGPERBLOCK, 4);
 
     /* Initialize the "outer space" triangle and omnipresent subsegment. */
@@ -10813,7 +10813,7 @@ struct behavior *b;
   int check4events, farrightflag;
   triangle ptr;   /* Temporary variable used by sym(), onext(), and oprev(). */
 
-  poolinit(&m->splaynodes, sizeof(struct splaynode), SPLAYNODEPERBLOCK,
+  poolinit(&m->splaynodes, (int)sizeof(struct splaynode), SPLAYNODEPERBLOCK,
            SPLAYNODEPERBLOCK, 0);
   splayroot = (struct splaynode *) NULL;
 
@@ -11271,8 +11271,8 @@ FILE *polyfile;
   /* Allocate a temporary array that maps each vertex to some adjacent */
   /*   triangle.  I took care to allocate all the permanent memory for */
   /*   triangles and subsegments first.                                */
-  vertexarray = (triangle *) trimalloc(m->vertices.items *
-                                       (int) sizeof(triangle));
+  vertexarray = (triangle *) trimalloc((int)(m->vertices.items *
+                                       (int) sizeof(triangle)));
   /* Each vertex is initially unrepresented. */
   for (i = 0; i < m->vertices.items; i++) {
     vertexarray[i] = (triangle) m->dummytri;
@@ -13019,7 +13019,7 @@ int regions;
   if (((holes > 0) && !b->noholes) || !b->convex || (regions > 0)) {
     /* Initialize a pool of viri to be used for holes, concavities, */
     /*   regional attributes, and/or regional area constraints.     */
-    poolinit(&m->viri, sizeof(triangle *), VIRUSPERBLOCK, VIRUSPERBLOCK, 0);
+    poolinit(&m->viri, (int)sizeof(triangle *), VIRUSPERBLOCK, VIRUSPERBLOCK, 0);
   }
 
   if (!b->convex) {
@@ -13625,7 +13625,7 @@ struct behavior *b;
     printf("Adding Steiner points to enforce quality.\n");
   }
   /* Initialize the pool of encroached subsegments. */
-  poolinit(&m->badsubsegs, sizeof(struct badsubseg), BADSUBSEGPERBLOCK,
+  poolinit(&m->badsubsegs, (int)sizeof(struct badsubseg), BADSUBSEGPERBLOCK,
            BADSUBSEGPERBLOCK, 0);
   if (b->verbose) {
     printf("  Looking for encroached subsegments.\n");
@@ -13643,7 +13643,7 @@ struct behavior *b;
   /* Next, we worry about enforcing triangle quality. */
   if ((b->minangle > 0.0) || b->vararea || b->fixedarea || b->usertest) {
     /* Initialize the pool of bad triangles. */
-    poolinit(&m->badtriangles, sizeof(struct badtriang), BADTRIPERBLOCK,
+    poolinit(&m->badtriangles, (int)sizeof(struct badtriang), BADTRIPERBLOCK,
              BADTRIPERBLOCK, 0);
     /* Initialize the queues of bad triangles. */
     for (i = 0; i < 4096; i++) {
@@ -13653,7 +13653,7 @@ struct behavior *b;
     /* Test all triangles to see if they're bad. */
     tallyfaces(m, b);
     /* Initialize the pool of recently flipped triangles. */
-    poolinit(&m->flipstackers, sizeof(struct flipstacker), FLIPSTACKERPERBLOCK,
+    poolinit(&m->flipstackers, (int)sizeof(struct flipstacker), FLIPSTACKERPERBLOCK,
              FLIPSTACKERPERBLOCK, 0);
     m->checkquality = 1;
     if (b->verbose) {
