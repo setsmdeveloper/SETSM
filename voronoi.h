@@ -108,6 +108,9 @@ void PQinitialize(void) ;
 extern int PQmin, PQcount, PQhashsize ;
 extern Halfedge * PQhash ;
 
+/* getopt.c */
+extern int getopt(int, char *const *, const char *);
+
 /* main.c */
 extern int sorted, triangulate, plot, debug, siteidx,count_tri;
 extern double xmin, xmax, ymin, ymax;

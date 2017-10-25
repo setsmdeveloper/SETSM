@@ -39,7 +39,8 @@
 #define	 SQ(x)		 (x) * (x)
 
 FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
-int sorted, plot, debug, count_tri,triangulate;
+int sorted, plot, debug, count_tri;
+int triangulate;
 int nsites, siteidx ;
 double xmin, xmax, ymin, ymax ;
 Site * sites ;

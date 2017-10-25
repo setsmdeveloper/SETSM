@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+#ifdef VLIBRARY
 extern Site * bottomsite ;
 extern Halfedge * ELleftend, * ELrightend ;
+
 /*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
 	 : deltax, deltay (can all be estimates).
 	 : Performance suffers if they are wrong; better to make nsites,
@@ -64,8 +66,8 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			}
 			newsite = (*nextsite)() ;
 		}
-		else if (!PQempty())  /* intersection is smallest */
-	{
+		else if (!PQempty())   /* intersection is smallest */
+		{
 			lbnd = PQextractmin() ;
 			llbnd = ELleft(lbnd) ;
 			rbnd = ELright(lbnd) ;
@@ -98,7 +100,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			  printf("circle through left=%d right=%d bottom=%d\n",
 			  s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 			  }
-			*/	
+			*/
 			
 			
 			v = lbnd->vertex ;
@@ -332,6 +334,9 @@ rightreg(Halfedge * he)
 	return (he->ELpm == le ? he->ELedge->reg[re] :
 			he->ELedge->reg[le]) ;
 }
+
+
+
 
 /*** GEOMETRY.C ***/
 double deltax, deltay ;
@@ -987,8 +992,4 @@ clip_line(Edge * e)
 	}
 	line(x1,y1,x2,y2);
 }
-
-
-
-
-
+#endif

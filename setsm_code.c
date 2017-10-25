@@ -27,8 +27,11 @@
 #define REAL double
 
 #include "setsm_code.h"
-//#include "triangle.h"
+#ifdef VLIBRARY
 #include "voronoi.h"
+#elif TRILIBRARY
+#include "triangle.h"
+#endif
 #include "math.h"
 #include <omp.h>
 #include <time.h>
@@ -2339,18 +2342,14 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											i++;
 										}
 										fclose(survey);
-										
-										min_max[0] = minX_ptslists;
-										min_max[1] = minY_ptslists;
-										min_max[2] = maxX_ptslists;
-										min_max[3] = maxY_ptslists;
+										double min_max2[4] = {minX_ptslists,minY_ptslists,maxX_ptslists,maxY_ptslists};
 										
 										if(level >= TIN_split_level || count_MPs < 10000)
 										{
 											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 											
 											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max);
+											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2);
 											
 											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 											i = 0;
@@ -2369,7 +2368,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											int iter_row,iter_col;
 											
 											trilists = TINgeneration(true,proinfo.save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-																	 min_max,
+																	 min_max2,
 																	 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
 										}
 										
@@ -10942,7 +10941,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	return count;
 }
 
-//#ifdef VLIBRARY
+#ifdef VLIBRARY
 int scomp(const void * vs1, const void * vs2)
 {
 	Point * s1 = (Point *)vs1 ;
@@ -11036,14 +11035,14 @@ Site *readone(void)
 	}
 	return (s) ;
 }
-//#endif
+#endif
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[])
 {
 double minX_ptslists = min_max[0];
 double minY_ptslists = min_max[1];
 double maxX_ptslists = min_max[2];
 double maxY_ptslists = min_max[3];
-//#ifdef VLIBRARY
+#ifdef VLIBRARY
 	double distX_ptslists, distY_ptslists;
 	double Scale_ptslists = 1000;
 	Site *(*next)();
@@ -11071,10 +11070,10 @@ double maxY_ptslists = min_max[3];
 	siteidx = 0;
 	geominit();
 	voronoi(next,trilists);
+	free(scaled_ptslists);
 	free_all();
 
-//#endif
-#ifdef TRILIBRARY
+#elif TRILIBRARY
 	//clock_t start = clock(), mid1, mid2, mid3, end;
 
 	struct triangulateio in, out;
@@ -11086,6 +11085,16 @@ double maxY_ptslists = min_max[3];
         count_tri = 0;
         return;
     }
+	D3DPOINT *shifted_ptslists;
+	shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
+	
+	double midX_ptslists = (maxX_ptslists - minX_ptslists) / 2.0;
+	double midY_ptslists = (maxY_ptslists - minY_ptslists) / 2.0;
+	for(int i=0;i<numofpts;i++)
+	{
+		shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
+		shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
+	}
 
 	/* Define input points. */
 
@@ -11095,8 +11104,8 @@ double maxY_ptslists = min_max[3];
 
 	#pragma omp parallel for private(x) schedule(guided)
     for (x = 0; x < numofpts; x++){
-        in.pointlist[2*x] = ptslists[x].m_X;
-        in.pointlist[2*x+1] = ptslists[x].m_Y;
+        in.pointlist[2*x] = shifted_ptslists[x].m_X;
+        in.pointlist[2*x+1] = shifted_ptslists[x].m_Y;
     }
 
 	in.pointattributelist = (REAL *) malloc(in.numberofpoints *
@@ -11167,6 +11176,7 @@ double maxY_ptslists = min_max[3];
     free(out.segmentmarkerlist);
     free(out.edgelist);
     free(out.edgemarkerlist);
+    free(shifted_ptslists);
 
 	//end = clock();
 /*
