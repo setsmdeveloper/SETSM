@@ -84,7 +84,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			
 			//out_triple(Site * s1, Site * s2, Site * s3)
 			
-			if (triangulate && !plot && !debug)
+			if (triangulate_v && !plot && !debug)
 			{
 				
 				trilists[count_tri].m_X = bot->sitenbr;
@@ -757,7 +757,7 @@ void free_all(void)
 
 
 /*** OUTPUT.C ***/
-extern int triangulate, plot, debug, count_tri ;
+extern int triangulate_v, plot, debug, count_tri ;
 extern double ymax, ymin, xmax, xmin ;
 extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
@@ -786,12 +786,12 @@ range(double pxmin, double pxmax, double pymin, double pymax)
 void
 out_bisector(Edge * e)
 {
-	if (triangulate && plot && !debug)
+	if (triangulate_v && plot && !debug)
 	{
 		line(e->reg[0]->coord.x, e->reg[0]->coord.y,
 			 e->reg[1]->coord.x, e->reg[1]->coord.y) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf("l %f %f %f\n", e->a, e->b, e->c) ;
 	}
@@ -805,11 +805,11 @@ out_bisector(Edge * e)
 void
 out_ep(Edge * e)
 {
-	if (!triangulate && plot)
+	if (!triangulate_v && plot)
 	{
 		clip_line(e) ;
 	}
-	if (!triangulate && !plot)
+	if (!triangulate_v && !plot)
 	{
 		printf("e %d", e->edgenbr);
 		printf(" %d ", e->ep[le] != (Site *)NULL ? e->ep[le]->sitenbr : -1) ;
@@ -820,7 +820,7 @@ out_ep(Edge * e)
 void
 out_vertex(Site * v)
 {
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf ("v %f %f\n", v->coord.x, v->coord.y) ;
 	}
@@ -833,11 +833,11 @@ out_vertex(Site * v)
 void
 out_site(Site * s)
 {
-	if (!triangulate && plot && !debug)
+	if (!triangulate_v && plot && !debug)
 	{
 		circle (s->coord.x, s->coord.y, cradius) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf("s %f %f\n", s->coord.x, s->coord.y) ;
 	}
@@ -850,7 +850,7 @@ out_site(Site * s)
 void
 out_triple(Site * s1, Site * s2, Site * s3)
 {
-	if (triangulate && !plot && !debug)
+	if (triangulate_v && !plot && !debug)
 	{
 		count_tri++;
 		fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;

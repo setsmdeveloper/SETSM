@@ -112,7 +112,7 @@ extern Halfedge * PQhash ;
 extern int getopt(int, char *const *, const char *);
 
 /* main.c */
-extern int sorted, triangulate, plot, debug, siteidx,count_tri;
+extern int sorted, triangulate_v, plot, debug, siteidx,count_tri;
 extern double xmin, xmax, ymin, ymax;
 extern Site * sites;
 

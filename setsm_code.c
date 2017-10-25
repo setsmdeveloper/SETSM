@@ -11049,8 +11049,8 @@ double maxY_ptslists = min_max[3];
 	
 	count_tri = 0;
 
-	sorted = triangulate = plot = debug = 0;
-	triangulate = 1;
+	sorted = triangulate_v = plot = debug = 0;
+	triangulate_v = 1;
 	freeinit(&sfl, sizeof(Site));
 	
 	D3DPOINT *scaled_ptslists;
