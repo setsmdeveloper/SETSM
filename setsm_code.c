@@ -5171,8 +5171,8 @@ void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary, CSize
 					
 					t_x = Boundary[0] + col*Grid_set;
 					t_y = Boundary[1] + row*Grid_set;
-					col_seed = floor((t_x - minX)/grid_size) - cols[0];
-					row_seed = floor((maxY - t_y)/grid_size) - rows[0];
+                    col_seed = floor((t_x - minX)/grid_size);// - cols[0];
+                    row_seed = floor((maxY - t_y)/grid_size);// - rows[0];
 					
 					index_seeddem = row_seed*data_size.width + col_seed;
 					if(index_seeddem >= 0 && index_seeddem < data_size.width*data_size.height)
