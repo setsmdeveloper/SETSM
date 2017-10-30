@@ -36,7 +36,7 @@ make install
 
 ### Building SETSM using one of the provided Makefiles
 
-Makefiles are provided for building SESTSM with the Intel, PGI, GNU and Cray 
+Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
 compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
 use.  Copy the selected file to Makefile and edit it if necessary to set the 
 correct path to the TIFF library.  SETSM can then be built simply by typing:
@@ -44,10 +44,18 @@ correct path to the TIFF library.  SETSM can then be built simply by typing:
 make
 ```
 
-Additionally, you can build SETSM with MPI by following the above steps then instead typing:
+#### Parallel SETSM with MPI (Message-Passing Interface)
+To build SETSM for parallel computing with MPI, follow the above steps then use:
 ```
-make MPI
+make setsm_mpi
 ```
+
+MPI-parallel SETSM (setsm_mpi) has been tested with MVAPICH2 and 
+OpenMPI.  It should work with other MPI implementations with minor changes 
+to the Makefile.
+
+If SETSM is built with both MPI and OpenMP it is usually best to run one 
+MPI process per compute node and allow threading within the node.
 
 ### Building and installing SETSM using CMake
 
