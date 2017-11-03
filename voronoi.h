@@ -1,6 +1,7 @@
 #ifndef __VORONOI_H
 #define __VORONOI_H
 
+#include "Typedefine.h"
 #include "tiff.h"
 #ifndef NULL
 #define NULL 0
@@ -59,13 +60,14 @@ typedef struct tagHalfedge
     double ystar ;
     struct tagHalfedge * PQnext ;
     } Halfedge ;
-
+/*
 typedef struct tagUI3DPoint
 {
 	uint32 m_X;
 	uint32 m_Y;
 	uint32 m_Z;
 } UI3DPOINT;
+*/
 
 /* edgelist.c */
 void ELinitialize(void) ;
@@ -112,9 +114,10 @@ extern Halfedge * PQhash ;
 extern int getopt(int, char *const *, const char *);
 
 /* main.c */
-extern int sorted, triangulate_v, plot, debug, siteidx,count_tri;
+extern int triangulate_v,sorted,plot, debug, count_tri;
 extern double xmin, xmax, ymin, ymax;
 extern Site * sites;
+extern Freelist sfl;
 
 /* memory.c */
 void freeinit(Freelist *, int) ;

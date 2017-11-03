@@ -298,7 +298,7 @@ typedef struct tagBandInfo
 
 #endif
 
-#ifndef __VORONOI_H
+#if 0
 #define __VORONOI_H
 
 #ifndef NULL

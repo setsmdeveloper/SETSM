@@ -7,149 +7,6 @@
 #include <time.h>
 
 #ifdef VLIBRARY
-extern Site * bottomsite ;
-extern Halfedge * ELleftend, * ELrightend ;
-
-/*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
-	 : deltax, deltay (can all be estimates).
-	 : Performance suffers if they are wrong; better to make nsites,
-	 : deltax, and deltay too big than too small.  (?)
-***/
-
-void
-voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
-{
-	Site * newsite, * bot, * top, * temp, * p, * v ;
-	Point newintstar ;
-	int pm ;
-	Halfedge * lbnd, * rbnd, * llbnd, * rrbnd, * bisector ;
-	Edge * e ;
-	
-	PQinitialize() ;
-	bottomsite = (*nextsite)() ;
-	out_site(bottomsite) ;
-	ELinitialize() ;
-	newsite = (*nextsite)() ;
-	while (1)
-	{
-		if(!PQempty())
-		{
-			newintstar = PQ_min() ;
-		}
-		if (newsite != (Site *)NULL && (PQempty()
-										|| newsite -> coord.y < newintstar.y
-										|| (newsite->coord.y == newintstar.y
-											&& newsite->coord.x < newintstar.x))) {/* new site is
-																					  smallest */
-			{
-				out_site(newsite) ;
-			}
-			lbnd = ELleftbnd(&(newsite->coord)) ;
-			rbnd = ELright(lbnd) ;
-			bot = rightreg(lbnd) ;
-			e = bisect(bot, newsite) ;
-			bisector = HEcreate(e, le) ;
-			ELinsert(lbnd, bisector) ;
-			p = intersect(lbnd, bisector) ;
-			if (p != (Site *)NULL)
-			{
-				PQdelete(lbnd) ;
-				PQinsert(lbnd, p, dist(p,newsite)) ;
-			}
-			lbnd = bisector ;
-			bisector = HEcreate(e, re) ;
-			ELinsert(lbnd, bisector) ;
-			p = intersect(bisector, rbnd) ;
-			if (p != (Site *)NULL)
-			{
-				PQinsert(bisector, p, dist(p,newsite)) ;
-			}
-			newsite = (*nextsite)() ;
-		}
-		else if (!PQempty())   /* intersection is smallest */
-		{
-			lbnd = PQextractmin() ;
-			llbnd = ELleft(lbnd) ;
-			rbnd = ELright(lbnd) ;
-			rrbnd = ELright(rbnd) ;
-			bot = leftreg(lbnd) ;
-			top = rightreg(rbnd) ;
-			
-			
-			
-			//out_triple(bot, top, rightreg(lbnd)) ;
-			
-			
-			
-			
-			//out_triple(Site * s1, Site * s2, Site * s3)
-			
-			if (triangulate_v && !plot && !debug)
-			{
-				
-				trilists[count_tri].m_X = bot->sitenbr;
-				trilists[count_tri].m_Y = top->sitenbr;
-				trilists[count_tri].m_Z = rightreg(lbnd)->sitenbr;
-				count_tri++;
-				
-				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
-				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;
-			}
-			/*if (debug)
-			  {
-			  printf("circle through left=%d right=%d bottom=%d\n",
-			  s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
-			  }
-			*/
-			
-			
-			v = lbnd->vertex ;
-			makevertex(v) ;
-			endpoint(lbnd->ELedge, lbnd->ELpm, v);
-			endpoint(rbnd->ELedge, rbnd->ELpm, v) ;
-			ELdelete(lbnd) ;
-			PQdelete(rbnd) ;
-			ELdelete(rbnd) ;
-			pm = le ;
-			if (bot->coord.y > top->coord.y)
-			{
-				temp = bot ;
-				bot = top ;
-				top = temp ;
-				pm = re ;
-			}
-			e = bisect(bot, top) ;
-			bisector = HEcreate(e, pm) ;
-			ELinsert(llbnd, bisector) ;
-			endpoint(e, re-pm, v) ;
-			deref(v) ;
-			p = intersect(llbnd, bisector) ;
-			if (p  != (Site *) NULL)
-			{
-				PQdelete(llbnd) ;
-				PQinsert(llbnd, p, dist(p,bot)) ;
-			}
-			p = intersect(bisector, rrbnd) ;
-			if (p != (Site *) NULL)
-			{
-				PQinsert(bisector, p, dist(p,bot)) ;
-			}
-		}
-		else
-		{
-			break ;
-		}
-	}
-	
-	for( lbnd = ELright(ELleftend) ;
-		 lbnd != ELrightend ;
-		 lbnd = ELright(lbnd))
-	{
-		e = lbnd->ELedge ;
-		out_ep(e) ;
-	}
-	
-}
 
 //edgelist.c
 int ELhashsize ;
@@ -334,9 +191,6 @@ rightreg(Halfedge * he)
 	return (he->ELpm == le ? he->ELedge->reg[re] :
 			he->ELedge->reg[le]) ;
 }
-
-
-
 
 /*** GEOMETRY.C ***/
 double deltax, deltay ;
@@ -554,9 +408,6 @@ ref(Site * v)
 	++(v->refcnt) ;
 }
 
-
-
-
 /*** HEAP.C ***/
 int PQmin, PQcount, PQhashsize ;
 Halfedge * PQhash ;
@@ -673,7 +524,6 @@ PQinitialize(void)
 
 
 
-
 /*** MEMORY.C ***/
 extern int sqrt_nsites, siteidx ;
 char** memory_map;
@@ -755,9 +605,8 @@ void free_all(void)
 
 
 
-
 /*** OUTPUT.C ***/
-extern int triangulate_v, plot, debug, count_tri ;
+extern int plot, debug, count_tri ;
 extern double ymax, ymin, xmax, xmin ;
 extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
@@ -991,5 +840,148 @@ clip_line(Edge * e)
 		}
 	}
 	line(x1,y1,x2,y2);
+}
+
+/*** VORONOI.C ***/
+extern Site * bottomsite ;
+extern Halfedge * ELleftend, * ELrightend ;
+/*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
+	 : deltax, deltay (can all be estimates).
+	 : Performance suffers if they are wrong; better to make nsites,
+	 : deltax, and deltay too big than too small.  (?)
+***/
+
+void
+voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
+{
+	Site * newsite, * bot, * top, * temp, * p, * v ;
+	Point newintstar ;
+	int pm ;
+	Halfedge * lbnd, * rbnd, * llbnd, * rrbnd, * bisector ;
+	Edge * e ;
+	
+	PQinitialize() ;
+	bottomsite = (*nextsite)() ;
+	out_site(bottomsite) ;
+	ELinitialize() ;
+	newsite = (*nextsite)() ;
+	while (1)
+	{
+		if(!PQempty())
+		{
+			newintstar = PQ_min() ;
+		}
+		if (newsite != (Site *)NULL && (PQempty()
+										|| newsite -> coord.y < newintstar.y
+										|| (newsite->coord.y == newintstar.y
+											&& newsite->coord.x < newintstar.x))) {/* new site is
+																					  smallest */
+			{
+				out_site(newsite) ;
+			}
+			lbnd = ELleftbnd(&(newsite->coord)) ;
+			rbnd = ELright(lbnd) ;
+			bot = rightreg(lbnd) ;
+			e = bisect(bot, newsite) ;
+			bisector = HEcreate(e, le) ;
+			ELinsert(lbnd, bisector) ;
+			p = intersect(lbnd, bisector) ;
+			if (p != (Site *)NULL)
+			{
+				PQdelete(lbnd) ;
+				PQinsert(lbnd, p, dist(p,newsite)) ;
+			}
+			lbnd = bisector ;
+			bisector = HEcreate(e, re) ;
+			ELinsert(lbnd, bisector) ;
+			p = intersect(bisector, rbnd) ;
+			if (p != (Site *)NULL)
+			{
+				PQinsert(bisector, p, dist(p,newsite)) ;
+			}
+			newsite = (*nextsite)() ;
+		}
+		else if (!PQempty())   /* intersection is smallest */
+		{
+			lbnd = PQextractmin() ;
+			llbnd = ELleft(lbnd) ;
+			rbnd = ELright(lbnd) ;
+			rrbnd = ELright(rbnd) ;
+			bot = leftreg(lbnd) ;
+			top = rightreg(rbnd) ;
+			
+			
+			
+			//out_triple(bot, top, rightreg(lbnd)) ;
+			
+			
+			
+			
+			//out_triple(Site * s1, Site * s2, Site * s3)
+			if (triangulate_v && !plot && !debug)
+			{
+				
+				trilists[count_tri].m_X = bot->sitenbr;
+				trilists[count_tri].m_Y = top->sitenbr;
+				trilists[count_tri].m_Z = rightreg(lbnd)->sitenbr;
+				count_tri++;
+				
+				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
+				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;
+			}
+			/*if (debug)
+			  {
+			  printf("circle through left=%d right=%d bottom=%d\n",
+			  s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
+			  }
+			*/
+			
+			
+			v = lbnd->vertex ;
+			makevertex(v) ;
+			endpoint(lbnd->ELedge, lbnd->ELpm, v);
+			endpoint(rbnd->ELedge, rbnd->ELpm, v) ;
+			ELdelete(lbnd) ;
+			PQdelete(rbnd) ;
+			ELdelete(rbnd) ;
+			pm = le ;
+			if (bot->coord.y > top->coord.y)
+			{
+				temp = bot ;
+				bot = top ;
+				top = temp ;
+				pm = re ;
+			}
+			e = bisect(bot, top) ;
+			bisector = HEcreate(e, pm) ;
+			ELinsert(llbnd, bisector) ;
+			endpoint(e, re-pm, v) ;
+			deref(v) ;
+			p = intersect(llbnd, bisector) ;
+			if (p  != (Site *) NULL)
+			{
+				PQdelete(llbnd) ;
+				PQinsert(llbnd, p, dist(p,bot)) ;
+			}
+			p = intersect(bisector, rrbnd) ;
+			if (p != (Site *) NULL)
+			{
+				PQinsert(bisector, p, dist(p,bot)) ;
+			}
+		}
+		else
+		{
+			break ;
+		}
+	}
+	
+	for( lbnd = ELright(ELleftend) ;
+		 lbnd != ELrightend ;
+		 lbnd = ELright(lbnd))
+	{
+		e = lbnd->ELedge ;
+		out_ep(e) ;
+	}
+	
 }
 #endif

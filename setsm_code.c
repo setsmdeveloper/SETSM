@@ -15041,9 +15041,9 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
 	
 	return result;
 }
-
+#if 0
 //edgelist.c
-/*int ELhashsize ;
+int ELhashsize ;
 Site * bottomsite ;
 Freelist hfl ;
 Halfedge * ELleftend, * ELrightend, **ELhash ;
@@ -15094,9 +15094,8 @@ ELinsert(Halfedge * lb, Halfedge * new)
 	(lb->ELright)->ELleft = new ;
 	lb->ELright = new ;
 }
-*/
 /* Get entry from hash table, pruning any deleted nodes */
-/*
+
 Halfedge *
 ELgethash(int b)
 {
@@ -15110,9 +15109,9 @@ ELgethash(int b)
 	if ((he == (Halfedge *)NULL) || (he->ELedge != (Edge *)DELETED))
 	{
 		return (he) ;
-	}*/
+	}
 	/* Hash table points to deleted half edge.	Patch as necessary. */
-/*	ELhash[b] = (Halfedge *)NULL ;
+	ELhash[b] = (Halfedge *)NULL ;
 	if ((--(he->ELrefcnt)) == 0)
 	{
 		makefree((Freenode *)he, (Freelist *)&hfl) ;
@@ -15125,9 +15124,8 @@ ELleftbnd(Point * p)
 {
 	int i, bucket ;
 	Halfedge * he ;
-*/	
 	/* Use hash table to get close to desired halfedge */
-/*	bucket = (p->x - xmin) / deltax * ELhashsize ;
+	bucket = (p->x - xmin) / deltax * ELhashsize ;
 	if (bucket < 0)
 	{
 		bucket = 0 ;
@@ -15152,9 +15150,9 @@ ELleftbnd(Point * p)
 		}
 		totalsearch += i ;
 	}
-	ntry++ ;*/
+	ntry++ ;
 	/* Now search linear list of halfedges for the corect one */
-/*	if (he == ELleftend || (he != ELrightend && right_of(he,p)))
+	if (he == ELleftend || (he != ELrightend && right_of(he,p)))
 	{
 		do	{
 			he = he->ELright ;
@@ -15166,9 +15164,9 @@ ELleftbnd(Point * p)
 		do	{
 			he = he->ELleft ;
 		} while (he != ELleftend && !right_of(he,p)) ;
-	}*/
+	}
 	/*** Update hash table and reference counts ***/
-	/*if ((bucket > 0) && (bucket < ELhashsize-1))
+	if ((bucket > 0) && (bucket < ELhashsize-1))
 	{
 		if (ELhash[bucket] != (Halfedge *)NULL)
 		{
@@ -15179,11 +15177,9 @@ ELleftbnd(Point * p)
 	}
 	return (he) ;
 }
-*/
 /*** This delete routine can't reclaim node, since pointers from hash
 	 : table may be present.
 ***/
-/*
 void
 ELdelete(Halfedge * he)
 {
@@ -15225,12 +15221,9 @@ rightreg(Halfedge * he)
 	return (he->ELpm == le ? he->ELedge->reg[re] :
 			he->ELedge->reg[le]) ;
 }
-*/
-
-
 
 /*** GEOMETRY.C ***/
-/*double deltax, deltay ;
+double deltax, deltay ;
 int nedges, sqrt_nsites, nvertices ;
 Freelist efl ;
 
@@ -15330,9 +15323,9 @@ intersect(Halfedge * el1, Halfedge * el2)
 	v->coord.y = yint ;
 	return (v) ;
 }
-*/
+
 /*** returns 1 if p is to right of halfedge e ***/
-/*
+
 int
 right_of(Halfedge * el, Point * p)
 {
@@ -15387,8 +15380,8 @@ right_of(Halfedge * el, Point * p)
 			}
 		}
 	}
-	else*/  /*** e->b == 1.0 ***/
-/*	{
+	else  /*** e->b == 1.0 ***/
+	{
 		yl = e->c - e->a * p->x ;
 		t1 = p->y - yl ;
 		t2 = p->x - topsite->coord.x ;
@@ -15445,11 +15438,8 @@ ref(Site * v)
 	++(v->refcnt) ;
 }
 
-
-*/
-
 /*** HEAP.C ***/
-/*int PQmin, PQcount, PQhashsize ;
+int PQmin, PQcount, PQhashsize ;
 Halfedge * PQhash ;
 
 void
@@ -15562,11 +15552,9 @@ PQinitialize(void)
 	}
 }
 
-*/
-
 
 /*** MEMORY.C ***/
-/*extern int sqrt_nsites, siteidx ;
+extern int sqrt_nsites, siteidx ;
 char** memory_map;
 int nallocs = 0;
 
@@ -15645,11 +15633,10 @@ void free_all(void)
 }
 
 
-*/
 
 /*** OUTPUT.C ***/
-/*extern int triangulate, plot, debug, count_tri ;
-extern double ymax, ymin, xmax, xmin ;
+//extern int triangulate, plot, debug, count_tri ;
+//extern double ymax, ymin, xmax, xmin ;
 extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
 double pxmin, pxmax, pymin, pymax, cradius;
@@ -15677,12 +15664,12 @@ range(double pxmin, double pxmax, double pymin, double pymax)
 void
 out_bisector(Edge * e)
 {
-	if (triangulate && plot && !debug)
+	if (triangulate_v && plot && !debug)
 	{
 		line(e->reg[0]->coord.x, e->reg[0]->coord.y,
 			 e->reg[1]->coord.x, e->reg[1]->coord.y) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf("l %f %f %f\n", e->a, e->b, e->c) ;
 	}
@@ -15696,11 +15683,11 @@ out_bisector(Edge * e)
 void
 out_ep(Edge * e)
 {
-	if (!triangulate && plot)
+	if (!triangulate_v && plot)
 	{
 		clip_line(e) ;
 	}
-	if (!triangulate && !plot)
+	if (!triangulate_v && !plot)
 	{
 		printf("e %d", e->edgenbr);
 		printf(" %d ", e->ep[le] != (Site *)NULL ? e->ep[le]->sitenbr : -1) ;
@@ -15711,7 +15698,7 @@ out_ep(Edge * e)
 void
 out_vertex(Site * v)
 {
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf ("v %f %f\n", v->coord.x, v->coord.y) ;
 	}
@@ -15724,11 +15711,11 @@ out_vertex(Site * v)
 void
 out_site(Site * s)
 {
-	if (!triangulate && plot && !debug)
+	if (!triangulate_v && plot && !debug)
 	{
 		circle (s->coord.x, s->coord.y, cradius) ;
 	}
-	if (!triangulate && !plot && !debug)
+	if (!triangulate_v && !plot && !debug)
 	{
 		printf("s %f %f\n", s->coord.x, s->coord.y) ;
 	}
@@ -15741,7 +15728,7 @@ out_site(Site * s)
 void
 out_triple(Site * s1, Site * s2, Site * s3)
 {
-	if (triangulate && !plot && !debug)
+	if (triangulate_v && !plot && !debug)
 	{
 		count_tri++;
 		fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
@@ -15885,7 +15872,6 @@ clip_line(Edge * e)
 }
 
 
-*/
 
 
 /*** VORONOI.C ***/
@@ -15897,7 +15883,7 @@ extern Halfedge * ELleftend, * ELrightend ;
 	 : Performance suffers if they are wrong; better to make nsites,
 	 : deltax, and deltay too big than too small.  (?)
 ***/
-/*
+
 void
 voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 {
@@ -15921,9 +15907,9 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 		if (newsite != (Site *)NULL && (PQempty()
 										|| newsite -> coord.y < newintstar.y
 										|| (newsite->coord.y == newintstar.y
-											&& newsite->coord.x < newintstar.x))) {*//* new site is
+											&& newsite->coord.x < newintstar.x))) {/* new site is
 																					  smallest */
-/*			{
+			{
 				out_site(newsite) ;
 			}
 			lbnd = ELleftbnd(&(newsite->coord)) ;
@@ -15948,8 +15934,8 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			}
 			newsite = (*nextsite)() ;
 		}
-		else if (!PQempty())  */ /* intersection is smallest */
-/*	{
+		else if (!PQempty())   /* intersection is smallest */
+	{
 			lbnd = PQextractmin() ;
 			llbnd = ELleft(lbnd) ;
 			rbnd = ELright(lbnd) ;
@@ -15966,7 +15952,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			
 			//out_triple(Site * s1, Site * s2, Site * s3)
 			
-			if (triangulate && !plot && !debug)
+			if (triangulate_v && !plot && !debug)
 			{
 				
 				trilists[count_tri].m_X = bot->sitenbr;
@@ -15976,7 +15962,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 				
 				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;
-			}*/
+			}
 			/*if (debug)
 			  {
 			  printf("circle through left=%d right=%d bottom=%d\n",
@@ -15984,7 +15970,7 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			  }
 			*/
 			
-			/*
+			
 			v = lbnd->vertex ;
 			makevertex(v) ;
 			endpoint(lbnd->ELedge, lbnd->ELpm, v);
@@ -16032,7 +16018,8 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 	}
 	
 }
-*/
+#endif
+
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair)
 {
