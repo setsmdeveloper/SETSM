@@ -68,7 +68,6 @@ typedef struct tagUI3DPoint
 	uint32 m_Z;
 } UI3DPOINT;
 */
-
 /* edgelist.c */
 void ELinitialize(void) ;
 Halfedge * HEcreate(Edge *, int) ;
@@ -114,10 +113,14 @@ extern Halfedge * PQhash ;
 extern int getopt(int, char *const *, const char *);
 
 /* main.c */
-extern int triangulate_v,sorted,plot, debug, count_tri;
-extern double xmin, xmax, ymin, ymax;
-extern Site * sites;
-extern Freelist sfl;
+int scomp(const void * vs1, const void * vs2);
+Site *nextone(void);
+void readsites(D3DPOINT *ptslists,int numofpts);
+Site *readone(void);
+extern int triangulate_v,sorted,plot, debug, count_tri,siteidx;
+double xmin, xmax, ymin, ymax;
+Site * sites;
+Freelist sfl;
 
 /* memory.c */
 void freeinit(Freelist *, int) ;

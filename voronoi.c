@@ -1,12 +1,105 @@
 /*** VORONOI.C ***/
 
 #include "voronoi.h"
-#include <math.h>
+#include "math.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#ifdef VLIBRARY
+//main.c
+int scomp(const void * vs1, const void * vs2)
+{
+	Point * s1 = (Point *)vs1 ;
+	Point * s2 = (Point *)vs2 ;
+
+	if (s1->y < s2->y)
+	{
+		return (-1) ;
+	}
+	if (s1->y > s2->y)
+	{
+		return (1) ;
+	}
+	if (s1->x < s2->x)
+	{
+		return (-1) ;
+	}
+	if (s1->x > s2->x)
+	{
+		return (1) ;
+	}
+	return (0) ;
+}
+
+/*** return a single in-storage site ***/
+
+Site *nextone(void)
+{
+	Site * s ;
+
+	if (siteidx < nsites)
+	{
+		s = &sites[siteidx++];
+		return (s) ;
+	}
+	else
+	{
+		return ((Site *)NULL) ;
+	}
+}
+
+/*** read all sites, sort, and compute xmin, xmax, ymin, ymax ***/
+
+void readsites(D3DPOINT *ptslists,int numofpts)
+{
+	int i ;
+	nsites = 0 ;
+	sites = (Site *) myalloc(numofpts * sizeof(Site));
+	i = 0;
+	for(i=0;i<numofpts;i++)
+	{
+		sites[nsites].coord.x = ptslists[i].m_X;
+		sites[nsites].coord.y = ptslists[i].m_Y;
+		sites[nsites].sitenbr = nsites ;
+		sites[nsites++].refcnt = 0 ;
+	}
+
+	qsort((void *)sites, nsites, sizeof(Site), scomp) ;
+	if (nsites > 0)
+	{
+		xmin = sites[0].coord.x ;
+		xmax = sites[0].coord.x ;
+		for (i = 1 ; i < nsites ; ++i)
+		{
+			if(sites[i].coord.x < xmin)
+			{
+				xmin = sites[i].coord.x ;
+			}
+			if (sites[i].coord.x > xmax)
+			{
+				xmax = sites[i].coord.x ;
+			}
+		}
+		ymin = sites[0].coord.y ;
+		ymax = sites[nsites-1].coord.y ;
+	}
+}
+
+/*** read one site ***/
+
+Site *readone(void)
+{
+	Site * s ;
+
+	s = (Site *)getfree(&sfl) ;
+	s->refcnt = 0 ;
+	s->sitenbr = siteidx++ ;
+	if (scanf("%f %f", &(s->coord.x), &(s->coord.y)) == EOF)
+	{
+		return ((Site *)NULL ) ;
+	}
+	return (s) ;
+}
 
 //edgelist.c
 int ELhashsize ;
@@ -984,4 +1077,3 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 	}
 	
 }
-#endif
