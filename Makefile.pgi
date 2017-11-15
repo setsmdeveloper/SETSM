@@ -9,7 +9,7 @@
 CC=pgcc
 MPICC=mpicc
 CFLAGS=-c99 -O3 -mp=allcores -fast
-CSWITCHES =-c99 -O3 -mp=allcores -DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
+CSWITCHES =-DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
 TRILIBDEFS = -DTRILIBRARY
 VDEFS = -DVLIBRARY
 MPICFLAGS=$(CFLAGS) -DbuildMPI
@@ -24,7 +24,7 @@ setsm_code.o : Typedefine.h setsm_code.h setsm_code.c triangle.o voronoi.o
 	$(CC) $(CFLAGS) $(INCS) $(VDEFS) -c setsm_code.c
 
 triangle.o: triangle.c triangle.h
-	$(CC) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
+	$(CC) $(CFLAGS) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
 
 voronoi.o: voronoi.c voronoi.h
 	$(CC) $(CFLAGS) $(INCS) -c -o voronoi.o voronoi.c

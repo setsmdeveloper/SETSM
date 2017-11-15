@@ -10993,8 +10993,8 @@ double maxY_ptslists = min_max[3];
 	D3DPOINT *shifted_ptslists;
 	shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
 	
-	double midX_ptslists = (maxX_ptslists - minX_ptslists) / 2.0;
-	double midY_ptslists = (maxY_ptslists - minY_ptslists) / 2.0;
+	double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
+	double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
 	for(int i=0;i<numofpts;i++)
 	{
 		shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;

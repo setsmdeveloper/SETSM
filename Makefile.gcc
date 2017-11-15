@@ -7,7 +7,7 @@
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=gcc
-CSWITCHES =-std=c99 -O3 -fopenmp -g -DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
+CSWITCHES =-DLINUX -I/usr/X11R6/include -L/usr/X11R6/lib
 TRILIBDEFS = -DTRILIBRARY
 VDEFS = -DVLIBRARY
 MPICC=mpicc
@@ -28,7 +28,7 @@ voronoi.o: voronoi.c voronoi.h Typedefine.h
 	$(CC) $(GFLAGS) $(INCS)  -c -o voronoi.o voronoi.c
 
 triangle.o: triangle.c triangle.h
-	$(CC) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
+	$(CC) $(GFLAGS) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
 
 MPI : setsm_code_mpi.o
 	$(MPICC) $(MPICFLAGS) -o setsm setsm_code_mpi.o $(LDFLAGS) -lm -ltiff
