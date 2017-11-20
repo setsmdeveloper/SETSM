@@ -1,0 +1,26 @@
+sudo: required
+dist: trusty
+
+language:
+  - cpp
+
+matrix:
+  include:
+    - env:
+        - BUILD_NAME=NO_MPI
+        - MAKEFILE_EXT=gcc
+    - env:
+        - BUILD_NAME=MPI
+        - MAKEFILE_EXT=mpi.gcc
+addons:
+  apt:
+    packages:
+    - g++
+    - libtiff5-dev
+    - libopenmpi-dev
+
+before_script:
+  - gcc --version
+script:
+  - make -f Makefile.${MAKEFILE_EXT} -j2
+
