@@ -77,6 +77,7 @@ int main(int argc,char *argv[])
 	args.check_boundary = false;
 	args.check_checktiff = false;
 	args.check_ortho = false;
+	args.check_RA_only = false;
     
 	args.projection = 3;//PS = 1, UTM = 2
     args.sensor_provider = 1; //DG = 1, Pleiades = 2
@@ -84,6 +85,7 @@ int main(int argc,char *argv[])
     args.utm_zone = -99;
     args.ortho_count = 1;
     args.overlap_length = 50;
+    args.RA_only = 0;
     
 	TransParam param;
 	
@@ -132,6 +134,7 @@ int main(int argc,char *argv[])
 			printf("\t[-projection value]\t: Set planemetric coordinate projection. The value is 'ps' or 'utm'. Default projection is automatically defined by latitude of the input information of xml (between 60N and 60S is utm, and other is ps\n");
 			printf("\t[-threads value]\t : Total number of threads for utilizing openmp parallel codes\n");
 			printf("\t\t(if you don't know about this value, input '0'. Openmp can automatically detect a best value of your system)\n");
+			printf("\t[-RAonly value]\t: If set to 1 (true), program will exit after RA comprehension. Default = 0 (false)\n");
 		}
 	}
 	else if(argc == 3)
@@ -559,6 +562,20 @@ int main(int argc,char *argv[])
 					args.RA_col = atof(argv[i+1]);
 					printf("%d\n",args.RA_col);
 					args.check_RA_tileC = true;
+				}
+			}
+
+			if (strcmp("-RAonly",argv[i]) == 0)
+			{
+				if (argc == i+1 || (atoi(argv[i+1]) != 0 && atoi(argv[i+1]) != 1)) {
+					printf("Please input the RA_only 0 or 1\n");
+					cal_flag = false;
+				}
+				else
+				{
+					args.RA_only = atoi(argv[i+1]);
+					printf("%d\n",args.RA_only);
+					args.check_RA_only = true;
 				}
 			}
 
@@ -1297,230 +1314,254 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         fprintf(pMetafile,"RA Params=%f\t%f\t\n",Rimageparam[0],Rimageparam[1]);
                         fprintf(pMetafile,"RA tilesize=%d\n",tile_size);
                     }
-                    
-                    proinfo.IsRA		= false;
-                    tile_size			= 4000;
-                    
-                    if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
-                    {
-                        if(Boundary_size.width > Boundary_size.height)
-                            tile_size = Boundary_size.width;
-                        else
-                            tile_size = Boundary_size.height;
-                    }
-                    
-                    if(args.check_tilesize)
-                        tile_size		= args.tilesize;
-                    printf("tilesize %d\n",tile_size);
 
-                    if(!proinfo.check_checktiff)
-                    {
-                        fprintf(pMetafile,"tilesize=%d\n",tile_size);
-                        if(proinfo.pre_DEMtif)
-                            fprintf(pMetafile,"Seed DEM=%s\n",proinfo.priori_DEM_tif);
-                        else
-                            fprintf(pMetafile,"Seed DEM=\n");
-                    
-                        if(param.projection == 1)
-                        {
-                            if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
-                            } else {
-                                fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
-                            }
-                        }
-                        else {
-                            if (Hemisphere) {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +north=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
-                            } else {
-                                fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +south=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
-                            }
-                        }
-                    }
-                    
-                    
-                    bin_angle			= 360.0/18.0;
+		    if (args.RA_only){
+			fclose(pMetafile);
+			
+			/*
+			total_ET = time(0);
+			total_gap = difftime(total_ET,total_ST);
+			
+			sprintf(computation_file,"%s/txt/computation_time.txt",proinfo.save_filepath);
+			time_fid			= fopen(computation_file,"w");
+			fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
+			fclose(time_fid);
+			#ifdef BUILDMPI
+			// Make sure to finalize
+			int finalized;
+			MPI_Finalized(&finalized);
+			if (!finalized)
+			{
+				MPI_Finalize();
+			}
+			#endif
+			printf("Exiting: RA_only = true\n");
+			exit(0);*/
+		    } else {
 
-                    SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
-                             &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);	
+			    proinfo.IsRA		= false;
+			    tile_size			= 4000;
+			    
+			    if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
+			    {
+				if(Boundary_size.width > Boundary_size.height)
+				    tile_size = Boundary_size.width;
+				else
+				    tile_size = Boundary_size.height;
+			    }
+			    
+			    if(args.check_tilesize)
+				tile_size		= args.tilesize;
+			    printf("tilesize %d\n",tile_size);
 
-                    total_count			= 0;
+			    if(!proinfo.check_checktiff)
+			    {
+				fprintf(pMetafile,"tilesize=%d\n",tile_size);
+				if(proinfo.pre_DEMtif)
+				    fprintf(pMetafile,"Seed DEM=%s\n",proinfo.priori_DEM_tif);
+				else
+				    fprintf(pMetafile,"Seed DEM=\n");
+			    
+				if(param.projection == 1)
+				{
+				    if (Hemisphere) {
+					fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=90 +lat_ts=70 +lon_0=-45, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
+				    } else {
+					fprintf(pMetafile, "Output Projection='+proj=stere +lat_0=-90 +lat_ts=-71 +lon_0=0, +k=1 +x_0=0 +y_0=0 +datum=WGS84 +unit=m +no_defs'\n");
+				    }
+				}
+				else {
+				    if (Hemisphere) {
+					fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +north=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
+				    } else {
+					fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +south=%s +datum=WGS84 +unit=m +no_defs'\n",param.zone,param.direction);
+				    }
+				}
+			    }
+			    
+			    
+			    bin_angle			= 360.0/18.0;
 
-                    if (args.check_tiles_SR)
-                    {
-                        iter_row_start	  = args.start_row;
-                    }
-                    
-                    if (args.check_tiles_ER)
-                    {
-                        iter_row_end	  = args.end_row;
-                    }
-                    
-                    if (args.check_tiles_SC)
-                    {	
-                        t_col_start		  = args.start_col;
-                    }
-                    
-                    if (args.check_tiles_EC)
-                    {	
-                        t_col_end		  = args.end_col;
-                    }
-                    
-                    if (proinfo.check_tiles_SR)
-                    {
-                        iter_row_start	  = proinfo.start_row;
-                    }
-                    
-                    if (proinfo.check_tiles_ER)
-                    {
-                        iter_row_end	  = proinfo.end_row;
-                    }
-                    
-                    if (proinfo.check_tiles_SC)
-                    {	
-                        t_col_start		  = proinfo.start_col;
-                    }
-                    
-                    if (proinfo.check_tiles_EC)
-                    {	
-                        t_col_end		  = proinfo.end_col;
-                    }
-                
-                    printf("RA param = %f\t%f\n",Rimageparam[0],Rimageparam[1]);
-                    
-                    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
-                    
-                    if(!args.check_gridonly)
-                    {
-                        final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
-                                                         subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
-                                                         LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
-                    }
-#ifdef BUILDMPI
-					MPI_Barrier(MPI_COMM_WORLD);
-					MPI_Finalize();
-					if(rank != 0)
+			    SetTiles(proinfo,proinfo.IsSP,proinfo.IsRR, Boundary, Res, tile_size, proinfo.pre_DEMtif, &pyramid_step, &buffer_area, 
+				     &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);	
+
+			    total_count			= 0;
+
+			    if (args.check_tiles_SR)
+			    {
+				iter_row_start	  = args.start_row;
+			    }
+			    
+			    if (args.check_tiles_ER)
+			    {
+				iter_row_end	  = args.end_row;
+			    }
+			    
+			    if (args.check_tiles_SC)
+			    {	
+				t_col_start		  = args.start_col;
+			    }
+			    
+			    if (args.check_tiles_EC)
+			    {	
+				t_col_end		  = args.end_col;
+			    }
+			    
+			    if (proinfo.check_tiles_SR)
+			    {
+				iter_row_start	  = proinfo.start_row;
+			    }
+			    
+			    if (proinfo.check_tiles_ER)
+			    {
+				iter_row_end	  = proinfo.end_row;
+			    }
+			    
+			    if (proinfo.check_tiles_SC)
+			    {	
+				t_col_start		  = proinfo.start_col;
+			    }
+			    
+			    if (proinfo.check_tiles_EC)
+			    {	
+				t_col_end		  = proinfo.end_col;
+			    }
+			
+			    printf("RA param = %f\t%f\n",Rimageparam[0],Rimageparam[1]);
+			    
+			    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
+			    
+			    if(!args.check_gridonly)
+			    {
+				final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
+								 subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
+								 LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
+								 Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
+			    }
+	#ifdef BUILDMPI
+						MPI_Barrier(MPI_COMM_WORLD);
+						MPI_Finalize();
+						if(rank != 0)
+						{
+							exit(0);
+						}
+	#endif
+			    if(!args.check_ortho)
+			    {
+				char check_file[500];
+				FILE* pcheckFile;
+				int max_row = 0;
+				int max_col = 0;
+				int row,col;
+				for(row = 1; row < 100 ; row++)
+				{
+				    for(col = 1; col < 100 ; col++)
+				    {
+					sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
+					pcheckFile = fopen(check_file,"r");
+					if(pcheckFile)
 					{
-						exit(0);
+					    if(max_row < row)
+						max_row = row;
+					    if(max_col < col)
+						max_col = col;
 					}
-#endif
-                    if(!args.check_ortho)
-                    {
-                        char check_file[500];
-                        FILE* pcheckFile;
-                        int max_row = 0;
-                        int max_col = 0;
-                        int row,col;
-                        for(row = 1; row < 100 ; row++)
-                        {
-                            for(col = 1; col < 100 ; col++)
-                            {
-                                sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo.save_filepath,row,col);
-                                pcheckFile = fopen(check_file,"r");
-                                if(pcheckFile)
-                                {
-                                    if(max_row < row)
-                                        max_row = row;
-                                    if(max_col < col)
-                                        max_col = col;
-                                }
-                            }
-                        }
-                        
-                        if (args.check_tiles_SR)
-                            iter_row_start	  = args.start_row;
-                        
-                        if (args.check_tiles_ER)
-                            iter_row_end	  = args.end_row;
-                        else
-                        {
-                            if (proinfo.check_tiles_ER)
-                                iter_row_end	  = proinfo.end_row;
-                            else
-                            {
-                                iter_row_end = max_row + 1;
-                            }
-                        }
-                        
-                        if (args.check_tiles_SC)
-                            t_col_start		  = args.start_col;
-                        
-                        if (args.check_tiles_EC)
-                            t_col_end		  = args.end_col;
-                        else
-                        {
-                            if (proinfo.check_tiles_EC)
-                                t_col_end		  = proinfo.end_col;
-                            else
-                            {
-                                t_col_end	 = max_col + 1;
-                            }
-                        }
-                        
-                        if (proinfo.check_tiles_SR)
-                            iter_row_start	  = proinfo.start_row;
-                        
-                        
-                        if (proinfo.check_tiles_SC)
-                            t_col_start		  = proinfo.start_col;
-                        
-                    }
+				    }
+				}
+				
+				if (args.check_tiles_SR)
+				    iter_row_start	  = args.start_row;
+				
+				if (args.check_tiles_ER)
+				    iter_row_end	  = args.end_row;
+				else
+				{
+				    if (proinfo.check_tiles_ER)
+					iter_row_end	  = proinfo.end_row;
+				    else
+				    {
+					iter_row_end = max_row + 1;
+				    }
+				}
+				
+				if (args.check_tiles_SC)
+				    t_col_start		  = args.start_col;
+				
+				if (args.check_tiles_EC)
+				    t_col_end		  = args.end_col;
+				else
+				{
+				    if (proinfo.check_tiles_EC)
+					t_col_end		  = proinfo.end_col;
+				    else
+				    {
+					t_col_end	 = max_col + 1;
+				    }
+				}
+				
+				if (proinfo.check_tiles_SR)
+				    iter_row_start	  = proinfo.start_row;
+				
+				
+				if (proinfo.check_tiles_SC)
+				    t_col_start		  = proinfo.start_col;
+				
+			    }
 
-                    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
-                    
-                    
-                    if(iter_row_end < 2 && t_col_end < 2)
-                    {
-                        printf("No matching results. Please check overlapped area of stereo pair, or image textures\n");
-                        exit(1);
-                    }
-                    
-                    char str_DEMfile[500];
-                    sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
-                    
-                    FILE* pFile_DEM = NULL;
-                    
-                    pFile_DEM = fopen(str_DEMfile,"r");
-                    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
-                    final_iteration = 3;
-                    if(!pFile_DEM)
-                    {
-                        ST = time(0);
-                        printf("Tile merging start final iteration %d!!\n",final_iteration);
-                        int buffer_tile = 420;
-                        mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration);
-                        
-                        mt_grid_size = proinfo.DEM_resolution;
-                        
-                        ET = time(0);
-                        gap = difftime(ET,ST);
-                        printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
-                        
-                        ST = time(0);
-                        printf("Interpolation start!!\n");
-                        sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
-                        printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
-                        
-                        NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
-                        ET = time(0);
-                        gap = difftime(ET,ST);
-                        printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
-                    }
-                    
-                    char hdr_path[500];
-                    CSize seeddem_size;
-                    double tminX, tmaxY, tgrid_size;
-                    sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
-                    seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &tminX, &tmaxY, &tgrid_size);
-                    
-                    fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
-                    fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
-                    
-                    fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
-                    fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
-                    fclose(pMetafile);
-                     
+			    printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo.pre_DEMtif);
+			    
+			    
+			    if(iter_row_end < 2 && t_col_end < 2)
+			    {
+				printf("No matching results. Please check overlapped area of stereo pair, or image textures\n");
+				exit(1);
+			    }
+			    
+			    char str_DEMfile[500];
+			    sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
+			    
+			    FILE* pFile_DEM = NULL;
+			    
+			    pFile_DEM = fopen(str_DEMfile,"r");
+			    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+			    final_iteration = 3;
+			    if(!pFile_DEM)
+			    {
+				ST = time(0);
+				printf("Tile merging start final iteration %d!!\n",final_iteration);
+				int buffer_tile = 420;
+				mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration);
+				
+				mt_grid_size = proinfo.DEM_resolution;
+				
+				ET = time(0);
+				gap = difftime(ET,ST);
+				printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
+				
+				ST = time(0);
+				printf("Interpolation start!!\n");
+				sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
+				printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
+				
+				NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
+				ET = time(0);
+				gap = difftime(ET,ST);
+				printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
+			    }
+			    
+			    char hdr_path[500];
+			    CSize seeddem_size;
+			    double tminX, tmaxY, tgrid_size;
+			    sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
+			    seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &tminX, &tmaxY, &tgrid_size);
+			    
+			    fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
+			    fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
+			    
+			    fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
+			    fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+			    fclose(pMetafile);
+                }     
                 }
                 else
                     printf("out of boundary!! please check boundary infomation!!\n");

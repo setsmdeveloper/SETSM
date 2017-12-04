@@ -227,6 +227,7 @@ typedef struct ArgumentInfo{
     int utm_zone;
     int sensor_provider; //DG = 1, Pleiades = 2
     int ortho_count;
+    int RA_only;
 	
     char Image1[500];
 	char Image2[500];
@@ -252,6 +253,7 @@ typedef struct ArgumentInfo{
 	bool check_tilesize;
 	bool check_boundary;
 	bool check_checktiff;
+	bool check_RA_only;
     bool check_ortho;
     bool check_imageresolution;
 } ARGINFO;
