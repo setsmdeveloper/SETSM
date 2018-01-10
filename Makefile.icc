@@ -24,7 +24,7 @@ setsm_code.o : Typedefine.h setsm_code.h setsm_code.c voronoi.o triangle.o
 	$(CC) $(CFLAGS) $(INCS) $(VDEFS) -c setsm_code.c
 
 triangle.o: triangle.c triangle.h
-	$(CC) $(CFLAGS) $(CSWITCHES) $(TRILIBDEFS) -c -o triangle.o triangle.c
+	$(CC) $(CFLAGS) $(CSWITCHES) $(TRILIBDEFS) -wd180 -c -o triangle.o triangle.c
 
 voronoi.o: voronoi.c voronoi.h
 	$(CC) $(CFLAGS) $(INCS) -c -o voronoi.o voronoi.c
