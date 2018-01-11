@@ -113,10 +113,10 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
 void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir);
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
 bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
-					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
-					   uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
-					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
-					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var);
+                       CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
+                       uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
+                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
+                       bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var, double CA, double mean_product_res);
 
 double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
 								CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
@@ -200,9 +200,9 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str);
 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
-				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
-				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter);
+                   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
+                   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
+                   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter, double CA, double mean_product_res);
 bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, double *rimageparam, D2DPOINT Lstartpos, D2DPOINT Rstartpos,
 						  D2DPOINT pos_xy, double minH, double maxH, CSize Lsize, CSize Rsize, int H_template_size, int pyramid_step);
 void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);

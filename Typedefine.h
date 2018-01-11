@@ -270,7 +270,8 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
-	
+	float convergence_angle;
+    
 	int month;
     int date;
     int year;

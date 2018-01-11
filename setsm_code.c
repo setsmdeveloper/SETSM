@@ -814,7 +814,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		double Limageparam[2] = {0.0};
 		double Rimageparam[2] = {0.0};
 		int final_iteration;
-		
+        double convergence_angle;
+        double mean_product_res;
+        
 		double **LRPCs, **RRPCs, minLat, minLon;
         ImageInfo leftimage_info;
         ImageInfo rightimage_info;
@@ -859,7 +861,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.2.8\n");
+				fprintf(pMetafile,"SETSM Version=3.2.9\n");
 			}
 			
 			time_t current_time;
@@ -885,11 +887,17 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                 GSD_image2.col_GSD = Image2_gsd_c;
                 GSD_image2.pro_GSD = Image2_gsd;
                 
+                mean_product_res = (Image1_gsd + Image2_gsd)/2.0;
+                
                 OpenXMLFile_orientation(proinfo.LeftRPCfilename,&leftimage_info);
                 OpenXMLFile_orientation(proinfo.RightRPCfilename,&rightimage_info);
                 
-                printf("leftimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
-                printf("rightimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                leftimage_info.convergence_angle = acos(sin(leftimage_info.Mean_sat_elevation*DegToRad)*sin(rightimage_info.Mean_sat_elevation*DegToRad) + cos(leftimage_info.Mean_sat_elevation*DegToRad)*cos(rightimage_info.Mean_sat_elevation*DegToRad)*cos( (leftimage_info.Mean_sat_azimuth_angle - rightimage_info.Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
+                rightimage_info.convergence_angle = leftimage_info.convergence_angle;
+                convergence_angle = leftimage_info.convergence_angle;
+                
+                printf("leftimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor,leftimage_info.convergence_angle);
+                printf("rightimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor,rightimage_info.convergence_angle);
             }
             else
             {
@@ -904,11 +912,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                 {
                     proinfo.resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
                     
-                    if (proinfo.resolution < 0.75)
+                    if (proinfo.resolution < 1.0)
                     {
                         proinfo.resolution = 0.5;
                     }
-                    else if(proinfo.resolution < 1.25)
+                    else if(proinfo.resolution < 2.0)
                         proinfo.resolution = 1.0;
                     else
                         proinfo.resolution = floor(proinfo.resolution);
@@ -1276,7 +1284,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                              LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter);
+                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,(double)leftimage_info.convergence_angle,mean_product_res);
                         }
                     }
                     
@@ -1388,7 +1396,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                          subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1);
+                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,(double)leftimage_info.convergence_angle,mean_product_res);
                     }
 #ifdef buildMPI
 		    MPI_Finalize();
@@ -1512,6 +1520,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     
                     fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
                     fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                    fprintf(pMetafile,"Stero_pair_convergence_angle=%f\n",rightimage_info.convergence_angle);
                     fclose(pMetafile);
                      
                 }
@@ -1541,7 +1550,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter)
+				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter, double CA,double mean_product_res)
 {
 #ifdef buildMPI
 	int rank, size;
@@ -2102,7 +2111,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								
 								VerticalLineLocus(nccresult,SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0],LRPCs,RRPCs,Limagesize,data_size_l[level],SubImages_L,Rimagesize,data_size_r[level],SubImages_R,Template_size,Size_Grid2D,
 												  param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Rimageparam,minmaxHeight,level,Lstartpos,Rstartpos,iteration,SubOriImages_L,SubOriImages_R,bin_angle,1,0,fid,true,Hemisphere,
-												  proinfo.save_filepath,row,col,subBoundary,proinfo.pre_DEMtif,v_temp_path,&MPP,proinfo.IsRA,mag_avg,mag_var);
+												  proinfo.save_filepath,row,col,subBoundary,proinfo.pre_DEMtif,v_temp_path,&MPP,proinfo.IsRA,mag_avg,mag_var,CA,mean_product_res);
 								
 								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -7373,7 +7382,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
 					   uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
 					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
-					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var)
+					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var,double CA,double mean_product_res)
 {
     if(Pyramid_step >= 1)
     {
@@ -7434,17 +7443,42 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	temp_GrP.m_Z = minmaxHeight[1];
 	temp_p2		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
 	
-	*meters_per_pixel = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    temp_GrP.m_Z = minmaxHeight[0];
+    temp_GrP.flag = 0;
+    temp_p1		= GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    
+    temp_GrP.m_Z = minmaxHeight[1];
+    temp_p2		= GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    
+    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
+    
+    *meters_per_pixel = (left_mpp + right_mpp)/2.0;
 	
 	printf("mpp = %f\n",*meters_per_pixel);
-	
-    if(*meters_per_pixel > 5)
-        *meters_per_pixel = 5;
+
+    double ccdsize = 0.00001;
+    double scale = ccdsize/0.5;
+    double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+    double BH_ratio = mean_product_res*2/convergence_mpp;
+    double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
+    
+    printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
+    
+    if(sigmaZ > 1)
+        *meters_per_pixel = (*meters_per_pixel)*sigmaZ;
+    
+    printf("mpp = %f\t mpr = %f\n",*meters_per_pixel,mean_product_res);
+    
+//    if(*meters_per_pixel > 10)
+//        *meters_per_pixel = 10;
 	
     if(*meters_per_pixel < im_resolution)
         *meters_per_pixel = im_resolution;
     
-	printf("h,x,y =%f\t %f\t %f\t\n%f\t %f\t %f\n",minmaxHeight[0], temp_p1.m_X, temp_p1.m_Y, minmaxHeight[1],temp_p2.m_X, temp_p2.m_Y);
 	printf("mpp = %f\n",*meters_per_pixel);
 	
 	im_resolution = im_resolution*pow(2,Pyramid_step);
@@ -10052,14 +10086,11 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 			temp			= abs(GridPT3[grid_index].maxHeight - GridPT3[grid_index].minHeight); 
 			temp_h			= temp/(PPM/h_divide);
 			
+/*
 			if(Pyramid_step >= 1)
 				roh_index	= index & index_2 & index_3;
 			else if(Pyramid_step == 0 && final_level_iteration < 3)
 			{
-				/*if( index_3	 && roh_height[grid_index].result0 > minimum_Th)
-					index_1	= true;
-				
-				roh_index	= ((index_3 & index_2) | index_1);*/
                 roh_index	= index & index_2 & index_3;
 			}
 			else
@@ -10069,7 +10100,31 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 				
 				roh_index	= (index_2 | index_1);
 			}
-			
+*/
+            
+            if(Pyramid_step >= 2)
+                roh_index	= index & index_2 & index_3;
+            else if(Pyramid_step >= 1)
+            {
+                if( index_3	 && roh_height[grid_index].result0 > minimum_Th)
+                    index_1	= true;
+                
+                roh_index	= ((index_3 & index_2) | index_1);
+            }
+            else if(Pyramid_step == 0 && final_level_iteration < 3)
+            {
+                roh_index	= index & index_2 & index_3;
+            }
+            else
+            {
+                if( index_3)
+                    index_1	= true;
+                
+                roh_index	= (index_2 | index_1);
+            }
+            
+            
+            
 			if(GridPT3[grid_index].Matched_flag != 0)
 			{
 				index			= false;
@@ -12198,6 +12253,10 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 			BufferOfHeight = 0.5;
 	}
 
+    
+    if (BufferOfHeight < 0.5)
+        BufferOfHeight = 0.5;
+    
 	printf("BufferOfHeight = %f\n",BufferOfHeight);
 	
     if(BufferOfHeight > 100)
@@ -12292,10 +12351,9 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 				if(temp_MaxZ > Total_Max_Z)
 					Total_Max_Z = temp_MaxZ;
 
-				
 				double diff_H = fabs(Total_Max_Z - Total_Min_Z)/3.0;
 				double BF;
-
+                
                 if(pyramid_step >= 3)
                     BF = BufferOfHeight*angle_weight;
 				else
