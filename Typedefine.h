@@ -143,6 +143,10 @@ typedef struct UpdateGrid{
 	double Matched_height;//before blunder detection
 	double ortho_ncc;
 	double angle;
+    double angle_std;
+    double h_std;
+    double lsf_std;
+    int lsf_count;
 //	double *false_h;
 
 //	uint16 false_h_count;
@@ -296,6 +300,14 @@ typedef struct tagBandInfo
     float effbw;
     float tdi;
 } BandInfo;
+
+typedef struct
+{
+    uint32 ncols;
+    uint32 nrows;
+    double **val;
+    double *data;
+} GMA_double;
 
 #endif
 

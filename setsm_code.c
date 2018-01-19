@@ -816,6 +816,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		int final_iteration;
         double convergence_angle;
         double mean_product_res;
+        double MPP_stereo_angle;
         
 		double **LRPCs, **RRPCs, minLat, minLon;
         ImageInfo leftimage_info;
@@ -1284,7 +1285,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                              LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,(double)leftimage_info.convergence_angle,mean_product_res);
+                                                             Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,(double)leftimage_info.convergence_angle,mean_product_res,&MPP_stereo_angle);
                         }
                     }
                     
@@ -1396,7 +1397,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                          subX,subY,bin_angle,Hinterval,Image_res,Res, Limageparam, Rimageparam,
                                                          LRPCs, RRPCs, pre_DEM_level, DEM_level,	NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,(double)leftimage_info.convergence_angle,mean_product_res);
+                                                         Limagesize,Rimagesize,LBRsize,RBRsize,param,total_count,ori_minmaxHeight,Boundary,1,1,(double)leftimage_info.convergence_angle,mean_product_res,&MPP_stereo_angle);
                     }
 #ifdef buildMPI
 		    MPI_Finalize();
@@ -1521,6 +1522,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
                     fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
                     fprintf(pMetafile,"Stero_pair_convergence_angle=%f\n",rightimage_info.convergence_angle);
+                    fprintf(pMetafile,"Setereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                     fclose(pMetafile);
                      
                 }
@@ -1550,7 +1552,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter, double CA,double mean_product_res)
+				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter, double CA,double mean_product_res, double *stereo_angle_accuracy)
 {
 #ifdef buildMPI
 	int rank, size;
@@ -1872,8 +1874,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							double minH_mps, maxH_mps;
 							double minH_grid, maxH_grid;
 							double MPP;
-							
-							uint8 iteration;
+                            double MPP_simgle_image;
+                            double MPP_stereo_angle;
+                            uint8 iteration;
 
 							D2DPOINT Lstartpos, Rstartpos;
 							D2DPOINT BLstartpos, BRstartpos;
@@ -1954,7 +1957,8 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                     GridPT3 = ResizeGirdPT3(pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
                                 }
                     		}
-							
+                            
+                            
                             printf("end start ResizeGridPT3\n");
                             
 							pre_Size_Grid2D.width = Size_Grid2D.width;
@@ -2024,12 +2028,18 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 							NCCresult *nccresult;
 							nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
 							
+                            CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Rimageparam, minmaxHeight, LRPCs, RRPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                            
+                            *stereo_angle_accuracy = MPP_stereo_angle;
+                            
+                            printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
+                            
                             if(level == 0 &&  iteration == 3)
                                 matching_change_rate = 0.001;
                             
                          	while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
 							{
-								printf("%f \t %f\n",Th_roh,Th_roh_min);
+                             	printf("%f \t %f\n",Th_roh,Th_roh_min);
 								
 
 								double pre_3sigma, pre_mean;
@@ -2118,6 +2128,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 								minH_mps = 1000000;
 								maxH_mps = -1000000;
 
+                                if(level >= 5)
+                                    MPP = MPP_simgle_image;
+                                else
+                                    MPP = MPP_stereo_angle;
+                                
 								count_MPs = SelectMPs(nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
 													  iteration,0,filename_mps_pre,proinfo.pre_DEMtif,proinfo.IsRA,MPP,proinfo.DEM_resolution,Image_res[0],final_level_iteration);
 								printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
@@ -2321,7 +2336,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 																			 SubMagImages_L,SubMagImages_R,SubImages_L,SubImages_R,
 																			 grid_resolution, Image_res[0],LRPCs,RRPCs,
 																			 data_size_l[level],data_size_r[level],Size_Grid2D,param,NumOfIAparam,
-																			 t_Rimageparam,minmaxHeight,level,MPP,
+																			 t_Rimageparam,minmaxHeight,level,MPP_simgle_image,
 																			 Lstartpos,Rstartpos,iteration,GridPT3,filename_mps,proinfo.save_filepath);
 											free(trilists);
 											
@@ -2409,6 +2424,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
 											}
 											
+                                            
+                                            int selected_numpts;
+                                            STDKenel_LSF(GridPT3, Size_Grid2D, count_MPs, ptslists, scaled_ptslists, grid_resolution, subBoundary[0], subBoundary[1],&selected_numpts,20);
+                                            
+                                            
 											free(scaled_ptslists);
 											
 											count_blunder = DecisionMPs_setheight(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo.save_filepath,
@@ -2496,18 +2516,48 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											else
 												update_flag				= false;
 											
-											if(level == 0)
+                                            
+                                      		if(level == 0)
                                             {
+                                                MPP = MPP_stereo_angle;
+                                                
                                                 Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                                 printf("update GridPT3\n");
+                                                
+                                                if(iteration >= 2)
+                                                {
+                                                    STDKenel_angle(Pre_GridPT3,Size_Grid2D,2);
+                                                    STDKenel_height(Pre_GridPT3,Size_Grid2D,2);
+                                                }
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,Pre_GridPT3,"final");
+                                                
                                             }
                                             else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
+                                                //MPP = MPP_simgle_image;
+                                                //if(level == 1)
+                                                    MPP = MPP_stereo_angle;
+                                                
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
+                                                
+                                                //STDKenel_angle(Pre_GridPT3,Size_Grid2D,2);
+                                                //STDKenel_height(Pre_GridPT3,Size_Grid2D,2);
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,Pre_GridPT3,"final");
 											}
 											else
+                                            {
+                                                if(level <= 1)
+                                                    MPP = MPP_stereo_angle;
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                                
 												GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
+                                                
+                                                //STDKenel_angle(GridPT3,Size_Grid2D,2);
+                                                //STDKenel_height(GridPT3,Size_Grid2D,2);
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,GridPT3,"final");
+                                            }
 											
 											free(trilists);
 											free(ptslists);
@@ -2588,6 +2638,9 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 																		 subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
 											}
 											
+                                            int selected_numpts;
+                                            STDKenel_LSF(GridPT3, Size_Grid2D, count_MPs, ptslists, scaled_ptslists, grid_resolution, subBoundary[0], subBoundary[1],&selected_numpts,20);
+                                            
 											free(scaled_ptslists);
                                             
                                             if(pre_matched_pts == 0)
@@ -2665,17 +2718,45 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
                                             if(level == 0)
                                             {
+                                                MPP = MPP_stereo_angle;
+                                                
                                                 Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                                 printf("update GridPT3\n");
+                                                
+                                                if(iteration >= 2)
+                                                {
+                                                    STDKenel_angle(Pre_GridPT3,Size_Grid2D,2);
+                                                    STDKenel_height(Pre_GridPT3,Size_Grid2D,2);
+                                                }
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,Pre_GridPT3,"final");
                                             }
 											else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 											{
+                                                //MPP = MPP_simgle_image;
+                                                //if(level == 1)
+                                                    MPP = MPP_stereo_angle;
+                                                
 												Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 												printf("update GridPT3\n");
+                                                
+                                                //STDKenel_angle(Pre_GridPT3,Size_Grid2D,2);
+                                                //STDKenel_height(Pre_GridPT3,Size_Grid2D,2);
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,Pre_GridPT3,"final");
 											}
 											else
+                                            {
+                                                if(level <= 1)
+                                                    MPP = MPP_stereo_angle;
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                                
 												GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 											
+                                                //STDKenel_angle(GridPT3,Size_Grid2D,2);
+                                                //STDKenel_height(GridPT3,Size_Grid2D,2);
+                                                //echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,0,&Size_Grid2D,GridPT3,"final");
+                                            }
+                                            
 											free(trilists);
 											free(ptslists);
                                       	}
@@ -4175,6 +4256,9 @@ UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize
 			GridPT3[i].Matched_height	= -1000.0;
 			GridPT3[i].ortho_ncc		= 0;
 			GridPT3[i].angle			= 0;
+            GridPT3[i].angle_std			= 0;
+            GridPT3[i].h_std			= 0;
+            GridPT3[i].lsf_std          = 0;
 //			GridPT3[i].false_h_count	= 0;
 
 			GridPT3[i].minHeight		= (double)(minmaxHeight[0] - 0.5);
@@ -7378,6 +7462,68 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 	}
 }
 
+
+void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, double** LRPCs, double** RRPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+{
+    D2DPOINT temp_p1, temp_p2;
+    D3DPOINT temp_GrP;
+    double temp_LIA[2] = {0,0};
+    
+    int numofpts;
+    
+    numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    
+    temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
+    temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
+    temp_GrP.m_Z = minmaxHeight[0];
+    temp_GrP.flag = 0;
+    temp_p1		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+    
+    temp_GrP.m_Z = minmaxHeight[1];
+    temp_p2		= GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+    
+    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    temp_GrP.m_Z = minmaxHeight[0];
+    temp_GrP.flag = 0;
+    temp_p1		= GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    
+    temp_GrP.m_Z = minmaxHeight[1];
+    temp_p2		= GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    
+    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
+    
+    if(left_mpp > right_mpp)
+        *MPP_simgle_image = left_mpp;
+    else
+        *MPP_simgle_image = right_mpp;
+    
+    printf("mpp = %f\n",*MPP_simgle_image);
+    
+    double ccdsize = 0.00001;
+    double scale = ccdsize/0.5;
+    double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+    double BH_ratio = mean_product_res*2/convergence_mpp;
+    double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
+    
+    printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
+    
+    if(sigmaZ > 1)
+        *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
+    
+    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
+    
+    if(*MPP_simgle_image < im_resolution)
+        *MPP_simgle_image = im_resolution;
+    
+    if(*MPP_stereo_angle < im_resolution)
+        *MPP_stereo_angle = im_resolution;
+    
+    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
+}
+
 bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
 					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
 					   uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
@@ -7434,6 +7580,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	
 	numofpts = Size_Grid2D.height*Size_Grid2D.width;
 
+    /*
 	temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
 	temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
 	temp_GrP.m_Z = minmaxHeight[0];
@@ -7456,7 +7603,10 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
-    *meters_per_pixel = (left_mpp + right_mpp)/2.0;
+    if(left_mpp > right_mpp)
+        *meters_per_pixel = left_mpp;
+    else
+        *meters_per_pixel = right_mpp;
 	
 	printf("mpp = %f\n",*meters_per_pixel);
 
@@ -7473,12 +7623,13 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
     
     printf("mpp = %f\t mpr = %f\n",*meters_per_pixel,mean_product_res);
     
-//    if(*meters_per_pixel > 10)
-//        *meters_per_pixel = 10;
+//    if(Pyramid_step == 0)
+//    if(*meters_per_pixel > 3)
+//        *meters_per_pixel = 3;
 	
     if(*meters_per_pixel < im_resolution)
         *meters_per_pixel = im_resolution;
-    
+    */
 	printf("mpp = %f\n",*meters_per_pixel);
 	
 	im_resolution = im_resolution*pow(2,Pyramid_step);
@@ -12359,6 +12510,9 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 				else
                     BF = BufferOfHeight;
                 
+                if(BF > 100)
+                    BF = 100;
+                
 				// calculation on BoundingBox(MinMax XY) of triangle
 				TriMinXY[0]	= min(min(TriP1[0],TriP2[0]),TriP3[0]);
 				TriMinXY[1]	= min(min(TriP1[1],TriP2[1]),TriP3[1]);
@@ -12724,7 +12878,11 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 			
 			result[matlab_index].maxHeight					= GridPT3[matlab_index].maxHeight;
 			
-//			result[matlab_index].false_h_count	= 0;
+			result[matlab_index].angle                      = GridPT3[matlab_index].angle;
+            result[matlab_index].angle_std                  = GridPT3[matlab_index].angle_std;
+            result[matlab_index].h_std                      = GridPT3[matlab_index].h_std;
+            result[matlab_index].lsf_std                    = GridPT3[matlab_index].lsf_std;
+            result[matlab_index].lsf_count                  = GridPT3[matlab_index].lsf_count;
 			
 			if(pyramid_step >= 2)
 			{
@@ -12799,6 +12957,10 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 				resize_GridPT3[index].anchor_flag	= preGridPT3[pre_index].anchor_flag;
 				resize_GridPT3[index].ortho_ncc		= preGridPT3[pre_index].ortho_ncc;
 				resize_GridPT3[index].angle			= preGridPT3[pre_index].angle;
+                resize_GridPT3[index].angle_std		= preGridPT3[pre_index].angle_std;
+                resize_GridPT3[index].h_std			= preGridPT3[pre_index].h_std;
+                resize_GridPT3[index].lsf_std       = preGridPT3[pre_index].lsf_std;
+                resize_GridPT3[index].lsf_count       = preGridPT3[pre_index].lsf_count;
 //				resize_GridPT3[index].false_h_count = 0;
 			}
 			else
@@ -12811,6 +12973,10 @@ UGRID* ResizeGirdPT3(CSize preSize, CSize resize_Size, double* Boundary, D2DPOIN
 				resize_GridPT3[index].anchor_flag	= 0;
 				resize_GridPT3[index].ortho_ncc		= 0;
 				resize_GridPT3[index].angle			= 0;
+                resize_GridPT3[index].angle_std		= 0;
+                resize_GridPT3[index].h_std			= 0;
+                resize_GridPT3[index].lsf_std       = 0;
+                resize_GridPT3[index].lsf_count       = 0;
 //				resize_GridPT3[index].false_h_count = 0;
 			}
 		}
@@ -12850,6 +13016,10 @@ UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,do
                 resize_GridPT3[index].anchor_flag	= preGridPT3[pre_index].anchor_flag;
                 resize_GridPT3[index].ortho_ncc		= preGridPT3[pre_index].ortho_ncc;
                 resize_GridPT3[index].angle			= preGridPT3[pre_index].angle;
+                resize_GridPT3[index].angle_std		= preGridPT3[pre_index].angle_std;
+                resize_GridPT3[index].h_std			= preGridPT3[pre_index].h_std;
+                resize_GridPT3[index].lsf_std       = preGridPT3[pre_index].lsf_std;
+                resize_GridPT3[index].lsf_count       = preGridPT3[pre_index].lsf_count;
                 //				resize_GridPT3[index].false_h_count = 0;
             }
             else
@@ -12862,6 +13032,10 @@ UGRID* ResizeGirdPT3_RA(CSize preSize, CSize resize_Size, double* preBoundary,do
                 resize_GridPT3[index].anchor_flag	= 0;
                 resize_GridPT3[index].ortho_ncc		= 0;
                 resize_GridPT3[index].angle			= 0;
+                resize_GridPT3[index].angle_std		= 0;
+                resize_GridPT3[index].h_std			= 0;
+                resize_GridPT3[index].lsf_std       = 0;
+                resize_GridPT3[index].lsf_count       = 0;
                 //				resize_GridPT3[index].false_h_count = 0;
             }
         }
@@ -13104,6 +13278,7 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
 void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str)
 {
 	FILE *outfile_h,*outfile_min, *outfile_max,	 *outfile_roh, *outfile_flag;
+    FILE *outfile_angle,*outfile_angle_std,*outfile_h_std,*outfile_lsf_std,*outfile_lsf_count;
 	CSize temp_S;
 	char t_str[500];
 	int k,j;
@@ -13118,6 +13293,16 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 	//outfile_roh	= fopen(t_str,"w");
 	/*sprintf(t_str,"%s/txt/tin_flag_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	  outfile_flag	= fopen(t_str,"w");*/
+    sprintf(t_str,"%s/txt/tin_angle_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    outfile_angle	= fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/tin_angle_std_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    outfile_angle_std	= fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/tin_h_std_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    outfile_h_std	= fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/tin_lsf_std_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    outfile_lsf_std	= fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/tin_lsf_count_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    outfile_lsf_count	= fopen(t_str,"w");
 	
 //	if(outfile_min && outfile_max && outfile_h && outfile_roh && outfile_flag)
 	{
@@ -13144,12 +13329,22 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 				fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
 				//fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].roh);
 				/*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
+                fprintf(outfile_angle,"%f\t",GridPT3[matlab_index].angle);
+                fprintf(outfile_angle_std,"%f\t",GridPT3[matlab_index].angle_std);
+                fprintf(outfile_h_std,"%f\t",GridPT3[matlab_index].h_std);
+                fprintf(outfile_lsf_std,"%f\t",GridPT3[matlab_index].lsf_std);
+                fprintf(outfile_lsf_count,"%d\t",GridPT3[matlab_index].lsf_count);
 			}
 			//fprintf(outfile_min,"\n");
 			//fprintf(outfile_max,"\n");
 			fprintf(outfile_h,"\n");
 			//fprintf(outfile_roh,"\n");
 			/*fprintf(outfile_flag,"\n");*/
+            fprintf(outfile_angle,"\n");
+            fprintf(outfile_angle_std,"\n");
+            fprintf(outfile_h_std,"\n");
+            fprintf(outfile_lsf_std,"\n");
+            fprintf(outfile_lsf_count,"\n");
 		}
 
 		//fclose(outfile_min);
@@ -13157,6 +13352,11 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 		fclose(outfile_h);
 		//fclose(outfile_roh);
 		/*fclose(outfile_flag);*/
+        fclose(outfile_angle);
+        fclose(outfile_angle_std);
+        fclose(outfile_h_std);
+        fclose(outfile_lsf_std);
+        fclose(outfile_lsf_count);
 	}
 }
 
@@ -17286,3 +17486,723 @@ char* remove_ext_ortho(char* mystr)
 		*lastdot = '\0';
 	return retstr;
 }
+
+
+
+//post processing
+GMA_double* GMA_double_create(uint32 size_row, uint32 size_col)
+{
+    uint32 cnt;
+    GMA_double *out;
+    out=(GMA_double*)malloc(sizeof(GMA_double));
+    out->nrows=size_row;
+    out->ncols=size_col;
+    out->val=(double**)calloc(sizeof(double*),size_row);
+    //out->val[0]=(float*)malloc(sizeof(float)*size_row*size_col);
+    out->data=(double*)calloc(sizeof(double),size_row*size_col);
+    for(cnt=0;cnt<size_row;cnt++)
+    {
+        //out->val[cnt]=out->val[0]+sizeof(float*)*size_col*cnt;
+        out->val[cnt]=&(out->data[cnt*size_col]);
+    }
+    return out;
+}
+
+void GMA_double_destroy(GMA_double* in)
+{
+    /*
+     int32_t cnt;
+     for(cnt=0;cnt<in->nrows;cnt++) free(in->val[cnt]);
+     free(in);
+     */
+    free(in->val);
+    free(in->data);
+    free(in);
+}
+
+
+double ImageNoiseCal(uint16* input, CSize img_size)
+{
+    printf("start noise\n");
+    
+    double noise;
+    
+    int i,j;
+    
+    int masksize = 1;
+    //double* std_array = (double*)calloc(sizeof(double),img_size.height*img_size.width);
+    int* hist = (int*)calloc(sizeof(int),10000);
+    
+    int total_count = 0;
+    
+    for(int r=0; r<img_size.height ; r+=2)
+    {
+        for(int c=0; c<img_size.width ; c+=2)
+        {
+            int ori_index = r*img_size.width + c;
+            
+            //printf("%d\t",input[ori_index]);
+            double sum = 0;
+            int count = 0;
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*img_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < img_size.height && col_index >= 0 && col_index < img_size.width)
+                    {
+                        count++;
+                        sum += input[index];
+                        
+                        
+                    }
+                }
+            }
+            
+            double avg = sum/count;
+            
+            double sum_v2 = 0;
+            
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*img_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < img_size.height && col_index >= 0 && col_index < img_size.width)
+                        sum_v2 += (input[index] - avg)*(input[index] - avg);
+                }
+            }
+            
+            double std = sqrt(sum_v2/count);
+            
+            //std_array[ori_index] = std;
+            total_count++;
+            hist[(int)(std)]++;
+            //printf("%d\tstd %f\n",total_count,std);
+        }
+        //printf("\n");
+    }
+    
+    /*printf("start sort\n");
+     bubble_sort(std_array,img_size.height*img_size.width);
+     printf("end sort\n");
+     */
+    int selected_count = 0;
+    double sum_std = 0;
+    
+    i=0;
+    bool stop = false;
+    while(i<10000 && !stop)
+    {
+        
+        
+        //if(hist[i] > 0)
+        //{
+        selected_count += hist[i];
+        sum_std += hist[i]*i;
+        double ratio = (double)selected_count/(double)total_count;
+        
+        if(ratio > 0.85)
+        {
+            stop = true;
+            noise = sum_std/selected_count;
+        }
+        //}
+        
+        printf("%d\t%d\t%f\t%f\t%f\n",i,hist[i],sum_std,ratio,hist[i]/(double)total_count);
+        
+        i++;
+    }
+    
+    printf("noise %f\n",noise);
+    
+    free(hist);
+    
+    printf("end noise\n");
+    
+    return noise;
+}
+
+
+void EdgeAdaptiveSmoothing(uint16* input, CSize img_size, double sigma, int repeat)
+{
+    printf("start EAS\n");
+    
+    double noise;
+    
+    int i,j;
+    
+    int masksize = 1;
+    
+    int total_count = 0;
+    
+    uint16* out = (uint16*)malloc(sizeof(double)*img_size.width*img_size.height);
+    
+    for(int iter = 0 ; iter < repeat ; iter++)
+    {
+        for(int r=masksize+1; r<img_size.height-masksize-1 ; r++)
+        {
+            for(int c=masksize+1; c<img_size.width-masksize-1 ; c++)
+            {
+                int ori_index = r*img_size.width + c;
+                
+                double sum = 0;
+                double W_sum = 0;
+                
+                for(i= -masksize ; i<=masksize ;i++)
+                {
+                    for(j=-masksize ; j<=masksize ; j++)
+                    {
+                        int row_index = r+i;
+                        int col_index = c+j;
+                        int index = row_index*img_size.width + col_index;
+                        
+                        int index1 = row_index*img_size.width + (col_index+1);
+                        int index2 = row_index*img_size.width + (col_index-1);
+                        int index3 = (row_index+1)*img_size.width + col_index;
+                        int index4 = (row_index-1)*img_size.width + col_index;
+                        
+                        double Gx, Gy;
+                        Gx = (double)(input[index1] - input[index2])*0.5;
+                        Gy = (double)(input[index3] - input[index4])*0.5;
+                        
+                        double W = exp(-(Gx*Gx + Gy*Gy)/(2*sigma*sigma));
+                        
+                        if(row_index >= 0 && row_index < img_size.height && col_index >= 0 && col_index < img_size.width)
+                        {
+                            W_sum += W;
+                            sum += input[index]*W;
+                        }
+                    }
+                }
+                
+                double avg = sum/W_sum;
+                
+                out[ori_index] = (uint16)avg;
+                
+            }
+            //printf("\n");
+        }
+        
+        for(int r= 0; r<img_size.height ; r++)
+        {
+            for(int c = 0; c<img_size.width ; c++)
+            {
+                int ori_index = r*img_size.width + c;
+                
+                input[ori_index] = out[ori_index];
+            }
+        }
+    }
+    
+    free(out);
+    
+    printf("end EAS\n");
+}
+
+void STDKenel_angle(UGRID *input, CSize grids_size, int masksize)
+{
+    int i,j,r,c;
+    
+    for(r=0; r<grids_size.height ; r++)
+    {
+        for(c=0; c<grids_size.width ; c++)
+        {
+            int ori_index = r*grids_size.width + c;
+            
+            double sum = 0;
+            int count = 0;
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*grids_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < grids_size.height && col_index >= 0 && col_index < grids_size.width)
+                    {
+                        count++;
+                        sum += input[index].angle;
+                    }
+                }
+            }
+            
+            double avg = sum/count;
+            
+            double sum_v2 = 0;
+            
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*grids_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < grids_size.height && col_index >= 0 && col_index < grids_size.width)
+                        sum_v2 += (input[index].angle - avg)*(input[index].angle - avg);
+                }
+            }
+            
+            double std = sqrt(sum_v2/count);
+            
+            input[ori_index].angle_std = std;
+        }
+    }
+}
+
+void STDKenel_height(UGRID *input, CSize grids_size, int masksize)
+{
+    int i,j,r,c;
+    
+    for(r=0; r<grids_size.height ; r++)
+    {
+        for(c=0; c<grids_size.width ; c++)
+        {
+            int ori_index = r*grids_size.width + c;
+            
+            double sum = 0;
+            int count = 0;
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*grids_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < grids_size.height && col_index >= 0 && col_index < grids_size.width)
+                    {
+                        count++;
+                        sum += input[index].Height;
+                    }
+                }
+            }
+            
+            double avg = sum/count;
+            
+            double sum_v2 = 0;
+            
+            for(i= -masksize ; i<=masksize ;i++)
+            {
+                for(j=-masksize ; j<=masksize ; j++)
+                {
+                    int row_index = r+i;
+                    int col_index = c+j;
+                    int index = row_index*grids_size.width + col_index;
+                    
+                    if(row_index >= 0 && row_index < grids_size.height && col_index >= 0 && col_index < grids_size.width)
+                        sum_v2 += (input[index].Height - avg)*(input[index].Height - avg);
+                }
+            }
+            
+            double std = sqrt(sum_v2/count);
+            
+            input[ori_index].h_std = std;
+        }
+    }
+}
+
+void STDKenel_LSF(UGRID *input, CSize grids_size, int count_MPs, D3DPOINT *ptslists, D3DPOINT *scaled_ptslists, double gridspace, double minX, double minY,int *numpts, int row_interval)
+{
+    int i,j,r,c;
+    
+    
+    F3DPOINT* grid_matched_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*grids_size.height*grids_size.width);
+    for(i=0;i<grids_size.height;i++)
+    {
+        for(int j=0; j<grids_size.width;j++)
+        {
+            grid_matched_pts[i*grids_size.width + j].m_X = -999999999;
+            grid_matched_pts[i*grids_size.width + j].m_Y = -999999999;
+            grid_matched_pts[i*grids_size.width + j].m_Z = -9999;
+        }
+    }
+    
+    for(i=0;i<count_MPs;i++)
+    {
+        int pos_col = (int)((ptslists[i].m_X - minX)/gridspace);
+        int pos_row = (int)((ptslists[i].m_Y - minY)/gridspace);
+        
+        grid_matched_pts[pos_row*grids_size.width + pos_col].m_X = scaled_ptslists[i].m_X;
+        grid_matched_pts[pos_row*grids_size.width + pos_col].m_Y = scaled_ptslists[i].m_Y;
+        grid_matched_pts[pos_row*grids_size.width + pos_col].m_Z = ptslists[i].m_Z;
+    }
+    
+    for(int iter_count = 0 ; iter_count < grids_size.height*grids_size.width ; iter_count++)
+    {
+        int pts_row = (int)(floor(iter_count/grids_size.width));
+        int pts_col = iter_count % grids_size.width;
+        int rendata;
+        int ndim1;
+
+        double X = minX + pts_col*gridspace;
+        double Y = minY + pts_row*gridspace;
+        
+        double sigma = LocalSurfaceFitting(grid_matched_pts, grids_size.height, grids_size.width, gridspace, minX, minY, X, Y, numpts, row_interval);
+        
+        input[iter_count].lsf_std = sigma;
+        input[iter_count].lsf_count = *numpts;
+    }
+
+    free(grid_matched_pts);
+}
+
+double LocalSurfaceFitting(F3DPOINT *input, int row_size, int col_size, double grid, double minX, double minY, double X, double Y, int *numpts, int row_interval)
+{
+    double result;
+    double row_pos, col_pos;
+    int row,col;
+    int size_pts;
+    int check_stop = 0;
+    int interval;
+    int final_interval;
+    int count1,count2,count3,count4;
+    int max_pts = 5;
+    
+    col_pos = ((X - minX)/grid);
+    row_pos = ((Y - minY)/grid);
+    
+    interval = 1;
+    
+    
+    while (check_stop == 0)
+    {
+        *numpts = 0;
+        count1 = 0;
+        count2 = 0;
+        count3 = 0;
+        count4 = 0;
+        for(row = -interval;row<interval;row++)
+        {
+            for(col = -interval;col < interval ; col++)
+            {
+                int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+                if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)// && radius > distance)
+                {
+                    if(input[grid_pos].m_Z != -9999)
+                    {
+                        (*numpts)++;
+                        
+                        if (row >= 0 && row <interval && col >= 0 && col < interval) {
+                            count1++;
+                        }
+                        else if (row >= 0 && row <interval && col < 0 && col >= -interval) {
+                            count2++;
+                        }
+                        else if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                            count3++;
+                        }
+                        else/*if (row < 0 && row >= -interval && col >= 0 && col < interval)*/ {
+                            count4++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (interval >= row_interval || ((*numpts) > max_pts && count1 >= 1 && count2 >= 1 && count3 >= 1 && count4 >= 1))
+        {
+            check_stop = 1;
+            final_interval = interval;
+        }
+        else
+            interval = interval + 1;
+        
+    }
+    
+    //printf("selected numpts %d\n",*numpts);
+    
+    *numpts = 0;
+    for(row = -final_interval;row<final_interval;row++)
+    {
+        for(col = -final_interval;col < final_interval ; col++)
+        {
+            int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+            
+            if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+               row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size/* && col != 0 && row != 0*/)// && radius > distance)
+            {
+                if(input[grid_pos].m_Z != -9999 /*&& count < *numpts*/)
+                {
+                    (*numpts)++;
+                }
+            }
+        }
+    }
+    
+    //printf("pts %d kernel_size %d\n",*numpts,final_interval);
+    
+    double sigma = 0;
+    
+    if((*numpts) > 6)
+    {
+        GMA_double *A_matrix = GMA_double_create(*numpts, 6);
+        GMA_double *L_matrix = GMA_double_create(*numpts, 1);
+        GMA_double *AT_matrix = GMA_double_create(6,*numpts);
+        GMA_double *ATA_matrix = GMA_double_create(6,6);
+        
+        GMA_double *ATAI_matrix = GMA_double_create(6,6);
+        GMA_double *ATL_matrix = GMA_double_create(6,1);
+        
+        GMA_double *X_matrix = GMA_double_create(6,1);
+        GMA_double *AX_matrix = GMA_double_create(*numpts,1);
+        GMA_double *V_matrix = GMA_double_create(*numpts,1);
+        
+        
+        
+        int count = 0;
+        for(row = -final_interval;row<final_interval;row++)
+        {
+            for(col = -final_interval;col < final_interval ; col++)
+            {
+                int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+                
+                if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size/* && col != 0 && row != 0*/)// && radius > distance)
+                {
+                    if(input[grid_pos].m_Z != -9999 /*&& count < *numpts*/)
+                    {
+                        double x,y,z;
+                        x = input[grid_pos].m_X;
+                        y = input[grid_pos].m_Y;
+                        z = input[grid_pos].m_Z;
+                        
+                        //printf("id %d\txyz %f\t%f\t%f\n",count,x,y,z);
+                        
+                        A_matrix->val[count][0] = x*x;
+                        A_matrix->val[count][1] = x*y;
+                        A_matrix->val[count][2] = y*y;
+                        A_matrix->val[count][3] = x;
+                        A_matrix->val[count][4] = y;
+                        A_matrix->val[count][5] = 1.0;
+                        
+                        L_matrix->val[count][0] = z;
+                        count++;
+                    }
+                }
+            }
+        }
+        
+        //printf("pt1 pt2 %d\t%d\n",*numpts,count);
+        //printf("A matrix\n");
+        //GMA_double_printf(A_matrix);
+        
+        //printf("L matrix\n");
+        //GMA_double_printf(L_matrix);
+        
+        GMA_double_Tran(A_matrix,AT_matrix);
+        //printf("AT matrix\n");
+        //GMA_double_printf(AT_matrix);
+        
+        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+        //printf("ATA matrix\n");
+        //GMA_double_printf(ATA_matrix);
+        
+        GMA_double_inv(ATA_matrix,ATAI_matrix);
+        //printf("ATAI matrix\n");
+        //GMA_double_printf(ATAI_matrix);
+        
+        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+        //printf("ATL matrix\n");
+        //GMA_double_printf(ATL_matrix);
+        
+        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+        //printf("X matrix\n");
+        //GMA_double_printf(X_matrix);
+        
+        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+        //printf("AX matrix\n");
+        //GMA_double_printf(AX_matrix);
+        
+        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+        //printf("V matrix\n");
+        //GMA_double_printf(V_matrix);
+        
+        
+        double sum = 0;
+        for(row = 0; row < *numpts ; row++)
+        {
+            sum += V_matrix->val[row][0] * V_matrix->val[row][0];
+        }
+        
+        sigma = sqrt(sum/(*numpts));
+        
+        //printf("sigma %f\n",sigma);
+        
+        GMA_double_destroy(A_matrix);
+        GMA_double_destroy(L_matrix);
+        GMA_double_destroy(AT_matrix);
+        GMA_double_destroy(ATA_matrix);
+        
+        GMA_double_destroy(ATAI_matrix);
+        GMA_double_destroy(ATL_matrix);
+        
+        GMA_double_destroy(X_matrix);
+        GMA_double_destroy(AX_matrix);
+        GMA_double_destroy(V_matrix);
+        
+        //printf("end matrix release\n");
+    }
+    else
+        sigma = 0;
+    //exit(1);
+    
+    return sigma;
+}
+
+void GMA_double_inv(GMA_double *a, GMA_double *I)
+{
+    int cnt1,cnt2,cnt3;
+    double pivot,coeff;
+    
+    GMA_double *b=GMA_double_create(a->nrows,a->ncols);
+    //printf("duplicate the matrix a\n");
+    
+    for(cnt1=0;cnt1<a->nrows;cnt1++)
+    {
+        for(cnt2=0;cnt2<a->ncols;cnt2++)
+        {
+            b->val[cnt1][cnt2]=a->val[cnt1][cnt2];
+        }
+    }
+    
+    //printf("initialize I\n");
+    for(cnt1=0;cnt1<b->nrows;cnt1++)
+    {
+        for(cnt2=0;cnt2<b->nrows;cnt2++)
+        {
+            I->val[cnt1][cnt2]=(cnt1==cnt2)?1:0;
+        }
+    }
+    
+    //printf("Gaussian elimation - forward\n");
+    for(cnt1=0;cnt1<b->nrows-1;cnt1++)
+    {
+        pivot=b->val[cnt1][cnt1];
+        for(cnt2=cnt1+1;cnt2<b->ncols;cnt2++)
+        {
+            coeff=b->val[cnt2][cnt1]/pivot;
+            //printf("%d %d\tcoeff %f\n",cnt1, cnt2, coeff);
+            for(cnt3=0;cnt3<b->nrows;cnt3++)
+            {
+                b->val[cnt2][cnt3]-=b->val[cnt1][cnt3]*coeff;
+                //printf("%f\n",b->val[cnt2][cnt3]);
+                I->val[cnt2][cnt3]-=I->val[cnt1][cnt3]*coeff;
+                //printf("%f\t%f\n",b->val[cnt2][cnt3], I->val[cnt2][cnt3]);
+            }
+        }
+    }
+    /*
+     printf("b matrix\n");
+     for(cnt1=0;cnt1<4;cnt1++)
+     {
+     for(cnt2=0;cnt2<4;cnt2++)
+     {
+     printf("%f\t",I->val[cnt1][cnt2]);
+     }
+     printf("\n");
+     }
+     */
+    
+    //printf("Backward Elimination\n");
+    for(cnt1=b->nrows-1;cnt1>=0;cnt1--)
+    {
+        pivot=b->val[cnt1][cnt1];
+        for(cnt2=cnt1-1;cnt2>=0;cnt2--)
+        {
+            //printf("%d %d\n",cnt1, cnt2);
+            coeff=b->val[cnt2][cnt1]/pivot;
+            
+            //printf("%d %d\tcoeff %f\n",cnt1, cnt2, coeff);
+            for(cnt3=b->nrows-1;cnt3>=0;cnt3--)
+            {
+                //printf("%d\t%d\t%d\n",cnt1,cnt2,cnt3);
+                b->val[cnt2][cnt3]-=b->val[cnt1][cnt3]*coeff;
+                //printf("%f\n",b->val[cnt2][cnt3]);
+                I->val[cnt2][cnt3]-=I->val[cnt1][cnt3]*coeff;
+                
+                //printf("%f\t%f\n",b->val[cnt2][cnt3], I->val[cnt2][cnt3]);
+            }
+            //printf("enf for loop\n");
+        }
+    }
+    
+    //printf("scaling\n");
+    for(cnt1=0;cnt1<b->nrows;cnt1++)
+    {
+        for(cnt2=0;cnt2<b->nrows;cnt2++)
+        {
+            I->val[cnt1][cnt2]/=b->val[cnt1][cnt1];
+        }
+        
+    }
+    
+    //printf("release memory\n");
+    GMA_double_destroy(b);
+    
+}
+
+void GMA_double_mul(GMA_double *a, GMA_double *b, GMA_double *out)
+{
+    uint32 cnt1,cnt2,cnt3;
+    for(cnt1=0;cnt1<a->nrows;cnt1++)  //TODO: consider loop unrolling
+    {
+        for(cnt2=0;cnt2<b->ncols;cnt2++)
+        {
+            out->val[cnt1][cnt2]=0;
+            for(cnt3=0;cnt3<a->ncols;cnt3++)
+            {
+                out->val[cnt1][cnt2]+=a->val[cnt1][cnt3]*b->val[cnt3][cnt2];
+            }
+        }
+    }
+}
+
+void GMA_double_Tran(GMA_double *a, GMA_double *out)
+{
+    uint32 cnt1,cnt2,cnt3;
+    for(cnt1=0;cnt1<a->nrows;cnt1++)  //TODO: consider loop unrolling
+    {
+        for(cnt2=0;cnt2<a->ncols;cnt2++)
+        {
+            out->val[cnt2][cnt1] = 0;
+            out->val[cnt2][cnt1] = a->val[cnt1][cnt2];
+        }
+    }
+}
+
+void GMA_double_sub(GMA_double *a, GMA_double *b, GMA_double *out)
+{
+    uint32 cnt1,cnt2;
+    for(cnt1=0;cnt1<a->nrows;cnt1++)  //TODO: consider loop unrolling
+    {
+        for(cnt2=0;cnt2<a->ncols;cnt2++)
+        {
+            out->val[cnt1][cnt2]=0;
+            out->val[cnt1][cnt2] = a->val[cnt1][cnt2] - b->val[cnt1][cnt2];
+        }
+    }
+}
+
+void GMA_double_printf(GMA_double *a)
+{
+    uint32 cnt1,cnt2;
+    for(cnt1=0;cnt1<a->nrows;cnt1++)  //TODO: consider loop unrolling
+    {
+        for(cnt2=0;cnt2<a->ncols;cnt2++)
+        {
+            printf("[%d,%d] %f\t",cnt1,cnt2,a->val[cnt1][cnt2]);
+        }
+        printf("\n");
+    }
+}
+

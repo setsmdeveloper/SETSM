@@ -112,6 +112,9 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
 uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
 void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir);
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
+
+
+void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, double** LRPCs, double** RRPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
 bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
                        CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
                        uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
@@ -202,7 +205,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
                    double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
                    double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-                   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter, double CA, double mean_product_res);
+                   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter, double CA, double mean_product_res,double *MPP_stereo_angle);
 bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, double *rimageparam, D2DPOINT Lstartpos, D2DPOINT Rstartpos,
 						  D2DPOINT pos_xy, double minH, double maxH, CSize Lsize, CSize Rsize, int H_template_size, int pyramid_step);
 void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);
@@ -246,3 +249,18 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c);
 CSize Envihdr_reader_ortho(char *filename);
 CSize Envihdr_reader_DEM_ortho(TransParam param, char *filename, double *minX, double *maxY, double *grid_size);
 char* remove_ext_ortho(char* mystr);
+
+GMA_double* GMA_double_create(uint32 size_row, uint32 size_col);
+void GMA_double_destroy(GMA_double* in);
+void GMA_double_inv(GMA_double *a, GMA_double *I);
+void GMA_double_mul(GMA_double *a, GMA_double *b, GMA_double *out);
+void GMA_double_Tran(GMA_double *a, GMA_double *out);
+void GMA_double_sub(GMA_double *a, GMA_double *b, GMA_double *out);
+void GMA_double_printf(GMA_double *a);
+
+double ImageNoiseCal(uint16* input, CSize img_size);
+void EdgeAdaptiveSmoothing(uint16* input, CSize img_size, double sigma, int repeat);
+void STDKenel_angle(UGRID *input, CSize grids_size, int masksize);
+void STDKenel_height(UGRID *input, CSize grids_size, int masksize);
+void STDKenel_LSF(UGRID *input, CSize grids_size, int count_MPs, D3DPOINT *ptslists, D3DPOINT *scaled_ptslists, double gridspace, double minX, double minY,int *numpts, int row_interval);
+double LocalSurfaceFitting(F3DPOINT *input, int row_size, int col_size, double grid, double minX, double minY, double X, double Y, int *numpts, int row_interval);
