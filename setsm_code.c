@@ -27,10 +27,10 @@
 #define REAL double
 
 #include "setsm_code.h"
-#ifdef VLIBRARY
-#include "voronoi.h"
-#elif TRILIBRARY
+#ifdef TRILIBRARY
 #include "triangle.h"
+#else
+#include "voronoi.h"
 #endif
 #include "math.h"
 #include <omp.h>
@@ -11116,7 +11116,7 @@ double minX_ptslists = min_max[0];
 double minY_ptslists = min_max[1];
 double maxX_ptslists = min_max[2];
 double maxY_ptslists = min_max[3];
-#ifdef VLIBRARY
+#ifdef __VORONOI_H
 	double distX_ptslists, distY_ptslists;
 	double Scale_ptslists = 1000;
 	Site *(*next)();
