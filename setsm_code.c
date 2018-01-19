@@ -30,7 +30,8 @@
 #ifdef TRILIBRARY
 #include "triangle.h"
 #else
-#include "voronoi.h"
+#define VLIBRARY
+#include "voronoi_setsm.h"
 #endif
 #include "math.h"
 #include <omp.h>
@@ -11116,7 +11117,7 @@ double minX_ptslists = min_max[0];
 double minY_ptslists = min_max[1];
 double maxX_ptslists = min_max[2];
 double maxY_ptslists = min_max[3];
-#ifdef __VORONOI_H
+#ifdef VLIBRARY
 	double distX_ptslists, distY_ptslists;
 	double Scale_ptslists = 1000;
 	Site *(*next)();

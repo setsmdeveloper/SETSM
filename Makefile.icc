@@ -21,8 +21,8 @@ setsm : setsm_code.o voronoi.o
 setsm_code.o : Typedefine.h setsm_code.h setsm_code.c voronoi.o
 	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
 
-voronoi.o: voronoi.c voronoi.h
-	$(CC) $(CFLAGS) $(INCS) -c -o voronoi.o voronoi.c
+voronoi.o: voronoi_setsm.c voronoi_setsm.h
+	$(CC) $(CFLAGS) $(INCS) -c -o voronoi.o voronoi_setsm.c
 
 setsm_mpi : setsm_code_mpi.o voronoi.o
 	$(MPICC) $(MPICFLAGS) -o setsm_mpi setsm_code_mpi.o voronoi.o $(LDFLAGS) -lm -ltiff
