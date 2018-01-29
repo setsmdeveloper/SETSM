@@ -4,22 +4,23 @@ The Surface Extraction from TIN-based Searchspace Minimization (SETSM) software
 is a fully automatic algorithm for deriving Digital Terrain Models (DTM) from
 pairs of satellite imagery.
 
-SETSM homepage, https://mjremotesensing.wordpress.com/setsm/
+The SETSM homepage is [here](https://mjremotesensing.wordpress.com/setsm).
 
 SETSM was written by Myoung-Jong (MJ) Noh, Byrd Polar & Climate Rsch Cntr, 
-the Ohio State University, www.osu.edu.
+the [Ohio State University](http://www.osu.edu).
 Principal investigator is Ian Howat, School of Earth Sciences,
-the Ohio State University, www.osu.edu.
+the [Ohio State University](http://www.osu.edu).
 Software engineering team:  Judy Gardiner and Karen Tomko, 
-the Ohio Supercomputer Center, www.osc.edu
+the [Ohio Supercomputer Center](http://www.osc.edu).
 
 This software includes code derived from the voronoi algorithm by 
-Steven Fortune (http://ect.bell-labs.com/who/sjf/) 
-as modified by Derek Bradley 
-(http://zurich.disneyresearch.com/derekbradley/voronoi.html)
+[Steven Fortune](http://ect.bell-labs.com/who/sjf/) 
+as modified by
+[Derek Bradley](http://zurich.disneyresearch.com/derekbradley/voronoi.html)
 
-Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
-Algorithmica 2, 153-174.
+Reference:
+
+ > Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams, Algorithmica 2, 153-174.
 
 ## Installation instructions
 
@@ -27,7 +28,7 @@ Algorithmica 2, 153-174.
 
 SETSM is dependent on LibTIFF, version 4.0.3 or higher.  Your system may 
 already have LibTIFF installed.  If not, you must download and install it 
-separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
+separately.  Download LibTIFF [here](http://libtiff.maptools.org/) and install
 it according to the instructions in the README file.  In short,
 ```
 ./configure --prefix=/directory-to-install-in
