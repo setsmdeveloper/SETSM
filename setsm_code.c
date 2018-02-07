@@ -748,12 +748,11 @@ int main(int argc,char *argv[])
 				
 				printf("param %s %d\n", param.direction,param.zone);
 				param.projection = args.projection;
-                orthogeneration(param,args,args.Image1, DEMFilename, Outputpath,1);
-                if(!args.check_ortho)
-                    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
-                else if(args.ortho_count == 2)
-                    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
-				
+		orthogeneration(param,args,args.Image1, DEMFilename, Outputpath,1);
+		if(!args.check_ortho)
+		    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
+		else if(args.ortho_count == 2)
+		    orthogeneration(param,args,args.Image2, DEMFilename, Outputpath,2);
 			}
 			else
 				printf("Please check input 1 and input 2. Both is same\n");
@@ -1440,6 +1439,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 
 
 		    proinfo.IsRA		= false;
+
+					if (!args.RA_only)
+					{
 		    tile_size			= 4000;
 		    
 		    if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
@@ -1660,6 +1662,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 		    
 		    fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
 		    fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+					} // if (!RA_only)
 		    fclose(pMetafile);
                 }
                 else
@@ -15120,6 +15123,9 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair)
 {
+	if(args.RA_only) {
+	    return;
+	}
 	char DEM_header[500];
 	char RPCFilename[500];
 	char OrthoFilename[500];
