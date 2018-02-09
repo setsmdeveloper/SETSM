@@ -1740,7 +1740,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 #ifdef BUILDMPI
 	//Reorder list of tiles for static load balancing
 	if (length > 1) {
-		reorder_list_of_tiles(proinfo, iterations, length, col_length, row_length);
+		reorder_list_of_tiles(iterations, length, col_length, row_length);
 	}
 #endif
 
