@@ -39,6 +39,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include <string.h>
 #ifdef BUILDMPI
 #include "mpi.h"
 #endif
@@ -1698,40 +1699,68 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 }
 
 #ifdef BUILDMPI
+// Read tile info
+int read_tile_info(FILE* inputFile, int row[], int col[], int mp[]) {
+	int flag = 0;
+	char line[1024];
+	int i = 0;
+
+	while (fgets(line, 1024, inputFile) != NULL) {
+		if (strstr(line, "MPs") != NULL) {
+			flag = 1;
+			continue;
+		}
+
+		if (flag) {
+			sscanf(line, "%i\t%i\t%i", &row[i], &col[i], &mp[i]);
+			i++;
+		}
+	}
+	return 0;
+} 
+
 // Reorder tiles for static load balancing with MPI
-int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
+int reorder_list_of_tiles(ProInfo proinfo, int iterations[], int length, int col_length, int row_length)
 {
-	int i,j;
+	FILE* tileInfoFile;
+	char path[500];
+	sprintf(path,"%s/txt/Tileinfo.txt",proinfo.save_filepath);
+	tileInfoFile = fopen(path,"r");
 
-	int *temp = (int*)malloc(col_length*row_length*2*sizeof(int));
-	int midrow = ceil(row_length / 2.0);
-	int midcol = ceil(col_length / 2.0);
-
-	for (i = 0; i < length*2; i += 2)
-	{
-	    int closest = 0;
-	    int closest_dist = midrow + midcol;
-	    for (j = 0; j < length*2; j += 2)
-	    {
-			int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
-			if (new_dist <= closest_dist)
-			{
-		    	closest_dist = new_dist;
-		    	closest = j;
-			}
-	    }
-	    temp[i] = iterations[closest];
-	    temp[i+1] = iterations[closest+1];
-	    iterations[closest] = -1;
-	    iterations[closest+1] = -1;
+	if (tileInfoFile == 0) {
+		printf("Cannot open %s \n", path);
+		return 1;
 	}
 
-	for (i = 0; i < length*2; i++)
-	{
-	    iterations[i] = temp[i];
+	int *row = (int *)malloc(length * sizeof(int));
+	int *col = (int *)malloc(length * sizeof(int));
+	int *mp = (int *)malloc(length * sizeof(int));
+	read_tile_info(tileInfoFile, row, col, mp);
+
+	int i,j,key;
+	int tmpRow, tmpCol;
+	// insertion sort
+	for (int i = 2; i < length * 2; i += 2) {
+		tmpRow = iterations[i];
+		tmpCol = iterations[i+1];
+		key = mp[i / 2];
+		j = i - 2;
+
+		while (j >= 0 && mp[j/2] < key) {
+			iterations[j + 2] = iterations[j];
+			iterations[j + 3] = iterations[j + 1];
+			mp[j/2 + 1] = mp[j/2];
+			j = j - 2;
+		}
+		iterations[j + 2] = tmpRow; 
+		iterations[j + 3] = tmpCol;	
+		mp[j/2 + 1] = key;
 	}
-	free(temp);
-	return length;
+
+	free(row);
+	free(col);
+	free(mp);
+	return 0;
 }
 #endif
 
@@ -1754,6 +1783,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 	int col_length = t_col_end-t_col_start;
 	int *iterations = (int*)malloc(col_length*row_length*2*sizeof(int));
 	int length = 0;
+	int count_tri;
 
 	for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
 	{
@@ -1768,7 +1798,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 #ifdef BUILDMPI
 	//Reorder list of tiles for static load balancing
 	if (length > 1) {
-		reorder_list_of_tiles(iterations, length, col_length, row_length);
+		reorder_list_of_tiles(proinfo, iterations, length, col_length, row_length);
 	}
 #endif
 
@@ -2407,7 +2437,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 											
 											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max);
+											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
 											
 											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 											i = 0;
@@ -2493,7 +2523,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 											
 											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2);
+											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri);
 											
 											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 											i = 0;
@@ -2658,7 +2688,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 											UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 											
 											sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo.save_filepath);
-											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max);
+											TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
 											
 											trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 											i = 0;
@@ -10363,6 +10393,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 	int total_tri_counts = 0;
 	int total_mps_counts = 0;
 	int total_ptslist_count = 0;
+	int count_tri;
 	
 	int i = 0;
 	
@@ -10532,7 +10563,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 			UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
 			
 			sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
-			TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists,min_max);
+			TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists,min_max,&count_tri);
 			
 			i = 0;
 			for(i=0;i<count_tri;i++)
@@ -10591,6 +10622,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 	*p_flag				= true;
 	int count_MPs		= count_MPs_input;
 	int TIN_split_level = 0;
+	int count_tri;
 	
 	if (grid_resolution <= 8)
 	{
@@ -10718,7 +10750,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 					UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
 					
 					sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-					TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max);
+					TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
 					
 					trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
 					i = 0;
@@ -10833,7 +10865,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 						UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
 						
 						sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-						TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max);
+						TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri);
 						
 						free(input_tri_pts);
 						
@@ -10937,7 +10969,7 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 							UI3DPOINT* t_trilists	= (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
 							
 							sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-							TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max);
+							TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri);
 							
 							free(input_tri_pts);
  
@@ -11085,7 +11117,7 @@ int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Bounda
 	return count;
 }
 
-void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[])
+void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri)
 {
 double minX_ptslists = min_max[0];
 double minY_ptslists = min_max[1];
@@ -11096,12 +11128,9 @@ double maxY_ptslists = min_max[3];
 	double Scale_ptslists = 1000;
 	Site *(*next)();
 	
-	count_tri = 0;
+	*count_tri = 0;
 
-	sorted = triangulate_v = plot = debug = 0;
-	triangulate_v = 1;
-	freeinit(&sfl, sizeof(Site));
-	
+	initializeVoronoi();	
 	D3DPOINT *scaled_ptslists;
 
 	scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
@@ -11116,9 +11145,8 @@ double maxY_ptslists = min_max[3];
 
 	readsites(scaled_ptslists,numofpts);
 	next = nextone;
-	siteidx = 0;
 	geominit();
-	voronoi(next,trilists);
+	voronoi(next,trilists,&(*count_tri));
 	free(scaled_ptslists);
 	free_all();
 
@@ -11131,7 +11159,7 @@ double maxY_ptslists = min_max[3];
     D3DPOINT pt1, pt2, pt3;
 	
 	if(numofpts < 3){
-        count_tri = 0;
+        *count_tri = 0;
         return;
     }
 	D3DPOINT *shifted_ptslists;
@@ -11207,7 +11235,7 @@ double maxY_ptslists = min_max[3];
         }*/
 	}
 	
-	count_tri = out.numberoftriangles;
+	*count_tri = out.numberoftriangles;
 	//mid3 = clock();
 	/* Free all allocated arrays, including those allocated by Triangle. */
 

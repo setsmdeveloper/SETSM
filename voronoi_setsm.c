@@ -6,7 +6,48 @@
 #include <stdlib.h>
 #include <time.h>
 
+//edgelist
+int ELhashsize ;
+Site * bottomsite ;
+Freelist hfl ;
+Halfedge * ELleftend, * ELrightend, **ELhash ;
+int ntry, totalsearch ;
+
+//geometry
+double deltax, deltay ;
+int nsites, nedges, sqrt_nsites, nvertices ;
+Freelist efl ;
+
+//heap
+int PQmin, PQcount, PQhashsize ;
+Halfedge * PQhash ;
+
+//memory
+int siteidx ;
+char** memory_map;
+int nallocs = 0;
+
+//output
+int plot, debug;
+double ymax, ymin, xmax, xmin ;
+FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
+double pxmin, pxmax, pymin, pymax, cradius;
+
 //main.c
+int triangulate, sorted, siteidx;
+Site * sites;
+Freelist sfl;
+
+void initializeVoronoi(void)
+{
+
+	sorted = plot = debug = 0;
+	triangulate = 1;
+	freeinit(&sfl, sizeof(Site));
+
+	siteidx = 0;
+}
+
 int scomp(const void * vs1, const void * vs2)
 {
 	Point * s1 = (Point *)vs1 ;
@@ -102,12 +143,6 @@ Site *readone(void)
 }
 
 //edgelist.c
-int ELhashsize ;
-Site * bottomsite ;
-Freelist hfl ;
-Halfedge * ELleftend, * ELrightend, **ELhash ;
-
-int ntry, totalsearch ;
 
 void
 ELinitialize(void)
@@ -286,9 +321,6 @@ rightreg(Halfedge * he)
 }
 
 /*** GEOMETRY.C ***/
-double deltax, deltay ;
-int nedges, sqrt_nsites, nvertices ;
-Freelist efl ;
 
 void
 geominit(void)
@@ -502,8 +534,6 @@ ref(Site * v)
 }
 
 /*** HEAP.C ***/
-int PQmin, PQcount, PQhashsize ;
-Halfedge * PQhash ;
 
 void
 PQinsert(Halfedge * he, Site * v, double offset)
@@ -618,9 +648,6 @@ PQinitialize(void)
 
 
 /*** MEMORY.C ***/
-extern int sqrt_nsites, siteidx ;
-char** memory_map;
-int nallocs = 0;
 
 void
 freeinit(Freelist * fl, int size)
@@ -698,12 +725,8 @@ void free_all(void)
 
 
 
-/*** OUTPUT.C ***/
-extern int plot, debug, count_tri ;
-extern double ymax, ymin, xmax, xmin ;
-extern FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
 
-double pxmin, pxmax, pymin, pymax, cradius;
+/*** OUTPUT.C ***/
 
 void
 openpl(void)
@@ -728,12 +751,12 @@ range(double pxmin, double pxmax, double pymin, double pymax)
 void
 out_bisector(Edge * e)
 {
-	if (triangulate_v && plot && !debug)
+	if (triangulate && plot && !debug)
 	{
 		line(e->reg[0]->coord.x, e->reg[0]->coord.y,
 			 e->reg[1]->coord.x, e->reg[1]->coord.y) ;
 	}
-	if (!triangulate_v && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf("l %f %f %f\n", e->a, e->b, e->c) ;
 	}
@@ -747,11 +770,11 @@ out_bisector(Edge * e)
 void
 out_ep(Edge * e)
 {
-	if (!triangulate_v && plot)
+	if (!triangulate && plot)
 	{
 		clip_line(e) ;
 	}
-	if (!triangulate_v && !plot)
+	if (!triangulate && !plot)
 	{
 		printf("e %d", e->edgenbr);
 		printf(" %d ", e->ep[le] != (Site *)NULL ? e->ep[le]->sitenbr : -1) ;
@@ -762,7 +785,7 @@ out_ep(Edge * e)
 void
 out_vertex(Site * v)
 {
-	if (!triangulate_v && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf ("v %f %f\n", v->coord.x, v->coord.y) ;
 	}
@@ -775,11 +798,11 @@ out_vertex(Site * v)
 void
 out_site(Site * s)
 {
-	if (!triangulate_v && plot && !debug)
+	if (!triangulate && plot && !debug)
 	{
 		circle (s->coord.x, s->coord.y, cradius) ;
 	}
-	if (!triangulate_v && !plot && !debug)
+	if (!triangulate && !plot && !debug)
 	{
 		printf("s %f %f\n", s->coord.x, s->coord.y) ;
 	}
@@ -790,11 +813,11 @@ out_site(Site * s)
 }
 
 void
-out_triple(Site * s1, Site * s2, Site * s3)
+out_triple(Site * s1, Site * s2, Site * s3, int *count_tri)
 {
-	if (triangulate_v && !plot && !debug)
+	if (triangulate && !plot && !debug)
 	{
-		count_tri++;
+		(*count_tri)++;
 		fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 		//printf("%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 	}
@@ -936,8 +959,6 @@ clip_line(Edge * e)
 }
 
 /*** VORONOI.C ***/
-extern Site * bottomsite ;
-extern Halfedge * ELleftend, * ELrightend ;
 /*** implicit parameters: nsites, sqrt_nsites, xmin, xmax, ymin, ymax,
 	 : deltax, deltay (can all be estimates).
 	 : Performance suffers if they are wrong; better to make nsites,
@@ -945,7 +966,7 @@ extern Halfedge * ELleftend, * ELrightend ;
 ***/
 
 void
-voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
+voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists, int *count_tri)
 {
 	Site * newsite, * bot, * top, * temp, * p, * v ;
 	Point newintstar ;
@@ -1011,13 +1032,13 @@ voronoi(Site *(*nextsite)(void),UI3DPOINT* trilists)
 			
 			
 			//out_triple(Site * s1, Site * s2, Site * s3)
-			if (triangulate_v && !plot && !debug)
+			if (triangulate && !plot && !debug)
 			{
 				
-				trilists[count_tri].m_X = bot->sitenbr;
-				trilists[count_tri].m_Y = top->sitenbr;
-				trilists[count_tri].m_Z = rightreg(lbnd)->sitenbr;
-				count_tri++;
+				trilists[*count_tri].m_X = bot->sitenbr;
+				trilists[*count_tri].m_Y = top->sitenbr;
+				trilists[*count_tri].m_Z = rightreg(lbnd)->sitenbr;
+				(*count_tri)++;
 				
 				//fprintf(fid_triple,"%d %d %d\n", s1->sitenbr, s2->sitenbr, s3->sitenbr) ;
 				//printf("%d %d %d\n", bot->sitenbr, top->sitenbr, rightreg(lbnd)->sitenbr) ;

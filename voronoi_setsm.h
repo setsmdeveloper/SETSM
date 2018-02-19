@@ -60,14 +60,7 @@ typedef struct tagHalfedge
     double ystar ;
     struct tagHalfedge * PQnext ;
     } Halfedge ;
-/*
-typedef struct tagUI3DPoint
-{
-	uint32 m_X;
-	uint32 m_Y;
-	uint32 m_Z;
-} UI3DPOINT;
-*/
+
 /* edgelist.c */
 void ELinitialize(void) ;
 Halfedge * HEcreate(Edge *, int) ;
@@ -79,10 +72,6 @@ Halfedge * ELright(Halfedge *) ;
 Halfedge * ELleft(Halfedge *) ;
 Site * leftreg(Halfedge *) ;
 Site * rightreg(Halfedge *) ;
-extern int ELhashsize ;
-extern Site * bottomsite ;
-extern Freelist hfl ;
-extern Halfedge * ELleftend, * ELrightend, **ELhash ;
 
 /* geometry.c */
 void geominit(void) ;
@@ -94,9 +83,6 @@ double dist(Site *, Site *) ;
 void makevertex(Site *) ;
 void deref(Site *) ;
 void ref(Site *) ;
-extern double deltax, deltay ;
-extern int nsites, nedges, sqrt_nsites, nvertices ;
-extern Freelist sfl, efl ;
 
 /* heap.c */
 void PQinsert(Halfedge *, Site *, double) ;
@@ -106,21 +92,13 @@ int PQempty(void) ;
 Point PQ_min(void) ;
 Halfedge * PQextractmin(void) ;
 void PQinitialize(void) ;
-extern int PQmin, PQcount, PQhashsize ;
-extern Halfedge * PQhash ;
-
-/* getopt.c */
-extern int getopt(int, char *const *, const char *);
 
 /* main.c */
 int scomp(const void * vs1, const void * vs2);
 Site *nextone(void);
 void readsites(D3DPOINT *ptslists,int numofpts);
 Site *readone(void);
-extern int triangulate_v,sorted,plot, debug, count_tri,siteidx;
-double xmin, xmax, ymin, ymax;
-Site * sites;
-Freelist sfl;
+void initializeVoronoi(void);
 
 /* memory.c */
 void freeinit(Freelist *, int) ;
@@ -138,12 +116,12 @@ void out_bisector(Edge *) ;
 void out_ep(Edge *) ;
 void out_vertex(Site *) ;
 void out_site(Site *) ;
-void out_triple(Site *, Site *, Site *) ;
+void out_triple(Site *, Site *, Site *, int*) ;
 void plotinit(void) ;
 void clip_line(Edge *) ;
 
 /* voronoi.c */
-void voronoi(Site *(*)(void),UI3DPOINT*) ;
+void voronoi(Site *(*)(void),UI3DPOINT*, int*) ;
 
 #endif  
 
