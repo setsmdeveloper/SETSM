@@ -9,25 +9,24 @@
 CC=pgcc
 MPICC=mpicc
 CFLAGS=-c99 -O3 -mp=allcores -fast
-CSWITCHES =-DLINUX
 MPICFLAGS=$(CFLAGS) -DBUILDMPI
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
 
-setsm : setsm_code.o voronoi.o
-	$(CC) $(CFLAGS)  -o setsm setsm_code.o voronoi.o $(LDFLAGS) -lm -ltiff
+setsm : setsm_code.o voronoi_setsm.o
+	$(CC) $(CFLAGS) -o setsm setsm_code.o voronoi_setsm.o $(LDFLAGS) -lm -ltiff
 
-setsm_code.o : Typedefine.h setsm_code.h setsm_code.c voronoi.o
+setsm_code.o : Typedefine.h setsm_code.h setsm_code.c
 	$(CC) $(CFLAGS) $(INCS) -c setsm_code.c
 
-voronoi.o: voronoi_setsm.c voronoi_setsm.h
-	$(CC) $(CFLAGS) $(INCS) -c -o voronoi.o voronoi_setsm.c
+voronoi_setsm.o: voronoi_setsm.c voronoi_setsm.h Typedefine.h
+	$(CC) $(CFLAGS) $(INCS) -c -o voronoi_setsm.o voronoi_setsm.c
 
-setsm_mpi : setsm_code_mpi.o voronoi.o
-	$(MPICC) $(MPICFLAGS) -o setsm_mpi setsm_code_mpi.o voronoi.o $(LDFLAGS) -lm -ltiff
+setsm_mpi : setsm_code_mpi.o voronoi_setsm.o
+	$(MPICC) $(MPICFLAGS) -o setsm_mpi setsm_code_mpi.o voronoi_setsm.o $(LDFLAGS) -lm -ltiff
 
-setsm_code_mpi.o : Typedefine.h setsm_code.h setsm_code.c voronoi.o
+setsm_code_mpi.o : Typedefine.h setsm_code.h setsm_code.c
 	$(MPICC) $(MPICFLAGS) $(INCS) -o setsm_code_mpi.o -c setsm_code.c
 
 .PHONY: clean
