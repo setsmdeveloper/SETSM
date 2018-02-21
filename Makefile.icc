@@ -8,7 +8,7 @@
 
 CC=icc
 MPICC=mpicc
-CFLAGS=-std=c99 -O3 -qopenmp -xHost
+CFLAGS=-std=c99 -O3 -qopenmp -xHost -fp-model precise
 MPICFLAGS=$(CFLAGS) -DBUILDMPI
 
 INCS=$(TIFFINC)
