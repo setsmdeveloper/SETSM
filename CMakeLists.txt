@@ -36,7 +36,7 @@ endif (NOT DEFINED OPENMP_OPTION)
 # Create target
 project (setsm C)
 MESSAGE("CMAKE_C_COMPILER_ID is ${CMAKE_C_COMPILER_ID}")
-add_executable (setsm setsm_code.c)
+add_executable (setsm setsm_code.c voronoi_setsm.c)
 set_target_properties (setsm PROPERTIES C_STANDARD 99)
 
 # Check compiler
