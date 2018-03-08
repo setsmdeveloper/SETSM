@@ -24,15 +24,16 @@
  * Algorithmica 2, 153-174.
  */
 
-#define REAL double
-
 #include "setsm_code.h"
+
 #ifdef TRILIBRARY
+#define REAL double
 #include "triangle.h"
 #else
 #define VLIBRARY
 #include "voronoi_setsm.h"
 #endif
+
 #include "math.h"
 #include <omp.h>
 #include <time.h>
@@ -42,6 +43,8 @@
 #ifdef BUILDMPI
 #include "mpi.h"
 #endif
+
+const char setsm_version[] = "3.3.0";
 
 char *dirname(char *path);
 
@@ -123,7 +126,7 @@ int main(int argc,char *argv[])
 			printf("\t\t(execute setsm with image1, image2 and output directory for saving the results with user-defined options\n");
 			printf("\t\texample usage : ./setsm /home/image1.tif /home/image2.tif /home/output -outres 10 -threads 12 -seed /home/seed_dem.bin 50\n\n");
 			
-			printf("setsm version : 3.2.8\n");
+			printf("setsm version : %s\n", setsm_version);
 			printf("supported image format : tif with xml, and binary with envi header file\n");
 			printf("options\n");
 			printf("\t[-outres value]\t: Output grid spacing[m] of Digital Elevation Model(DEM)\n");
@@ -135,7 +138,7 @@ int main(int argc,char *argv[])
 			printf("\t[-projection value]\t: Set planemetric coordinate projection. The value is 'ps' or 'utm'. Default projection is automatically defined by latitude of the input information of xml (between 60N and 60S is utm, and other is ps\n");
 			printf("\t[-threads value]\t : Total number of threads for utilizing openmp parallel codes\n");
 			printf("\t\t(if you don't know about this value, input '0'. Openmp can automatically detect a best value of your system)\n");
-			printf("\t[-RAonly value]\t: If set to 1 (true), program will exit after RA comprehension. Default = 0 (false)\n");
+			printf("\t[-RAonly value]\t: If set to 1 (true), program will exit after RA calculation. Default = 0 (false)\n");
 		}
 	}
 	else if(argc == 3)
@@ -883,7 +886,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
 			{
 				pMetafile	= fopen(metafilename,"w");
 			
-				fprintf(pMetafile,"SETSM Version=3.2.8\n");
+				fprintf(pMetafile,"SETSM Version=%s\n", setsm_version);
 			}
 			
 			time_t current_time;
