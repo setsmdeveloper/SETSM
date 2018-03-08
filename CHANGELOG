@@ -1,0 +1,18 @@
+SETSM Change Log
+----------------
+This file briefly describes the changes to the SETSM software package.  
+The most recent changes are listed first.
+
+SETSM 3.3.0 (03/20/2018)
+
+* Changes since 3.2.8
+    - Code restructuring and cleanup
+    - Cleanup of MPI code, renaming of executable
+    - Added hooks to support Triangle as an alternative to Fortune's voronoi
+    - Changed int to long in some functions to support larger grids
+    - Improved handling of out-of-memory situations
+    - Added instructions (README_Windows.md) for building and running on Windows
+    - Added an option -RAonly intended to improved efficiency of MPI parallel 
+      computing. RA computation is not MPI parallelized and can now be done 
+      separately (prior to) the main computation.
+

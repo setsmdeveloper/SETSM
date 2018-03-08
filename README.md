@@ -57,6 +57,12 @@ to the Makefile.
 If SETSM is built with both MPI and OpenMP it is usually best to run one 
 MPI process per compute node and allow threading within the node.
 
+#### A note about precision
+
+SETSM can be quite sensitive to roundoff error for some terrains.  We have 
+tried to set appropriate compilation flags in the Makefiles, but you may need 
+to experiment with floating-point related options if you have problems.
+
 ### Building and installing SETSM using CMake
 
 A CMake build is provided as an alternative to the Makefile method described 
@@ -101,6 +107,17 @@ make install
 ```
 
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
+
+### Building SETSM with an alternative triangulation library
+
+By default, SETSM uses Steve Fortune's voronoi code for Delaunay triangulation.  
+It also supports Jonathan Shewchuk's Triangle library, available at 
+https://www.cs.cmu.edu/~quake/triangle.html.  To use Triangle in place of the 
+default triangulation code, download the code and place the files triangle.c 
+and triangle.h in the directory with the SETSM code.  Use Makefile.Triangle as 
+a model for building SETSM with Triangle.  Note that Triangle has restrictions 
+related to commercial distribution.  The user is responsible for complying with 
+all license terms.
 
 ## License
 
