@@ -78,24 +78,26 @@ typedef struct tagD3DPoint
 	double m_X;
 	double m_Y;
 	double m_Z;
+    uint8 flag;
 } D3DPOINT;
 
 typedef struct tagTransParam
 {
-	bool bHemisphere;
-	// a and b are radius and eccentricity of WGS84 ellipsoid, repectively.
-	float a, e;
-	// phi_c and lambda_0 are the latitude of true scale of standard parallel and meridian along positive Y axis, respectively.
-	float phi_c, lambda_0;
 	double t_c, m_c;
-	int pm;
-	
 	//UTM param
 	double sa, sb, e2, e2cuadrada, c;
+	// a and b are radius and eccentricity of WGS84 ellipsoid, repectively.
+	double a, e;
+	// phi_c and lambda_0 are the latitude of true scale of standard parallel and meridian along positive Y axis, respectively.
+	double phi_c, lambda_0;
+	
+	int pm;
 	int zone;
-	char direction[10];
 	int projection;
     int utm_zone;
+	
+	char direction[10];
+	bool bHemisphere;
 } TransParam;
 
 typedef struct tagCSize
@@ -115,47 +117,66 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-	float result0;
-	float result1;
-	float result2;
-	float result3;
-	float result4;
+	double result0;
+	double result1;
+	double result2;
+	double result3;
+	double result4;
+	
+	double INCC;
+	double GNCC;
+	
 	int roh_count;
 	uint8 mag_tag;
-	float INCC;
-	float GNCC;
+	
 } NCCresult;
 
 typedef struct UpdateGrid{
-	float minHeight;
-	float maxHeight;
+	double minHeight;
+	double maxHeight;
 	
-	float t_minHeight;
-	float t_maxHeight;
+	double t_minHeight;
+	double t_maxHeight;
 	
-	float Height; //after blunder detection
+	double Height; //after blunder detection
+	double roh;
+	double Matched_height;//before blunder detection
+	double ortho_ncc;
+	double angle;
+//	double *false_h;
+
+//	uint16 false_h_count;
 	uint8 Matched_flag;
-	float roh;
 	uint8 anchor_flag;
-	float Matched_height;//before blunder detection
-	float ortho_ncc;
-	float angle;
-	uint16 false_h_count;
-	float *false_h;
-	
 }UGRID;
 
 typedef struct BlunderIP{
-	uint8 Pyramid_step;
 	CSize Size_Grid2D;
-	int* Boundary;
-	float gridspace;
+	double gridspace;
+	double Hinterval; 
+	double* Boundary;
+	uint8 Pyramid_step;
 	uint8 iteration;
-	float Hinterval;
 	bool height_check_flag;
 }BL;
 
 typedef struct ProjectInfo{
+	double resolution;
+	double DEM_resolution;
+	double preDEM_space;
+	double cal_boundary[4];
+	double RA_param[2];
+	double seedDEMsigma;
+	
+	double minHeight;
+	double maxHeight;
+	
+	int start_row;
+	int end_row;
+	int start_col;
+	int end_col;
+	int threads_num;
+	
 	char LeftImagefilename[500];
 	char RightImagefilename[500];
 	char LeftRPCfilename[500];
@@ -167,20 +188,6 @@ typedef struct ProjectInfo{
 	char priori_DEM_tif[500];
 	char metafilename[500];
 	
-	float resolution;
-	float DEM_resolution;
-	float preDEM_space;
-	float cal_boundary[4];
-	float RA_param[2];
-	float seedDEMsigma;
-	
-	float minHeight;
-	float maxHeight;
-	int start_row;
-	int end_row;
-	int start_col;
-	int end_col;
-	
 	bool check_minH;
 	bool check_maxH;
 	bool check_tiles_SR;
@@ -191,15 +198,44 @@ typedef struct ProjectInfo{
 	bool check_boundary;
 	bool check_checktiff;
     bool check_ortho;
+	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
-
-	int threads_num;
-	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
 } ProInfo;
 
 typedef struct ArgumentInfo{
+	double DEM_space;
+	double seedDEMsigma;
+	double minHeight;
+	double maxHeight;
+	double ra_line;
+	double ra_sample;
+	double Min_X, Max_X, Min_Y, Max_Y;
+	double image_resolution;
+	double overlap_length;
+	
 	int check_arg; // 0 : no input, 1: 3 input
+	int Threads_num;
+	int start_row;
+	int end_row;
+	int start_col;
+	int end_col;
+	int RA_row;
+	int RA_col;
+	int tilesize;
+	int projection; //PS = 1, UTM = 2
+    int utm_zone;
+    int sensor_provider; //DG = 1, Pleiades = 2
+    int ortho_count;
+    int RA_only;
+	
+    char Image1[500];
+	char Image2[500];
+	char Outputpath[500];
+	char Outputpath_name[500];
+	char seedDEMfilename[500];
+	char metafilename[500];
+	
 	bool check_DEM_space;
 	bool check_Threads_num;
 	bool check_seeddem;
@@ -217,168 +253,50 @@ typedef struct ArgumentInfo{
 	bool check_tilesize;
 	bool check_boundary;
 	bool check_checktiff;
+	bool check_RA_only;
     bool check_ortho;
     bool check_imageresolution;
-	char Image1[500];
-	char Image2[500];
-	char Outputpath[500];
-	char Outputpath_name[500];
-	int Threads_num;
-	float DEM_space;
-	char seedDEMfilename[500];
-	char metafilename[500];
-	float seedDEMsigma;
-	float minHeight;
-	float maxHeight;
-	int start_row;
-	int end_row;
-	int start_col;
-	int end_col;
-	float ra_line;
-	float ra_sample;
-	int RA_row;
-	int RA_col;
-	int tilesize;
-	int Min_X, Max_X, Min_Y, Max_Y;
-	
-	int projection; //PS = 1, UTM = 2
-    int utm_zone;
-    int sensor_provider; //DG = 1, Pleiades = 2
-    float image_resolution;
-    int ortho_count;
-    float overlap_length;
-	
 } ARGINFO;
 
+typedef struct tagImageInfo
+{
+    float Mean_sun_azimuth_angle;
+    float Mean_sun_elevation;
+    float Mean_sat_azimuth_angle;
+    float Mean_sat_elevation;
+    float Intrack_angle;
+    float Crosstrack_angle;
+    float Offnadir_angle;
+    float cloud;
+    float Image_ori;
+    float Image_ori_azi;
+    float dx,dy,f;
+    float UL[3], UR[3],LR[3],LL[3];
+	
+	int month;
+    int date;
+    int year;
+    int scandirection;
+    
+    char filename[500];
+    char Ofilename[500];
+    char imagetime[500];
+    char SatID[500];
+} ImageInfo;
+
+typedef struct tagImageGSD
+{
+    float row_GSD;
+    float col_GSD;
+    float pro_GSD;
+} ImageGSD;
+
+typedef struct tagBandInfo
+{
+    float abscalfactor;
+    float effbw;
+    float tdi;
+} BandInfo;
+
 #endif
-
-#ifndef __VDEFS_H
-#define __VDEFS_H
-
-#ifndef NULL
-#define NULL 0
-#endif
-
-#define DELETED -2
-
-typedef struct tagFreenode
-{
-	struct tagFreenode * nextfree;
-} Freenode ;
-
-
-typedef struct tagFreelist
-{
-	Freenode * head;
-	int nodesize;
-} Freelist ;
-
-typedef struct tagPoint
-{
-	float x ;
-	float y ;
-} Point ;
-
-/* structure used both for sites and for vertices */
-
-typedef struct tagSite
-{
-	Point coord ;
-	int sitenbr ;
-	int refcnt ;
-} Site ;
-
-
-typedef struct tagEdge
-{
-	float a, b, c ;
-	Site * ep[2] ;
-	Site * reg[2] ;
-	int edgenbr ;
-} Edge ;
-
-#define le 0
-#define re 1
-
-typedef struct tagHalfedge
-{
-	struct tagHalfedge * ELleft ;
-	struct tagHalfedge * ELright ;
-	Edge * ELedge ;
-	int ELrefcnt ;
-	char ELpm ;
-	Site * vertex ;
-	float ystar ;
-	struct tagHalfedge * PQnext ;
-} Halfedge ;
-
-/* edgelist.c */
-void ELinitialize(void) ;
-Halfedge * HEcreate(Edge *, int) ;
-void ELinsert(Halfedge *, Halfedge *) ;
-Halfedge * ELgethash(int) ;
-Halfedge * ELleftbnd(Point *) ;
-void ELdelete(Halfedge *) ;
-Halfedge * ELright(Halfedge *) ;
-Halfedge * ELleft(Halfedge *) ;
-Site * leftreg(Halfedge *) ;
-Site * rightreg(Halfedge *) ;
-extern int ELhashsize ;
-extern Site * bottomsite ;
-extern Freelist hfl ;
-extern Halfedge * ELleftend, * ELrightend, **ELhash ;
-
-/* geometry.c */
-void geominit(void) ;
-Edge * bisect(Site *, Site *) ;
-Site * intersect(Halfedge *, Halfedge *) ;
-int right_of(Halfedge *, Point *) ;
-void endpoint(Edge *, int, Site *) ;
-float dist(Site *, Site *) ;
-void makevertex(Site *) ;
-void deref(Site *) ;
-void ref(Site *) ;
-extern float deltax, deltay ;
-extern int nsites, nedges, sqrt_nsites, nvertices ;
-extern Freelist sfl, efl ;
-
-/* heap.c */
-void PQinsert(Halfedge *, Site *, float) ;
-void PQdelete(Halfedge *) ;
-int PQbucket(Halfedge *) ;
-int PQempty(void) ;
-Point PQ_min(void) ;
-Halfedge * PQextractmin(void) ;
-void PQinitialize(void) ;
-extern int PQmin, PQcount, PQhashsize ;
-extern Halfedge * PQhash ;
-
-/* getopt.c */
-extern int getopt(int, char *const *, const char *);
-
-/* memory.c */
-void freeinit(Freelist *, int) ;
-char *getfree(Freelist *) ;
-void makefree(Freenode *, Freelist *) ;
-char *myalloc(unsigned) ;
-void free_all(void);
-
-/* output.c */
-void openpl(void) ;
-void line(float, float, float, float) ;
-void circle(float, float, float) ;
-void range(float, float, float, float) ;
-void out_bisector(Edge *) ;
-void out_ep(Edge *) ;
-void out_vertex(Site *) ;
-void out_site(Site *) ;
-void out_triple(Site *, Site *, Site *) ;
-void plotinit(void) ;
-void clip_line(Edge *) ;
-
-/* voronoi.c */
-void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
-
-#endif	
-
 
