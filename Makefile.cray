@@ -4,7 +4,7 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-#TIFFPATH=/fs/project/PZS0530/setsm/tiff-4.0.3
+#TIFFPATH=$(HOME)/libtiff
 #TIFFINC=-I$(TIFFPATH)/include
 #TIFFLIB=-L$(TIFFPATH)/lib
 
