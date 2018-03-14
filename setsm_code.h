@@ -38,13 +38,6 @@
 #define	 MAXSTR		 48
 #define	 SQ(x)		 (x) * (x)
 
-FILE *fid_bisector, *fid_ep, *fid_vertex, *fid_site, *fid_triple;
-int sorted, triangulate, plot, debug, count_tri;
-int nsites, siteidx ;
-double xmin, xmax, ymin, ymax ;
-Site * sites ;
-Freelist sfl ;
-
 typedef struct nnXY
 {
 	double X;
@@ -144,7 +137,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration);
 
 UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
-						 D3DPOINT *scaled_ptslists,
+						 double min_max[],
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
@@ -173,11 +166,7 @@ int AdjustParam(uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT Lsta
 bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
 			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
 
-int scomp(const void * vs1, const void * vs2);
-Site *nextone(void);
-void readsites(D3DPOINT *ptslists,int numofpts);
-Site *readone(void);
-void TINCreate(D3DPOINT *ptslists,char *filename_tri,int numofpts,UI3DPOINT* trilists);
+void TINCreate(D3DPOINT *ptslists,char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri);
 bool blunder_detection_TIN(int pre_DEMtif, double* ortho_ncc, double* INCC,bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
 						   D3DPOINT *ptslists, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 
 						   uint32 *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma);
