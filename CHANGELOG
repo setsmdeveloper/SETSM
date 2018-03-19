@@ -3,7 +3,12 @@ SETSM Change Log
 This file briefly describes the changes to the SETSM software package.  
 The most recent changes are listed first.
 
-SETSM 3.3.0 (03/20/2018)
+SETSM 3.3.1 (03/19/2018)
+
+* Changes since 3.3.0
+    - orthoimage generation bug fixed about xml file format
+
+SETSM 3.3.0 (03/14/2018)
 
 * Changes since 3.2.8
     - Code restructuring and cleanup
