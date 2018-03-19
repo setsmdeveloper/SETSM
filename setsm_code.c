@@ -14999,6 +14999,24 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 	tmp_chr = remove_ext_ortho(ImageFilename);
 	sprintf(RPCFilename,"%s.xml",tmp_chr);
 	
+    FILE* fid_xml;
+    fid_xml = fopen(RPCFilename,"r");
+    if(!fid_xml)
+    {
+        sprintf(RPCFilename,"%s.XML",tmp_chr);
+        FILE* fid_XML;
+        fid_XML = fopen(RPCFilename,"r");
+        if(!fid_XML)
+        {
+            printf("Please check xml file!! SETSM supports a format of 'xml' or 'XML'");
+            exit(1);
+        }
+        else
+            fclose(fid_XML);
+    }
+    else
+        fclose(fid_xml);
+    
 	tmp_chr = remove_ext_ortho(DEMFilename);
 	sprintf(DEM_header,"%s.hdr",tmp_chr);
 	
