@@ -143,16 +143,17 @@ typedef struct UpdateGrid{
 	double Matched_height;//before blunder detection
 	double ortho_ncc;
 	double angle;
-    double angle_std;
-    double h_std;
-    double lsf_std;
-    int lsf_count;
 //	double *false_h;
 
 //	uint16 false_h_count;
 	uint8 Matched_flag;
 	uint8 anchor_flag;
 }UGRID;
+
+typedef struct LSFinfo{
+    float lsf_std;
+    int lsf_kernel;
+}LSFINFO;
 
 typedef struct BlunderIP{
 	CSize Size_Grid2D;
@@ -231,6 +232,7 @@ typedef struct ArgumentInfo{
     int utm_zone;
     int sensor_provider; //DG = 1, Pleiades = 2
     int ortho_count;
+    int RA_only;
 	
     char Image1[500];
 	char Image2[500];
@@ -256,8 +258,13 @@ typedef struct ArgumentInfo{
 	bool check_tilesize;
 	bool check_boundary;
 	bool check_checktiff;
+	bool check_RA_only;
     bool check_ortho;
     bool check_imageresolution;
+    bool check_LSF;
+    bool check_LSF_DEM;
+    bool check_LSFDEMpath;
+    bool check_LSF2;
 } ARGINFO;
 
 typedef struct tagImageInfo
@@ -274,8 +281,8 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
-	float convergence_angle;
-    
+    float convergence_angle;
+	
 	int month;
     int date;
     int year;
@@ -303,140 +310,11 @@ typedef struct tagBandInfo
 
 typedef struct
 {
-    uint32 ncols;
-    uint32 nrows;
-    double **val;
-    double *data;
+    long int ncols;
+    long int nrows;
+    long double **val;
+    long double *data;
 } GMA_double;
 
 #endif
-
-#ifndef __VDEFS_H
-#define __VDEFS_H
-
-#ifndef NULL
-#define NULL 0
-#endif
-
-#define DELETED -2
-
-typedef struct tagFreenode
-{
-	struct tagFreenode * nextfree;
-} Freenode ;
-
-
-typedef struct tagFreelist
-{
-	Freenode * head;
-	int nodesize;
-} Freelist ;
-
-typedef struct tagPoint
-{
-	double x ;
-	double y ;
-} Point ;
-
-/* structure used both for sites and for vertices */
-
-typedef struct tagSite
-{
-	Point coord ;
-	int sitenbr ;
-	int refcnt ;
-} Site ;
-
-
-typedef struct tagEdge
-{
-	double a, b, c ;
-	Site * ep[2] ;
-	Site * reg[2] ;
-	int edgenbr ;
-} Edge ;
-
-#define le 0
-#define re 1
-
-typedef struct tagHalfedge
-{
-	double ystar ;
-	int ELrefcnt ;
-	struct tagHalfedge * ELleft ;
-	struct tagHalfedge * ELright ;
-	struct tagHalfedge * PQnext ;
-	Edge * ELedge ;
-	Site * vertex ;
-	char ELpm ;
-} Halfedge ;
-
-/* edgelist.c */
-void ELinitialize(void) ;
-Halfedge * HEcreate(Edge *, int) ;
-void ELinsert(Halfedge *, Halfedge *) ;
-Halfedge * ELgethash(int) ;
-Halfedge * ELleftbnd(Point *) ;
-void ELdelete(Halfedge *) ;
-Halfedge * ELright(Halfedge *) ;
-Halfedge * ELleft(Halfedge *) ;
-Site * leftreg(Halfedge *) ;
-Site * rightreg(Halfedge *) ;
-extern int ELhashsize ;
-extern Site * bottomsite ;
-extern Freelist hfl ;
-extern Halfedge * ELleftend, * ELrightend, **ELhash ;
-
-/* geometry.c */
-void geominit(void) ;
-Edge * bisect(Site *, Site *) ;
-Site * intersect(Halfedge *, Halfedge *) ;
-int right_of(Halfedge *, Point *) ;
-void endpoint(Edge *, int, Site *) ;
-double dist(Site *, Site *) ;
-void makevertex(Site *) ;
-void deref(Site *) ;
-void ref(Site *) ;
-extern double deltax, deltay ;
-extern int nsites, nedges, sqrt_nsites, nvertices ;
-extern Freelist sfl, efl ;
-
-/* heap.c */
-void PQinsert(Halfedge *, Site *, double) ;
-void PQdelete(Halfedge *) ;
-int PQbucket(Halfedge *) ;
-int PQempty(void) ;
-Point PQ_min(void) ;
-Halfedge * PQextractmin(void) ;
-void PQinitialize(void) ;
-extern int PQmin, PQcount, PQhashsize ;
-extern Halfedge * PQhash ;
-
-/* getopt.c */
-extern int getopt(int, char *const *, const char *);
-
-/* memory.c */
-void freeinit(Freelist *, int) ;
-char *getfree(Freelist *) ;
-void makefree(Freenode *, Freelist *) ;
-char *myalloc(unsigned) ;
-void free_all(void);
-
-/* output.c */
-void openpl(void) ;
-void line(double, double, double, double) ;
-void circle(double, double, double) ;
-void range(double, double, double, double) ;
-void out_bisector(Edge *) ;
-void out_ep(Edge *) ;
-void out_vertex(Site *) ;
-void out_site(Site *) ;
-void out_triple(Site *, Site *, Site *) ;
-void plotinit(void) ;
-void clip_line(Edge *) ;
-
-/* voronoi.c */
-void voronoi(Site *(*)(),UI3DPOINT* trilists) ;
-
-#endif	
 
