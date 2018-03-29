@@ -2908,7 +2908,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 										{
-                                            MPP = MPP_stereo_angle;
+                                            if(level > 2)
+                                                MPP = MPP_stereo_angle;
+                                            else
+                                                MPP = MPP_simgle_image;
                                             
 											Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 											printf("update GridPT3\n");
@@ -3072,7 +3075,10 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                         }
 										else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 										{
-                                            MPP = MPP_stereo_angle;
+                                            if(level > 2)
+                                                MPP = MPP_stereo_angle;
+                                            else
+                                                MPP = MPP_simgle_image;
                                             
 											Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
 											printf("update GridPT3\n");
@@ -8756,7 +8762,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                                 double pos_row_right_ortho= -100;
                                                 double pos_col_right_ortho= -100;
                                                 
-                                                if(row != 0 || col != 0)
+                                                if(row != 0 && col != 0)
                                                 {
                                                     long int pt_index_temp,pt_index_dem;
                                                     double t_X, t_Y;
@@ -8882,32 +8888,30 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                                                             Sum_R_2_mag_ortho	= Sum_R_2_mag_ortho	 + right_mag_patch;
                                                             Sum_L2_2_mag_ortho	= Sum_L2_2_mag_ortho + L2_mag;
                                                             Sum_R2_2_mag_ortho	= Sum_R2_2_mag_ortho + R2_mag;
-							}              
-						    }
-                                                    
-                                                    
-						    size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
-						    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-						    {
-						      if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-						      {
-							Sum_LR_3_ortho	= Sum_LR_3_ortho + LR;
-							Sum_L_3_ortho	= Sum_L_3_ortho	 + left_patch;
-							Sum_R_3_ortho	= Sum_R_3_ortho	 + right_patch;
-							Sum_L2_3_ortho	= Sum_L2_3_ortho + L2;
-							Sum_R2_3_ortho	= Sum_R2_3_ortho + R2;
-							Count_N_ortho[2]++;
-                                                            
-							Sum_LR_3_mag_ortho	= Sum_LR_3_mag_ortho + LR_mag;
-							Sum_L_3_mag_ortho	= Sum_L_3_mag_ortho	 + left_mag_patch;
-							Sum_R_3_mag_ortho	= Sum_R_3_mag_ortho	 + right_mag_patch;
-							Sum_L2_3_mag_ortho	= Sum_L2_3_mag_ortho + L2_mag;
-							Sum_R2_3_mag_ortho	= Sum_R2_3_mag_ortho + R2_mag;
-                                                            
-						      }
-						    }
-							
-						    
+                                                        }
+                                                    }
+                                                                            
+                                                                            
+                                                    size_2		  = size_1 + (int)((size_1/2.0) + 0.5);
+                                                    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                                    {
+                                                      if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                                      {
+                                                            Sum_LR_3_ortho	= Sum_LR_3_ortho + LR;
+                                                            Sum_L_3_ortho	= Sum_L_3_ortho	 + left_patch;
+                                                            Sum_R_3_ortho	= Sum_R_3_ortho	 + right_patch;
+                                                            Sum_L2_3_ortho	= Sum_L2_3_ortho + L2;
+                                                            Sum_R2_3_ortho	= Sum_R2_3_ortho + R2;
+                                                            Count_N_ortho[2]++;
+                                                                                            
+                                                            Sum_LR_3_mag_ortho	= Sum_LR_3_mag_ortho + LR_mag;
+                                                            Sum_L_3_mag_ortho	= Sum_L_3_mag_ortho	 + left_mag_patch;
+                                                            Sum_R_3_mag_ortho	= Sum_R_3_mag_ortho	 + right_mag_patch;
+                                                            Sum_L2_3_mag_ortho	= Sum_L2_3_mag_ortho + L2_mag;
+                                                            Sum_R2_3_mag_ortho	= Sum_R2_3_mag_ortho + R2_mag;
+                                                          
+                                                      }
+                                                    }
                                                 }
                                             }
 										}
@@ -10798,7 +10802,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 			temp			= abs(GridPT3[grid_index].maxHeight - GridPT3[grid_index].minHeight); 
 			temp_h			= temp/(PPM/h_divide);
 			
-            /*
+            
             if(Pyramid_step >= 2)
                 roh_index	= index & index_2 & index_3;
             else if(Pyramid_step >= 1)
@@ -10819,8 +10823,8 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                 
                 roh_index	= (index_2 | index_1);
             }
-             */
             
+            /*
 			if(Pyramid_step >= 1)
 				roh_index	= index & index_2 & index_3;
 			else if(Pyramid_step == 0 && final_level_iteration < 3)
@@ -10834,7 +10838,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 				
 				roh_index	= (index_2 | index_1);
 			}
-			
+			*/
             
 			if(GridPT3[grid_index].Matched_flag != 0)
 			{
@@ -12198,6 +12202,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
 			if(count_height_th < 3)
 				count_height_th = 3;
 		}
+        
 		printf("height_th %f\tcount_height_th %f\titeration %d\n",height_th,count_height_th,iteration);
 		  
 		double ortho_ncc_th = 0.5 + (iteration-1)*0.02;
@@ -12998,17 +13003,11 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
     
     double average_building_height = 50;
     
-    if(pyramid_step >= 2 && iteration <= 3)
+    if(pyramid_step >= 2 && iteration < 3)
     {
         if(BufferOfHeight < average_building_height)
             BufferOfHeight = average_building_height;
     }
-    else if(pyramid_step == 1 && iteration <= 3)
-    {
-        if(BufferOfHeight < average_building_height/2.0)
-            BufferOfHeight = average_building_height/2.0;
-    }
-
     
     printf("BufferOfHeight = %f\n",BufferOfHeight);
     
