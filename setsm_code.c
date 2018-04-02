@@ -2552,11 +2552,13 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
                             if(level >= 5)
                                 MPP = MPP_simgle_image;
-                            else
+                            else if(MPP_stereo_angle > 5)
                                 MPP = MPP_stereo_angle;
+                            else
+                                MPP = MPP_simgle_image;
                             
 							count_MPs = SelectMPs(nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
-												  iteration,0,filename_mps_pre,proinfo.pre_DEMtif,proinfo.IsRA,MPP,proinfo.DEM_resolution,Image_res[0],final_level_iteration);
+												  iteration,0,filename_mps_pre,proinfo.pre_DEMtif,proinfo.IsRA,MPP,proinfo.DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle);
 							printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
 								
 							if (check_ortho_cal && proinfo.IsRA != 1)
@@ -2901,15 +2903,23 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										
 										if(level == 0)
                                         {
-                                            MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                                MPP = MPP_stereo_angle;
+                                            else
+                                                MPP = MPP_simgle_image;
                                             
                                             Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                             printf("update GridPT3\n");
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 										{
-                                            if(level > 2)
-                                                MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                            {
+                                                if(level > 2)
+                                                    MPP = MPP_stereo_angle;
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                            }
                                             else
                                                 MPP = MPP_simgle_image;
                                             
@@ -2918,10 +2928,19 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										}
 										else
                                         {
-                                            if(level <= 1)
-                                                MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                            {
+                                                if(level <= 1)
+                                                {
+                                                    MPP = MPP_stereo_angle;
+                                                }
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                            }
                                             else
+                                            {
                                                 MPP = MPP_simgle_image;
+                                            }
                                             
 											GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                         }
@@ -3068,15 +3087,23 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 
                                         if(level == 0)
                                         {
-                                            MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                                MPP = MPP_stereo_angle;
+                                            else
+                                                MPP = MPP_simgle_image;
                                             
                                             Pre_GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                             printf("update GridPT3\n");
                                         }
 										else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
 										{
-                                            if(level > 2)
-                                                MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                            {
+                                                if(level > 2)
+                                                    MPP = MPP_stereo_angle;
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                            }
                                             else
                                                 MPP = MPP_simgle_image;
                                             
@@ -3085,10 +3112,19 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										}
 										else
                                         {
-                                            if(level <= 1)
-                                                MPP = MPP_stereo_angle;
+                                            if(MPP_stereo_angle > 5)
+                                            {
+                                                if(level <= 1)
+                                                {
+                                                    MPP = MPP_stereo_angle;
+                                                }
+                                                else
+                                                    MPP = MPP_simgle_image;
+                                            }
                                             else
+                                            {
                                                 MPP = MPP_simgle_image;
+                                            }
                                             
                           					GridPT3		= SetHeightRange(proinfo.pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo.IsRA,MPP,proinfo.save_filepath,row,col,check_level_end,proinfo.seedDEMsigma);
                                         }
@@ -8092,8 +8128,8 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     
     printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
     
-    if(*MPP_simgle_image < im_resolution*2)
-        *MPP_simgle_image = im_resolution*2;
+    //if(*MPP_simgle_image < im_resolution*2)
+    //    *MPP_simgle_image = im_resolution*2;
     
     if(*MPP_stereo_angle < im_resolution*2)
         *MPP_stereo_angle = im_resolution*2;
@@ -10675,7 +10711,7 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
 
 int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
 			  double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration)
+			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle)
 {
 	int count_MPs = 0;
 
@@ -10802,43 +10838,46 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 			temp			= abs(GridPT3[grid_index].maxHeight - GridPT3[grid_index].minHeight); 
 			temp_h			= temp/(PPM/h_divide);
 			
-            
-            if(Pyramid_step >= 2)
-                roh_index	= index & index_2 & index_3;
-            else if(Pyramid_step >= 1)
+            if(MPP_stereo_angle > 5)
             {
-                if( index_3	 && roh_height[grid_index].result0 > minimum_Th)
-                    index_1	= true;
-                
-                roh_index	= ((index_3 & index_2) | index_1);
-            }
-            else if(Pyramid_step == 0 && final_level_iteration < 3)
-            {
-                roh_index	= index & index_2 & index_3;
+                if(Pyramid_step >= 2)
+                    roh_index	= index & index_2 & index_3;
+                else if(Pyramid_step >= 1)
+                {
+                    if( index_3	 && roh_height[grid_index].result0 > minimum_Th)
+                        index_1	= true;
+                    
+                    roh_index	= ((index_3 & index_2) | index_1);
+                }
+                else if(Pyramid_step == 0 && final_level_iteration < 3)
+                {
+                    roh_index	= index & index_2 & index_3;
+                }
+                else
+                {
+                    if( index_3)
+                        index_1	= true;
+                    
+                    roh_index	= (index_2 | index_1);
+                }
             }
             else
             {
-                if( index_3)
-                    index_1	= true;
-                
-                roh_index	= (index_2 | index_1);
+                if(Pyramid_step >= 1)
+                    roh_index	= index & index_2 & index_3;
+                else if(Pyramid_step == 0 && final_level_iteration < 3)
+                {
+                    roh_index	= index & index_2 & index_3;
+                }
+                else
+                {
+                    if( index_3)
+                        index_1	= true;
+                    
+                    roh_index	= (index_2 | index_1);
+                }
             }
-            
-            /*
-			if(Pyramid_step >= 1)
-				roh_index	= index & index_2 & index_3;
-			else if(Pyramid_step == 0 && final_level_iteration < 3)
-			{
-                roh_index	= index & index_2 & index_3;
-			}
-			else
-			{
-				if( index_3)
-					index_1	= true;
-				
-				roh_index	= (index_2 | index_1);
-			}
-			*/
+			
             
 			if(GridPT3[grid_index].Matched_flag != 0)
 			{
@@ -12976,6 +13015,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
 	
 	double BufferOfHeight	= DEM_error*pow(2.0,pyramid_step);
 
+    
 	if (pyramid_step == 1)
 	{
 		if(iteration >= 2)
@@ -13001,6 +13041,8 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
     if(BufferOfHeight > 100)
         BufferOfHeight = 100;
     
+    
+    /*
     double average_building_height = 50;
     
     if(pyramid_step >= 2 && iteration < 3)
@@ -13008,7 +13050,7 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
         if(BufferOfHeight < average_building_height)
             BufferOfHeight = average_building_height;
     }
-    
+    */
     printf("BufferOfHeight = %f\n",BufferOfHeight);
     
 	m_bHeight		= (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
