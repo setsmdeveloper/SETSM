@@ -94,6 +94,7 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs);
 D3DPOINT* wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs);
 D2DPOINT* ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps);
 D2DPOINT ps2wgs_single(TransParam _param, D2DPOINT _ps);
+D2DPOINT utm2wgs_single(TransParam _param, D2DPOINT _ps);
 D3DPOINT* ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
 
 D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imageparam, uint16 _numofpts, D3DPOINT *_GP);
@@ -207,6 +208,7 @@ void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size
 CSize Envihdr_reader(char *filename);
 CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid_size);
+bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir);
 
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair);

@@ -276,9 +276,15 @@ int main(int argc,char *argv[])
                 {
                     int dir = atoi(argv[i+1]);
                     if(dir == 1)
+                    {
                         param.bHemisphere = 1;
+                        param.pm = 1;
+                    }
                     else
+                    {
                         param.bHemisphere = 2;
+                        param.pm = -1;
+                    }
                 }
             }
         }
@@ -13042,15 +13048,6 @@ UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int nu
         BufferOfHeight = 100;
     
     
-    /*
-    double average_building_height = 50;
-    
-    if(pyramid_step >= 2 && iteration < 3)
-    {
-        if(BufferOfHeight < average_building_height)
-            BufferOfHeight = average_building_height;
-    }
-    */
     printf("BufferOfHeight = %f\n",BufferOfHeight);
     
 	m_bHeight		= (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
@@ -15639,7 +15636,7 @@ bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid
 	*maxY = temp;
 	
 	*minX = (*minX) - (*grid_size)/2.0;
-	*maxY = (*maxY) - (*grid_size)/2.0;
+	*maxY = (*maxY) + (*grid_size)/2.0;
 	
 	
 	printf("%f\n",*minX);
@@ -15651,6 +15648,68 @@ bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid
 	
 	return true;
 }
+
+bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir)
+{
+    FILE* fid;
+    double garbage;
+    printf("%s\n",filename);
+    fid = fopen(filename,"r");
+    int count_line = 0;
+    char bufstr[500];
+    while(!feof(fid))
+    {
+        double temp;
+        fgets(bufstr,300,fid);
+        if(count_line == 0)
+        {
+            sscanf(bufstr,"%lf",&temp);
+            *grid_size = temp;
+        }
+        else if(count_line == 4)
+        {
+            sscanf(bufstr,"%lf",&temp);
+            *minX = temp;
+        }
+        else if(count_line == 5)
+        {
+            sscanf(bufstr,"%lf",&temp);
+            *maxY = temp;
+        }
+        else if(count_line == 7)
+        {
+            int ttt;
+            sscanf(bufstr,"%d",&ttt);
+            *zone = ttt;
+        }
+        else if(count_line == 8)
+        {
+            char ttt[100];
+            sscanf(bufstr,"%s",ttt);
+            sprintf(dir,"%s",ttt);
+            
+        }
+        count_line++;
+    }
+    
+    *minX = (*minX) - (*grid_size)/2.0;
+    *maxY = (*maxY) + (*grid_size)/2.0;
+    
+    
+    printf("%f\n",*minX);
+    printf("%f\n",*maxY);
+    printf("%f\n",*grid_size);
+    if(count_line > 5)
+    {
+        printf("%d\n",*zone);
+        printf("%s\n",dir);
+    }
+    
+    fclose(fid);
+    
+    return true;
+}
+
 
 CSize Envihdr_reader(char *filename)
 {
@@ -17135,8 +17194,66 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
     pFile_meta	= fopen(metafilename,"r");
     printf("meta file = %s\n",metafilename);
     printf("DEM file = %s\n",GIMP_path);
+    bool check_open_header = false;
     
-    if(pFile_meta)
+    if(check_ftype == 1)
+    {
+        hdr_path = remove_ext(GIMP_path);
+        sprintf(hdr_path,"%s.tfw",hdr_path);
+        
+        
+        FILE *pfile = fopen(hdr_path,"r");
+        if(pfile)
+        {
+            int zone;
+            char dir[500];
+            
+            printf("tfw path %s \n",hdr_path);
+            
+            TFW_reader_LSFDEM(hdr_path, &minX, &maxY, grid_size, &zone, dir);
+            
+            if(param->projection == 2)
+            {
+                param->zone = zone;
+                sprintf(param->direction,"%s",dir);
+                
+                printf("projection %d\t%d\t%s\n",param->projection,param->zone,param->direction);
+            }
+            
+            GetImageSize(GIMP_path,&seeddem_size);
+            fclose(pfile);
+            check_open_header = true;
+        }
+        else
+        {
+            hdr_path = remove_ext(GIMP_path);
+            sprintf(hdr_path,"%s.hdr",hdr_path);
+            printf("hdr path %s\n",hdr_path);
+            FILE *phdr = fopen(hdr_path,"r");
+            if(phdr)
+            {
+                seeddem_size  = Envihdr_reader_seedDEM(*param,hdr_path, &minX, &maxY, grid_size);
+                fclose(phdr);
+                check_open_header = true;
+            }
+        }
+    }
+    else if(check_ftype == 2)
+    {
+        hdr_path = remove_ext(GIMP_path);
+        sprintf(hdr_path,"%s.hdr",hdr_path);
+        
+        printf("hdr path %s\n",hdr_path);
+        FILE *phdr = fopen(hdr_path,"r");
+        if(phdr)
+        {
+            seeddem_size  = Envihdr_reader_seedDEM(*param,hdr_path, &minX, &maxY, grid_size);
+            fclose(phdr);
+            check_open_header = true;
+        }
+    }
+    
+    if(pFile_meta && !check_open_header)
     {
         char bufstr[500];
         printf("open Boundary\n");
@@ -17195,41 +17312,14 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
                 sscanf(bufstr,"Upper left coordinates=%lf\t%lf\n",&minX,&maxY);
             }
         }
+        check_open_header = true;
         fclose(pFile_meta);
     }
-    else
+    
+    if(!check_open_header)
     {
-        if(check_ftype == 1)
-        {
-            hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.tfw",hdr_path);
-            
-            
-            FILE *pfile = fopen(hdr_path,"r");
-            if(pfile)
-            {
-                printf("tfw path %s \n",hdr_path);
-                TFW_reader_seedDEM(hdr_path, &minX, &maxY, grid_size);
-                GetImageSize(GIMP_path,&seeddem_size);
-                fclose(pfile);
-            }
-            else
-            {
-                hdr_path = remove_ext(GIMP_path);
-                sprintf(hdr_path,"%s.hdr",hdr_path);
-                printf("hdr path %s\n",hdr_path);
-                seeddem_size  = Envihdr_reader_seedDEM(*param,hdr_path, &minX, &maxY, grid_size);
-                fclose(pfile);
-            }
-        }
-        else if(check_ftype == 2)
-        {
-            hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.hdr",hdr_path);
-            
-            printf("hdr path %s\n",hdr_path);
-            seeddem_size  = Envihdr_reader_seedDEM(*param,hdr_path, &minX, &maxY, grid_size);
-        }
+        printf("No information about input tif!!\n");
+        exit(1);
     }
     
     maxX	= minX + (*grid_size)*((double)seeddem_size.width);
@@ -17400,44 +17490,53 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
             float sigma;
             long int selected_count;
             
-            sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, matchtag, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
-            
-            double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
-            
-            Grid_info[iter_count].lsf_std = sigma;
-            
-            if(check_smooth_iter)
+            if(seeddem[iter_count] > -100)
             {
-                if(sigma < 20 && sigma > -1 && selected_count > 6)
+                sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, matchtag, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
+                
+                double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
+                
+                Grid_info[iter_count].lsf_std = sigma;
+                
+                if(check_smooth_iter)
                 {
-                    smooth_DEM[iter_count] = fitted_Z;
-                    sum_fitted_Z += fitted_Z;
-                    total_selected_points++;
-                    sigma_sum += sigma;
-                    temp_sigma[iter_count] = sigma;
+                    if(sigma < 20 && sigma > -1 && selected_count > 6)
+                    {
+                        smooth_DEM[iter_count] = fitted_Z;
+                        sum_fitted_Z += fitted_Z;
+                        total_selected_points++;
+                        sigma_sum += sigma;
+                        temp_sigma[iter_count] = sigma;
+                    }
+                    else
+                    {
+                        smooth_DEM[iter_count] = seeddem[iter_count];
+                        temp_sigma[iter_count] = -9999;
+                    }
                 }
                 else
                 {
-                    smooth_DEM[iter_count] = seeddem[iter_count];
-                    temp_sigma[iter_count] = -9999;
+                    if(sigma < 20 && sigma > -1 && selected_count > 6)
+                    {
+                        smooth_DEM[iter_count] = fitted_Z;
+                        sum_fitted_Z += fitted_Z;
+                        total_selected_points++;
+                        sigma_sum += sigma;
+                        temp_sigma[iter_count] = sigma;
+                    }
+                    else
+                    {
+                        smooth_DEM[iter_count] = seeddem[iter_count];
+                        temp_sigma[iter_count] = -9999;
+                    }
                 }
             }
             else
             {
-                if(sigma < 20 && sigma > -1 && selected_count > 6)
-                {
-                    smooth_DEM[iter_count] = fitted_Z;
-                    sum_fitted_Z += fitted_Z;
-                    total_selected_points++;
-                    sigma_sum += sigma;
-                    temp_sigma[iter_count] = sigma;
-                }
-                else
-                {
-                    smooth_DEM[iter_count] = seeddem[iter_count];
-                    temp_sigma[iter_count] = -9999;
-                }
+                smooth_DEM[iter_count] = seeddem[iter_count];
+                temp_sigma[iter_count] = -9999;
             }
+                
         }
         printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     }
@@ -17905,11 +18004,11 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                         if(grid > 2)
                         {
                             if(angle < 10)
-                                Grid_info[t_index].lsf_kernel = 5;
-                            else if(angle < 20)
                                 Grid_info[t_index].lsf_kernel = 4;
-                            else if(angle < 30)
+                            else if(angle < 20)
                                 Grid_info[t_index].lsf_kernel = 3;
+                            else if(angle < 30)
+                                Grid_info[t_index].lsf_kernel = 2;
                             else if(Grid_info[t_index].lsf_kernel < 2)
                                 Grid_info[t_index].lsf_kernel = 2;
                         }
@@ -18348,4 +18447,15 @@ void GMA_double_printf(GMA_double *a)
         }
         printf("\n");
     }
+}
+
+
+
+//DEM edge filtering
+double cart2pol(double x, double y)
+{
+    double theta = atan2(y,x);
+    double roh = sqrt(x*x + y*y);
+    
+    return roh;
 }
