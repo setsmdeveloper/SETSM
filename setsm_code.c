@@ -1462,6 +1462,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     double bin_angle;
                     double mt_grid_size;
                     char temp_c[500];
+                    char temp_ortho[500];
                     double temp_br_x, temp_br_y;
                     CSize temp_size;
                     time_t ST = 0, ET = 0;
@@ -1909,7 +1910,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         pFile_DEM = fopen(str_DEMfile,"r");
                         printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
                         final_iteration = 3;
-                        if(!pFile_DEM)
+                        //if(!pFile_DEM)
                         {
                             ST = time(0);
                             printf("Tile merging start final iteration %d!!\n",final_iteration);
@@ -1925,9 +1926,10 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             ST = time(0);
                             printf("Interpolation start!!\n");
                             sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo.save_filepath,proinfo.Outputpath_name);
+                            sprintf(temp_ortho, "%s/%s_dem_ortho.txt", proinfo.save_filepath,proinfo.Outputpath_name);
                             printf("%f %f\n",proinfo.DEM_resolution,mt_grid_size);
                             
-                            NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
+                            NNA_M(param,proinfo.save_filepath, proinfo.Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo.DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration);
                             ET = time(0);
                             gap = difftime(ET,ST);
                             printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
@@ -5193,19 +5195,146 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
 			
-			out				= (float*)malloc(sizeof(float)*data_size->height*data_size->width);
+            long int data_length = (long int)data_size->height*(long int)data_size->width;
+            
+			out				= (float*)malloc(sizeof(float)*data_length);
 			
 			buf				= _TIFFmalloc(TIFFTileSize(tif));
 			
-			count_L = (int)(data_size->height/tileL);
-			count_W = (int)(data_size->width/tileW);
+			count_L = ceil(data_size->height/(double)tileL);
+			count_W = ceil(data_size->width/(double)tileW);
 			
+            int f_row_end = 0;
+            int f_col_end = 0;
+            
+            if(count_L*tileL > data_size->height)
+                f_row_end = tileL + data_size->height - (count_L*tileL);
+            
+            if(count_W*tileW > data_size->width)
+                f_col_end = tileW + data_size->width - (count_W*tileW);
+            
+            printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
+            
 			for (row = 0; row < count_L; row ++)
 			{
 				for (col = 0; col < count_W; col ++)
 				{
 					TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
 					t_data = (float*)buf;
+                    
+                    if(f_row_end > 0 && f_col_end > 0)
+                    {
+                        if(row == count_L-1 && col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else if(row == count_L-1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                            
+                        }
+                        else if(col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else if(f_row_end > 0)
+                    {
+                        if(row == count_L-1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                            
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else if(f_col_end > 0)
+                    {
+                        if(col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                       
+                        for (i=0;i<tileL;i++)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (j=0;j<tileW;j++)
+                            {
+                                out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                            }
+                        }
+                    }
+                    
+ /*
 #pragma omp parallel for private(i,j) schedule(guided)
 					for (i=0;i<tileL;i++)
 					{
@@ -5214,6 +5343,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 							out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
 						}
 					}
+  */
 				}
 			}
 			_TIFFfree(buf);
@@ -5353,7 +5483,7 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                 {
                     TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
                     t_data = (unsigned char*)buf;
-                    if(f_row_end > 0 && f_col_end)
+                    if(f_row_end > 0 && f_col_end > 0)
                     {
                         if(row == count_L-1 && col == count_W -1)
                         {
@@ -8415,6 +8545,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 		int pt_index = pts_row*Size_Grid2D.width + pts_col;
 		
 		{
+            
 			double pre_rho	= -1.0;
 			double pre_INCC_roh = -1.0;
 			double pre_GNCC_roh = -1.0;
@@ -8427,6 +8558,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 			double pre_height= 0.0;
 			int direction	= 0;
 			bool check_rho	= false;
+            
 			int count_height;
 			int NumOfHeights;
 			double start_H, end_H;
@@ -8495,13 +8627,20 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 				}
 				if(!check_blunder_cell)
 				{
+                    double *saveroh = (double *) malloc(NumOfHeights * sizeof(double));
+                    //double *saveheight = (double *) malloc(NumOfHeights * sizeof(double));
+                    bool *saverohcheck = (bool *)calloc(NumOfHeights,sizeof(bool));
+                    
 					for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
 					{
 						double iter_height;
 						bool check_false_h = false;
 						
 						iter_height		= start_H + count_height*height_step;
-
+                        //saveheight[count_height] = iter_height;
+                        saverohcheck[count_height] = false;
+                        
+                        
 						if(count_height == 0)
 						{
 							nccresult[pt_index].result0 = -1.0;
@@ -9213,6 +9352,29 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 								else
 									temp_rho = temp_INCC_roh;
 						
+                                
+                                
+                                saveroh[count_height] = temp_rho;
+                                saverohcheck[count_height] = true;
+                             /*
+                            }
+                        }
+                    }
+                    
+                    rohsmoothing(saveroh, saverohcheck, NumOfHeights, Pyramid_step);
+                    
+                    for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
+                    {
+                        double iter_height		= start_H + count_height*height_step;
+                        
+                        if(saverohcheck[count_height])
+                        {
+                            int grid_index;
+                            double diff_rho;
+                            int t_direction;
+                            
+                            double temp_rho = saveroh[count_height];
+                    */
 								grid_index			 = pt_index;
 
 								
@@ -9302,6 +9464,10 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 							}
 						}
 					}
+                    
+                    free(saveroh);
+                    free(saverohcheck);
+
 				}
 			}
 		}
@@ -9316,6 +9482,49 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 	return true;
 }
 
+void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level)
+{
+    /*
+    char t_out[500];
+    sprintf(t_out,"/data/nga/Test/DEM_quality_test/nepal_test_8m_v332_icc/test_roh.txt");
+    FILE *fid = fopen(t_out,"w");
+    
+    sprintf(t_out,"/data/nga/Test/DEM_quality_test/nepal_test_8m_v332_icc/test_roh_pre.txt");
+    FILE *fid_pre = fopen(t_out,"w");
+*/
+    
+    int kernel_size = 2;
+    if(level <= 2)
+        kernel_size = 5;
+    
+    for(int i=0;i<total_count;i++)
+    {
+        //fprintf(fid_pre,"%f\t",inputroh[i]);
+        double sum = 0;
+        int s_count = 0;
+        double avg = 0;
+        for(int k=-kernel_size;k<=kernel_size;k++)
+        {
+            if(inputcheck[i+k] && i+k >= 0 && i+k < total_count && inputroh[i+k] > 0)
+            {
+                sum += inputroh[i+k];
+                s_count++;
+            }
+        }
+        if(s_count > 1)
+        {
+            avg = sum/s_count;
+            inputroh[i] = avg;
+            //printf("sum %f\t%f\n",sum,avg);
+        }
+        //fprintf(fid,"%f\t",inputroh[i]);
+    }
+    //fclose(fid);
+    //fclose(fid_pre);
+    
+    
+    
+}
 
 double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
 								CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
@@ -10864,7 +11073,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                     if( index_3)
                         index_1	= true;
                     
-                    roh_index	= (index_2 | index_1);
+                    roh_index	= (index_2 & index_1);
                 }
             }
             else
@@ -10880,7 +11089,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                     if( index_3)
                         index_1	= true;
                     
-                    roh_index	= (index_2 | index_1);
+                    roh_index	= (index_2 & index_1);
                 }
             }
 			
@@ -13901,8 +14110,8 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 	//outfile_max	= fopen(t_str,"w");
 	sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	outfile_h	= fopen(t_str,"w");
-	//sprintf(t_str,"%s/txt/tin_roh_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-	//outfile_roh	= fopen(t_str,"w");
+	sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+	outfile_roh	= fopen(t_str,"w");
 	/*sprintf(t_str,"%s/txt/tin_flag_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	  outfile_flag	= fopen(t_str,"w");*/
 	
@@ -13929,20 +14138,20 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
 				//fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight);
 				//if(GridPT3[matlab_index].Matched_flag != 0)
 				fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-				//fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].roh);
+				fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].ortho_ncc);
 				/*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
 			}
 			//fprintf(outfile_min,"\n");
 			//fprintf(outfile_max,"\n");
 			fprintf(outfile_h,"\n");
-			//fprintf(outfile_roh,"\n");
+			fprintf(outfile_roh,"\n");
 			/*fprintf(outfile_flag,"\n");*/
 		}
 
 		//fclose(outfile_min);
 		//fclose(outfile_max);
 		fclose(outfile_h);
-		//fclose(outfile_roh);
+		fclose(outfile_roh);
 		/*fclose(outfile_flag);*/
 	}
 }
@@ -14674,7 +14883,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 
 	double boundary[4];
 
-	double *DEM, *DEMinter;
+	double *DEM, *DEMinter, *DEM_ortho;
 	//bool *Matchtag;
 	char DEM_str[500];	  
 
@@ -14769,6 +14978,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 	DEM_size.width		= (int)(ceil( (double)(boundary[2] - boundary[0]) /grid_size ));
 	DEM_size.height		= (int)(ceil( (double)(boundary[3] - boundary[1]) /grid_size ));
 	DEM = (double*)malloc((long)DEM_size.height*(long)DEM_size.width*sizeof(double));
+    DEM_ortho = (double*)malloc((long)DEM_size.height*(long)DEM_size.width*sizeof(double));
 	
     printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
     
@@ -14776,6 +14986,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 	for(long index = 0 ; index < (long)DEM_size.height*(long)DEM_size.width ; index++)
 	{
 		DEM[index] = -9999;
+        DEM_ortho[index] = -1.0;
 	}
 
 	if(check_gs)
@@ -14815,7 +15026,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                 if(size > 0)
                 {
                     char h_t_str[500];
-                    FILE *p_hfile, *p_hvfile;
+                    FILE *p_hfile, *p_hvfile, *p_orthofile;
                     
                     sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
                     p_hfile		= fopen(h_t_str,"r");
@@ -14823,6 +15034,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                     {
                         int iter;
                         char hv_t_str[500];
+                        char ortho_str[500];
                         int row_size,col_size;
                         double t_boundary[4];
                         for(iter=0;iter<header_line;iter++)
@@ -14835,7 +15047,11 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                         }	
                         sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info.save_filepath,row,col,find_level,find_iter);
                         
+                        sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_final.txt",info.save_filepath,row,col,find_level,find_iter);
+                        
                         p_hvfile	= fopen(hv_t_str,"r");
+                        p_orthofile = fopen(ortho_str,"r");
+                        
                         if(p_hvfile)
                         {
                             long index_total;
@@ -14853,6 +15069,9 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                                     double DEM_value;
                                     fscanf(p_hvfile,"%lf\t",&DEM_value);
                                     
+                                    double ortho_value;
+                                    fscanf(p_orthofile,"%lf\t",&ortho_value);
+                                    
                                     //if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
                                     //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM_value,index);
                                     
@@ -14862,6 +15081,9 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                                     {
                                         if(DEM_value > -1000 && DEM_value != 0)
                                             DEM[index] = DEM_value;
+                                        
+                                        DEM_ortho[index] = ortho_value;
+                                        
                                         //else if(t_row > 1400 && t_row < DEM_size.height - 1000 && t_col > 1200 && t_col < 1500)
                                         //    printf("buffer %d\t row %f\t col %f\t DEM %f\t %d\n",buffer,t_row,t_col,DEM[index],index);
                                         
@@ -14869,9 +15091,11 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
                                     }
                                 }
                                 fscanf(p_hvfile,"\n");
+                                fscanf(p_orthofile,"\n");
                             }
                             
                             fclose(p_hvfile);
+                            fclose(p_orthofile);
                         }
                         
                         fclose(p_hfile);
@@ -14962,7 +15186,20 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 		}
 		fclose(poutDEM);
 		
-		
+        
+        sprintf(DEM_str, "%s/%s_dem_ortho.txt", info.save_filepath, info.Outputpath_name);
+        poutDEM	= fopen(DEM_str,"w");
+        for (row = 0; row < DEM_size.height; row++)
+        {
+            for (col = 0; col < DEM_size.width; col++)
+            {
+                fprintf(poutDEM,"%f\t",DEM_ortho[(long)row*(long)DEM_size.width + (long)col]);
+            }
+            fprintf(poutDEM,"\r\n");
+        }
+        fclose(poutDEM);
+        
+        
 		sprintf(DEM_str, "%s/%s_dem_header_tin.txt", info.save_filepath, info.Outputpath_name);
 		
 		printf("name %s\t%f\t%f\t%f\t%d\t%d\n",DEM_str,boundary[0],boundary[3],grid_size,DEM_size.width,DEM_size.height);
@@ -14978,7 +15215,7 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 	return grid_size;
 }
 
-void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration)
+void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration)
 {
 	double dummy;
 	int i0, cnthold,i,j,index;
@@ -14987,6 +15224,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	double grid;
 	double mt_grid;
 	float *value;
+    float *value_orthoncc;
 	unsigned char	 *value_pt;
 	int index_file;
 	NNXY *pt_save;
@@ -14995,7 +15233,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	FILE* fheader;
 	FILE	 *afile;
 	FILE* t_file;
-	
+    FILE* forthoncc;
+    
 	char t_savefile[500];
 	char outfile[500];
 	char DEM_header[500];
@@ -15119,7 +15358,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	col_count_mt = (int)((maxX - minX)/mt_grid) + 1;			
 	row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
 	
-	
+	value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
 	value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
 	value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
 	pt_save	 = (NNXY*)malloc(sizeof(NNXY)*(long)row_count*(long)col_count);
@@ -15133,7 +15372,6 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	
 	remove(DEM_header);
 	
-	
 	for(i=0;i<row_count;i++)
 	{
 		for(j=0;j<col_count;j++)
@@ -15142,6 +15380,12 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	
 	if ((fheader = fopen(iterfile,"r")) != NULL)
 	{
+        forthoncc = fopen(iterorthofile,"r");
+        if(!forthoncc)
+        {
+            printf("no ortho file\n");
+            exit(1);
+        }
 		sprintf(t_savefile,"%s/txt/tfile.txt",save_path);
 		
 		t_file = fopen(t_savefile,"w");
@@ -15150,6 +15394,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		{
 			int row,col;
 			double t_z;
+            double t_ortho;
 			double t_x, t_y;
 			row = (int)(floor(ix/DEM_cols));
 			col = ix%DEM_cols;
@@ -15158,7 +15403,8 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 			t_y = DEM_maxY - row*mt_grid;
 			
 			fscanf(fheader,"%lf",&t_z);
-			
+			fscanf(forthoncc,"%lf",&t_ortho);
+            
             double d_row,d_col;
 			if(t_x >= minX && t_x < maxX && t_y >= minY && t_y < maxY)
 			{
@@ -15171,6 +15417,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
                 {
                     value[t_index] = t_z;
                     value_pt[t_index] = 0;
+                    
+                    value_orthoncc[t_index] = t_ortho;
+                    
                     if(t_z > -1000)
                     {
                         fprintf(t_file,"%12.4lf\t%12.4lf\n",t_x,t_y);
@@ -15308,72 +15557,538 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	printf("start null\n");
 	long count_null_cell = 0;
 	int check_while = 0;
-	while(check_while == 0)
-	{
-		count_null_cell = 0;
-	
-//#pragma omp parallel for shared(value,value_pt,col_count,row_count) private(index) reduction(+:count_null_cell)
-		for (long index = 0; index < col_count*row_count; index++) 
-		{
-			int row, col;
-			int check_size;
-			long count_cell;
-			int t_i, t_j;
-			double sum_h;
-			row = (int)(floor(index/col_count));
-			col = index%col_count;
-		
-			if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-			{
-			
-				check_size = 1;
-				count_cell = 0;
-				sum_h = 0;
-				for (t_i = -check_size; t_i <= check_size;t_i++ ) 
-				{
-					for (t_j = -check_size; t_j <= check_size; t_j++) 
-					{
-						int index_row = row + t_i;
-						int index_col = col + t_j;
-						if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
-						{
-							if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
-							{
-								count_cell++;
-								sum_h += value[(long)index_row*(long)col_count + (long)index_col];
-							}
-						}
-					}
-				}
-				if (count_cell >= 6) 
-				{
-					double t_x, t_y;
-					double pos_col,pos_row;
-					
-					value_pt[(long)row*(long)col_count + (long)col] = 1;
-					value[(long)row*(long)col_count + (long)col]	  = (sum_h)/(count_cell);
-					
-					t_x = minX + col*grid;
-					t_y = maxY - row*grid;
-					
-					if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
-					{
-						pt_save[(long)row*(long)col_count + (long)col].X = t_x;
-						pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
-						pt_save[(long)row*(long)col_count + (long)col].Z = value[(long)row*(long)col_count + (long)col]; 
-					}
-					count_null_cell ++;
-				}
-			}
-		}
-		
-		if(count_null_cell == 0)
-			check_while = 1;
-		
-		total_null_cell += count_null_cell;
-	}
-	total_mt_count = 0;
-	
+    
+    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    float *t_value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
+    
+    memcpy(t_value,value,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_orthoncc,value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+
+    int iter_check = 0;
+    int check_size = 0;
+    int max_total_iteration = 6;
+    if(grid > 2)
+        max_total_iteration = 3;
+    int total_iteration;
+    
+    for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+    {
+        check_while = 0;
+        check_size = total_iteration;
+        
+        double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
+        int total_size = (2*check_size+1)*(2*check_size+1);
+        while(check_while == 0)
+        {
+            iter_check ++;
+            //printf("1st null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+
+            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+            for (long index = 0; index < col_count*row_count; index++) 
+            {
+                int row, col;
+                
+                long count_cell;
+                long count_all_cell = 0;
+                int t_i, t_j;
+                double sum_h;
+                double sum_ortho;
+                
+                //double* save_ortho = (double*)malloc(sizeof(double)*total_size);
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+            
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                {
+                    count_cell = 0;
+                    sum_h = 0;
+                    sum_ortho = 0;
+                    count_all_cell = 0;
+                    
+                    D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(total_size));
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i++ )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j++)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
+                            {
+                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
+                                {
+                                    double x,y,x_ref,y_ref;
+                                    x = t_j*grid;
+                                    y = t_i*grid;
+                                   
+                                    XY_save[count_cell].flag = 1;
+                                    XY_save[count_cell].m_X = x;
+                                    XY_save[count_cell].m_Y = y;
+                                    XY_save[count_cell].m_Z = value[(long)index_row*(long)col_count + (long)index_col];
+                                    
+                                    sum_ortho += value_orthoncc[t_index];
+                                    
+                                    count_cell++;
+                                }
+                                
+                                if(value_orthoncc[t_index] <= 0.0)
+                                   count_all_cell++;
+                            }
+                        }
+                    }
+                   
+                    if (count_cell >= total_size*0.6 /*&& count_all_cell < total_size*0.2*/)
+                    {
+                        /*
+                        GMA_double *A_matrix = GMA_double_create(count_cell, 6);
+                        GMA_double *L_matrix = GMA_double_create(count_cell, 1);
+                        GMA_double *AT_matrix = GMA_double_create(6,count_cell);
+                        GMA_double *ATA_matrix = GMA_double_create(6,6);
+                        
+                        GMA_double *ATAI_matrix = GMA_double_create(6,6);
+                        GMA_double *ATL_matrix = GMA_double_create(6,1);
+                        
+                        GMA_double *X_matrix = GMA_double_create(6,1);
+                        GMA_double *AX_matrix = GMA_double_create(count_cell,1);
+                        GMA_double *V_matrix = GMA_double_create(count_cell,1);
+                        
+                        for(int t_row = 0; t_row < count_cell ; t_row++)
+                        {
+                            A_matrix->val[t_row][0] = XY_save[t_row].m_X;
+                            A_matrix->val[t_row][1] = XY_save[t_row].m_Y;
+                            A_matrix->val[t_row][2] = 1.0;
+                            
+                            L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
+                        }
+                        
+                        GMA_double_Tran(A_matrix,AT_matrix);
+                        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                        GMA_double_inv(ATA_matrix,ATAI_matrix);
+                        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                        
+                        double sum = 0;
+                        double min_Z = 99999999999;
+                        double max_Z = -99999999999;
+                        double temp_fitted_Z;
+                        double diff_Z;
+                        long int selected_count = 0;
+                        int *hist = (int*)calloc(sizeof(int),20);
+                        for(int t_row = 0; t_row < count_cell ; t_row++)
+                        {
+                            int hist_index = (int)(fabs(V_matrix->val[t_row][0]));
+                            if(hist_index > 19)
+                                hist_index = 19;
+                            if(hist_index >= 0 && hist_index <= 19)
+                                hist[hist_index]++;
+                        }
+                        
+                        double hist_th = 0.8;
+                        if(grid >= 8)
+                            hist_th = 0.9;
+                        else
+                            hist_th = 0.8;
+                        int V_th = 20;
+                        int hist_sum = 0;
+                        double hist_rate;
+                        bool check_V = true;
+                        int s_row = 0;
+                        while(check_V && s_row < 20)
+                        {
+                            hist_sum += hist[s_row];
+                            hist_rate = (double)hist_sum/(count_cell);
+                            if(hist_rate > hist_th && hist_sum > 6)
+                            {
+                                V_th = s_row;
+                                check_V = false;
+                            }
+                            s_row++;
+                        }
+                        free(hist);
+                        
+                        for(int t_row = 0; t_row < count_cell ; t_row++)
+                        {
+                            if(fabs(V_matrix->val[t_row][0]) > V_th+1)
+                                XY_save[t_row].flag = 0;
+                            else
+                                selected_count++;
+                        }
+                        
+                        GMA_double_destroy(A_matrix);
+                        GMA_double_destroy(L_matrix);
+                        GMA_double_destroy(AT_matrix);
+                        GMA_double_destroy(ATA_matrix);
+                        GMA_double_destroy(ATAI_matrix);
+                        GMA_double_destroy(ATL_matrix);
+                        GMA_double_destroy(X_matrix);
+                        GMA_double_destroy(AX_matrix);
+                        GMA_double_destroy(V_matrix);
+                        
+                        
+                        if(selected_count > 10)*/
+                        {
+                            
+                            GMA_double *A_matrix = GMA_double_create(count_cell, 6);
+                            GMA_double *L_matrix = GMA_double_create(count_cell, 1);
+                            GMA_double *AT_matrix = GMA_double_create(6,count_cell);
+                            GMA_double *ATA_matrix = GMA_double_create(6,6);
+                            
+                            GMA_double *ATAI_matrix = GMA_double_create(6,6);
+                            GMA_double *ATL_matrix = GMA_double_create(6,1);
+                            
+                            GMA_double *X_matrix = GMA_double_create(6,1);
+                            GMA_double *AX_matrix = GMA_double_create(count_cell,1);
+                            GMA_double *V_matrix = GMA_double_create(count_cell,1);
+                            
+                            /*
+                            A_matrix = GMA_double_create(selected_count, 6);
+                            L_matrix = GMA_double_create(selected_count, 1);
+                            AT_matrix = GMA_double_create(6,selected_count);
+                            ATA_matrix = GMA_double_create(6,6);
+                            
+                            ATAI_matrix = GMA_double_create(6,6);
+                            ATL_matrix = GMA_double_create(6,1);
+                            
+                            X_matrix = GMA_double_create(6,1);
+                            AX_matrix = GMA_double_create(selected_count,1);
+                            V_matrix = GMA_double_create(selected_count,1);
+                            */
+                            //int se_count = 0;
+                            for(int t_row = 0; t_row < count_cell ; t_row++)
+                            {
+                                //if(XY_save[t_row].flag == 1)
+                                {
+                                    A_matrix->val[t_row][0] = XY_save[t_row].m_X*XY_save[t_row].m_X;
+                                    A_matrix->val[t_row][1] = XY_save[t_row].m_X*XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][2] = XY_save[t_row].m_Y*XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][3] = XY_save[t_row].m_X;
+                                    A_matrix->val[t_row][4] = XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][5] = 1.0;
+                                    
+                                    L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
+                                    
+                                    //se_count++;
+                                }
+                            }
+                            
+                            GMA_double_Tran(A_matrix,AT_matrix);
+                            GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                            GMA_double_inv(ATA_matrix,ATAI_matrix);
+                            GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                            GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                            GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                            GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                            
+                            double sum = 0;
+                            for(int t_row = 0; t_row < count_cell ; t_row++)
+                            {
+                                sum += V_matrix->val[t_row][0] * V_matrix->val[t_row][0];
+                            }
+                            
+                            double sigma = sqrt(sum/(double)count_cell);
+                            
+                            if(sigma < grid)
+                            {
+                                t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho;
+                                
+                                t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                                t_value[(long)row*(long)col_count + (long)col]	  = X_matrix->val[0][5];
+                                
+                                double t_x, t_y;
+                                double pos_col,pos_row;
+                                
+                                t_x = minX + col*grid;
+                                t_y = maxY - row*grid;
+                                
+                                //if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
+                                {
+                                    pt_save[(long)row*(long)col_count + (long)col].X = t_x;
+                                    pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
+                                    pt_save[(long)row*(long)col_count + (long)col].Z = t_value[(long)row*(long)col_count + (long)col];
+                                }
+                                count_null_cell ++;
+                            }
+                            
+                            GMA_double_destroy(A_matrix);
+                            GMA_double_destroy(L_matrix);
+                            GMA_double_destroy(AT_matrix);
+                            GMA_double_destroy(ATA_matrix);
+                            GMA_double_destroy(ATAI_matrix);
+                            GMA_double_destroy(ATL_matrix);
+                            GMA_double_destroy(X_matrix);
+                            GMA_double_destroy(AX_matrix);
+                            GMA_double_destroy(V_matrix);
+                        }
+                        
+                    }
+                    free(XY_save);
+                }
+                
+            }
+            
+            memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            
+            if(count_null_cell == 0)
+                check_while = 1;
+        }
+    }
+
+    total_mt_count = 0;
+    
+    
+    iter_check = 0;
+    check_size = 10;
+    total_iteration = 0;
+    max_total_iteration = 6;
+    if(grid > 2)
+        max_total_iteration = 3;
+    
+    //while(total_iteration < max_total_iteration)
+    {
+        check_while = 0;
+        //check_size ++;
+        while(check_while == 0)
+        {
+            iter_check ++;
+            //printf("2nd null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+            int total_size = (2*check_size+1)*(2*check_size+1);
+            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+            for (long index = 0; index < col_count*row_count; index++)
+            {
+                int row, col;
+                long count_cell;
+                int t_i, t_j;
+                double sum_h;
+                double sum_ortho;
+                
+                int count_low_cell = 0;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+
+                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
+                {
+                    sum_ortho = 0;
+                    count_cell = 0;
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i++ )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j++)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
+                            {
+                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
+                                {
+                                    sum_ortho += value_orthoncc[t_index];
+                                    count_cell++;
+                                    
+                                    if(value_orthoncc[t_index] < 0.0)
+                                    {
+                                        count_low_cell++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    sum_ortho /= (double)count_cell;
+                    
+                    if (/*count_cell > total_size*0.2 && */count_low_cell >= total_size*0.3)
+                    {
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
+                        
+                        count_null_cell ++;
+                    }
+                }
+            }
+            
+            if(count_null_cell == 0)
+                check_while = 1;
+            
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+        }
+        //total_iteration = total_iteration + 1;
+    }
+    
+    /*
+    check_while = 0;
+    check_size = 3;
+    while(check_while == 0)
+    {
+        iter_check ++;
+        //printf("3rd null iteration %d\t%d\n",check_size,iter_check);
+        
+        count_null_cell = 0;
+        
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+        for (long index = 0; index < col_count*row_count; index++)
+        {
+            int row, col;
+            
+            long count_cell;
+            int t_i, t_j;
+            double sum_h;
+            double sum_ortho;
+            int total_size = (2*check_size+1)*(2*check_size+1);
+            
+            row = (int)(floor(index/col_count));
+            col = index%col_count;
+            
+            
+            if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+            {
+                count_cell = 0;
+                sum_h = 0;
+                sum_ortho = 0;
+                
+                D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(total_size));
+                
+                for (t_i = -check_size; t_i <= check_size;t_i++ )
+                {
+                    for (t_j = -check_size; t_j <= check_size; t_j++)
+                    {
+                        int index_row = row + t_i;
+                        int index_col = col + t_j;
+                        long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                        
+                        if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100)
+                        {
+                            if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
+                            {
+                                double x,y,x_ref,y_ref;
+                                x = t_j*grid;
+                                y = t_i*grid;
+                                x_ref = 0;
+                                y_ref = 0;
+                                
+                                XY_save[count_cell].flag = 1;
+                                XY_save[count_cell].m_X = x;
+                                XY_save[count_cell].m_Y = y;
+                                XY_save[count_cell].m_Z = value[(long)index_row*(long)col_count + (long)index_col];
+                                
+                                sum_ortho += value_orthoncc[t_index];
+                                
+                                count_cell++;
+                            }
+                        }
+                    }
+                }
+                
+                sum_ortho/=(double)count_cell;
+                
+                if (count_cell >= total_size*0.7)
+                {
+                    GMA_double *A_matrix = GMA_double_create(count_cell, 6);
+                    GMA_double *L_matrix = GMA_double_create(count_cell, 1);
+                    GMA_double *AT_matrix = GMA_double_create(6,count_cell);
+                    GMA_double *ATA_matrix = GMA_double_create(6,6);
+                    
+                    GMA_double *ATAI_matrix = GMA_double_create(6,6);
+                    GMA_double *ATL_matrix = GMA_double_create(6,1);
+                    
+                    GMA_double *X_matrix = GMA_double_create(6,1);
+                    GMA_double *AX_matrix = GMA_double_create(count_cell,1);
+                    GMA_double *V_matrix = GMA_double_create(count_cell,1);
+                    
+                    for(int t_row = 0; t_row < count_cell ; t_row++)
+                    {
+                        {
+                            A_matrix->val[t_row][0] = XY_save[t_row].m_X*XY_save[t_row].m_X;
+                            A_matrix->val[t_row][1] = XY_save[t_row].m_X*XY_save[t_row].m_Y;
+                            A_matrix->val[t_row][2] = XY_save[t_row].m_Y*XY_save[t_row].m_Y;
+                            A_matrix->val[t_row][3] = XY_save[t_row].m_X;
+                            A_matrix->val[t_row][4] = XY_save[t_row].m_Y;
+                            A_matrix->val[t_row][5] = 1.0;
+                            
+                            L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
+                        }
+                    }
+                    
+                    GMA_double_Tran(A_matrix,AT_matrix);
+                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                    GMA_double_inv(ATA_matrix,ATAI_matrix);
+                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                    
+                    double sum = 0;
+                    for(int t_row = 0; t_row < count_cell ; t_row++)
+                    {
+                        sum += V_matrix->val[t_row][0] * V_matrix->val[t_row][0];
+                    }
+                    
+                    double sigma = sqrt(sum/count_cell);
+                    
+                    //if(sigma < grid)
+                    {
+                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho;
+                        
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                        t_value[(long)row*(long)col_count + (long)col]	  = X_matrix->val[0][5];
+                        
+                        double t_x, t_y;
+                        double pos_col,pos_row;
+                        
+                        t_x = minX + col*grid;
+                        t_y = maxY - row*grid;
+                        
+                        if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
+                        {
+                            pt_save[(long)row*(long)col_count + (long)col].X = t_x;
+                            pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
+                            pt_save[(long)row*(long)col_count + (long)col].Z = t_value[(long)row*(long)col_count + (long)col];
+                        }
+                        count_null_cell ++;
+                    }
+                    
+                    GMA_double_destroy(A_matrix);
+                    GMA_double_destroy(L_matrix);
+                    GMA_double_destroy(AT_matrix);
+                    GMA_double_destroy(ATA_matrix);
+                    GMA_double_destroy(ATAI_matrix);
+                    GMA_double_destroy(ATL_matrix);
+                    GMA_double_destroy(X_matrix);
+                    GMA_double_destroy(AX_matrix);
+                    GMA_double_destroy(V_matrix);
+                    
+                }
+                free(XY_save);
+            }
+            
+        }
+        
+        memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+        memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+        memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+        
+        if(count_null_cell == 0)
+            check_while = 1;
+    }
+    */
+    free(t_value);
+    free(t_value_orthoncc);
+    free(t_value_pt);
+    
     printf("end null\n");
     
 	if(total_search_count > 0)
@@ -15533,6 +16248,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	free(pt_save);
 	free(value);
 	free(value_pt);
+    free(value_orthoncc);
 }
 
 void Envihdr_writer(TransParam _param, char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type)
