@@ -1344,11 +1344,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             
             printf("image resolution %f\n",proinfo.resolution);
             
-            if (!args.check_DEM_space)
+            /*if (!args.check_DEM_space)
             {
                 proinfo.DEM_resolution = proinfo.resolution;
             }
-            
+            */
             //if(proinfo.DEM_resolution < 1.0)
             //    proinfo.DEM_resolution = 1.0;
             
@@ -2672,8 +2672,11 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 									fclose(pFile);
 									
 									if(!proinfo.IsRA)
+                                    {
 										echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
-									
+                                        
+                                        echo_print_nccresults(proinfo.save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,"final");
+                                    }
 									free(ptslists);
 								}
 								else
@@ -8316,7 +8319,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 		N_th = 75;
 
 	}
-	else if(Pyramid_step < 3)
+	else if(Pyramid_step < 3 && Pyramid_step > 0)
 	{
 		Half_template_size = Half_template_size - 2;
 		N_th = 45;
@@ -8627,9 +8630,66 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 				}
 				if(!check_blunder_cell)
 				{
-                    double *saveroh = (double *) malloc(NumOfHeights * sizeof(double));
-                    //double *saveheight = (double *) malloc(NumOfHeights * sizeof(double));
-                    bool *saverohcheck = (bool *)calloc(NumOfHeights,sizeof(bool));
+                    
+                    if(Pyramid_step <= 1 && GridPT3[pt_index].ortho_ncc < 0.2 && DEM_resolution > 5)
+                    {
+                        int t_kernel = 10;
+                        int total_cell = 0;
+                        int sum_Height = 0;
+                        int total_kernel = (2*t_kernel+1)*(2*t_kernel+1);
+                        int select_cell = 0;
+                        int roh_kernel = 5;
+                        
+                        double *saveheight = (double *) malloc(total_kernel * sizeof(double));
+                        bool *saveheightcheck = (bool *)calloc(total_kernel,sizeof(bool));
+                        
+                        for(int t_row = - t_kernel ; t_row <= t_kernel ; t_row++)
+                        {
+                            for(int t_col = - t_kernel ; t_col <= t_kernel ; t_col++)
+                            {
+                                int t_row_index = pts_row+t_row;
+                                int t_col_index = pts_col+t_col;
+                                int t_index = t_row_index*Size_Grid2D.width + t_col_index;
+                                
+                                if(t_row_index >= 0 && t_row_index < Size_Grid2D.height && t_col_index >= 0 && t_col_index < Size_Grid2D.width && GridPT3[t_index].Height > -100)
+                                {
+                                    saveheight[total_cell] = GridPT3[t_index].Height;
+                                    saveheightcheck[total_cell] = true;
+                                    sum_Height += GridPT3[t_index].Height;
+                                    
+                                    total_cell++;
+                                    if(GridPT3[t_index].ortho_ncc < 0.2 && t_row > -roh_kernel && t_row < roh_kernel && t_col > -roh_kernel && t_col < roh_kernel)
+                                    {
+                                        select_cell++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(total_cell > 5)
+                        {
+                            double avgheight = sum_Height/(double)total_cell;
+                            double sum_residual = 0;
+                            double rate = (double)select_cell/ (double)((2*roh_kernel + 1)*(2*roh_kernel + 1));
+                            
+                            for(int t_row = 0 ; t_row < total_cell ; t_row ++)
+                            {
+                                sum_residual += (saveheight[t_row] - avgheight)*(saveheight[t_row] - avgheight);
+                            }
+                            double stdheight = sqrt(sum_residual/(double)total_cell);
+                            
+                            int temp_th_height = 10;
+//                            if(Pyramid_step == 0)
+//                                temp_th_height = 10;
+                            if(stdheight < temp_th_height && rate > 0.2)
+                            {
+                                Half_template_size = 10;//(int)(Template_size/2);
+                            }
+                        }
+                        
+                        free(saveheight);
+                        free(saveheightcheck);
+                    }
                     
 					for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
 					{
@@ -8638,7 +8698,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 						
 						iter_height		= start_H + count_height*height_step;
                         //saveheight[count_height] = iter_height;
-                        saverohcheck[count_height] = false;
+                        //saverohcheck[count_height] = false;
                         
                         
 						if(count_height == 0)
@@ -8714,7 +8774,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 							
 							if(check_orientation)
 							{
-								double rot_theta = 0.0;
+                            	double rot_theta = 0.0;
 								
 								double Sum_LR = 0;
 								double Sum_L = 0;
@@ -8936,7 +8996,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 											}
 											
                                             //ortho_NCC
-                                            if(check_ortho)
+                                            if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
                                             {
                                                 double pos_row_left_ortho = -100;
                                                 double pos_col_left_ortho = -100;
@@ -9220,133 +9280,138 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 								
 								
 								//ortho_NCC
-					            N				= Count_N_ortho[0];
-                                val1		  = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
-                                val2		  = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
-                                if(Pyramid_step <= 1)
+                                if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
                                 {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
+                                    N				= Count_N_ortho[0];
+                                    val1		  = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
+                                    val2		  = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de			  = sqrt(val1*val2);
+                      de2			  = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
+                      ncc_1_ortho			  = de2/de;
+                    }
+                                    else
+                                        ncc_1_ortho			  = -1.0;
+                                    
+                                    
+                                    val1		  = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
+                                    val2		  = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de			  = sqrt(val1*val2);
+                      de2			  = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
+                      ncc_1_mag_ortho			  = de2/de;
+                    }
+                                    else
+                                        ncc_1_mag_ortho			  = -1.0;
+                                    
+                                    N					= Count_N_ortho[1];
+                                    val1				= (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
+                                    val2				= (double)(Sum_R2_2_ortho) - (double)(Sum_R_2_ortho*Sum_R_2_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de					= sqrt(val1*val2);
+                      de2					= (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
+                      ncc_2_ortho			= de2/de;
+                    }
+                                    else
+                                        ncc_2_ortho			  = -1.0;
+                                    
+                                    val1				= (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
+                                    val2				= (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de					= sqrt(val1*val2);
+                      de2					= (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+                      ncc_2_mag_ortho			= de2/de;
+                    }
+                                    else
+                                        ncc_2_mag_ortho			  = -1.0;
+                                    
+                                    
+                                    N					= Count_N_ortho[2];
+                                    val1				= (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
+                                    val2				= (double)(Sum_R2_3_ortho) - (double)(Sum_R_3_ortho*Sum_R_3_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de					= sqrt(val1*val2);
+                      de2					= (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
+                      ncc_3_ortho			= de2/de;
+                    }
+                                    else
+                                        ncc_3_ortho			  = -1.0;
+                                    
+                                    val1				= (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
+                                    val2				= (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+                                    if(Pyramid_step <= 1)
+                                    {
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                    {
+                      de					= sqrt(val1*val2);
+                      de2					= (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+                      ncc_3_mag_ortho			= de2/de;
+                    }
+                                    else
+                                        ncc_3_mag_ortho			  = -1.0;
                                 }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de			  = sqrt(val1*val2);
-				  de2			  = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
-				  ncc_1_ortho			  = de2/de;
-				}
-                                else
-                                    ncc_1_ortho			  = -1.0;
-                                
-                                
-                                val1		  = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
-                                val2		  = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de			  = sqrt(val1*val2);
-				  de2			  = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
-				  ncc_1_mag_ortho			  = de2/de;
-				}
-                                else
-                                    ncc_1_mag_ortho			  = -1.0;
-                                
-                                N					= Count_N_ortho[1];
-                                val1				= (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
-                                val2				= (double)(Sum_R2_2_ortho) - (double)(Sum_R_2_ortho*Sum_R_2_ortho)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de					= sqrt(val1*val2);
-				  de2					= (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
-				  ncc_2_ortho			= de2/de;
-				}
-                                else
-                                    ncc_2_ortho			  = -1.0;
-                                
-                                val1				= (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
-                                val2				= (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de					= sqrt(val1*val2);
-				  de2					= (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-				  ncc_2_mag_ortho			= de2/de;
-				}
-                                else
-                                    ncc_2_mag_ortho			  = -1.0;
-                                
-                                
-                                N					= Count_N_ortho[2];
-                                val1				= (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
-                                val2				= (double)(Sum_R2_3_ortho) - (double)(Sum_R_3_ortho*Sum_R_3_ortho)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de					= sqrt(val1*val2);
-				  de2					= (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
-				  ncc_3_ortho			= de2/de;
-				}
-                                else
-                                    ncc_3_ortho			  = -1.0;
-                                
-                                val1				= (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
-                                val2				= (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-				{
-				  de					= sqrt(val1*val2);
-				  de2					= (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-				  ncc_3_mag_ortho			= de2/de;
-				}
-                                else
-                                    ncc_3_mag_ortho			  = -1.0;
                                 
                                 flag_value		= true;
 								
 								temp_INCC_roh = (double)(ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
-								temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
+								
 							
 							
 								if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
 								{
+                                    temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
+                                    
 									temp_rho = temp_INCC_roh*ncc_alpha + temp_GNCC_roh*ncc_beta;
 								}
 								else
@@ -9354,8 +9419,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 						
                                 
                                 
-                                saveroh[count_height] = temp_rho;
-                                saverohcheck[count_height] = true;
+                                //saveroh[count_height] = temp_rho;
+                                //saverohcheck[count_height] = true;
                              /*
                             }
                         }
@@ -9432,8 +9497,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 											temp_2 = nccresult[grid_index].result2;
 											nccresult[grid_index].result2 = pre_height;
 											
-											nccresult[grid_index].INCC = pre_INCC_roh;
-											nccresult[grid_index].GNCC = pre_GNCC_roh;
+											//nccresult[grid_index].INCC = pre_INCC_roh;
+											//nccresult[grid_index].GNCC = pre_GNCC_roh;
 							   
 											if(nccresult[grid_index].result1 < temp_1)
 											{
@@ -9465,8 +9530,8 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 						}
 					}
                     
-                    free(saveroh);
-                    free(saverohcheck);
+                    //free(saveroh);
+                    //free(saverohcheck);
 
 				}
 			}
@@ -11031,7 +11096,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 			//ratio of 1st peak roh / 2nd peak roh
 			ROR			= (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
 			
-			if(Pyramid_step <= 2)	
+			if(Pyramid_step <= 2)
 			{
 				if(ROR >= (0.1 - 0.03*(3 - Pyramid_step)) && roh_height[grid_index].result0 > minimum_Th)
 					index_2	= true;
@@ -11050,8 +11115,8 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 				index		= true;
 
 			//distance between min and max height
-			temp			= abs(GridPT3[grid_index].maxHeight - GridPT3[grid_index].minHeight); 
-			temp_h			= temp/(PPM/h_divide);
+			//temp			= abs(GridPT3[grid_index].maxHeight - GridPT3[grid_index].minHeight);
+			//temp_h			= temp/(PPM/h_divide);
 			
             if(MPP_stereo_angle > 5)
             {
@@ -11090,6 +11155,35 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                         index_1	= true;
                     
                     roh_index	= (index_2 & index_1);
+                    
+                    /*if(roh_index)
+                    {
+                        int t_kernel = 2;
+                        int total_cell = 0;
+                        int sel_count = 0;
+                        for(int t_row = - t_kernel ; t_row <= t_kernel ; t_row++)
+                        {
+                            for(int t_col = - t_kernel ; t_col <= t_kernel ; t_col++)
+                            {
+                                int t_row_index = row+t_row;
+                                int t_col_index = col+t_col;
+                                int t_index = t_row_index*Size_Grid2D.width + t_col_index;
+                                
+                                if(t_row_index >= 0 && t_row_index < Size_Grid2D.height && t_col_index >= 0 && t_col_index < Size_Grid2D.width)
+                                {
+                                    total_cell++;
+                                    if(GridPT3[t_index].ortho_ncc < 0.2 && roh_height[t_index].GNCC < 0.0)
+                                    {
+                                        sel_count++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(total_cell > 10 && sel_count >= total_cell*0.3)
+                            roh_index = false;
+                    }
+                     */
                 }
             }
 			
@@ -14162,11 +14256,12 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 	FILE *outfile_min, *outfile_max, *outfile_h, *outfile_roh, *outfile_diff, *outfile_peak, *outINCC, *outGNCC,*outcount;
 	CSize temp_S;
 	char t_str[500];
-
+    
 	sprintf(t_str,"%s/txt/nccresult_roh1_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	outfile_min	= fopen(t_str,"w");
 	sprintf(t_str,"%s/txt/nccresult_roh2_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	outfile_max	= fopen(t_str,"w");
+    /*
 	sprintf(t_str,"%s/txt/nccresult_h1_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	outfile_h	= fopen(t_str,"w");
 	sprintf(t_str,"%s/txt/nccresult_h2_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
@@ -14174,14 +14269,15 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 	sprintf(t_str,"%s/txt/nccresult_peaks_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
 	outfile_peak	= fopen(t_str,"w");
 	sprintf(t_str,"%s/txt/nccresult_diff_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-	outfile_diff	= fopen(t_str,"w");
+	outfile_diff	= fopen(t_str,"w");\*/
 	sprintf(t_str,"%s/txt/INCC_level_%d_%d_%d_iter_%d.txt",save_path,row,col,level,iteration);
 	outINCC	= fopen(t_str,"w");
 	sprintf(t_str,"%s/txt/GNCC_level_%d_%d_%d_iter_%d.txt",save_path,row,col,level,iteration);
 	outGNCC	= fopen(t_str,"w");
+    /*
 	sprintf(t_str,"%s/txt/rohcount_level_%d_%d_%d_iter_%d.txt",save_path,row,col,level,iteration);
 	outcount	= fopen(t_str,"w");
-	
+	*/
 	temp_S.height	= Size_Grid2D->height;
 	temp_S.width	= Size_Grid2D->width;
 		
@@ -14190,40 +14286,40 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 		for(j=0;j<temp_S.width;j++)
 		{
 			int matlab_index	= k*temp_S.width + j;
-
+            
 			fprintf(outfile_min,"%f\t",nccresult[matlab_index].result0);
 			fprintf(outfile_max,"%f\t",nccresult[matlab_index].result1);
-			fprintf(outfile_h,"%f\t",nccresult[matlab_index].result2);
-			fprintf(outfile_roh,"%f\t",nccresult[matlab_index].result3);
-			fprintf(outfile_peak,"%f\t",nccresult[matlab_index].result4);
+			//fprintf(outfile_h,"%f\t",nccresult[matlab_index].result2);
+			//fprintf(outfile_roh,"%f\t",nccresult[matlab_index].result3);
+			//fprintf(outfile_peak,"%f\t",nccresult[matlab_index].result4);
 			
 			
 			fprintf(outINCC,"%f\t",nccresult[matlab_index].INCC);
 			fprintf(outGNCC,"%f\t",nccresult[matlab_index].GNCC);
-			fprintf(outcount,"%d\t",nccresult[matlab_index].roh_count);
+			//fprintf(outcount,"%d\t",nccresult[matlab_index].roh_count);
 		}
 		fprintf(outfile_min,"\n");
 		fprintf(outfile_max,"\n");
-		fprintf(outfile_h,"\n");
-		fprintf(outfile_roh,"\n");
-		fprintf(outfile_peak,"\n");
+		//fprintf(outfile_h,"\n");
+		//fprintf(outfile_roh,"\n");
+		//fprintf(outfile_peak,"\n");
 		//fprintf(outfile_diff,"\n");
 		
 		fprintf(outINCC,"\n");
 		fprintf(outGNCC,"\n");
-		fprintf(outcount,"\n");
+		//fprintf(outcount,"\n");
 	}
 
 	fclose(outfile_min);
 	fclose(outfile_max);
-	fclose(outfile_h);
-	fclose(outfile_roh);
-	fclose(outfile_peak);
+	//fclose(outfile_h);
+	//fclose(outfile_roh);
+	//fclose(outfile_peak);
 	//fclose(outfile_diff);
 	
 	fclose(outINCC);
 	fclose(outGNCC);
-	fclose(outcount);
+	//fclose(outcount);
 }
 
 int AdjustParam(uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT Lstartpos, D2DPOINT Rstartpos, double **LRPCs, double **RRPCs, double *ImageAdjust, NCCflag _flag,
@@ -15432,7 +15528,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		fclose(t_file);
 	}
 	fclose(fheader);
-	remove(iterfile);
+	//remove(iterfile);
 	
 	if(total_search_count > 0)
 	{
@@ -15597,8 +15693,6 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
                 int t_i, t_j;
                 double sum_h;
                 double sum_ortho;
-                
-                //double* save_ortho = (double*)malloc(sizeof(double)*total_size);
                 
                 row = (int)(floor(index/col_count));
                 col = index%col_count;
