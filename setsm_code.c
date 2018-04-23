@@ -2640,9 +2640,12 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
 										TIN_split_level = 0;
 									else if(grid_resolution <= 4)
 										TIN_split_level = 2;
+                                    
+                                    if(fabs(subBoundary[2] - subBoundary[0]) > 10000 || fabs(subBoundary[3] - subBoundary[1]) > 10000)
+                                        TIN_split_level = 2;
 								}
 								
-								if(proinfo.IsRA)
+                             	if(proinfo.IsRA)
 								{
 									TIN_split_level = 4;
 								}
@@ -2675,7 +2678,7 @@ int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint
                                     {
 										echoprint_Gridinfo(proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
                                         
-                                        echo_print_nccresults(proinfo.save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,"final");
+                                        //echo_print_nccresults(proinfo.save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,"final");
                                     }
 									free(ptslists);
 								}
@@ -8617,13 +8620,15 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 					if(GridPT3[pt_index].Matched_flag == 0)
 						check_blunder_cell = true;
 				}
-
+                
+                
 				if((nccresult[pt_index].result2 != 0) && (nccresult[pt_index].result2 >= GridPT3[pt_index].minHeight && nccresult[pt_index].result2 <= GridPT3[pt_index].maxHeight) &&
 				   (GridPT3[pt_index].minHeight >= GridPT3[pt_index].t_minHeight && GridPT3[pt_index].maxHeight <= GridPT3[pt_index].t_maxHeight) )
 				{
 					check_blunder_cell = true;
 				}
 				
+                
 				if(Pyramid_step == 0 && GridPT3[pt_index].Matched_flag == 2 && iteration > 100)
 				{
 					//no calculation
@@ -8678,12 +8683,11 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
                             }
                             double stdheight = sqrt(sum_residual/(double)total_cell);
                             
-                            int temp_th_height = 10;
-//                            if(Pyramid_step == 0)
-//                                temp_th_height = 10;
-                            if(stdheight < temp_th_height && rate > 0.2)
+                            int temp_th_height = 5;
+                            if(rate > 0.2)
                             {
-                                Half_template_size = 10;//(int)(Template_size/2);
+                                if(stdheight <= temp_th_height)
+                                    Half_template_size = (int)(Template_size/2);
                             }
                         }
                         
@@ -11600,6 +11604,10 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
 			TIN_split_level = 0;
 		else if(grid_resolution <= 4)
 			TIN_split_level = 2;
+        
+        if(fabs(Boundary[2] - Boundary[0]) > 10000 || fabs(Boundary[3] - Boundary[1]) > 10000)
+            TIN_split_level = 2;
+        
 	}
 	if(IsRA)
 	{
@@ -14172,8 +14180,8 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
 								m_bHeight[Index] = 1;
 								GridPT3[Index].Height = Z;
 								
-								GridPT3[Index].t_minHeight = temp_MinZ;
-								GridPT3[Index].t_maxHeight = temp_MaxZ;
+								//GridPT3[Index].t_minHeight = temp_MinZ;
+								//GridPT3[Index].t_maxHeight = temp_MaxZ;
 							}
 						}
 					}
@@ -15456,7 +15464,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 	
 	value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
 	value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-	value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
+	value_pt = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
 	pt_save	 = (NNXY*)malloc(sizeof(NNXY)*(long)row_count*(long)col_count);
 	
 	t_ndata = ndata;
@@ -15525,11 +15533,13 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 			}
 			
 		}
+        fclose(forthoncc);
 		fclose(t_file);
 	}
 	fclose(fheader);
-	//remove(iterfile);
-	
+	remove(iterfile);
+    remove(iterorthofile);
+    
 	if(total_search_count > 0)
 	{
 		cal_gridpts_X	 = (double*)malloc(sizeof(double)*total_search_count);
@@ -15648,543 +15658,7 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
             }
         }
 	}
-
-    
-	printf("start null\n");
-	long count_null_cell = 0;
-	int check_while = 0;
-    
-    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    float *t_value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
-    
-    memcpy(t_value,value,sizeof(float)*(long)col_count*(long)row_count);
-    memcpy(t_value_orthoncc,value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-    memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-
-    int iter_check = 0;
-    int check_size = 0;
-    int max_total_iteration = 6;
-    if(grid > 2)
-        max_total_iteration = 3;
-    int total_iteration;
-    
-    for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
-    {
-        check_while = 0;
-        check_size = total_iteration;
-        
-        double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
-        int total_size = (2*check_size+1)*(2*check_size+1);
-        while(check_while == 0)
-        {
-            iter_check ++;
-            //printf("1st null iteration %d\t%d\n",check_size,iter_check);
-            
-            count_null_cell = 0;
-
-            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-            for (long index = 0; index < col_count*row_count; index++) 
-            {
-                int row, col;
-                
-                long count_cell;
-                long count_all_cell = 0;
-                int t_i, t_j;
-                double sum_h;
-                double sum_ortho;
-                
-                row = (int)(floor(index/col_count));
-                col = index%col_count;
-            
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-                {
-                    count_cell = 0;
-                    sum_h = 0;
-                    sum_ortho = 0;
-                    count_all_cell = 0;
-                    
-                    D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(total_size));
-                    
-                    for (t_i = -check_size; t_i <= check_size;t_i++ )
-                    {
-                        for (t_j = -check_size; t_j <= check_size; t_j++)
-                        {
-                            int index_row = row + t_i;
-                            int index_col = col + t_j;
-                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                            
-                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
-                            {
-                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
-                                {
-                                    double x,y,x_ref,y_ref;
-                                    x = t_j*grid;
-                                    y = t_i*grid;
-                                   
-                                    XY_save[count_cell].flag = 1;
-                                    XY_save[count_cell].m_X = x;
-                                    XY_save[count_cell].m_Y = y;
-                                    XY_save[count_cell].m_Z = value[(long)index_row*(long)col_count + (long)index_col];
-                                    
-                                    sum_ortho += value_orthoncc[t_index];
-                                    
-                                    count_cell++;
-                                }
-                                
-                                if(value_orthoncc[t_index] <= 0.0)
-                                   count_all_cell++;
-                            }
-                        }
-                    }
-                   
-                    if (count_cell >= total_size*0.6 /*&& count_all_cell < total_size*0.2*/)
-                    {
-                        /*
-                        GMA_double *A_matrix = GMA_double_create(count_cell, 6);
-                        GMA_double *L_matrix = GMA_double_create(count_cell, 1);
-                        GMA_double *AT_matrix = GMA_double_create(6,count_cell);
-                        GMA_double *ATA_matrix = GMA_double_create(6,6);
-                        
-                        GMA_double *ATAI_matrix = GMA_double_create(6,6);
-                        GMA_double *ATL_matrix = GMA_double_create(6,1);
-                        
-                        GMA_double *X_matrix = GMA_double_create(6,1);
-                        GMA_double *AX_matrix = GMA_double_create(count_cell,1);
-                        GMA_double *V_matrix = GMA_double_create(count_cell,1);
-                        
-                        for(int t_row = 0; t_row < count_cell ; t_row++)
-                        {
-                            A_matrix->val[t_row][0] = XY_save[t_row].m_X;
-                            A_matrix->val[t_row][1] = XY_save[t_row].m_Y;
-                            A_matrix->val[t_row][2] = 1.0;
-                            
-                            L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
-                        }
-                        
-                        GMA_double_Tran(A_matrix,AT_matrix);
-                        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                        GMA_double_inv(ATA_matrix,ATAI_matrix);
-                        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                        
-                        double sum = 0;
-                        double min_Z = 99999999999;
-                        double max_Z = -99999999999;
-                        double temp_fitted_Z;
-                        double diff_Z;
-                        long int selected_count = 0;
-                        int *hist = (int*)calloc(sizeof(int),20);
-                        for(int t_row = 0; t_row < count_cell ; t_row++)
-                        {
-                            int hist_index = (int)(fabs(V_matrix->val[t_row][0]));
-                            if(hist_index > 19)
-                                hist_index = 19;
-                            if(hist_index >= 0 && hist_index <= 19)
-                                hist[hist_index]++;
-                        }
-                        
-                        double hist_th = 0.8;
-                        if(grid >= 8)
-                            hist_th = 0.9;
-                        else
-                            hist_th = 0.8;
-                        int V_th = 20;
-                        int hist_sum = 0;
-                        double hist_rate;
-                        bool check_V = true;
-                        int s_row = 0;
-                        while(check_V && s_row < 20)
-                        {
-                            hist_sum += hist[s_row];
-                            hist_rate = (double)hist_sum/(count_cell);
-                            if(hist_rate > hist_th && hist_sum > 6)
-                            {
-                                V_th = s_row;
-                                check_V = false;
-                            }
-                            s_row++;
-                        }
-                        free(hist);
-                        
-                        for(int t_row = 0; t_row < count_cell ; t_row++)
-                        {
-                            if(fabs(V_matrix->val[t_row][0]) > V_th+1)
-                                XY_save[t_row].flag = 0;
-                            else
-                                selected_count++;
-                        }
-                        
-                        GMA_double_destroy(A_matrix);
-                        GMA_double_destroy(L_matrix);
-                        GMA_double_destroy(AT_matrix);
-                        GMA_double_destroy(ATA_matrix);
-                        GMA_double_destroy(ATAI_matrix);
-                        GMA_double_destroy(ATL_matrix);
-                        GMA_double_destroy(X_matrix);
-                        GMA_double_destroy(AX_matrix);
-                        GMA_double_destroy(V_matrix);
-                        
-                        
-                        if(selected_count > 10)*/
-                        {
-                            
-                            GMA_double *A_matrix = GMA_double_create(count_cell, 6);
-                            GMA_double *L_matrix = GMA_double_create(count_cell, 1);
-                            GMA_double *AT_matrix = GMA_double_create(6,count_cell);
-                            GMA_double *ATA_matrix = GMA_double_create(6,6);
-                            
-                            GMA_double *ATAI_matrix = GMA_double_create(6,6);
-                            GMA_double *ATL_matrix = GMA_double_create(6,1);
-                            
-                            GMA_double *X_matrix = GMA_double_create(6,1);
-                            GMA_double *AX_matrix = GMA_double_create(count_cell,1);
-                            GMA_double *V_matrix = GMA_double_create(count_cell,1);
-                            
-                            /*
-                            A_matrix = GMA_double_create(selected_count, 6);
-                            L_matrix = GMA_double_create(selected_count, 1);
-                            AT_matrix = GMA_double_create(6,selected_count);
-                            ATA_matrix = GMA_double_create(6,6);
-                            
-                            ATAI_matrix = GMA_double_create(6,6);
-                            ATL_matrix = GMA_double_create(6,1);
-                            
-                            X_matrix = GMA_double_create(6,1);
-                            AX_matrix = GMA_double_create(selected_count,1);
-                            V_matrix = GMA_double_create(selected_count,1);
-                            */
-                            //int se_count = 0;
-                            for(int t_row = 0; t_row < count_cell ; t_row++)
-                            {
-                                //if(XY_save[t_row].flag == 1)
-                                {
-                                    A_matrix->val[t_row][0] = XY_save[t_row].m_X*XY_save[t_row].m_X;
-                                    A_matrix->val[t_row][1] = XY_save[t_row].m_X*XY_save[t_row].m_Y;
-                                    A_matrix->val[t_row][2] = XY_save[t_row].m_Y*XY_save[t_row].m_Y;
-                                    A_matrix->val[t_row][3] = XY_save[t_row].m_X;
-                                    A_matrix->val[t_row][4] = XY_save[t_row].m_Y;
-                                    A_matrix->val[t_row][5] = 1.0;
-                                    
-                                    L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
-                                    
-                                    //se_count++;
-                                }
-                            }
-                            
-                            GMA_double_Tran(A_matrix,AT_matrix);
-                            GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                            GMA_double_inv(ATA_matrix,ATAI_matrix);
-                            GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                            GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                            GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                            GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                            
-                            double sum = 0;
-                            for(int t_row = 0; t_row < count_cell ; t_row++)
-                            {
-                                sum += V_matrix->val[t_row][0] * V_matrix->val[t_row][0];
-                            }
-                            
-                            double sigma = sqrt(sum/(double)count_cell);
-                            
-                            if(sigma < grid)
-                            {
-                                t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho;
-                                
-                                t_value_pt[(long)row*(long)col_count + (long)col] = 1;
-                                t_value[(long)row*(long)col_count + (long)col]	  = X_matrix->val[0][5];
-                                
-                                double t_x, t_y;
-                                double pos_col,pos_row;
-                                
-                                t_x = minX + col*grid;
-                                t_y = maxY - row*grid;
-                                
-                                //if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
-                                {
-                                    pt_save[(long)row*(long)col_count + (long)col].X = t_x;
-                                    pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
-                                    pt_save[(long)row*(long)col_count + (long)col].Z = t_value[(long)row*(long)col_count + (long)col];
-                                }
-                                count_null_cell ++;
-                            }
-                            
-                            GMA_double_destroy(A_matrix);
-                            GMA_double_destroy(L_matrix);
-                            GMA_double_destroy(AT_matrix);
-                            GMA_double_destroy(ATA_matrix);
-                            GMA_double_destroy(ATAI_matrix);
-                            GMA_double_destroy(ATL_matrix);
-                            GMA_double_destroy(X_matrix);
-                            GMA_double_destroy(AX_matrix);
-                            GMA_double_destroy(V_matrix);
-                        }
-                        
-                    }
-                    free(XY_save);
-                }
-                
-            }
-            
-            memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
-            memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-            
-            if(count_null_cell == 0)
-                check_while = 1;
-        }
-    }
-
-    total_mt_count = 0;
-    
-    
-    iter_check = 0;
-    check_size = 10;
-    total_iteration = 0;
-    max_total_iteration = 6;
-    if(grid > 2)
-        max_total_iteration = 3;
-    
-    //while(total_iteration < max_total_iteration)
-    {
-        check_while = 0;
-        //check_size ++;
-        while(check_while == 0)
-        {
-            iter_check ++;
-            //printf("2nd null iteration %d\t%d\n",check_size,iter_check);
-            
-            count_null_cell = 0;
-            int total_size = (2*check_size+1)*(2*check_size+1);
-            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-            for (long index = 0; index < col_count*row_count; index++)
-            {
-                int row, col;
-                long count_cell;
-                int t_i, t_j;
-                double sum_h;
-                double sum_ortho;
-                
-                int count_low_cell = 0;
-                
-                row = (int)(floor(index/col_count));
-                col = index%col_count;
-
-                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
-                {
-                    sum_ortho = 0;
-                    count_cell = 0;
-                    
-                    for (t_i = -check_size; t_i <= check_size;t_i++ )
-                    {
-                        for (t_j = -check_size; t_j <= check_size; t_j++)
-                        {
-                            int index_row = row + t_i;
-                            int index_col = col + t_j;
-                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                            
-                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
-                            {
-                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
-                                {
-                                    sum_ortho += value_orthoncc[t_index];
-                                    count_cell++;
-                                    
-                                    if(value_orthoncc[t_index] < 0.0)
-                                    {
-                                        count_low_cell++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    sum_ortho /= (double)count_cell;
-                    
-                    if (/*count_cell > total_size*0.2 && */count_low_cell >= total_size*0.3)
-                    {
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
-                        
-                        count_null_cell ++;
-                    }
-                }
-            }
-            
-            if(count_null_cell == 0)
-                check_while = 1;
-            
-            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-            memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
-        }
-        //total_iteration = total_iteration + 1;
-    }
-    
-    /*
-    check_while = 0;
-    check_size = 3;
-    while(check_while == 0)
-    {
-        iter_check ++;
-        //printf("3rd null iteration %d\t%d\n",check_size,iter_check);
-        
-        count_null_cell = 0;
-        
-#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-        for (long index = 0; index < col_count*row_count; index++)
-        {
-            int row, col;
-            
-            long count_cell;
-            int t_i, t_j;
-            double sum_h;
-            double sum_ortho;
-            int total_size = (2*check_size+1)*(2*check_size+1);
-            
-            row = (int)(floor(index/col_count));
-            col = index%col_count;
-            
-            
-            if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-            {
-                count_cell = 0;
-                sum_h = 0;
-                sum_ortho = 0;
-                
-                D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(total_size));
-                
-                for (t_i = -check_size; t_i <= check_size;t_i++ )
-                {
-                    for (t_j = -check_size; t_j <= check_size; t_j++)
-                    {
-                        int index_row = row + t_i;
-                        int index_col = col + t_j;
-                        long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                        
-                        if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100)
-                        {
-                            if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
-                            {
-                                double x,y,x_ref,y_ref;
-                                x = t_j*grid;
-                                y = t_i*grid;
-                                x_ref = 0;
-                                y_ref = 0;
-                                
-                                XY_save[count_cell].flag = 1;
-                                XY_save[count_cell].m_X = x;
-                                XY_save[count_cell].m_Y = y;
-                                XY_save[count_cell].m_Z = value[(long)index_row*(long)col_count + (long)index_col];
-                                
-                                sum_ortho += value_orthoncc[t_index];
-                                
-                                count_cell++;
-                            }
-                        }
-                    }
-                }
-                
-                sum_ortho/=(double)count_cell;
-                
-                if (count_cell >= total_size*0.7)
-                {
-                    GMA_double *A_matrix = GMA_double_create(count_cell, 6);
-                    GMA_double *L_matrix = GMA_double_create(count_cell, 1);
-                    GMA_double *AT_matrix = GMA_double_create(6,count_cell);
-                    GMA_double *ATA_matrix = GMA_double_create(6,6);
-                    
-                    GMA_double *ATAI_matrix = GMA_double_create(6,6);
-                    GMA_double *ATL_matrix = GMA_double_create(6,1);
-                    
-                    GMA_double *X_matrix = GMA_double_create(6,1);
-                    GMA_double *AX_matrix = GMA_double_create(count_cell,1);
-                    GMA_double *V_matrix = GMA_double_create(count_cell,1);
-                    
-                    for(int t_row = 0; t_row < count_cell ; t_row++)
-                    {
-                        {
-                            A_matrix->val[t_row][0] = XY_save[t_row].m_X*XY_save[t_row].m_X;
-                            A_matrix->val[t_row][1] = XY_save[t_row].m_X*XY_save[t_row].m_Y;
-                            A_matrix->val[t_row][2] = XY_save[t_row].m_Y*XY_save[t_row].m_Y;
-                            A_matrix->val[t_row][3] = XY_save[t_row].m_X;
-                            A_matrix->val[t_row][4] = XY_save[t_row].m_Y;
-                            A_matrix->val[t_row][5] = 1.0;
-                            
-                            L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
-                        }
-                    }
-                    
-                    GMA_double_Tran(A_matrix,AT_matrix);
-                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                    GMA_double_inv(ATA_matrix,ATAI_matrix);
-                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                    
-                    double sum = 0;
-                    for(int t_row = 0; t_row < count_cell ; t_row++)
-                    {
-                        sum += V_matrix->val[t_row][0] * V_matrix->val[t_row][0];
-                    }
-                    
-                    double sigma = sqrt(sum/count_cell);
-                    
-                    //if(sigma < grid)
-                    {
-                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho;
-                        
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 1;
-                        t_value[(long)row*(long)col_count + (long)col]	  = X_matrix->val[0][5];
-                        
-                        double t_x, t_y;
-                        double pos_col,pos_row;
-                        
-                        t_x = minX + col*grid;
-                        t_y = maxY - row*grid;
-                        
-                        if(pt_save[(long)row*(long)col_count + (long)col].Z == -9999)
-                        {
-                            pt_save[(long)row*(long)col_count + (long)col].X = t_x;
-                            pt_save[(long)row*(long)col_count + (long)col].Y = t_y;
-                            pt_save[(long)row*(long)col_count + (long)col].Z = t_value[(long)row*(long)col_count + (long)col];
-                        }
-                        count_null_cell ++;
-                    }
-                    
-                    GMA_double_destroy(A_matrix);
-                    GMA_double_destroy(L_matrix);
-                    GMA_double_destroy(AT_matrix);
-                    GMA_double_destroy(ATA_matrix);
-                    GMA_double_destroy(ATAI_matrix);
-                    GMA_double_destroy(ATL_matrix);
-                    GMA_double_destroy(X_matrix);
-                    GMA_double_destroy(AX_matrix);
-                    GMA_double_destroy(V_matrix);
-                    
-                }
-                free(XY_save);
-            }
-            
-        }
-        
-        memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
-        memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-        memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-        
-        if(count_null_cell == 0)
-            check_while = 1;
-    }
-    */
-    free(t_value);
-    free(t_value_orthoncc);
-    free(t_value_pt);
-    
-    printf("end null\n");
-    
+     
 	if(total_search_count > 0)
 	{
 #pragma omp parallel for schedule(guided)
@@ -16258,6 +15732,394 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		free(cal_gridpts_Y);
 	
     printf("end interpolation\n");
+    
+    
+    printf("start null\n");
+    long count_null_cell = 0;
+    int check_while = 0;
+    
+    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    float *t_value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
+    
+    memcpy(t_value,value,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_orthoncc,value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+    
+    int iter_check = 0;
+    int check_size = 0;
+    int max_total_iteration = 3;
+    if(grid > 2)
+        max_total_iteration = 3;
+    int total_iteration;
+    double th_rate = 0.6;
+    int grid_rate = (int)(8.0/(double)grid);
+    if(grid_rate < 1)
+        grid_rate = 1;
+    
+    printf("first grid rate %d\n",grid_rate);
+    
+    for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+    {
+        check_while = 0;
+        check_size = total_iteration*grid_rate;
+        
+        //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
+        int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+        while(check_while == 0)
+        {
+            iter_check ++;
+            //printf("1st null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+            
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+            for (long index = 0; index < col_count*row_count; index++)
+            {
+                int row, col;
+                
+                long count_cell;
+                int t_i, t_j;
+                double sum_h;
+                double sum_ortho;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+                
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                {
+                    count_cell = 0;
+                    sum_h = 0;
+                    sum_ortho = 0;
+                    
+                    //D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(total_size));
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
+                            {
+                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
+                                {
+                                    /*
+                                    double x,y,x_ref,y_ref;
+                                    x = t_j*grid;
+                                    y = t_i*grid;
+                                    
+                                    XY_save[count_cell].flag = 1;
+                                    XY_save[count_cell].m_X = x;
+                                    XY_save[count_cell].m_Y = y;
+                                    XY_save[count_cell].m_Z = value[(long)index_row*(long)col_count + (long)index_col];
+                                    */
+                                    sum_ortho += value_orthoncc[t_index];
+                                    
+                                    count_cell++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (count_cell >= 7 && count_cell >= total_size*th_rate )
+                    {
+                        
+                        {
+                            
+                            /*GMA_double *A_matrix = GMA_double_create(count_cell, 6);
+                            GMA_double *L_matrix = GMA_double_create(count_cell, 1);
+                            GMA_double *AT_matrix = GMA_double_create(6,count_cell);
+                            GMA_double *ATA_matrix = GMA_double_create(6,6);
+                            
+                            GMA_double *ATAI_matrix = GMA_double_create(6,6);
+                            GMA_double *ATL_matrix = GMA_double_create(6,1);
+                            
+                            GMA_double *X_matrix = GMA_double_create(6,1);
+                            GMA_double *AX_matrix = GMA_double_create(count_cell,1);
+                            GMA_double *V_matrix = GMA_double_create(count_cell,1);
+                            
+                            for(int t_row = 0; t_row < count_cell ; t_row++)
+                            {
+                                //if(XY_save[t_row].flag == 1)
+                                {
+                                    A_matrix->val[t_row][0] = XY_save[t_row].m_X*XY_save[t_row].m_X;
+                                    A_matrix->val[t_row][1] = XY_save[t_row].m_X*XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][2] = XY_save[t_row].m_Y*XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][3] = XY_save[t_row].m_X;
+                                    A_matrix->val[t_row][4] = XY_save[t_row].m_Y;
+                                    A_matrix->val[t_row][5] = 1.0;
+                                    
+                                    L_matrix->val[t_row][0] = XY_save[t_row].m_Z;
+                                    
+                                    //se_count++;
+                                }
+                            }
+                            
+                            GMA_double_Tran(A_matrix,AT_matrix);
+                            GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                            GMA_double_inv(ATA_matrix,ATAI_matrix);
+                            GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                            GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                            GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                            GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                            
+                            double sum = 0;
+                            for(int t_row = 0; t_row < count_cell ; t_row++)
+                            {
+                                sum += V_matrix->val[t_row][0] * V_matrix->val[t_row][0];
+                            }
+                            
+                            double sigma = sqrt(sum/(double)count_cell);
+                            */
+                            //if(sigma < grid)
+                            {
+                                t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                                
+                                t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                                //t_value[(long)row*(long)col_count + (long)col]	  = X_matrix->val[0][5];
+                                
+                                count_null_cell ++;
+                            }
+                            
+                            /*
+                            GMA_double_destroy(A_matrix);
+                            GMA_double_destroy(L_matrix);
+                            GMA_double_destroy(AT_matrix);
+                            GMA_double_destroy(ATA_matrix);
+                            GMA_double_destroy(ATAI_matrix);
+                            GMA_double_destroy(ATL_matrix);
+                            GMA_double_destroy(X_matrix);
+                            GMA_double_destroy(AX_matrix);
+                            GMA_double_destroy(V_matrix);
+                             */
+                        }
+                        
+                    }
+                    //free(XY_save);
+                }
+                
+            }
+            
+            //memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            
+            if(count_null_cell == 0)
+                check_while = 1;
+        }
+    }
+    
+    total_mt_count = 0;
+    
+    
+    iter_check = 0;
+    check_size = 10*grid_rate;
+    total_iteration = 0;
+    printf("second null\n");
+    //while(total_iteration < max_total_iteration)
+    {
+        check_while = 0;
+        //check_size ++;
+        while(check_while == 0)
+        {
+            iter_check ++;
+            //printf("2nd null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+            int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+            for (long index = 0; index < col_count*row_count; index++)
+            {
+                int row, col;
+                long count_cell;
+                int t_i, t_j;
+                double sum_h;
+                double sum_ortho;
+                
+                int count_low_cell = 0;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
+                {
+                    sum_ortho = 0;
+                    count_cell = 0;
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
+                            {
+                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
+                                {
+                                    sum_ortho += value_orthoncc[t_index];
+                                    count_cell++;
+                                    
+                                    if(value_orthoncc[t_index] < 0.0)
+                                    {
+                                        count_low_cell++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    sum_ortho /= (double)count_cell;
+                    
+                    if (count_low_cell >= total_size*0.3)
+                    {
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
+                        
+                        count_null_cell ++;
+                    }
+                }
+            }
+            
+            if(count_null_cell == 0)
+                check_while = 1;
+            
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            //memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+        }
+        //total_iteration = total_iteration + 1;
+    }
+    
+    
+    if(grid_rate > 1)
+    {
+        printf("last iteration\n");
+        
+        iter_check = 0;
+        check_size = 0;
+        max_total_iteration = 3;
+        total_iteration;
+        th_rate = 0.6;
+        
+        for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+        {
+            check_while = 0;
+            check_size = total_iteration;
+            
+            //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
+            int total_size = (2*check_size+1)*(2*check_size+1);
+            while(check_while == 0)
+            {
+                iter_check ++;
+                //printf("1st null iteration %d\t%d\n",check_size,iter_check);
+                
+                count_null_cell = 0;
+                
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+                for (long index = 0; index < col_count*row_count; index++)
+                {
+                    int row, col;
+                    
+                    long count_cell;
+                    long count_all_cell = 0;
+                    int t_i, t_j;
+                    double sum_h;
+                    double sum_ortho;
+                    
+                    row = (int)(floor(index/col_count));
+                    col = index%col_count;
+                    
+                    
+                    if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                    {
+                        count_cell = 0;
+                        sum_h = 0;
+                        sum_ortho = 0;
+                        
+                        //double *diff = (double*)malloc(sizeof(double)*(total_size));
+                        //double *height = (double*)malloc(sizeof(double)*(total_size));
+                        
+                        for (t_i = -check_size; t_i <= check_size;t_i++ )
+                        {
+                            for (t_j = -check_size; t_j <= check_size; t_j++)
+                            {
+                                int index_row = row + t_i;
+                                int index_col = col + t_j;
+                                long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                                
+                                if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
+                                {
+                                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
+                                    {
+                                        /*
+                                        double x,y,x_ref,y_ref;
+                                        x = t_j*grid;
+                                        y = t_i*grid;
+                                        
+                                        diff[count_cell] = sqrt((t_i*t_i) + (t_j*t_j));
+                                        height[count_cell] = value[(long)index_row*(long)col_count + (long)index_col];
+                                        */
+                                        sum_ortho += value_orthoncc[t_index];
+                                        
+                                        count_cell++;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (count_cell >= total_size*th_rate )
+                        {
+                            /*double sum1, sum2;
+                            double p = 1.5;
+                            
+                            sum1 = 0;
+                            sum2 = 0;
+                            for(int t_row=0;t_row<count_cell;t_row++)
+                            {
+                                sum1 += (height[t_row]/pow(diff[t_row],p));
+                                sum2 += (1.0/pow(diff[t_row],p));
+                            }
+                            
+                            if(sum2 > 0)*/
+                            {
+                                //double t_result = sum1/sum2;
+                                
+                                t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                                
+                                t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                                //t_value[(long)row*(long)col_count + (long)col]	  = t_result;
+                                
+                                count_null_cell ++;
+                            }
+                        }
+                        
+                        //free(diff);
+                        //free(height);
+                    }
+                }
+                
+                //memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+                memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+                memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+                
+                if(count_null_cell == 0)
+                    check_while = 1;
+            }
+        }
+    }
+    
+    printf("end last iteration\n");
+    
+    free(t_value);
+    free(t_value_orthoncc);
+    free(t_value_pt);
+    
+    printf("end null\n");
+
 	//smoothing
 	float *value_sm = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
 				
@@ -16270,7 +16132,9 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 		long null_count_cell;
 		int t_i, t_j;
 		double sum_h, null_sum_h;
-		
+        int count_null_grid = 0;
+        int count_match_grid = 0;
+        
 		row = (int)(floor(index/col_count));
 		col = index%col_count;
 		count_cell = 0;
@@ -16302,8 +16166,29 @@ void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iter
 					}
 
 				}
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                {
+                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
+                    {
+                        count_match_grid++;
+                    }
+                }
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -9999)
+                {
+                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
+                    {
+                        count_null_grid++;
+                    }
+                }
 			}
 		}
+        
+        if(count_match_grid >= 8)
+            value_pt[(long)row*(long)col_count + (long)col] = 1;
+        if(count_null_grid >= 8)
+            value_pt[(long)row*(long)col_count + (long)col] = 0;
 		
 		if(count_cell > 0)
 			value_sm[(long)row*(long)col_count + (long)col] = sum_h / count_cell;
