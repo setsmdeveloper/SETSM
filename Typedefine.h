@@ -204,6 +204,7 @@ typedef struct ProjectInfo{
 	bool check_checktiff;
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
+    bool check_Matchtag;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 } ProInfo;
@@ -265,6 +266,8 @@ typedef struct ArgumentInfo{
     bool check_LSF_DEM;
     bool check_LSFDEMpath;
     bool check_LSF2;
+    bool check_Matchtag;
+    
 } ARGINFO;
 
 typedef struct tagImageInfo

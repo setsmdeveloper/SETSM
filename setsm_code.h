@@ -62,7 +62,7 @@ void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_
 void SetThs(int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double seedDEMsigma, double f_demsize);
 D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
 				   double *py_resolution, double *grid_resolution, double *subBoundary);
-UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,
+UGRID *SetGrid3PT(ProInfo proinfo,TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,
 				  char* priori_DEM_tif,bool pre_DEMtif, double seedDEMsigma, int IsRA,char* metafilename);
 int	 CalTotalIteration(uint8 DEM_level,int level);
 
@@ -81,7 +81,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
 void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_area, int col, int row, double *subBoundary);
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
-void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
+void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
@@ -116,7 +116,7 @@ bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImag
 					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var);
 void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
 
-double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
+double VerticalLineLocus_seeddem(ProInfo proinfo,uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
 								CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
 								CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
 								uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
