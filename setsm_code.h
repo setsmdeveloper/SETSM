@@ -40,6 +40,7 @@
 
 typedef struct nnXY
 {
+    bool flag;
 	double X;
 	double Y;
 	double Z;
@@ -58,10 +59,10 @@ void SetTiles_RA(ProInfo info, bool IsSP, bool IsRR, double *Boundary, double *R
 				 uint8 *RA_row_start, uint8 *RA_row_end, uint8 * RA_row_iter, uint8 *t_col_start, uint8 *t_col_end, uint8 *RA_col_iter, double *subX, double *subY);
 void SetPySizes(CSize *data_size_l, CSize *data_size_r, CSize Lsubsetsize, CSize Rsubsetsize, int level);
 void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double f_demsize);
-void SetThs(int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double seedDEMsigma, double f_demsize);
+void SetThs(ProInfo proinfo,int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double seedDEMsigma, double f_demsize);
 D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
 				   double *py_resolution, double *grid_resolution, double *subBoundary);
-UGRID *SetGrid3PT(TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,
+UGRID *SetGrid3PT(ProInfo proinfo,TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,
 				  char* priori_DEM_tif,bool pre_DEMtif, double seedDEMsigma, int IsRA,char* metafilename);
 int	 CalTotalIteration(uint8 DEM_level,int level);
 
@@ -77,9 +78,10 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 bool Writetiff(char *filename, double* input, CSize Imagesize);
 
 float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
+unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
 void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_area, int col, int row, double *subBoundary);
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
-void SetHeightWithSeedDEM(TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
+void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
@@ -93,6 +95,7 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs);
 D3DPOINT* wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs);
 D2DPOINT* ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps);
 D2DPOINT ps2wgs_single(TransParam _param, D2DPOINT _ps);
+D2DPOINT utm2wgs_single(TransParam _param, D2DPOINT _ps);
 D3DPOINT* ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
 
 D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imageparam, uint16 _numofpts, D3DPOINT *_GP);
@@ -105,13 +108,15 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
 uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
 void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir);
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
-bool VerticalLineLocus(NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
+void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, double** LRPCs, double** RRPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
+bool VerticalLineLocus(bool check_matchtag, NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
 					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
 					   uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
 					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
 					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var);
+void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
 
-double VerticalLineLocus_seeddem(uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
+double VerticalLineLocus_seeddem(ProInfo proinfo,uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
 								CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
 								CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
 								uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
@@ -134,7 +139,7 @@ D2DPOINT OriginalToPyramid_single(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyr
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
 			  double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration);
+			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle);
 
 UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
 						 double min_max[],
@@ -191,7 +196,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 int Matching_SETSM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
 				   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Limageparam, double *Rimageparam,
 				   double **LRPCs, double **RRPCs, uint8 pre_DEM_level, uint8 DEM_level,	uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter);
+				   CSize Limagesize,CSize Rimagesize,CSize LBRsize,CSize RBRsize,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter, double CA,double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile);
 bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, double *rimageparam, D2DPOINT Lstartpos, D2DPOINT Rstartpos,
 						  D2DPOINT pos_xy, double minH, double maxH, CSize Lsize, CSize Rsize, int H_template_size, int pyramid_step);
 void RemoveFiles(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);
@@ -199,12 +204,13 @@ double MergeTiles(ProInfo info, int iter_row_start, int t_col_start, int iter_ro
 
 double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 
-void NNA_M(TransParam _param, char *save_path, char* Outputpath_name, char *iterfile,int row_start, int col_start, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration);
+void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration);
 
 void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type);
 CSize Envihdr_reader(char *filename);
 CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid_size);
+bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir);
 
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair);
@@ -235,3 +241,19 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c);
 CSize Envihdr_reader_ortho(char *filename);
 CSize Envihdr_reader_DEM_ortho(TransParam param, char *filename, double *minX, double *maxY, double *grid_size);
 char* remove_ext_ortho(char* mystr);
+
+
+//LSF smoothing
+CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *grid_size, float* seeddem, double* _minX, double* _maxY);
+float* GetDEMValue(char *GIMP_path,CSize seeddem_size);
+unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size);
+void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem,unsigned char* matchtag, float *smooth_DEM);
+double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSFINFO *Grid_info, float *input,unsigned char* matchtag, int row_size, int col_size, double grid, long int X, long int Y, long int *numpts, double *fitted_Z);
+void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, CSize DEM_size);
+GMA_double* GMA_double_create(uint32 size_row, uint32 size_col);
+void GMA_double_destroy(GMA_double* in);
+void GMA_double_inv(GMA_double *a, GMA_double *I);
+void GMA_double_mul(GMA_double *a, GMA_double *b, GMA_double *out);
+void GMA_double_Tran(GMA_double *a, GMA_double *out);
+void GMA_double_sub(GMA_double *a, GMA_double *b, GMA_double *out);
+void GMA_double_printf(GMA_double *a);

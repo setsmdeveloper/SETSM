@@ -150,6 +150,11 @@ typedef struct UpdateGrid{
 	uint8 anchor_flag;
 }UGRID;
 
+typedef struct LSFinfo{
+    float lsf_std;
+    int lsf_kernel;
+}LSFINFO;
+
 typedef struct BlunderIP{
 	CSize Size_Grid2D;
 	double gridspace;
@@ -199,6 +204,7 @@ typedef struct ProjectInfo{
 	bool check_checktiff;
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
+    bool check_Matchtag;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 } ProInfo;
@@ -256,6 +262,12 @@ typedef struct ArgumentInfo{
 	bool check_RA_only;
     bool check_ortho;
     bool check_imageresolution;
+    bool check_LSF;
+    bool check_LSF_DEM;
+    bool check_LSFDEMpath;
+    bool check_LSF2;
+    bool check_Matchtag;
+    
 } ARGINFO;
 
 typedef struct tagImageInfo
@@ -272,6 +284,7 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
+    float convergence_angle;
 	
 	int month;
     int date;
@@ -297,6 +310,14 @@ typedef struct tagBandInfo
     float effbw;
     float tdi;
 } BandInfo;
+
+typedef struct
+{
+    long int ncols;
+    long int nrows;
+    long double **val;
+    long double *data;
+} GMA_double;
 
 #endif
 
