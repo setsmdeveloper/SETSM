@@ -3,10 +3,13 @@ SETSM Change Log
 This file briefly describes the changes to the SETSM software package.  
 The most recent changes are listed first.
 
-SETSM 3.3.1 (03/19/2018)
+SETSM 3.3.1 (04/26/2018)
 
 * Changes since 3.3.0
-    - orthoimage generation bug fixed about xml file format
+    - Orthoimage generation bug fixed about xml file format
+    - Added Local Surface Filter as post processing
+    - Updated matchtag information
+    - Reduced divot blunders over smooth surfaces
 
 SETSM 3.3.0 (03/14/2018)
 
