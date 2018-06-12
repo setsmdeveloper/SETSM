@@ -24,7 +24,6 @@ Algorithmica 2, 153-174.
 ## Installation instructions
 
 ### Prerequisite
-
 SETSM is dependent on LibTIFF, version 4.0.3 or higher.  Your system may 
 already have LibTIFF installed.  If not, you must download and install it 
 separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
@@ -37,7 +36,7 @@ make install
 
 ### Building SETSM using one of the provided Makefiles
 
-Makefiles are provided for building SESTSM with the Intel, PGI, GNU and Cray 
+Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
 compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
 use.  Copy the selected file to Makefile and edit it if necessary to set the 
 correct path to the TIFF library.  SETSM can then be built simply by typing:
@@ -45,10 +44,24 @@ correct path to the TIFF library.  SETSM can then be built simply by typing:
 make
 ```
 
-Additionally, you can build SETSM with MPI by following the above steps then instead typing:
+#### Parallel SETSM with MPI (Message-Passing Interface)
+To build SETSM for parallel computing with MPI, follow the above steps then use:
 ```
-make MPI
+make setsm_mpi
 ```
+
+MPI-parallel SETSM (setsm_mpi) has been tested with MVAPICH2 and 
+OpenMPI.  It should work with other MPI implementations with minor changes 
+to the Makefile.
+
+If SETSM is built with both MPI and OpenMP it is usually best to run one 
+MPI process per compute node and allow threading within the node.
+
+#### A note about precision
+
+SETSM can be quite sensitive to roundoff error for some terrains.  We have 
+tried to set appropriate compilation flags in the Makefiles, but you may need 
+to experiment with floating-point related options if you have problems.
 
 ### Building and installing SETSM using CMake
 
@@ -94,6 +107,17 @@ make install
 ```
 
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
+
+### Building SETSM with an alternative triangulation library
+
+By default, SETSM uses Steve Fortune's voronoi code for Delaunay triangulation.  
+It also supports Jonathan Shewchuk's Triangle library, available at 
+https://www.cs.cmu.edu/~quake/triangle.html.  To use Triangle in place of the 
+default triangulation code, download the code and place the files triangle.c 
+and triangle.h in the directory with the SETSM code.  Use Makefile.Triangle as 
+a model for building SETSM with Triangle.  Note that Triangle has restrictions 
+related to commercial distribution.  The user is responsible for complying with 
+all license terms.
 
 ## License
 

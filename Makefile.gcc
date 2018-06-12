@@ -2,14 +2,14 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-#TIFFPATH=/fs/project/PZS0530/setsm/tiff-4.0.3
+#TIFFPATH=$(HOME)/libtiff
 #TIFFINC=-I$(TIFFPATH)/include
 #TIFFLIB=-L$(TIFFPATH)/lib
 
 CC=gcc
 MPICC=mpicc
-CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -march=native
-MPICFLAGS=$(CFLAGS) -DbuildMPI
+CFLAGS=-std=c99 -O3 -fopenmp -march=native -ffast-math 
+MPICFLAGS=$(CFLAGS) -DBUILDMPI
 
 INCS=$(TIFFINC)
 LDFLAGS=$(TIFFLIB)
@@ -32,6 +32,6 @@ setsm_code_mpi.o : Typedefine.h setsm_code.h setsm_code.c
 .PHONY: clean
 
 clean :
-	rm -f setsm
+	rm -f setsm setsm_mpi
 	rm -f *.o
 
