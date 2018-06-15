@@ -5,6 +5,12 @@
 #define UCHAR 1
 #define UINT16 12
 
+#define N(a) (sizeof(a) / sizeof(a[0]))
+#define GDAL_NODATA 42113
+static const TIFFFieldInfo xtiffFieldInfo[] = {
+    { GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, "GDAL_NODATA" }
+};
+
 int WriteGeotiff_DEM(char *filename, void *buffer, size_t width, size_t height, double scale, double minX, double maxY, int projection, int zone, int NS_hemisphere, int data_type)
 {
     TIFF *tif;  /* TIFF-level descriptor */
@@ -29,7 +35,7 @@ int WriteGeotiff_DEM(char *filename, void *buffer, size_t width, size_t height, 
 
     for (int row=0; row<height; row++)
     {
-	// Write from buffer after appropriate cast and collect status of write
+    // Write from buffer after appropriate cast and collect status of write
         int status;
         switch (data_type)
         {
@@ -83,6 +89,9 @@ int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, dou
     TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1);
     TIFFSetField(tif, TIFFTAG_GEOTIEPOINTS, 6,tiepoints);
     TIFFSetField(tif, TIFFTAG_GEOPIXELSCALE, 3,pixscale);
+
+    TIFFMergeFieldInfo(tif, xtiffFieldInfo, N(xtiffFieldInfo));
+    TIFFSetField(tif, GDAL_NODATA, "-9999");
 
     switch (data_type)
     {
