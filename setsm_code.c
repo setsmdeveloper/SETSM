@@ -446,6 +446,8 @@ int main(int argc,char *argv[])
                 {
                     printf("raw matchtag file doesn't exist!!\n");
                     
+                    printf("matchfile %s\n",str_matchfile_tif);
+                    
                     FILE* pMatchtif = fopen(str_matchfile_tif,"r");
                     if(pMatchtif)
                     {
@@ -457,6 +459,7 @@ int main(int argc,char *argv[])
                     }
                     else
                     {
+                        
                         printf("tif matchtag file doesn't exist!!\n");
                         matchtag = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
                         for(long int i = 0; i< (long int)DEM_size.height*DEM_size.width ; i++)
@@ -1665,11 +1668,14 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                 sscanf(bufstr,"SETSM Version=%lf\n",&version);
                                                 printf("version %f\n",version);
                                                 
-                                                if (version > 2.0128) {
-                                                    proinfo.seedDEMsigma = 20;
-                                                }
-                                                else {
-                                                    proinfo.seedDEMsigma = 100;
+                                                if(!args.check_Matchtag)
+                                                {
+                                                    if (version > 2.0128) {
+                                                        proinfo.seedDEMsigma = 20;
+                                                    }
+                                                    else {
+                                                        proinfo.seedDEMsigma = 100;
+                                                    }
                                                 }
                                                 printf("sigma %f\n",proinfo.seedDEMsigma);
                                             }
@@ -5177,7 +5183,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 }
 
 
-float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
+float *Readtiff_DEM(char *filename, CSize *Imagesize, long int *cols, long int *rows, CSize *data_size)
 {
 	float *out;
 	FILE *bin;
@@ -5199,7 +5205,8 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 	
 	if(check_ftype == 1 && tif)
 	{
-		int i,j,row, col, tileW;
+		int i,j,row, col;
+        int tileW, tileL;
 		
 		tileW = -1;
 		TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
@@ -5246,23 +5253,23 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 		else
 		{
 			printf("tile\n");
-			int tileL,count_W,count_L,starttileL,starttileW;
-			uint16 start_row,start_col,end_row,end_col;
+			long int count_W,count_L,starttileL,starttileW;
+			long int start_row,start_col,end_row,end_col;
 			tdata_t buf;
 			float* t_data;
 			
 			TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
 			TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
 			
-			starttileL		= (int)(rows[0]/tileL);
+			starttileL		= (long int)(rows[0]/tileL);
 			start_row		= starttileL*tileL;
-			end_row			= ((int)(rows[1]/tileL)+1)*tileL;
+			end_row			= ((long int)(rows[1]/tileL)+1)*tileL;
 			if(end_row > Imagesize->height)
 				end_row = Imagesize->height;
 			
-			starttileW		= (int)(cols[0]/tileW);
+			starttileW		= (long int)(cols[0]/tileW);
 			start_col		= starttileW*tileW;
-			end_col			= ((int)(cols[1]/tileW)+1)*tileW;
+			end_col			= ((long int)(cols[1]/tileW)+1)*tileW;
 			if(end_col > Imagesize->width)
 				end_col = Imagesize->width;
 			
@@ -5274,18 +5281,18 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 			
 			data_size->width = end_col - start_col;
 			data_size->height= end_row - start_row;
-			
-            long int data_length = (long int)data_size->height*(long int)data_size->width;
+            
+            long int data_length = data_size->height*data_size->width;
             
 			out				= (float*)malloc(sizeof(float)*data_length);
 			
 			buf				= _TIFFmalloc(TIFFTileSize(tif));
 			
-			count_L = ceil(data_size->height/(double)tileL);
-			count_W = ceil(data_size->width/(double)tileW);
+			count_L = ceil((double)data_size->height/(double)tileL);
+			count_W = ceil((double)data_size->width/(double)tileW);
 			
-            int f_row_end = 0;
-            int f_col_end = 0;
+            long int f_row_end = 0;
+            long int f_col_end = 0;
             
             if(count_L*tileL > data_size->height)
                 f_row_end = tileL + data_size->height - (count_L*tileL);
@@ -5293,7 +5300,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
             if(count_W*tileW > data_size->width)
                 f_col_end = tileW + data_size->width - (count_W*tileW);
             
-            printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
+            printf("tile info %u\t%u\t%u\t%u\t%u\t%u\t%d\t%d\t%u\t%u\n",data_size->width,data_size->height,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
             
 			for (row = 0; row < count_L; row ++)
 			{
@@ -5435,7 +5442,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 	return out;
 }
 
-unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
+unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, long int *cols, long int *rows, CSize *data_size)
 {
     unsigned char *out;
     FILE *bin;
@@ -5457,7 +5464,7 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
     
     if(check_ftype == 1 && tif)
     {
-        int i,j,row, col, tileW;
+        int i,j,row, col, tileW, tileL;
         
         tileW = -1;
         TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
@@ -5509,8 +5516,8 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
         else
         {
             printf("tile\n");
-            int tileL,count_W,count_L,starttileL,starttileW;
-            uint16 start_row,start_col,end_row,end_col;
+            long int count_W,count_L,starttileL,starttileW;
+            long int start_row,start_col,end_row,end_col;
             tdata_t buf;
             unsigned char* t_data;
             
@@ -5537,6 +5544,8 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
             
             data_size->width = end_col - start_col;
             data_size->height= end_row - start_row;
+            
+            printf("width %d\theight %d\n",data_size->width,data_size->height);
             
             long int data_length = (long int)data_size->height*(long int)data_size->width;
             
@@ -5952,8 +5961,8 @@ void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double 
 		else
 		{
 			float *seeddem = NULL;
-			int cols[2];
-			int rows[2];
+			long int cols[2];
+			long int rows[2];
 			CSize data_size;
 
 			CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
@@ -15764,7 +15773,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
         }
 	}
      
-	if(total_search_count > 0 && !check_Matchtag)
+	if(total_search_count > 0 /*&& !check_Matchtag*/)
 	{
 #pragma omp parallel for schedule(guided)
 		for(long count = 0;count < total_search_count;count++)
@@ -16213,7 +16222,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
 	
 	printf("end loading mpts, %ld\t%d\t%f\t%f\t%ld\t%ld!!\n",total_search_count,buffer_clip,minHeight,maxHeight,total_mt_count,total_check_count);
 	
-    if(!check_Matchtag)
+    //if(!check_Matchtag)
     {
         sprintf(outfile, "%s/%s_dem.raw", save_path, Outputpath_name);
         fout	= fopen(outfile,"wb");
@@ -18077,8 +18086,8 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
     }
     else
     {
-        int cols[2];
-        int rows[2];
+        long int cols[2];
+        long int rows[2];
         CSize data_size;
         
         CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
@@ -18092,6 +18101,7 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
+        printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
         seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
         printf("tif open\n");
         
@@ -18134,8 +18144,8 @@ unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size)
     }
     else
     {
-        int cols[2];
-        int rows[2];
+        long int cols[2];
+        long int rows[2];
         CSize data_size;
         
         CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
