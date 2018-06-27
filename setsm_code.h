@@ -77,8 +77,8 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
 uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size,bool check_checktiff);
 bool Writetiff(char *filename, double* input, CSize Imagesize);
 
-float *Readtiff_DEM(char *filename, CSize *Imagesize, long int *cols, long int *rows, CSize *data_size);
-unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, long int *cols, long int *rows, CSize *data_size);
+float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
+unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
 void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_area, int col, int row, double *subBoundary);
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
 void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
