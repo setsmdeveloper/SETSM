@@ -5247,7 +5247,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 		{
 			printf("tile\n");
 			int tileL,count_W,count_L,starttileL,starttileW;
-			uint16 start_row,start_col,end_row,end_col;
+			unsigned int start_row,start_col,end_row,end_col;
 			tdata_t buf;
 			float* t_data;
 			
@@ -5263,9 +5263,9 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 			starttileW		= (int)(cols[0]/tileW);
 			start_col		= starttileW*tileW;
 			end_col			= ((int)(cols[1]/tileW)+1)*tileW;
-			if(end_col > Imagesize->width)
+            
+            if(end_col > Imagesize->width)
 				end_col = Imagesize->width;
-			
 			
 			cols[0]			= start_col;
 			cols[1]			= end_col;
@@ -5510,7 +5510,7 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
         {
             printf("tile\n");
             int tileL,count_W,count_L,starttileL,starttileW;
-            uint16 start_row,start_col,end_row,end_col;
+            unsigned int start_row,start_col,end_row,end_col;
             tdata_t buf;
             unsigned char* t_data;
             
