@@ -73,6 +73,34 @@ int WriteGeotiff_DEM(char *filename, void *buffer, size_t width, size_t height, 
     return 0;
 }
 
+CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_size)
+{
+    TIFF *tif;
+    CSize image_size;
+
+    tif = XTIFFOpen(filename, "r");
+    if (tif)
+    {
+        uint16 count = 0;
+        double *data = 0;
+
+        TIFFGetField(tif, TIFFTAG_GEOTIEPOINTS, &count, &data);
+        if (minX != NULL) *minX = data[3];
+        if (maxY != NULL) *maxY = data[4];
+
+        TIFFGetField(tif, TIFFTAG_GEOPIXELSCALE, &count, &data);
+        if (grid_size != NULL) *grid_size = data[0];
+
+        size_t value = 0;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &value);
+        image_size.width = value;
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &value);
+        image_size.height = value;
+
+        XTIFFClose(tif);
+    }
+    return image_size;
+}
 
 int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, double minX, double maxY, int data_type)
 {

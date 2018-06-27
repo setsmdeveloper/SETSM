@@ -194,7 +194,7 @@ int main(int argc,char *argv[])
             
             char DEMFilename[500];
             char Outputpath[500];
-            sprintf(DEMFilename, "%s/%s_dem.raw", save_filepath,args.Outputpath_name);
+            sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
             sprintf(Outputpath, "%s", save_filepath);
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1);
         }
@@ -354,7 +354,7 @@ int main(int argc,char *argv[])
                 
                 char *Outputpath_name  = SetOutpathName(args.Outputpath);
                 
-                sprintf(str_DEMfile, "%s/%s_dem.raw", args.Outputpath,Outputpath_name);
+                sprintf(str_DEMfile, "%s/%s_dem.tif", args.Outputpath,Outputpath_name);
                 sprintf(str_smooth_file,"%s/%s_smooth.raw",args.Outputpath,Outputpath_name);
                 sprintf(DEM_header, "%s/%s_smooth.hdr", args.Outputpath,Outputpath_name);
                 sprintf(smooth_GEOTIFF_filename, "%s/%s_smooth.tif", args.Outputpath, Outputpath_name);
@@ -545,14 +545,6 @@ int main(int argc,char *argv[])
                 
                 free(Grid_info);
                 
-                char *tmp_chr = remove_ext(str_DEMfile);
-                
-                FILE* fout  = fopen(str_smooth_file,"wb");
-                fwrite(smooth_DEM,sizeof(float),data_length,fout);
-                fclose(fout);
-
-                
-                Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
                 WriteGeotiff_DEM(smooth_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
                 
                 fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
@@ -1156,7 +1148,7 @@ int main(int argc,char *argv[])
 
                     char DEMFilename[500];
                     char Outputpath[500];
-                    sprintf(DEMFilename, "%s/%s_dem.raw", save_filepath,args.Outputpath_name);
+                    sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
                     sprintf(Outputpath, "%s", save_filepath);
                     
                     printf("param %s %d\n", param.direction,param.zone);
@@ -1935,7 +1927,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         }
                         
                         char str_DEMfile[500];
-                        sprintf(str_DEMfile, "%s/%s_dem.raw", proinfo.save_filepath,proinfo.Outputpath_name);
+                        sprintf(str_DEMfile, "%s/%s_dem.tif", proinfo.save_filepath,proinfo.Outputpath_name);
                         
                         FILE* pFile_DEM = NULL;
                         
@@ -1967,11 +1959,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
                         }
                         
-                        char hdr_path[500];
                         CSize seeddem_size;
-                        double tminX, tmaxY, tgrid_size;
-                        sprintf(hdr_path, "%s/%s_dem.hdr", proinfo.save_filepath, proinfo.Outputpath_name);
-                        seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &tminX, &tmaxY, &tgrid_size);
+                        double tminX, tmaxY;
+                        
+                        char tiff_path[500];
+                        sprintf(tiff_path, "%s/%s_dem.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+                        seeddem_size = ReadGeotiff_info(tiff_path, &tminX, &tmaxY, NULL);
                         
                         fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                         fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
@@ -2009,6 +2002,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
     time_fid            = fopen(computation_file,"w");
     fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
     fclose(time_fid);
+
 #ifdef BUILDMPI
     // Make sure to finalize
     int finalized;
@@ -4840,18 +4834,8 @@ bool GetImageSize(char *filename, CSize *Imagesize)
     
     if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
-        TIFF *tif  = TIFFOpen(filename,"r");
-
-        if(tif)
-        {
-            TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&Imagesize->width);
-            TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&Imagesize->height);
-            TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&Imagesize->width);
-            TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&Imagesize->height);
-            ret = true;
-        }
-
-        TIFFClose(tif);
+        *Imagesize = ReadGeotiff_info(filename, NULL, NULL, NULL);
+        ret = true;
     }
     else if(!strcmp("bin",ext+1))
     {
@@ -5800,26 +5784,7 @@ void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double 
     {
         if(check_ftype == 1)
         {
-            hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.tfw",hdr_path);
-            
-            
-            FILE *pfile = fopen(hdr_path,"r");
-            if(pfile)
-            {
-                printf("tfw path %s \n",hdr_path);
-                TFW_reader_seedDEM(hdr_path, &minX, &maxY, &grid_size);
-                GetImageSize(GIMP_path,&seeddem_size);
-                fclose(pfile);
-            }
-            else
-            {
-                hdr_path = remove_ext(GIMP_path);
-                sprintf(hdr_path,"%s.hdr",hdr_path);
-                printf("hdr path %s\n",hdr_path);
-                seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &minX, &maxY, &grid_size);
-                fclose(pfile);
-            }
+            seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
         }
         else if(check_ftype == 2)
         {
@@ -16222,27 +16187,14 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     
     if(!check_Matchtag)
     {
-        sprintf(outfile, "%s/%s_dem.raw", save_path, Outputpath_name);
-        fout    = fopen(outfile,"wb");
-        fwrite(value,sizeof(float),(long)row_count*(long)col_count,fout);
-        fclose(fout);
-        
         sprintf(DEM_header, "%s/%s_dem.hdr", save_path, Outputpath_name);
-        Envihdr_writer(_param,DEM_header, col_count, row_count, grid, minX, maxY, Hemisphere,4);
+        //Envihdr_writer(_param,DEM_header, col_count, row_count, grid, minX, maxY, Hemisphere,4);
 
         char GEOTIFF_dem_filename[500];
         sprintf(GEOTIFF_dem_filename, "%s/%s_dem.tif", save_path, Outputpath_name);
         WriteGeotiff_DEM(GEOTIFF_dem_filename, value, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
     }
     
-    sprintf(outfile, "%s/%s_matchtag.raw", save_path, Outputpath_name);
-    fout    = fopen(outfile,"wb");
-    fwrite(value_pt,sizeof(unsigned char),(long)row_count*(long)col_count,fout);
-    fclose(fout);
-    
-    sprintf(DEM_header, "%s/%s_matchtag.hdr", save_path, Outputpath_name);
-    Envihdr_writer(_param,DEM_header, col_count, row_count, grid, minX, maxY, Hemisphere,1);
-
     char GEOTIFF_matchtag_filename[500];
     sprintf(GEOTIFF_matchtag_filename, "%s/%s_matchtag.tif", save_path, Outputpath_name);
     WriteGeotiff_DEM(GEOTIFF_matchtag_filename, value_pt, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 1);
@@ -16704,8 +16656,8 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     param.projection = _param.projection;
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
 
-    // load DEM infor from hdr file.
-    DEM_size = Envihdr_reader_DEM_ortho(param, DEM_header, &DEM_minX, &DEM_maxY, &DEM_resolution);
+    // load DEM infor from geotiff file.
+    DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
     
     if (!args.check_DEM_space)
         Ortho_resolution = DEM_resolution;
@@ -16741,7 +16693,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     minmaxHeight[0]     = 99999;
     minmaxHeight[1]     = -99999;
     // load DEM value;
-    DEM_value = LoadDEM_ortho(param, DEMFilename, DEM_header);
+    DEM_value = GetDEMValue(DEMFilename, DEM_size);
     
     printf("%d\n",DEM_size.width);
     printf("%d\n",DEM_size.height);
@@ -16963,11 +16915,6 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     free(RPCs);
     free(DEM_value);
     
-    FILE *fout  = fopen(OrthoFilename,"wb");
-    fwrite(result_ortho,sizeof(uint16),Orthoimagesize.width*Orthoimagesize.height,fout);
-    fclose(fout);
-    
-    Envihdr_writer(_param, Ortho_header, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], Hemisphere, 12);
     WriteGeotiff_DEM(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
     free(result_ortho);
 }
@@ -17147,19 +17094,8 @@ bool GetImageSize_ortho(char *filename, CSize *Imagesize)
     
     if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
-        
-        TIFF *tif  = TIFFOpen(filename,"r");
-        
-        if(tif)
-        {
-            TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&Imagesize->width);
-            TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&Imagesize->height);
-            TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&Imagesize->width);
-            TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&Imagesize->height);
-            ret = true;
-        }
-        
-        TIFFClose(tif);
+        *Imagesize = ReadGeotiff_info(filename, NULL, NULL, NULL);
+        ret = true;
     }
     else if(!strcmp("bin",ext+1))
     {
@@ -17654,30 +17590,6 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     return true;
 }
 
-
-float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path)
-{
-    double minX, maxX, minY,maxY,grid_size;
-    CSize seeddem_size;
-    float *seeddem = NULL;
-    printf("hdr path %s\n",hdr_path);
-    seeddem_size  = Envihdr_reader_DEM_ortho(param, hdr_path, &minX, &maxY, &grid_size);
-    maxX    = minX + grid_size*seeddem_size.width;
-    minY    = maxY - grid_size*seeddem_size.height;
-    
-    printf("seeddem cal\n");
-    
-    FILE *bin;
-    
-    bin = fopen(DEM_path,"rb");
-    seeddem = (float*)malloc(sizeof(float)*seeddem_size.width*seeddem_size.height);
-    fread(seeddem,sizeof(float),seeddem_size.width*seeddem_size.height,bin);
-    
-    printf("seeddem end\n");
-    
-    return seeddem;
-}
-
 double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
 {
     double** out = NULL;
@@ -17950,16 +17862,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         }
         else
         {
-            hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.hdr",hdr_path);
-            printf("hdr path %s\n",hdr_path);
-            FILE *phdr = fopen(hdr_path,"r");
-            if(phdr)
-            {
-                seeddem_size  = Envihdr_reader_seedDEM(*param,hdr_path, &minX, &maxY, grid_size);
-                fclose(phdr);
-                check_open_header = true;
-            }
+            seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, grid_size);
+            check_open_header = true;
         }
     }
     else if(check_ftype == 2)
@@ -18813,7 +18717,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     char result_file[500];
     char metafilename[500];
     
-    sprintf(str_DEMfile, "%s/%s_dem.raw", savepath,outputpath);
+    sprintf(str_DEMfile, "%s/%s_dem.tif", savepath,outputpath);
     sprintf(str_smooth_file,"%s/%s_smooth.raw",savepath,outputpath);
     sprintf(DEM_header, "%s/%s_smooth.hdr", savepath,outputpath);
     sprintf(DEM_GEOTIFF_filename, "%s/%s_smooth.tif", savepath, outputpath);
@@ -18974,13 +18878,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         free(Grid_info);
         
-        char *tmp_chr = remove_ext(str_DEMfile);
-        
-        FILE* fout  = fopen(str_smooth_file,"wb");
-        fwrite(smooth_DEM,sizeof(float),DEM_size.height*DEM_size.width,fout);
-        fclose(fout);
-        
-        Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
+        //Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
         WriteGeotiff_DEM(DEM_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
         
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
