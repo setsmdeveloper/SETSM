@@ -15773,7 +15773,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
         }
 	}
      
-	if(total_search_count > 0 /*&& !check_Matchtag*/)
+	if(total_search_count > 0 && !check_Matchtag)
 	{
 #pragma omp parallel for schedule(guided)
 		for(long count = 0;count < total_search_count;count++)
@@ -16222,7 +16222,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
 	
 	printf("end loading mpts, %ld\t%d\t%f\t%f\t%ld\t%ld!!\n",total_search_count,buffer_clip,minHeight,maxHeight,total_mt_count,total_check_count);
 	
-    //if(!check_Matchtag)
+    if(!check_Matchtag)
     {
         sprintf(outfile, "%s/%s_dem.raw", save_path, Outputpath_name);
         fout	= fopen(outfile,"wb");
