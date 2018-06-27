@@ -1665,11 +1665,14 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                 sscanf(bufstr,"SETSM Version=%lf\n",&version);
                                                 printf("version %f\n",version);
                                                 
-                                                if (version > 2.0128) {
-                                                    proinfo.seedDEMsigma = 20;
-                                                }
-                                                else {
-                                                    proinfo.seedDEMsigma = 100;
+                                                if(!args.check_Matchtag)
+                                                {
+                                                    if (version > 2.0128) {
+                                                        proinfo.seedDEMsigma = 20;
+                                                    }
+                                                    else {
+                                                        proinfo.seedDEMsigma = 100;
+                                                    }
                                                 }
                                                 printf("sigma %f\n",proinfo.seedDEMsigma);
                                             }
