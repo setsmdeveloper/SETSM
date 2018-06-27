@@ -5298,6 +5298,8 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
             
             printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
             
+            printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
+            
 			for (row = 0; row < count_L; row ++)
 			{
 				for (col = 0; col < count_W; col ++)
@@ -5314,7 +5316,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5325,7 +5330,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -5337,7 +5345,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5348,7 +5359,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5362,7 +5376,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -5374,7 +5391,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5388,7 +5408,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5399,7 +5422,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5412,7 +5438,10 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 #pragma omp parallel for private(i,j) schedule(guided)
                             for (j=0;j<tileW;j++)
                             {
-                                out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                int t_row = (row*tileL) + i;
+                                int t_col = (col*tileL) + j;
+                                if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                             }
                         }
                     }
@@ -5560,6 +5589,8 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
             
             printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
             
+            printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
+            
             for (row = 0; row < count_L; row ++)
             {
                 for (col = 0; col < count_W; col ++)
@@ -5575,7 +5606,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5586,7 +5620,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -5598,7 +5635,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5609,7 +5649,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5623,7 +5666,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -5635,7 +5681,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5649,7 +5698,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5660,7 +5712,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -5672,7 +5727,10 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
 #pragma omp parallel for private(i,j) schedule(guided)
                             for (j=0;j<tileW;j++)
                             {
-                                out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                int t_row = (row*tileL) + i;
+                                int t_col = (col*tileL) + j;
+                                if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
                             }
                         }
                     }
