@@ -545,7 +545,7 @@ int main(int argc,char *argv[])
                 
                 free(Grid_info);
                 
-                WriteGeotiff_DEM(smooth_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
+                WriteGeotiff(smooth_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
                 
                 fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
                 
@@ -16192,12 +16192,12 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
 
         char GEOTIFF_dem_filename[500];
         sprintf(GEOTIFF_dem_filename, "%s/%s_dem.tif", save_path, Outputpath_name);
-        WriteGeotiff_DEM(GEOTIFF_dem_filename, value, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
+        WriteGeotiff(GEOTIFF_dem_filename, value, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
     }
     
     char GEOTIFF_matchtag_filename[500];
     sprintf(GEOTIFF_matchtag_filename, "%s/%s_matchtag.tif", save_path, Outputpath_name);
-    WriteGeotiff_DEM(GEOTIFF_matchtag_filename, value_pt, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 1);
+    WriteGeotiff(GEOTIFF_matchtag_filename, value_pt, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 1);
     
     
     free(pt_save);
@@ -16915,7 +16915,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     free(RPCs);
     free(DEM_value);
     
-    WriteGeotiff_DEM(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
+    WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
     free(result_ortho);
 }
 
@@ -18879,7 +18879,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         free(Grid_info);
         
         //Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
-        WriteGeotiff_DEM(DEM_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
+        WriteGeotiff(DEM_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
         
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         

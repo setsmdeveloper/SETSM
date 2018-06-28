@@ -14,7 +14,7 @@ static const TIFFFieldInfo xtiffFieldInfo[] = {
 #define STRIP_SIZE_DEFAULT 8192
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
 
-int WriteGeotiff_DEM(char *filename, void *buffer, size_t width, size_t height, double scale, double minX, double maxY, int projection, int zone, int NS_hemisphere, int data_type)
+int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, double scale, double minX, double maxY, int projection, int zone, int NS_hemisphere, int data_type)
 {
     TIFF *tif;  /* TIFF-level descriptor */
     GTIF *gtif; /* GeoKey-level descriptor */
