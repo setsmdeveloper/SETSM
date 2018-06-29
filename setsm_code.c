@@ -433,7 +433,13 @@ int main(int argc,char *argv[])
                 printf("data_length %ld\n",data_length);
                 printf("projection %d\tHemisphere %d\n",param.projection,Hemisphere);
                 
-                
+                matchtag = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
+                for(long int i = 0; i< (long int)DEM_size.height*DEM_size.width ; i++)
+                {
+                    if(seeddem[i] > -100)
+                        matchtag[i] = 1;
+                }
+                /*
                 FILE* pDEMheader = fopen(str_matchfile,"r");
                 if(pDEMheader)
                 {
@@ -466,6 +472,7 @@ int main(int argc,char *argv[])
                         }
                     }
                 }
+                 */
                 
                 printf("%d\n",DEM_size.width);
                 printf("%d\n",DEM_size.height);
@@ -18927,6 +18934,13 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         seeddem = GetDEMValue(str_DEMfile,DEM_size);
         
+        matchtag = (unsigned char*)calloc(sizeof(unsigned char),DEM_size.width*DEM_size.height);
+        for(int i = 0; i< DEM_size.height*DEM_size.width ; i++)
+        {
+            if(seeddem[i] > -100)
+                matchtag[i] = 1;
+        }
+        /*
         FILE* pDEMheader = fopen(str_matchfile,"r");
         if(pDEMheader)
         {
@@ -18959,7 +18973,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
                 }
             }
         }
-        
+        */
         printf("%d\n",DEM_size.width);
         printf("%d\n",DEM_size.height);
         printf("%f\n",grid_size);
