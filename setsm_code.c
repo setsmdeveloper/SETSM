@@ -378,7 +378,7 @@ int main(int argc,char *argv[])
                 FILE* pMetafile;
                 double sigma_avg = 10000;
                 double sigma_std = 10000;
-                int max_iter_count = 10;
+                int max_iter_count = 5;
                 int s_iter = 0;
                 bool check_smooth_iter = true;
                 double MPP_stereo_angle = 1;
@@ -18878,7 +18878,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         FILE* presult = fopen(result_file,"w");
         double sigma_avg = 10000;
         double sigma_std = 10000;
-        int max_iter_count = 10;
+        int max_iter_count = 5;
         int s_iter = 0;
         bool check_smooth_iter = true;
         double MPP_stereo_angle = MPP;
