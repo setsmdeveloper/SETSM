@@ -45,7 +45,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "3.3.1";
+const char setsm_version[] = "3.3.2";
 
 char *dirname(char *path);
 
