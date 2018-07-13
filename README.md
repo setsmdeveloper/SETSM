@@ -23,7 +23,7 @@ Algorithmica 2, 153-174.
 
 ## Installation instructions
 
-### Prerequisite
+### Prerequisites
 SETSM is dependent on LibTIFF, version 4.0.3 or higher.  Your system may 
 already have LibTIFF installed.  If not, you must download and install it 
 separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
@@ -53,7 +53,7 @@ make install
 Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
 compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
 use.  Copy the selected file to Makefile and edit it if necessary to set the 
-correct path to the TIFF library.  SETSM can then be built simply by typing:
+correct path to the TIFF and GeoTIFF libraries.  SETSM can then be built simply by typing:
 ```
 make
 ```
