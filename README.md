@@ -23,7 +23,7 @@ Algorithmica 2, 153-174.
 
 ## Installation instructions
 
-### Prerequisite
+### Prerequisites
 SETSM is dependent on LibTIFF, version 4.0.3 or higher.  Your system may 
 already have LibTIFF installed.  If not, you must download and install it 
 separately.  Download LibTIFF from http://libtiff.maptools.org/ and install
@@ -33,13 +33,27 @@ it according to the instructions in the README file.  In short,
 make
 make install
 ```
+SETSM is also dependent on LibGeoTIFF, version 1.4.0 or higher.  Your system
+may already have LibGeoTIFF isntalled. If not, you must download and install
+LibTIFF (see above) and PROJ, as they are dependencies of LibGeoTIFF.  PROJ
+can be downloaded from https://download.osgeo.org/proj/ and installed according
+to the instructions in the README file.  After both LibTIFF and PROJ are installed,
+LibGeoTIFF can be downloaded from https://download.osgeo.org/geotiff/libgeotiff/
+and installed according to the instructions in the README file. In short,
+```
+./configure --prefix=/directory-to-install-in \
+--with-proj=/directory-of-proj-build \
+--with-libtiff=/directory-of-libtiff-build
+make
+make install
+```
 
 ### Building SETSM using one of the provided Makefiles
 
 Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
 compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
 use.  Copy the selected file to Makefile and edit it if necessary to set the 
-correct path to the TIFF library.  SETSM can then be built simply by typing:
+correct path to the TIFF and GeoTIFF libraries.  SETSM can then be built simply by typing:
 ```
 make
 ```

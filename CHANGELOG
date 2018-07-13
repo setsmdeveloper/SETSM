@@ -3,6 +3,11 @@ SETSM Change Log
 This file briefly describes the changes to the SETSM software package.  
 The most recent changes are listed first.
 
+SETSM 3.3.2 (07/13/2018)
+
+* Changes since 3.3.1
+    - Changed output format to GeoTIFF
+
 SETSM 3.3.1 (04/26/2018)
 
 * Changes since 3.3.0
