@@ -29,9 +29,10 @@ Use Cygwin, a large collection of GNU and Open Source tools providing functional
 ## Install and Run SETSM
 
 1. Download SETSM onto your system in a location you can access it with Cygwin (nearly anywhere on your system).
-2. Set up the tiff library on your system as needed following the instructions in the SETSM README.md under Prerequisite.
+2. Set up the TIFF/GeoTIFF libraries on your system as needed following the instructions in the SETSM README.md under Prerequisites.
 3. Use the Makefile for gcc (or another compiler if you have downloaded it) to build SETSM according to the SETSM README.md
-	* Change the TIFFPATH and uncomment those 3 lines if the tiff library is in a different location.
+	* Change the TIFFPATH and uncomment those 3 lines if the TIFF library is in a different location.
+	* Change the GEOTIFFPATH and uncomment those 3 lines if the GeoTIFF library is in a different location.
 4. Make sure your images and their corresponding header files (*.xml) have the same filename and are in the same directory.
 5. Make sure your default.txt file is in the same directory as where you will run SETSM.
 6. Run SETSM according to the SETSM User Manual:

@@ -4,8 +4,11 @@ set (INTEL_VERSION 14.0.0)
 set (PGI_VERSION 13.0.0)
 set (CRAY_VERSION 0.0.0)
 set (TIFF_VERSION 4.0.0)
+set (GEOTIFF_VERSION 1.4.0)
 
 set (CC_LIST GNU INTEL PGI CRAY)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
 
 # Define compiler IDs
 set (GNU_ID "GNU")
@@ -36,7 +39,7 @@ endif (NOT DEFINED OPENMP_OPTION)
 # Create target
 project (setsm C)
 MESSAGE("CMAKE_C_COMPILER_ID is ${CMAKE_C_COMPILER_ID}")
-add_executable (setsm setsm_code.c voronoi_setsm.c)
+add_executable (setsm setsm_code.c voronoi_setsm.c setsmgeo.c)
 set_target_properties (setsm PROPERTIES C_STANDARD 99)
 
 # Check compiler
@@ -58,6 +61,12 @@ if (NOT TIFF_FOUND)
 	message (FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
 endif (NOT TIFF_FOUND)
 
+# Find geotiff
+find_package (GeoTIFF)# ${GEOTIFF_VERSION})
+if (NOT GEOTIFF_FOUND)
+	message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
+endif (NOT GEOTIFF_FOUND)
+
 # Find OpenMP
 find_package (OpenMP)
 if (NOT OPENMP_FOUND)
@@ -67,7 +76,10 @@ endif (NOT OPENMP_FOUND)
 # Build setsm target
 target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
 target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
+target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
 target_link_libraries (setsm m ${TIFF_LIBRARIES})
+target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+
 list (APPEND CMAKE_C_FLAGS ${OpenMP_C_FLAGS}${OPENMP_OPTION})
 
 # Make install
