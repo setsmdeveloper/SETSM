@@ -2679,12 +2679,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
-                            SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                            SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                            SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level,&left_mag_var,&left_mag_avg);
-                            
-                            SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-                            SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
+                            if(proinfo->check_selected_image[ti])
+                            {
+                                SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+                                SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+                                SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level,&left_mag_var,&left_mag_avg);
+                                
+                                SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
+                                SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
+                            }
                         }
                         printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
                         
@@ -2743,7 +2746,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
                         
-                        CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, LRPCs, RRPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                        CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
                         
                         *stereo_angle_accuracy = MPP_stereo_angle;
                         
@@ -2812,7 +2815,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             fprintf(fid,"Starting computation of NCC\n iteration = %u\tTh_roh = %f\tTh_roh_start = %f\tGrid size %d %d\n",
                                     iteration, Th_roh,Th_roh_start,Size_Grid2D.width,Size_Grid2D.height);
 
-                            printf("sub size %d\t%d\t%d\t%d\n",data_size_l[level].width,data_size_l[level].height,data_size_r[level].width,data_size_r[level].height);
+                            for( int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                printf("sub size %d\t%d\n",data_size_lr[ti][level].width,data_size_lr[ti][level].height);
                                 
                             if(proinfo->IsRA)
                             {
@@ -2834,9 +2838,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             //echoprint_Gridinfo(proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
                             
-                            VerticalLineLocus(proinfo->check_Matchtag,nccresult,SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0],LRPCs,RRPCs,Imagesizes,data_size_l[level],SubImages_L,Rimagesize,data_size_r[level],SubImages_R,Template_size,Size_Grid2D,
-                                              param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Lstartpos,Rstartpos,iteration,SubOriImages_L,SubOriImages_R,bin_angle,1,0,fid,true,Hemisphere,
-                                              proinfo->save_filepath,row,col,subBoundary,proinfo->pre_DEMtif,v_temp_path,&MPP,proinfo->IsRA,mag_avg,mag_var);
+                            VerticalLineLocus(proinfo,nccresult,SubMagImages,grid_resolution, Image_res[0],RPCs,Imagesizes,data_size_lr,SubImages,Template_size,Size_Grid2D,
+                                              param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
+                                              row,col,subBoundary,v_temp_path,&MPP,mag_avg,mag_var);
                             
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -2857,35 +2861,35 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
                                 //anchor points
-                                count_blunder = DecisionMPs(false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,proinfo->save_filepath,
+                                count_blunder = DecisionMPs(proinfo,false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-                                                            Imagesizes,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BLstartpos, BRstartpos,
-                                                            proinfo->save_filepath,row,col,proinfo->pre_DEMtif,proinfo->IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo->seedDEMsigma,proinfo->DEM_resolution);
+                                                            NumOfIAparam, t_Imageparams, BStartpos,
+                                                            row,col,SubOriImages,blunder_selected_level);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
 
                                 //blunder detection
-                                count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,proinfo->save_filepath,
+                                count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-                                                            Imagesizes,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BLstartpos, BRstartpos,
-                                                            proinfo->save_filepath,row,col,proinfo->pre_DEMtif,proinfo->IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo->seedDEMsigma,proinfo->DEM_resolution);
+                                                            NumOfIAparam, t_Imageparams, BStartpos,
+                                                            row,col,SubOriImages,blunder_selected_level);
                                 
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
                             else
                             {
-                                count_blunder = DecisionMPs(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,proinfo->save_filepath,
+                                count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-                                                            Imagesizes,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BLstartpos, BRstartpos,
-                                                            proinfo->save_filepath,row,col,proinfo->pre_DEMtif,proinfo->IsRA,SubOriImages_L,SubOriImages_R,blunder_selected_level,proinfo->seedDEMsigma,proinfo->DEM_resolution);
+                                                            NumOfIAparam, t_Imageparams, BStartpos,
+                                                            row,col,SubOriImages,blunder_selected_level);
                                 count_MPs       = count_results[0];
                                 printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
@@ -3032,12 +3036,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
                                         
-                                        count_results[0] = Ortho_blunder(ptslists, count_MPs, trilists,count_tri, update_flag,&minH_grid,&maxH_grid,blunder_param,
-                                                                         SubMagImages_L,SubMagImages_R,SubImages_L,SubImages_R,
-                                                                         grid_resolution, Image_res[0],LRPCs,RRPCs,
-                                                                         data_size_l[level],data_size_r[level],Size_Grid2D,param,NumOfIAparam,
+                                        count_results[0] = Ortho_blunder(proinfo,ptslists, count_MPs, trilists,count_tri, update_flag,&minH_grid,&maxH_grid,blunder_param,
+                                                                         SubMagImages,SubImages,
+                                                                         grid_resolution, Image_res[0],RPCs,
+                                                                         data_size_lr,Size_Grid2D,param,NumOfIAparam,
                                                                          t_Imageparams,minmaxHeight,level,MPP_simgle_image,
-                                                                         Lstartpos,Rstartpos,iteration,GridPT3,filename_mps,proinfo->save_filepath);
+                                                                         Startpos,iteration,GridPT3,filename_mps);
                                         free(trilists);
                                         
                                         printf("end ortho_blunder %d\n",count_results[0]);
@@ -3114,13 +3118,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                         
                                         
-                                        count_blunder = DecisionMPs_setheight(true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
+                                        count_blunder = DecisionMPs_setheight(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
                                                                               Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                                              SubMagImages_BL,SubMagImages_BR,grid_resolution, Image_res[0],LRPCs,RRPCs,
-                                                                              Imagesizes,data_size_l[blunder_selected_level],SubImages_BL,Rimagesize,data_size_r[blunder_selected_level],SubImages_BR,Template_size,
+                                                                              SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                                                              Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                                               param, Grid_wgs,GridPT,
-                                                                              NumOfIAparam, t_Imageparams, BLstartpos, BRstartpos,
-                                                                              proinfo->save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages_L,SubOriImages_R,blunder_selected_level);
+                                                                              NumOfIAparam, t_Imageparams, BStartpos,
+                                                                              proinfo->save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages,blunder_selected_level);
 
                                         printf("end decision_setheight\n");
                                         
@@ -3440,8 +3444,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(proinfo->IsRA && level <= 3)
                                 {
                                     int RA_iter_counts = 0;
-                                    RA_iter_counts = AdjustParam(level, count_MPs, filename_mps, Lstartpos, Rstartpos, LRPCs, RRPCs, t_Imageparams, flag,
-                                                                 Template_size, SubImages_L, data_size_l[level], SubImages_R, data_size_r[level], SubOriImages_L, SubOriImages_R, param,
+                                    RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
+                                                                 Template_size, SubImages, data_size_lr, SubOriImages, param,
                                                                  bin_angle, pyramid_step, Hemisphere, proinfo->save_filepath, proinfo->tmpdir);
                                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                     {
@@ -3660,25 +3664,40 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         free(Grid_wgs);
                         free(nccresult);
                         
+                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                        {
+                            if(proinfo->check_selected_image[ti])
+                            {
+                                printf("release subImage L\n");
+                                free(SubImages[ti]);
+                                free(SubImages_B[ti]);
+                                free(SubOriImages[ti]);
+                                
+ 
+                                printf("release subimage Mag\n\n\n");
+                                free(SubMagImages[ti]);
+                                free(SubMagImages_B[ti]);
+                           }
+                        }
                         printf("release subImage L\n");
-                        free(SubImages_L);
-                        free(SubImages_BL);
-                        free(SubOriImages_L);
+                        free(SubImages);
+                        free(SubImages_B);
+                        free(SubOriImages);
                         
-                        printf("release subImage R\n");
-                        free(SubImages_R);
-                        free(SubImages_BR);
-                        free(SubOriImages_R);
-
                         printf("release subimage Mag\n\n\n");
-                        free(SubMagImages_L);
-                        free(SubMagImages_R);
-                        free(SubMagImages_BL);
-                        free(SubMagImages_BR);
+                        free(SubMagImages);
+                        free(SubMagImages_B);
+                        
+                        free(Startpos);
+                        free(BStartpos);
                     }
                     printf("relese data size\n");
-                    free(data_size_l);
-                    free(data_size_r);
+
+                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                        if(proinfo->check_selected_image[ti])
+                            free(data_size_lr[ti]);
+                    free(data_size_lr);
+
                     free(GridPT3);
                     
                     printf("release GridTP3\n");
@@ -3710,8 +3729,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     free(iterations);
     if(proinfo->IsRA && RA_count > 0)
     {
-        Imageparams[0] /= RA_count;
-        Imageparams[1] /= RA_count;
+        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+        {
+            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
+            {
+                Imageparams[ti][0] /= RA_count;
+                Imageparams[ti][1] /= RA_count;
+            }
+        }
     }
 #ifdef BUILDMPI
     MPI_Bcast(Imageparams, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -3934,7 +3959,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 temp_pFile           = fopen(info->RPCfilename[ti],"r");
                 //printf("xml file %s\n",info->LeftRPCfilename);
                 if(temp_pFile)
-                    printf("imageti xml load completed!\n",ti);
+                    printf("image%d xml load completed!\n",ti);
                 else
                 {
                     sprintf(info->RPCfilename[ti],"%s.XML",tmp_chr);
@@ -4926,7 +4951,7 @@ UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool 
         if(proinfo->pre_DEMtif)
         {
             printf("seedem load\n");
-            SetHeightWithSeedDEM(proinfo,param, GridPT3,subBoundary,Size_Grid2D,py_resolution,minmaxHeight,metafilename);
+            SetHeightWithSeedDEM(proinfo,param, GridPT3,subBoundary,Size_Grid2D,py_resolution,minmaxHeight);
         }
     }
 
@@ -5969,7 +5994,7 @@ D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size
 }
 
 
-void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight,char* metafilename)
+void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight)
 {
     double minX, maxX, minY,maxY,grid_size,a_minX,a_maxX,a_minY,a_maxY;
     CSize seeddem_size;
@@ -5980,6 +6005,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     char *GIMP_path = proinfo->priori_DEM_tif;
     double seedDEM_sigma = proinfo->seedDEM_sigma;
     int IsRA = proinfo->IsRA;
+    char* metafilename = proinfo->metafilename;
     
     int check_ftype = 1; // 1 = tif, 2 = raw
     char *ext;
@@ -7126,7 +7152,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
 }
 
 
-void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, CSize* _imagesize, double* _Hinterval)
+void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, double* _Hinterval)
 {
     double minLon = (double) (-1.2 * _rpcs[1][2] + _rpcs[0][2]);
     double maxLon = (double) (1.2 * _rpcs[1][2] + _rpcs[0][2]);
@@ -7173,8 +7199,8 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     _boundary[2] =  ceil(maxX);
     _boundary[3] =  ceil(maxY);
     
-    _imagesize->height = (unsigned int) (ceil((_boundary[3] - _boundary[1]) / _res[1]));
-    _imagesize->width = (unsigned int) (ceil((_boundary[2] - _boundary[0]) / _res[0]));
+    //_imagesize->height = (unsigned int) (ceil((_boundary[3] - _boundary[1]) / _res[1]));
+    //_imagesize->width = (unsigned int) (ceil((_boundary[2] - _boundary[0]) / _res[0]));
     
     free(lonlat);
     free(XY);
@@ -8492,11 +8518,14 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
     }
 }
 
-void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, double** LRPCs, double** RRPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+// temporary, 1st and 2nd image
+void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
 {
     D2DPOINT temp_p1, temp_p2;
     D3DPOINT temp_GrP;
-    double temp_LIA[2] = {0,0};
+    double temp_LIA[2] = {0.0};
+    temp_LIA[0] = ImageAdjust[0][0];
+    temp_LIA[1] = ImageAdjust[0][1];
     
     int numofpts;
     
@@ -8506,19 +8535,19 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
-    temp_p1     = GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+    temp_p1     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
     temp_GrP.m_Z = minmaxHeight[1];
-    temp_p2     = GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
+    temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
     double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
-    temp_p1     = GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    temp_p1     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
     temp_GrP.m_Z = minmaxHeight[1];
-    temp_p2     = GetObjectToImageRPC_single_mpp(RRPCs,NumofIAparam,ImageAdjust,temp_GrP);
+    temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
     double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
@@ -8553,12 +8582,17 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
 }
 
-bool VerticalLineLocus(bool check_matchtag, NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
+bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                        CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
-                       uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
-                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
-                       bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var)
+                       uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
+                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
+                       char* tmpdir,double *meters_per_pixel, double mag_avg,double mag_var)
 {
+    bool check_matchtag = proinfo->check_matchtag;
+    char* save_filepath = proinfo->save_filepath;
+    bool pre_DEMtif = proinfo->pre_DEMtif;
+    bool IsRA = proinfo->IsRA;
+    
     if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
@@ -9878,16 +9912,10 @@ void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level
 }
 
 double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
-                                 CSize *Imagesizes_ori, CSize **Imagesizes, uint16* Images, uint8 Template_size,
+                                 CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                                  CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-                                 uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
-                                 char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEMsigma);
-
-double VerticalLineLocus_seeddem(ProInfo proinfo,uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-                                CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
-                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-                                uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-                                char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEM_sigma)
+                                 uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
+                                 char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEMsigma)
 {
     printf("minmax %f %f\n",minmaxHeight[0],minmaxHeight[1]);
     
@@ -11871,15 +11899,22 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
     return trilists_f;
 }
 
-int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-                uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, char *filename_tri, double Hinterval, 
+int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+                uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, double Hinterval,
                 bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-                uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-                CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
+                uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
+                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                 TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-                uint8 NumofIAparam, double* ImageAdjust, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-                char* save_filepath, uint8 tile_row, uint8 tile_col, int pre_DEMtif, int IsRA,uint8* left_ori, uint8* right_ori,int blunder_selected_level,double seedDEMsigma, double f_demsize)
+                uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
+                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level);
 {
+    char *filename_tri = proinfo->save_filepath;
+    char* save_filepath = proinfo->save_filepath;
+    int pre_DEMtif = proinfo->pre_DEMtif;
+    int IsRA = proinfo->IsRA;
+    double seedDEMsigma = proinfo->seedDEMsigma;
+    double f_demsize = proinfo->DEM_resolution;
+    
     char bufstr[500];
     uint16 count            = 0;
     *p_flag             = true;
@@ -12340,14 +12375,14 @@ int DecisionMPs(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID 
     return count;
 }
 
-int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-                          uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval, 
+int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+                          uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
                           bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-                          uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-                          CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
+                          uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
+                          CSize *Imagesizes_ori, CSize **LImagesizes, uint16 **Images, uint8 Template_size,
                           TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-                          uint8 NumofIAparam, double* ImageAdjust, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-                          char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8* left_ori, uint8* right_ori,int blunder_selected_level)
+                          uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
+                          char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level)
 {
     char bufstr[500];
     uint16 count            = 0;
@@ -13348,13 +13383,14 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
     return total_count;
 }
 
-int Ortho_blunder(D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param,
-                  uint16 *MagImages_L,uint16 *MagImages_R, uint16* LeftImage, uint16* RightImage,
-                  double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, 
-                  CSize LImagesize,  CSize RImagesize, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, 
-                  double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
-                  D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration,  UGRID *GridPT3, char *filename_mps, char *save_path)
+int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param,
+                  uint16 **MagImages, uint16 **Images,
+                  double DEM_resolution, double im_resolution, double ***RPCs,
+                  CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
+                  double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
+                  D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
 {
+    char *save_path = proinfo->save_filepath;
     uint32 num_triangles;
     int i, tcnt;
     double gridspace;
@@ -14619,8 +14655,8 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     //fclose(outcount);
 }
 
-int AdjustParam(uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT Lstartpos, D2DPOINT Rstartpos, double **LRPCs, double **RRPCs, double *ImageAdjust, NCCflag _flag,
-                uint8 Template_size, uint16 *LeftImage, CSize LImagesize, uint16 *RightImage, CSize RImagesize, uint8 *left_ori, uint8 *right_ori, TransParam param,
+int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
+                uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
                 double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir)
 {
     int i,iter_count;

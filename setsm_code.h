@@ -80,13 +80,14 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
 void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_area, int col, int row, double *subBoundary);
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
-void SetHeightWithSeedDEM(ProInfo proinfo,TransParam param, UGRID *Grid, double *Boundary,CSize Grid_size, double Grid_set,	 char *GIMP_path, double *minmaxHeight, double seedDEMsigma, int IsRA,char* metafilename);
+void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight);
 
 double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
 void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, double* _Hinterval);
+
 bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, double ***RPCs, double **ImageParams,
 				 double *subBoundary, double *minmaxHeight, D2DPOINT *Startpos, char **SubsetImage, CSize *Subsetsize, FILE *fid,bool check_checktiff);
 D2DPOINT* wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs);
@@ -107,18 +108,18 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
 uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
 void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir);
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
-void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, double** LRPCs, double** RRPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
-bool VerticalLineLocus(bool check_matchtag, NCCresult* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size,
+void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs, double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
+bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
 					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
-					   uint8 NumofIAparam, double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, uint8* left_ori, uint8* right_ori,
-					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, char* save_filepath, uint8 tile_row, uint8 tile_col, double* Boundary,
-					   bool pre_DEMtif, char* tmpdir,double *meters_per_pixel, bool IsRA,double mag_avg,double mag_var);
+					   uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
+					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
+					   char* tmpdir,double *meters_per_pixel, double mag_avg,double mag_var);
 void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
 
 double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
-								CSize *Imagesizes_ori, CSize **Imagesizes, uint16* Images, uint8 Template_size,
+								CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
 								CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-								uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
+								uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
 								char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEMsigma);
 
 bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
@@ -145,27 +146,28 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
-int DecisionMPs(bool flag_blunder,int count_MPs, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-				uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, char *filename_tri, double Hinterval, 
-				bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-				uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-				CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
-				TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-				uint8 NumofIAparam, double* ImageAdjust, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-				char* save_filepath, uint8 tile_row, uint8 tile_col, int pre_DEMtif, int IsRA,uint8* left_ori, uint8* right_ori, int blunder_selected_level,double seedDEMsigma, double f_demsize);
-int DecisionMPs_setheight(bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-						  uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval, 
+int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+                uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, double Hinterval,
+                bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
+                uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
+                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
+                TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
+                uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
+                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level);
+
+int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+						  uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
 						  bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-						  uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-						  CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
+						  uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
+						  CSize *Imagesizes_ori, CSize **LImagesizes, uint16 **Images, uint8 Template_size,
 						  TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-						  uint8 NumofIAparam, double* ImageAdjust, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-						  char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8* left_ori, uint8* right_ori, int blunder_selected_level);
+						  uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
+						  char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level);
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
 					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_results_anchor,int count_results_blunder, char *filename_mps);
 
-int AdjustParam(uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT Lstartpos, D2DPOINT Rstartpos, double **LRPCs, double **RRPCs, double *ImageAdjust, NCCflag _flag,
-				uint8 Template_size, uint16 *LeftImage, CSize LImagesize, uint16 *RightImage, CSize RImagesize, uint8 *left_ori, uint8 *right_ori, TransParam param,
+int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
+				uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
 				double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir);
 bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
 			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
@@ -175,12 +177,12 @@ bool blunder_detection_TIN(int pre_DEMtif, double* ortho_ncc, double* INCC,bool 
 						   D3DPOINT *ptslists, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 
 						   uint32 *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma);
 
-int Ortho_blunder(D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param,
-				  uint16 *MagImages_L,uint16 *MagImages_R, uint16* LeftImage, uint16* RightImage,
-				  double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, 
-				  CSize LImagesize,	 CSize RImagesize, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, 
-				  double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
-				  D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps, char *save_path);
+int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param,
+				  uint16 **MagImages, uint16 **Images,
+				  double DEM_resolution, double im_resolution, double ***RPCs,
+				  CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
+				  double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
+				  D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
 
 bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update);
 UGRID* SetHeightRange(bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
