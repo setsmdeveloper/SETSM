@@ -612,6 +612,8 @@ int main(int argc,char *argv[])
         }
         else
         {
+            args.check_arg = 1;
+            
             if (strcmp("-Sensor",argv[i]) == 0)
             {
                 if (argc == i+1) {
@@ -653,7 +655,7 @@ int main(int argc,char *argv[])
             }
 
             
-            args.check_arg = 1;
+            
             
             if (strcmp("-Image",argv[i]) == 0)
             {
@@ -1716,10 +1718,15 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                                     {
                                         sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                        if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0  && ti > 0)
-                                            check_load_RA = true;
+                                        if(ti == 0)
+                                            proinfo->check_selected_image[ti] = true;
                                         else
-                                            proinfo->check_selected_image[ti] = false;
+                                        {
+                                            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                                check_load_RA = true;
+                                            else
+                                                proinfo->check_selected_image[ti] = false;
+                                        }
                                     }
                                 }
                                 fclose(pFile_echo);
@@ -1763,10 +1770,15 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                                     {
                                         sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                        if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
-                                            check_load_RA = true;
+                                        if(ti == 0)
+                                            proinfo->check_selected_image[ti] = true;
                                         else
-                                            proinfo->check_selected_image[ti] = false;
+                                        {
+                                            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                                check_load_RA = true;
+                                            else
+                                                proinfo->check_selected_image[ti] = false;
+                                        }
                                     }
                                 }
                                 fclose(pFile_echo);
@@ -1796,10 +1808,15 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                     for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                                     {
                                         fscanf(pFile_echo,"%lf %lf",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                        if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
-                                            check_load_RA = true;
+                                        if(ti == 0)
+                                            proinfo->check_selected_image[ti] = true;
                                         else
-                                            proinfo->check_selected_image[ti] = false;
+                                        {
+                                            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                                check_load_RA = true;
+                                            else
+                                                proinfo->check_selected_image[ti] = false;
+                                        }
                                     }
                                     fclose(pFile_echo);
                                 }
@@ -1822,10 +1839,15 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                                 for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                                                 {
                                                     sscanf(bufstr,"RA Params=%lf\t%lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                                    if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
-                                                        check_load_RA = true;
+                                                    if(ti == 0)
+                                                        proinfo->check_selected_image[ti] = true;
                                                     else
-                                                        proinfo->check_selected_image[ti] = false;
+                                                    {
+                                                        if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                                            check_load_RA = true;
+                                                        else
+                                                            proinfo->check_selected_image[ti] = false;
+                                                    }
                                                 }
                                             }
                                             else if(strstr(bufstr,"SETSM Version=")!=NULL)
@@ -1872,10 +1894,15 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                                 for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                                 {
                                     fscanf(pFile_info,"%lf\t%lf",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                    if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
-                                        check_load_RA = true;
+                                    if(ti == 0)
+                                        proinfo->check_selected_image[ti] = true;
                                     else
-                                        proinfo->check_selected_image[ti] = false;
+                                    {
+                                        if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                            check_load_RA = true;
+                                        else
+                                            proinfo->check_selected_image[ti] = false;
+                                    }
                                 }
                                 fclose(pFile_info);
                             }
@@ -2840,7 +2867,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             VerticalLineLocus(proinfo,nccresult,SubMagImages,grid_resolution, Image_res[0],RPCs,Imagesizes,data_size_lr,SubImages,Template_size,Size_Grid2D,
                                               param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
-                                              row,col,subBoundary,v_temp_path,&MPP,mag_avg,mag_var);
+                                              row,col,subBoundary,v_temp_path,mag_avg,mag_var);
                             
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -3725,7 +3752,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 }
             }
         }
+        
+        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+        {
+            if(proinfo->check_selected_image[ti])
+            {
+                free(Subsetfilename[ti]);
+                free(t_Imageparams[ti]);
+            }
+        }
+        
+        free(Subsetfilename);
+        free(t_Imageparams);
+        free(Startpos_ori);
+        free(Subsetsize);
     }
+    
     free(iterations);
     if(proinfo->IsRA && RA_count > 0)
     {
@@ -3784,6 +3826,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
         bopened = true;
         char* tmp_chr;
         
+        int count_images = 0;
                 
         while(!feof(pFile))
         {
@@ -3792,6 +3835,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 sscanf(bufstr,"Image_GSD %lf\n",&info->resolution);
             else if (!args.check_DEM_space && strstr(bufstr,"DEM_space")!=NULL)
                 sscanf(bufstr,"DEM_space %lf\n",&info->DEM_resolution);
+            else if (args.check_arg == 0 && strstr(bufstr,"NumberOfImages")!=NULL)
+                sscanf(bufstr,"NumberOfImages %d\n",&info->number_of_images);
             else if (strstr(bufstr,"Image_RA")!=NULL)
             {
                 if(!args.check_RA_line || !args.check_RA_sample)
@@ -3808,75 +3853,41 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
             }
             else if (!args.check_Threads_num && strstr(bufstr,"Threads_num")!=NULL)
                 sscanf(bufstr,"Threads_num %d\n",&info->threads_num);
-            else if (args.check_arg == 0 && strstr(bufstr,"Image1")!=NULL)
+            else if (args.check_arg == 0 && strstr(bufstr,"Image")!=NULL)
             {
-                sscanf(bufstr,"Image1 %s\n",info->LeftImagefilename);
+                sscanf(bufstr,"Image1 %s\n",info->Imagefilename[count_images]);
                 
-                FILE *temp_ptif = fopen(info->LeftImagefilename,"r");
+                FILE *temp_ptif = fopen(info->Imagefilename[count_images],"r");
                 if(temp_ptif)
-                    printf("image1 load completed!\n");
+                    printf("image %d load completed!\n",count_images);
                 else
                 {
-                    printf("image1 load faied. Please check filename!!\n");
+                    printf("image %d load faied. Please check filename!!\n",count_images);
                     exit(1);
                 }
                 
-                tmp_chr = remove_ext(info->LeftImagefilename);
-                sprintf(info->LeftRPCfilename,"%s.xml",tmp_chr);
+                tmp_chr = remove_ext(info->Imagefilename[count_images]);
+                sprintf(info->RPCfilename[count_images],"%s.xml",tmp_chr);
                 
                 FILE *temp_pFile;
-                temp_pFile           = fopen(info->LeftRPCfilename,"r");
+                temp_pFile           = fopen(info->RPCfilename[count_images],"r");
                 //printf("xml file %s\n",info->LeftRPCfilename);
                 if(temp_pFile)
-                    printf("image1 xml load completed!\n");
+                    printf("image %d xml load completed!\n",count_images);
                 else
                 {
-                    sprintf(info->LeftRPCfilename,"%s.XML",tmp_chr);
+                    sprintf(info->RPCfilename[count_images],"%s.XML",tmp_chr);
                     //printf("xml file %s\n",info->LeftRPCfilename);
-                    temp_pFile           = fopen(info->LeftRPCfilename,"r");
+                    temp_pFile           = fopen(info->RPCfilename[count_images],"r");
                     if(temp_pFile)
-                        printf("image1 XML load completed!\n");
+                        printf("image %d XML load completed!\n",count_images);
                     else
                     {
-                        printf("image1 xml/XML load failed!\n");
+                        printf("image %d xml/XML load failed!\n",count_images);
                         exit(0);
                     }
                 }
-            }
-            else if (args.check_arg == 0 && strstr(bufstr,"Image2")!=NULL)
-            {
-                sscanf(bufstr,"Image2 %s\n",info->RightImagefilename);
-                
-                FILE *temp_ptif = fopen(info->RightImagefilename,"r");
-                if(temp_ptif)
-                    printf("image2 load completed!\n");
-                else
-                {
-                    printf("image2 load faied. Please check filename!!\n");
-                    exit(1);
-                }
-                
-                tmp_chr = remove_ext(info->RightImagefilename);
-                sprintf(info->RightRPCfilename,"%s.xml",tmp_chr);
-                
-                FILE *temp_pFile;
-                temp_pFile           = fopen(info->RightRPCfilename,"r");
-                //printf("xml file %s\n",info->RightRPCfilename);
-                if(temp_pFile)
-                    printf("image2 xml load completed!\n");
-                else
-                {
-                    sprintf(info->RightRPCfilename,"%s.XML",tmp_chr);
-                    //printf("xml file %s\n",info->RightRPCfilename);
-                    temp_pFile           = fopen(info->RightRPCfilename,"r");
-                    if(temp_pFile)
-                        printf("image2 XML load completed!\n");
-                    else
-                    {
-                        printf("image2 xml/XML load failed!\n");
-                        exit(0);
-                    }
-                }
+                count_images++;
             }
             else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
             {
@@ -3935,7 +3946,13 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 printf("%f\n",info->maxHeight);
             }
         }
-                
+        
+        if(args.check_arg == 0 && count_images != args.number_of_images)
+        {
+            printf("Please check number of images and image path (%d - %d)!!\n",count_images,args.number_of_images);
+            exit(1);
+        }
+        
         if (args.check_arg != 0) {
             sprintf(info->tmpdir,"%s/tmp",args.Outputpath);
             
@@ -4073,7 +4090,7 @@ bool SetupParam(ProInfo *info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *
     
     printf("seed flag %d\n",info->pre_DEMtif);
     
-    if (info.pre_DEMtif) 
+    if (info->pre_DEMtif)
     {
         FILE *pFile_DEM;
         printf("dem filename %s\n",info->priori_DEM_tif);
@@ -4237,7 +4254,7 @@ void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res
     *t_col_start            = 1;
     *t_col_end          = division_X+1;
     if(IsRR)
-        *iter_row_start = info.start_row;
+        *iter_row_start = info->start_row;
     
     if(*iter_row_start == *iter_row_end)
         *iter_row_end += 1;
@@ -4516,7 +4533,7 @@ void SetThs(ProInfo *proinfo,int level, int final_level_iteration, double *Th_ro
     }
     
     
-    if(proinfo.check_Matchtag)
+    if(proinfo->check_Matchtag)
     {
         *Th_roh          = (double)(0.35 - 0.15*(final_level_iteration-2));
         *Th_roh_min      = (double)(0.19);
@@ -4940,7 +4957,8 @@ UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool 
             GridPT3[i].roh              = Th_roh;
             GridPT3[i].anchor_flag      = 0;
             GridPT3[i].Matched_height   = -1000.0;
-            GridPT3[i].ortho_ncc        = 0;
+            for(int ti=0;ti<MaxImages;ti++)
+                GridPT3[i].ortho_ncc[ti]        = 0;
             GridPT3[i].angle            = 0;
 //          GridPT3[i].false_h_count    = 0;
 
@@ -5154,19 +5172,19 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
             cols[0]         = null_buffer;
         if(rows[0]          <= null_buffer)
             rows[0]         = null_buffer;
-        if(cols[0]          > Imagesize->width - null_buffer)
-            cols[0]         = Imagesize->width - null_buffer;
-        if(rows[0]          > Imagesize->height - null_buffer)
-            rows[0]         = Imagesize->height - null_buffer;
+        if(cols[0]          > Imagesize.width - null_buffer)
+            cols[0]         = Imagesize.width - null_buffer;
+        if(rows[0]          > Imagesize.height - null_buffer)
+            rows[0]         = Imagesize.height - null_buffer;
 
         if(cols[1]          <= null_buffer)
             cols[1]         = null_buffer;
         if(rows[1]          <= null_buffer)
             rows[1]         = null_buffer;
-        if(cols[1]          > Imagesize->width - null_buffer)
-            cols[1]         = Imagesize->width - null_buffer;
-        if(rows[1]          > Imagesize->height - null_buffer)
-            rows[1]         = Imagesize->height - null_buffer;
+        if(cols[1]          > Imagesize.width - null_buffer)
+            cols[1]         = Imagesize.width - null_buffer;
+        if(rows[1]          > Imagesize.height - null_buffer)
+            rows[1]         = Imagesize.height - null_buffer;
 
         //printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
         
@@ -6003,7 +6021,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     TIFF *tif;
     char save_DEMfile[500];
     char *GIMP_path = proinfo->priori_DEM_tif;
-    double seedDEM_sigma = proinfo->seedDEM_sigma;
+    double seedDEM_sigma = proinfo->seedDEMsigma;
     int IsRA = proinfo->IsRA;
     char* metafilename = proinfo->metafilename;
     
@@ -6025,7 +6043,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     
     printf("oriminmaxH %f\t%f\n",oriminH,orimaxH);
     
-    if(!proinfo.check_Matchtag)
+    if(!proinfo->check_Matchtag)
     {
         if(seedDEM_sigma < 10)
             seedDEM_sigma = 10;
@@ -6164,7 +6182,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                 
                                 Grid[index_grid].Height        = seeddem[index_seeddem];
 
-                                if(proinfo.check_Matchtag)
+                                if(proinfo->check_Matchtag)
                                 {
                                     //Grid[index_grid].Matched_flag = 1;
                                     //Grid[index_grid].roh          = 0.1;
@@ -6266,7 +6284,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                 
                                 Grid[index_grid].Height        = seeddem[index_seeddem];
                                 
-                                if(proinfo.check_Matchtag)
+                                if(proinfo->check_Matchtag)
                                 {
                                     //Grid[index_grid].Matched_flag = 1;
                                     //Grid[index_grid].roh          = 0.1;
@@ -7218,15 +7236,15 @@ bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, do
     {
         CSize Imagesize;
 
-        if(GetImageSize(proinfo->ImageFilename[ti],&Imagesize))
+        if(GetImageSize(proinfo->Imagefilename[ti],&Imagesize))
         {
             int Lcols[2], Lrows[2];
-            if(GetsubareaImage(transparam,NumofIAparam,RPCs[ti],Imageparams[ti],proinfo->ImageFilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
+            if(GetsubareaImage(transparam,NumofIAparam,RPCs[ti],ImageParams[ti],proinfo->Imagefilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
             {
                 uint16 *leftimage;
 
                 printf("read image %d\n", ti);
-                leftimage   = Readtiff(proinfo->ImageFilename[ti],Imagesize,Lcols,Lrows,Subsetsize[ti],check_checktiff);
+                leftimage   = Readtiff(proinfo->Imagefilename[ti],&Imagesize,Lcols,Lrows,&Subsetsize[ti],check_checktiff);
                 if(check_checktiff)
                     exit(1);
                 
@@ -7258,6 +7276,12 @@ bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, do
         }
     }
 
+    if(!proinfo->check_selected_image[0])
+    {
+        printf("SubsetImage : Subset of reference image is failed!!\n");
+        ret = false;
+    }
+    
     return ret;
 }
 
@@ -8586,9 +8610,9 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                        CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
                        uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
                        double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
-                       char* tmpdir,double *meters_per_pixel, double mag_avg,double mag_var)
+                       char* tmpdir, double mag_avg,double mag_var)
 {
-    bool check_matchtag = proinfo->check_matchtag;
+    bool check_matchtag = proinfo->check_Matchtag;
     char* save_filepath = proinfo->save_filepath;
     bool pre_DEMtif = proinfo->pre_DEMtif;
     bool IsRA = proinfo->IsRA;
@@ -8642,28 +8666,6 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
     subBoundary[3]    = Boundary[3];
     
     numofpts = Size_Grid2D.height*Size_Grid2D.width;
-
-    temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
-    temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
-    temp_GrP.m_Z = minmaxHeight[0];
-    temp_GrP.flag = 0;
-    temp_p1     = GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
-    
-    temp_GrP.m_Z = minmaxHeight[1];
-    temp_p2     = GetObjectToImageRPC_single_mpp(LRPCs,NumofIAparam,temp_LIA,temp_GrP);
-    
-    *meters_per_pixel = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
-    
-    printf("mpp = %f\n",*meters_per_pixel);
-    
-    if(*meters_per_pixel > 5)
-        *meters_per_pixel = 5;
-    
-    if(*meters_per_pixel < im_resolution)
-        *meters_per_pixel = im_resolution;
-    
-    printf("h,x,y =%f\t %f\t %f\t\n%f\t %f\t %f\n",minmaxHeight[0], temp_p1.m_X, temp_p1.m_Y, minmaxHeight[1],temp_p2.m_X, temp_p2.m_Y);
-    printf("mpp = %f\n",*meters_per_pixel);
     
     im_resolution = im_resolution*pow(2,Pyramid_step);
     
@@ -8677,7 +8679,7 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
         check_ortho = true;
     
     //orthoimage pixel information save
-    F2DPOINT *all_left_im_cd, *all_right_im_cd;
+    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
     int sub_imagesize_w, sub_imagesize_h;
     
     if(check_ortho)
@@ -8690,19 +8692,19 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
         long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
         printf("sub_imagesize_total %ld\n",sub_imagesize_total);
         
-        all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-        if (all_left_im_cd == NULL)
+        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
         {
-            printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-            exit(1);
+            if(proinfo->check_selected_image[ti])
+            {
+                all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+                if (all_im_cd[ti] == NULL)
+                {
+                    printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
+                    exit(1);
+                }
+            }
         }
-        all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-        if (all_right_im_cd == NULL)
-        {
-            printf("ERROR: Out of memory - all_right_im_cd is NULL\n");
-            exit(1);
-        }
-
+        
 #pragma omp parallel for schedule(guided)
         for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
         {
@@ -8726,11 +8728,10 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
             {
                 if(GridPT3[pt_index].Height != -1000)
                 {
-                    double temp_LIA[2];
                     D3DPOINT temp_GP;
                     D2DPOINT temp_GP_p;
-                    D2DPOINT Left_Imagecoord, Right_Imagecoord;
-                    D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
+                    D2DPOINT Imagecoord;
+                    D2DPOINT Imagecoord_py;
                    
                     temp_GP_p.m_X = t_X;
                     temp_GP_p.m_Y = t_Y;
@@ -8739,19 +8740,18 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                     temp_GP.m_X   = temp_GP_p.m_X;
                     temp_GP.m_Y   = temp_GP_p.m_Y;
                     temp_GP.m_Z   = GridPT3[pt_index].Height;
-                   
-                    temp_LIA[0] = 0.0;
-                    temp_LIA[1] = 0.0;
-                    Left_Imagecoord     = GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP);
-                    Right_Imagecoord    = GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP);
-                   
-                    Left_Imagecoord_py  = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
-                    Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
-                   
-                    all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
-                    all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
-                    all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
-                    all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
+                    
+                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    {
+                        if(proinfo->check_selected_image[ti])
+                        {
+                            Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
+                            
+                            all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
+                            all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
+                        }
+                    }
                 }
             }
         }
@@ -8883,7 +8883,7 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
             end_H       = GridPT3[pt_index].maxHeight;
 
             
-            if(check_image_boundary(LRPCs,RRPCs,NumofIAparam,ImageAdjust,Lstartpos,Rstartpos,Grid_wgs[pt_index],start_H,end_H,LImagesize,RImagesize,Half_template_size,Pyramid_step))
+            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,Grid_wgs[pt_index],start_H,end_H,Imagesizes,Half_template_size,Pyramid_step))
             {
                 char t_temp_path[500];
                 bool check_blunder_cell = false;
@@ -8951,7 +8951,7 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                 }
                 if(!check_blunder_cell)
                 {
-                    
+                    /*
                     if(Pyramid_step <= 1 && GridPT3[pt_index].ortho_ncc < 0.2 && DEM_resolution > 5)
                     {
                         int t_kernel = 10;
@@ -9010,11 +9010,12 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                         free(saveheight);
                         free(saveheightcheck);
                     }
-                    
+                    */
                     for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
                     {
                         double iter_height;
                         bool check_false_h = false;
+                        int reference_id = 0;
                         
                         iter_height     = start_H + count_height*height_step;
                         //saveheight[count_height] = iter_height;
@@ -9034,820 +9035,839 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                         
 
                         D3DPOINT temp_GP[1];
-                        D2DPOINT Left_Imagecoord[1], Right_Imagecoord[1];
-                        D2DPOINT Left_Imagecoord_py[1], Right_Imagecoord_py[1];
-        
+                        D2DPOINT Ref_Imagecoord[1];
+                        D2DPOINT Ref_Imagecoord_py[1];
+                        double sum_INCC_multi = 0;
+                        double sum_GNCC_multi = 0;
+                        int count_INCC = 0;
+                        int count_GNCC = 0;
                         
+                        //WNCC peak variables
+                        double temp_rho;
+                        int grid_index;
+                        double diff_rho;
+                        int t_direction;
 
                         temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
                         temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
                         temp_GP[0].m_Z = iter_height;
                         
-                        temp_LIA[0] = 0.0;
-                        temp_LIA[1] = 0.0;
+                        //reference image point
+                        temp_LIA[0] = ImageAdjust[reference_id][0];
+                        temp_LIA[1] = ImageAdjust[reference_id][1];
                         
-                        Left_Imagecoord[0]      = GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP[0]);
-                        Right_Imagecoord[0]     = GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP[0]);
+                        Ref_Imagecoord[0]      = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP[0]);
+                        Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos[reference_id],Pyramid_step);
                         
-                        Left_Imagecoord_py[0]   = OriginalToPyramid_single(Left_Imagecoord[0],Lstartpos,Pyramid_step);
-                        Right_Imagecoord_py[0]  = OriginalToPyramid_single(Right_Imagecoord[0],Rstartpos,Pyramid_step);
-
-                        bool check_weight = false;
-                        double weight = 1.0;
-                        
-                        int ori_diff;
-                        
-                        ori_diff = left_ori[(int)Left_Imagecoord_py[0].m_Y*LImagesize.width + (int)Left_Imagecoord_py[0].m_X] - 
-                            right_ori[(int)Right_Imagecoord_py[0].m_Y*RImagesize.width + (int)Right_Imagecoord_py[0].m_X];
+                        // target image point and ncc
+                        for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
                         {
-                            double Weight, Left_CR, Left_CC, Right_CR, Right_CC, diff_theta;
-                            bool b_count;
-                            double left_bin[36] = {0.0};
-                            int left_max_th, left_th;
-                            bool check_orientation = false; 
-                            
-                            b_count = false;
-                            left_max_th = -100;
-                            
-                            Weight      = weight;
-                            Left_CR     = Left_Imagecoord_py[0].m_Y;
-                            Left_CC     = Left_Imagecoord_py[0].m_X;
-                            Right_CR    = Right_Imagecoord_py[0].m_Y;
-                            Right_CC    = Right_Imagecoord_py[0].m_X;
-                            
-                            diff_theta  = (double)(ori_diff);
-
-                            if(IsRA != 1)
+                            if(proinfo->check_selected_image[ti])
                             {
-                                if(Pyramid_step >= 3 && diff_theta*bin_angle < 90 && diff_theta*bin_angle > - 90)
-                                    check_orientation = true;
-                                else if(Pyramid_step <= 2)
+                                D2DPOINT Tar_Imagecoord[1], Tar_Imagecoord_py[1];
+                                CSize LImagesize, RImagesize;
+                                
+                                LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
+                                LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+                                RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
+                                RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                                
+                                Tar_Imagecoord[0]     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP[0]);
+                                Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos[ti],Pyramid_step);
+
+                        
+                                int ori_diff;
+                        
+                                ori_diff = ori_images[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] -
+                                           ori_images[ti][          (int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
                                 {
-                                    check_orientation = true;
+                                    double Left_CR, Left_CC, Right_CR, Right_CC, diff_theta;
+                                    bool b_count;
+                                    double left_bin[36] = {0.0};
+                                    int left_max_th, left_th;
+                                    bool check_orientation = false; 
                                     
+                                    
+                                    b_count = false;
+                                    left_max_th = -100;
+                                    
+                                    Left_CR     = Ref_Imagecoord_py[0].m_Y;
+                                    Left_CC     = Ref_Imagecoord_py[0].m_X;
+                                    Right_CR    = Tar_Imagecoord_py[0].m_Y;
+                                    Right_CC    = Tar_Imagecoord_py[0].m_X;
+                                    
+                                    diff_theta  = (double)(ori_diff);
+
+                                    if(IsRA != 1)
+                                    {
+                                        if(Pyramid_step >= 3 && diff_theta*bin_angle < 90 && diff_theta*bin_angle > - 90)
+                                            check_orientation = true;
+                                        else if(Pyramid_step <= 2)
+                                        {
+                                            check_orientation = true;
+                                            
+                                        }
+                                    }
+                                    else
+                                    {
+                                        check_orientation = true;
+                                    }
+                                    
+                                    if(check_orientation)
+                                    {
+                                        double rot_theta = 0.0;
+                                        
+                                        double Sum_LR = 0;
+                                        double Sum_L = 0;
+                                        double Sum_R = 0;
+                                        double Sum_L2 = 0;
+                                        double Sum_R2 = 0;
+                                        double Sum_LR_2 = 0;
+                                        double Sum_L_2 = 0;
+                                        double Sum_R_2 = 0;
+                                        double Sum_L2_2 = 0;
+                                        double Sum_R2_2 = 0;
+                                        double Sum_LR_3 = 0;
+                                        double Sum_L_3 = 0;
+                                        double Sum_R_3 = 0;
+                                        double Sum_L2_3 = 0;
+                                        double Sum_R2_3 = 0;
+                                        int Count_N[3] = {0};
+                                        
+                                        double Sum_LR_mag = 0;
+                                        double Sum_L_mag = 0;
+                                        double Sum_R_mag = 0;
+                                        double Sum_L2_mag = 0;
+                                        double Sum_R2_mag = 0;
+                                        double Sum_LR_2_mag = 0;
+                                        double Sum_L_2_mag = 0;
+                                        double Sum_R_2_mag = 0;
+                                        double Sum_L2_2_mag = 0;
+                                        double Sum_R2_2_mag = 0;
+                                        double Sum_LR_3_mag = 0;
+                                        double Sum_L_3_mag = 0;
+                                        double Sum_R_3_mag = 0;
+                                        double Sum_L2_3_mag = 0;
+                                        double Sum_R2_3_mag = 0;
+                                        
+                                        double Sum_LR_ortho = 0;
+                                        double Sum_L_ortho = 0;
+                                        double Sum_R_ortho = 0;
+                                        double Sum_L2_ortho = 0;
+                                        double Sum_R2_ortho = 0;
+                                        double Sum_LR_2_ortho = 0;
+                                        double Sum_L_2_ortho = 0;
+                                        double Sum_R_2_ortho = 0;
+                                        double Sum_L2_2_ortho = 0;
+                                        double Sum_R2_2_ortho = 0;
+                                        double Sum_LR_3_ortho = 0;
+                                        double Sum_L_3_ortho = 0;
+                                        double Sum_R_3_ortho = 0;
+                                        double Sum_L2_3_ortho = 0;
+                                        double Sum_R2_3_ortho = 0;
+                                        int Count_N_ortho[3] = {0};    
+                                        
+                                        double Sum_LR_mag_ortho = 0;
+                                        double Sum_L_mag_ortho = 0;
+                                        double Sum_R_mag_ortho = 0;
+                                        double Sum_L2_mag_ortho = 0;
+                                        double Sum_R2_mag_ortho = 0;
+                                        double Sum_LR_2_mag_ortho = 0;
+                                        double Sum_L_2_mag_ortho = 0;
+                                        double Sum_R_2_mag_ortho = 0;
+                                        double Sum_L2_2_mag_ortho = 0;
+                                        double Sum_R2_2_mag_ortho = 0;
+                                        double Sum_LR_3_mag_ortho = 0;
+                                        double Sum_L_3_mag_ortho = 0;
+                                        double Sum_R_3_mag_ortho = 0;
+                                        double Sum_L2_3_mag_ortho = 0;
+                                        double Sum_R2_3_mag_ortho = 0;
+                                        
+                                        
+                                        int row, col;
+                                        int N;
+                                        
+                                        double val1, val2, de, de2, ncc_1, ncc_2, ncc_3;
+                                        double ncc_1_mag, ncc_2_mag, ncc_3_mag;
+                                        double ncc_1_ortho, ncc_2_ortho, ncc_3_ortho;
+                                        double ncc_1_mag_ortho, ncc_2_mag_ortho, ncc_3_mag_ortho;
+                                        
+                                        double temp_INCC_roh = 0;
+                                        double temp_GNCC_roh = 0;
+                             
+                                                                            
+                                        uint16 mag_center_l, mag_center_r;
+                                        
+                                        if(flag.rotate_flag)
+                                            rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
+                                        
+                                        double cos0 = cos(-rot_theta);
+                                        double sin0 = sin(-rot_theta);
+                                        
+                                        for(row = -Half_template_size; row <= Half_template_size ; row++)
+                                        {
+                                            for(col = -Half_template_size; col <= Half_template_size ; col++)
+                                            {
+                                                int radius2  =  row*row + col*col;
+                                                if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
+                                                {
+                                                    double pos_row_left      = (Left_CR + row);
+                                                    double pos_col_left      = (Left_CC + col);
+                                                    
+                                                    double temp_col        = (cos0*col - sin0*row);
+                                                    double temp_row        = (sin0*col + cos0*row);
+                                                    double pos_row_right     = (Right_CR + temp_row);
+                                                    double pos_col_right     = (Right_CC + temp_col);
+                                                    
+                                                    
+                                                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                                    {
+                                                        //interpolate left_patch
+                                                        double dx          =  pos_col_left - (int)(pos_col_left);
+                                                        double dy          =  pos_row_left - (int)(pos_row_left);
+                                                        double dxdy = dx * dy;
+                                                        double left_patch;
+                                                        double right_patch;
+                                                        double left_mag_patch;
+                                                        double right_mag_patch;
+                                                        long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
+                                                        
+                                                        left_patch =        (double) (Images[reference_id][position])                          * (1 - dx - dy + dxdy) +
+                                                                            (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
+                                                                            (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
+                                                                            (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
+                                                        
+                                                        left_mag_patch =    (double) (MagImages[reference_id][position])                       * (1 - dx - dy + dxdy) +
+                                                                            (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
+                                                                            (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
+                                                                            (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
+
+                                                         
+                                                        //interpolate right_patch
+                                                        dx          =  pos_col_right - (int)(pos_col_right);
+                                                        dy          =  pos_row_right - (int)(pos_row_right);
+                                                        dxdy = dx * dy;
+                                                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                                        
+                                                        right_patch =       (double) (Images[ti][position])                         * (1 - dx - dy + dxdy) +
+                                                                            (double) (Images[ti][position + 1])                     * (dx - dxdy) +
+                                                                            (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
+                                                                            (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
+                                                        
+                                                        right_mag_patch =   (double) (MagImages[ti][position])                      * (1 - dx - dy + dxdy) +
+                                                                            (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
+                                                                            (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
+                                                                            (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
+                                                        
+                                                        //end
+                                                        Count_N[0]++;
+
+                                                        //*************
+                                                        //Precomputing LR, L2 and R2 etc as they are used in different reductions. (Perhaps compiler handles that by itself)
+                                                        double LR = left_patch * right_patch;
+                                                        double L2 = left_patch * left_patch;
+                                                        double R2 = right_patch * right_patch;
+                                                        double LR_mag = left_mag_patch * right_mag_patch;
+                                                        double L2_mag = left_mag_patch * left_mag_patch;
+                                                        double R2_mag = right_mag_patch * right_mag_patch;
+                                                        
+                                                        Sum_LR            = Sum_LR + LR;
+                                                        Sum_L             = Sum_L  + left_patch;
+                                                        Sum_R             = Sum_R  + right_patch;
+                                                        Sum_L2            = Sum_L2 + L2;
+                                                        Sum_R2            = Sum_R2 + R2;
+                                                        
+                                                        Sum_LR_mag            = Sum_LR_mag + LR_mag;
+                                                        Sum_L_mag             = Sum_L_mag  + left_mag_patch;
+                                                        Sum_R_mag             = Sum_R_mag  + right_mag_patch;
+                                                        Sum_L2_mag            = Sum_L2_mag + L2_mag;
+                                                        Sum_R2_mag            = Sum_R2_mag + R2_mag;
+                                                        
+                                                        int size_1, size_2;
+                                                        size_1        = (int)(Half_template_size/2);
+                                                        if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                                        {
+                                                            if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                                            {
+                                                                Sum_LR_2  = Sum_LR_2 + LR;
+                                                                Sum_L_2   = Sum_L_2  + left_patch;
+                                                                Sum_R_2   = Sum_R_2  + right_patch;
+                                                                Sum_L2_2  = Sum_L2_2 + L2;
+                                                                Sum_R2_2  = Sum_R2_2 + R2;
+                                                                Count_N[1]++;
+                                                                
+                                                                Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
+                                                                Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
+                                                                Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
+                                                                Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
+                                                                Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
+                                                            }
+                                                        }
+                                                                
+                                                        size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                                                        if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                                        {
+                                                            if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                                            {
+                                                                Sum_LR_3  = Sum_LR_3 + LR;
+                                                                Sum_L_3   = Sum_L_3  + left_patch;
+                                                                Sum_R_3   = Sum_R_3  + right_patch;
+                                                                Sum_L2_3  = Sum_L2_3 + L2;
+                                                                Sum_R2_3  = Sum_R2_3 + R2;
+                                                                Count_N[2]++;
+                                                                
+                                                                Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+                                                                Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
+                                                                Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
+                                                                Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+                                                                Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+                                                            }
+                                                        }
+                                                        
+                                                        if(row == 0 && col == 0)
+                                                        {
+                                                            mag_center_l = left_patch;
+                                                            mag_center_r = right_patch;
+                                                        }
+                                                    }
+                                                    
+                                                    //ortho_NCC
+                                                    if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                                                    {
+                                                        double pos_row_left_ortho = -100;
+                                                        double pos_col_left_ortho = -100;
+                                                        double pos_row_right_ortho= -100;
+                                                        double pos_col_right_ortho= -100;
+                                                        
+                                                        if(row != 0 && col != 0)
+                                                        {
+                                                            long int pt_index_temp,pt_index_dem;
+                                                            double t_X, t_Y;
+                                                            int t_col, t_row, tt_col, tt_row;
+                                                            
+                                                            t_X     = GridPts[pt_index].m_X + col*im_resolution;
+                                                            t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+                                                            
+                                                            t_col   = (int)((t_X - subBoundary[0])/im_resolution);
+                                                            t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
+                                                            
+                                                            tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
+                                                            tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
+                                                            
+                                                            pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
+                                                            pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
+                                                            
+                                                            if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
+                                                               t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
+                                                               pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
+                                                               tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+                                                                all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                                            {
+                                                                if(GridPT3[pt_index_dem].Height != -1000)
+                                                                {
+                                                                    pos_row_left_ortho  = all_im_cd[reference_id][pt_index_temp].m_Y;
+                                                                    pos_col_left_ortho  = all_im_cd[reference_id][pt_index_temp].m_X;
+                                                                    pos_row_right_ortho = all_im_cd[ti][pt_index_temp].m_Y;
+                                                                    pos_col_right_ortho = all_im_cd[ti][pt_index_temp].m_X;
+                                                                    
+                                                                }
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            pos_row_left_ortho = pos_row_left;
+                                                            pos_col_left_ortho = pos_col_left;
+                                                            pos_row_right_ortho= pos_row_right;
+                                                            pos_col_right_ortho= pos_col_right;
+                                                        }
+                                                        
+                                                        pos_row_left = pos_row_left_ortho;
+                                                        pos_col_left = pos_col_left_ortho;
+                                                        pos_row_right= pos_row_right_ortho;
+                                                        pos_col_right= pos_col_right_ortho;
+                                                        
+                                                        if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                                            pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                                        {
+                                                            //interpolate left_patch
+                                                            double dx          =  pos_col_left - (int)(pos_col_left);
+                                                            double dy          =  pos_row_left - (int)(pos_row_left);
+                                                            double dxdy = dx * dy;
+                                                            double left_patch;
+                                                            double right_patch;
+                                                            double left_mag_patch;
+                                                            double right_mag_patch;
+                                                            
+                                                            long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
+                                                            
+                                                            left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
+                                                                                (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
+                                                                                (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
+                                                                                (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
+                                                            
+                                                            left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
+                                                                                (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
+                                                                                (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
+                                                                                (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
+                                                            
+                                                            //interpolate right_patch
+                                                            dx          =  pos_col_right - (int)(pos_col_right);
+                                                            dy          =  pos_row_right - (int)(pos_row_right);
+                                                            dxdy = dx * dy;
+                                                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                                            
+                                                            right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
+                                                                                (double) (Images[ti][position + 1])                         * (dx - dxdy) +
+                                                                                (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
+                                                                                (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
+                                                            
+                                                            right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
+                                                                                (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
+                                                                                (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
+                                                                                (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                                                            
+                                                            //end
+                                                            Count_N_ortho[0]++;
+                                                            
+                                                            double LR = left_patch * right_patch;
+                                                            double L2 = left_patch * left_patch;
+                                                            double R2 = right_patch * right_patch;
+                                                            double LR_mag = left_mag_patch * right_mag_patch;
+                                                            double L2_mag = left_mag_patch * left_mag_patch;
+                                                            double R2_mag = right_mag_patch * right_mag_patch;
+                                                            
+                                                            Sum_LR_ortho            = Sum_LR_ortho + LR;
+                                                            Sum_L_ortho             = Sum_L_ortho  + left_patch;
+                                                            Sum_R_ortho             = Sum_R_ortho  + right_patch;
+                                                            Sum_L2_ortho            = Sum_L2_ortho + L2;
+                                                            Sum_R2_ortho            = Sum_R2_ortho + R2;
+                                                            
+                                                            Sum_LR_mag_ortho            = Sum_LR_mag_ortho + LR_mag;
+                                                            Sum_L_mag_ortho             = Sum_L_mag_ortho  + left_mag_patch;
+                                                            Sum_R_mag_ortho             = Sum_R_mag_ortho  + right_mag_patch;
+                                                            Sum_L2_mag_ortho            = Sum_L2_mag_ortho + L2_mag;
+                                                            Sum_R2_mag_ortho            = Sum_R2_mag_ortho + R2_mag;
+                                                            
+                                                            int size_1, size_2;
+                                                            size_1        = (int)(Half_template_size/2);
+                                                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                                            {
+                                                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                                                {
+                                                                    Sum_LR_2_ortho  = Sum_LR_2_ortho + LR;
+                                                                    Sum_L_2_ortho   = Sum_L_2_ortho  + left_patch;
+                                                                    Sum_R_2_ortho   = Sum_R_2_ortho  + right_patch;
+                                                                    Sum_L2_2_ortho  = Sum_L2_2_ortho + L2;
+                                                                    Sum_R2_2_ortho  = Sum_R2_2_ortho + R2;
+                                                                    Count_N_ortho[1]++;
+                                                                    
+                                                                    Sum_LR_2_mag_ortho  = Sum_LR_2_mag_ortho + LR_mag;
+                                                                    Sum_L_2_mag_ortho   = Sum_L_2_mag_ortho  + left_mag_patch;
+                                                                    Sum_R_2_mag_ortho   = Sum_R_2_mag_ortho  + right_mag_patch;
+                                                                    Sum_L2_2_mag_ortho  = Sum_L2_2_mag_ortho + L2_mag;
+                                                                    Sum_R2_2_mag_ortho  = Sum_R2_2_mag_ortho + R2_mag;
+                                                                }
+                                                            }
+                                                                                    
+                                                                                    
+                                                            size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                                                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                                            {
+                                                              if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                                              {
+                                                                    Sum_LR_3_ortho  = Sum_LR_3_ortho + LR;
+                                                                    Sum_L_3_ortho   = Sum_L_3_ortho  + left_patch;
+                                                                    Sum_R_3_ortho   = Sum_R_3_ortho  + right_patch;
+                                                                    Sum_L2_3_ortho  = Sum_L2_3_ortho + L2;
+                                                                    Sum_R2_3_ortho  = Sum_R2_3_ortho + R2;
+                                                                    Count_N_ortho[2]++;
+                                                                                                    
+                                                                    Sum_LR_3_mag_ortho  = Sum_LR_3_mag_ortho + LR_mag;
+                                                                    Sum_L_3_mag_ortho   = Sum_L_3_mag_ortho  + left_mag_patch;
+                                                                    Sum_R_3_mag_ortho   = Sum_R_3_mag_ortho  + right_mag_patch;
+                                                                    Sum_L2_3_mag_ortho  = Sum_L2_3_mag_ortho + L2_mag;
+                                                                    Sum_R2_3_mag_ortho  = Sum_R2_3_mag_ortho + R2_mag;
+                                                                  
+                                                              }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        N               = Count_N[0];
+                                        val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
+                                        val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de              = sqrt(val1*val2);
+                                          de2             = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
+                                          ncc_1         = de2/de;
+                                        }
+                                        else
+                                            ncc_1           = -1.0;
+                                        
+                                        val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
+                                        val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de              = sqrt(val1*val2);
+                                          de2             = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
+                                          ncc_1_mag         = de2/de;
+                                        }
+                                        else
+                                            ncc_1_mag           = -1.0;
+                                        
+                                        N                   = Count_N[1];
+                                        val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
+                                        val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de                    = sqrt(val1*val2);
+                                          de2                   = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                                          ncc_2       = de2/de;
+                                        }
+                                        else
+                                            ncc_2           = -1.0;
+                                        
+                                        val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
+                                        val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de                    = sqrt(val1*val2);
+                                          de2                   = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                                          ncc_2_mag       = de2/de;
+                                        }
+                                        else
+                                            ncc_2_mag           = -1.0;
+                                        
+                                        
+                                        N                   = Count_N[2];
+                                        val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
+                                        val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de                    = sqrt(val1*val2);
+                                          de2                   = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                                          ncc_3       = de2/de;
+                                        }
+                                        else
+                                            ncc_3           = -1.0;
+                                        
+                                        val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
+                                        val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
+                                        if(Pyramid_step <= 1)
+                                        {
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                          de                    = sqrt(val1*val2);
+                                          de2                   = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                                          ncc_3_mag       = de2/de;
+                                        }
+                                        else
+                                            ncc_3_mag           = -1.0;
+                                        
+                                        
+                                        //ortho_NCC
+                                        if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                                        {
+                                            N               = Count_N_ortho[0];
+                                            val1          = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
+                                            val2          = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de              = sqrt(val1*val2);
+                                                de2             = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
+                                                ncc_1_ortho             = de2/de;
+                                            }
+                                            else
+                                                ncc_1_ortho           = -1.0;
+                                            
+                                            
+                                            val1          = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
+                                            val2          = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de              = sqrt(val1*val2);
+                                                de2             = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
+                                                ncc_1_mag_ortho             = de2/de;
+                                            }
+                                            else
+                                                ncc_1_mag_ortho           = -1.0;
+                                            
+                                            N                   = Count_N_ortho[1];
+                                            val1                = (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
+                                            val2                = (double)(Sum_R2_2_ortho) - (double)(Sum_R_2_ortho*Sum_R_2_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de                    = sqrt(val1*val2);
+                                                de2                   = (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
+                                                ncc_2_ortho           = de2/de;
+                                            }
+                                            else
+                                                ncc_2_ortho           = -1.0;
+                                            
+                                            val1                = (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
+                                            val2                = (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de                    = sqrt(val1*val2);
+                                                de2                   = (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+                                                ncc_2_mag_ortho           = de2/de;
+                                            }
+                                            else
+                                                ncc_2_mag_ortho           = -1.0;
+                                            
+                                            
+                                            N                   = Count_N_ortho[2];
+                                            val1                = (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
+                                            val2                = (double)(Sum_R2_3_ortho) - (double)(Sum_R_3_ortho*Sum_R_3_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de                    = sqrt(val1*val2);
+                                                de2                   = (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
+                                                ncc_3_ortho           = de2/de;
+                                            }
+                                            else
+                                                ncc_3_ortho           = -1.0;
+                                            
+                                            val1                = (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
+                                            val2                = (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+                                            if(Pyramid_step <= 1)
+                                            {
+                                                if(val1 == 0)
+                                                    val1 = 0.00001;
+                                                if(val2 == 0)
+                                                    val2 = 0.00001;
+                                            }
+                                            
+                                            if( val1*val2 > 0)
+                                            {
+                                                de                    = sqrt(val1*val2);
+                                                de2                   = (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+                                                ncc_3_mag_ortho           = de2/de;
+                                            }
+                                            else
+                                                ncc_3_mag_ortho           = -1.0;
+                                        }
+                                        
+                                        
+                                        temp_INCC_roh = (double)(ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
+                                        sum_INCC_multi += temp_INCC_roh;
+                                        count_INCC ++;
+                                        if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                                        {
+                                            temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
+                                            sum_GNCC_multi += temp_GNCC_roh;
+                                            count_GNCC ++;
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                        
+                        if(check_ortho && count_GNCC > 0)
+                            temp_rho = (sum_INCC_multi/count_INCC)*ncc_alpha + (sum_GNCC_multi/count_GNCC)*ncc_beta;
+                        else
+                            temp_rho = sum_INCC_multi/count_INCC;
+                
+                        
+                        
+                        //saveroh[count_height] = temp_rho;
+                        //saverohcheck[count_height] = true;
+                     /*
+                    }
+                }
+            }
+            
+            rohsmoothing(saveroh, saverohcheck, NumOfHeights, Pyramid_step);
+            
+            for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
+            {
+                double iter_height      = start_H + count_height*height_step;
+                
+                if(saverohcheck[count_height])
+                {
+                    int grid_index;
+                    double diff_rho;
+                    int t_direction;
+                    
+                    double temp_rho = saveroh[count_height];
+            */
+                        grid_index           = pt_index;
+
+                        
+                        if(temp_rho >= 0 && pre_rho >= 0)
+                            diff_rho = temp_rho - pre_rho;
+                        else if(temp_rho < 0 && pre_rho < 0)
+                            diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
+                        else if(temp_rho >= 0 && pre_rho < 0)
+                            diff_rho = 1;
+                        else
+                            diff_rho = -1;
+
+                        if(diff_rho > 0)
+                            t_direction = 1;
+                        else if(diff_rho < 0)
+                            t_direction = -1;
+                        else
+                            t_direction = 0;
+
+                        if(!check_rho)
+                        {
+                            check_rho   = true;
+                            t_direction = -1;
+                        }
+                        else if(pre_rho != -1)
+                        {
+                            bool check_peak = false;
+                            
+                            if (Pyramid_step == 0 && iteration == 3)
+                            {
+                                if(direction > 0 && t_direction < 0 )
+                                    check_peak = true;
+                            }
+                            else if(Pyramid_step == 4 && iteration < 3)
+                            {
+                                if (direction > 0 && t_direction < 0)
+                                    check_peak = true;
                             }
                             else
                             {
-                                check_orientation = true;
+                                
+                                if (direction > 0 && t_direction < 0)
+                                    check_peak = true;
                             }
                             
-                            if(check_orientation)
+                            if( check_peak )
                             {
-                                double rot_theta = 0.0;
-                                
-                                double Sum_LR = 0;
-                                double Sum_L = 0;
-                                double Sum_R = 0;
-                                double Sum_L2 = 0;
-                                double Sum_R2 = 0;
-                                double Sum_LR_2 = 0;
-                                double Sum_L_2 = 0;
-                                double Sum_R_2 = 0;
-                                double Sum_L2_2 = 0;
-                                double Sum_R2_2 = 0;
-                                double Sum_LR_3 = 0;
-                                double Sum_L_3 = 0;
-                                double Sum_R_3 = 0;
-                                double Sum_L2_3 = 0;
-                                double Sum_R2_3 = 0;
-                                int Count_N[3] = {0};
-                                
-                                double Sum_LR_mag = 0;
-                                double Sum_L_mag = 0;
-                                double Sum_R_mag = 0;
-                                double Sum_L2_mag = 0;
-                                double Sum_R2_mag = 0;
-                                double Sum_LR_2_mag = 0;
-                                double Sum_L_2_mag = 0;
-                                double Sum_R_2_mag = 0;
-                                double Sum_L2_2_mag = 0;
-                                double Sum_R2_2_mag = 0;
-                                double Sum_LR_3_mag = 0;
-                                double Sum_L_3_mag = 0;
-                                double Sum_R_3_mag = 0;
-                                double Sum_L2_3_mag = 0;
-                                double Sum_R2_3_mag = 0;
-                                
-                                double Sum_LR_ortho = 0;
-                                double Sum_L_ortho = 0;
-                                double Sum_R_ortho = 0;
-                                double Sum_L2_ortho = 0;
-                                double Sum_R2_ortho = 0;
-                                double Sum_LR_2_ortho = 0;
-                                double Sum_L_2_ortho = 0;
-                                double Sum_R_2_ortho = 0;
-                                double Sum_L2_2_ortho = 0;
-                                double Sum_R2_2_ortho = 0;
-                                double Sum_LR_3_ortho = 0;
-                                double Sum_L_3_ortho = 0;
-                                double Sum_R_3_ortho = 0;
-                                double Sum_L2_3_ortho = 0;
-                                double Sum_R2_3_ortho = 0;
-                                int Count_N_ortho[3] = {0};    
-                                
-                                double Sum_LR_mag_ortho = 0;
-                                double Sum_L_mag_ortho = 0;
-                                double Sum_R_mag_ortho = 0;
-                                double Sum_L2_mag_ortho = 0;
-                                double Sum_R2_mag_ortho = 0;
-                                double Sum_LR_2_mag_ortho = 0;
-                                double Sum_L_2_mag_ortho = 0;
-                                double Sum_R_2_mag_ortho = 0;
-                                double Sum_L2_2_mag_ortho = 0;
-                                double Sum_R2_2_mag_ortho = 0;
-                                double Sum_LR_3_mag_ortho = 0;
-                                double Sum_L_3_mag_ortho = 0;
-                                double Sum_R_3_mag_ortho = 0;
-                                double Sum_L2_3_mag_ortho = 0;
-                                double Sum_R2_3_mag_ortho = 0;
-                                
-                                
-                                int row, col;
-                                int N;
-                                
-                                double val1, val2, de, de2, ncc_1, ncc_2, ncc_3;
-                                double ncc_1_mag, ncc_2_mag, ncc_3_mag;
-                                double ncc_1_ortho, ncc_2_ortho, ncc_3_ortho;
-                                double ncc_1_mag_ortho, ncc_2_mag_ortho, ncc_3_mag_ortho;
-                                
-                                double temp_rho;
-                                double temp_INCC_roh = 0;
-                                double temp_GNCC_roh = 0;
-                                bool flag_value;
-                                int grid_index;
-                                double diff_rho;
-                                int t_direction;
+                                nccresult[grid_index].result4 += 1;
+                                if(nccresult[grid_index].result0 < pre_rho)
+                                {
+                                    double temp_1, temp_2;
+                                    temp_1 = nccresult[grid_index].result0;
+                                    nccresult[grid_index].result0 = pre_rho;
 
-                                                                    
-                                uint16 mag_center_l, mag_center_r;
-                                
-                                if(flag.rotate_flag)
-                                    rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
-                                
-                                double cos0 = cos(-rot_theta);
-                                double sin0 = sin(-rot_theta);
-                                
-                                for(row = -Half_template_size; row <= Half_template_size ; row++)
-                                {
-                                    for(col = -Half_template_size; col <= Half_template_size ; col++)
+                                    temp_2 = nccresult[grid_index].result2;
+                                    nccresult[grid_index].result2 = pre_height;
+                                    
+                                    //nccresult[grid_index].INCC = pre_INCC_roh;
+                                    //nccresult[grid_index].GNCC = pre_GNCC_roh;
+                       
+                                    if(nccresult[grid_index].result1 < temp_1)
                                     {
-                                        int radius2  =  row*row + col*col;
-                                        if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
-                                        {
-                                            double pos_row_left      = (Left_CR + row);
-                                            double pos_col_left      = (Left_CC + col);
-                                            
-                                            double temp_col        = (cos0*col - sin0*row);
-                                            double temp_row        = (sin0*col + cos0*row);
-                                            double pos_row_right     = (Right_CR + temp_row);
-                                            double pos_col_right     = (Right_CC + temp_col);
-                                            
-                                            
-                                            if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                            {
-                                                //interpolate left_patch
-                                                double dx          =  pos_col_left - (int)(pos_col_left);
-                                                double dy          =  pos_row_left - (int)(pos_row_left);
-                                                double dxdy = dx * dy;
-                                                double left_patch;
-                                                double right_patch;
-                                                double left_mag_patch;
-                                                double right_mag_patch;
-                                                long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
-                                                
-                                                left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
-                                                    (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) +
-                                                    (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
-                                                
-                                                left_mag_patch =
-                                                    (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_L[position + 1]) * (dx - dxdy) +
-                                                    (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) +
-                                                    (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
-
-                                                 
-                                                //interpolate right_patch
-                                                dx          =  pos_col_right - (int)(pos_col_right);
-                                                dy          =  pos_row_right - (int)(pos_row_right);
-                                                dxdy = dx * dy;
-                                                position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                                
-                                                right_patch =
-                                                    (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
-                                                    (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
-                                                    (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
-                                                
-                                                right_mag_patch =
-                                                    (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_R[position + 1]) * (dx - dxdy) +
-                                                    (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) +
-                                                    (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
-                                                
-                                                //end
-                                                Count_N[0]++;
-
-                                                //*************
-                                                //Precomputing LR, L2 and R2 etc as they are used in different reductions. (Perhaps compiler handles that by itself)
-                                                double LR = left_patch * right_patch;
-                                                double L2 = left_patch * left_patch;
-                                                double R2 = right_patch * right_patch;
-                                                double LR_mag = left_mag_patch * right_mag_patch;
-                                                double L2_mag = left_mag_patch * left_mag_patch;
-                                                double R2_mag = right_mag_patch * right_mag_patch;
-                                                
-                                                Sum_LR            = Sum_LR + LR;
-                                                Sum_L             = Sum_L  + left_patch;
-                                                Sum_R             = Sum_R  + right_patch;
-                                                Sum_L2            = Sum_L2 + L2;
-                                                Sum_R2            = Sum_R2 + R2;
-                                                
-                                                Sum_LR_mag            = Sum_LR_mag + LR_mag;
-                                                Sum_L_mag             = Sum_L_mag  + left_mag_patch;
-                                                Sum_R_mag             = Sum_R_mag  + right_mag_patch;
-                                                Sum_L2_mag            = Sum_L2_mag + L2_mag;
-                                                Sum_R2_mag            = Sum_R2_mag + R2_mag;
-                                                
-                                                int size_1, size_2;
-                                                size_1        = (int)(Half_template_size/2);
-                                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                {
-                                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                    {
-                                                        Sum_LR_2  = Sum_LR_2 + LR;
-                                                        Sum_L_2   = Sum_L_2  + left_patch;
-                                                        Sum_R_2   = Sum_R_2  + right_patch;
-                                                        Sum_L2_2  = Sum_L2_2 + L2;
-                                                        Sum_R2_2  = Sum_R2_2 + R2;
-                                                        Count_N[1]++;
-                                                        
-                                                        Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
-                                                        Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
-                                                        Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
-                                                        Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
-                                                        Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
-                                                    }
-                                                }
-                                                        
-                                                size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                {
-                                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                    {
-                                                        Sum_LR_3  = Sum_LR_3 + LR;
-                                                        Sum_L_3   = Sum_L_3  + left_patch;
-                                                        Sum_R_3   = Sum_R_3  + right_patch;
-                                                        Sum_L2_3  = Sum_L2_3 + L2;
-                                                        Sum_R2_3  = Sum_R2_3 + R2;
-                                                        Count_N[2]++;
-                                                        
-                                                        Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
-                                                        Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
-                                                        Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
-                                                        Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
-                                                        Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
-                                                    }
-                                                }
-                                                
-                                                if(row == 0 && col == 0)
-                                                {
-                                                    mag_center_l = left_patch;
-                                                    mag_center_r = right_patch;
-                                                }
-                                            }
-                                            
-                                            //ortho_NCC
-                                            if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
-                                            {
-                                                double pos_row_left_ortho = -100;
-                                                double pos_col_left_ortho = -100;
-                                                double pos_row_right_ortho= -100;
-                                                double pos_col_right_ortho= -100;
-                                                
-                                                if(row != 0 && col != 0)
-                                                {
-                                                    long int pt_index_temp,pt_index_dem;
-                                                    double t_X, t_Y;
-                                                    int t_col, t_row, tt_col, tt_row;
-                                                    
-                                                    t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                                                    t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
-                                                    
-                                                    t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                                                    t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
-                                                    
-                                                    tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                                                    tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
-                                                    
-                                                    pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
-                                                    pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
-                                                    
-                                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                                                       t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
-                                                       pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                                                       tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                                                        all_left_im_cd != NULL && all_right_im_cd != NULL)
-                                                    {
-                                                        if(GridPT3[pt_index_dem].Height != -1000)
-                                                        {
-                                                            pos_row_left_ortho  = all_left_im_cd[pt_index_temp].m_Y;
-                                                            pos_col_left_ortho  = all_left_im_cd[pt_index_temp].m_X;
-                                                            pos_row_right_ortho = all_right_im_cd[pt_index_temp].m_Y;
-                                                            pos_col_right_ortho = all_right_im_cd[pt_index_temp].m_X;
-                                                            
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    pos_row_left_ortho = pos_row_left;
-                                                    pos_col_left_ortho = pos_col_left;
-                                                    pos_row_right_ortho= pos_row_right;
-                                                    pos_col_right_ortho= pos_col_right;
-                                                }
-                                                
-                                                pos_row_left = pos_row_left_ortho;
-                                                pos_col_left = pos_col_left_ortho;
-                                                pos_row_right= pos_row_right_ortho;
-                                                pos_col_right= pos_col_right_ortho;
-                                                
-                                                if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                    pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                                {
-                                                    //interpolate left_patch
-                                                    double dx          =  pos_col_left - (int)(pos_col_left);
-                                                    double dy          =  pos_row_left - (int)(pos_row_left);
-                                                    double dxdy = dx * dy;
-                                                    double left_patch;
-                                                    double right_patch;
-                                                    double left_mag_patch;
-                                                    double right_mag_patch;
-                                                    
-                                                    long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                                                    
-                                                    left_patch =
-                                                        (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
-                                                        (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) +
-                                                        (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
-                                                    
-                                                    left_mag_patch = (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) +
-                                                        (double) (MagImages_L[position + 1]) * (dx - dxdy) +
-                                                        (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) +
-                                                        (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
-                                                    
-                                                    //interpolate right_patch
-                                                    dx          =  pos_col_right - (int)(pos_col_right);
-                                                    dy          =  pos_row_right - (int)(pos_row_right);
-                                                    dxdy = dx * dy;
-                                                    position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                                    right_patch =
-                                                        (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
-                                                        (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
-                                                        (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
-                                                    
-                                                    right_mag_patch = (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) +
-                                                        (double) (MagImages_R[position + 1]) * (dx - dxdy) +
-                                                        (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) +
-                                                        (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
-                                                    
-                                                    //end
-                                                    Count_N_ortho[0]++;
-                                                    
-                                                    double LR = left_patch * right_patch;
-                                                    double L2 = left_patch * left_patch;
-                                                    double R2 = right_patch * right_patch;
-                                                    double LR_mag = left_mag_patch * right_mag_patch;
-                                                    double L2_mag = left_mag_patch * left_mag_patch;
-                                                    double R2_mag = right_mag_patch * right_mag_patch;
-                                                    
-                                                    Sum_LR_ortho            = Sum_LR_ortho + LR;
-                                                    Sum_L_ortho             = Sum_L_ortho  + left_patch;
-                                                    Sum_R_ortho             = Sum_R_ortho  + right_patch;
-                                                    Sum_L2_ortho            = Sum_L2_ortho + L2;
-                                                    Sum_R2_ortho            = Sum_R2_ortho + R2;
-                                                    
-                                                    Sum_LR_mag_ortho            = Sum_LR_mag_ortho + LR_mag;
-                                                    Sum_L_mag_ortho             = Sum_L_mag_ortho  + left_mag_patch;
-                                                    Sum_R_mag_ortho             = Sum_R_mag_ortho  + right_mag_patch;
-                                                    Sum_L2_mag_ortho            = Sum_L2_mag_ortho + L2_mag;
-                                                    Sum_R2_mag_ortho            = Sum_R2_mag_ortho + R2_mag;
-                                                    
-                                                    int size_1, size_2;
-                                                    size_1        = (int)(Half_template_size/2);
-                                                    if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                    {
-                                                        if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                        {
-                                                            Sum_LR_2_ortho  = Sum_LR_2_ortho + LR;
-                                                            Sum_L_2_ortho   = Sum_L_2_ortho  + left_patch;
-                                                            Sum_R_2_ortho   = Sum_R_2_ortho  + right_patch;
-                                                            Sum_L2_2_ortho  = Sum_L2_2_ortho + L2;
-                                                            Sum_R2_2_ortho  = Sum_R2_2_ortho + R2;
-                                                            Count_N_ortho[1]++;
-                                                            
-                                                            Sum_LR_2_mag_ortho  = Sum_LR_2_mag_ortho + LR_mag;
-                                                            Sum_L_2_mag_ortho   = Sum_L_2_mag_ortho  + left_mag_patch;
-                                                            Sum_R_2_mag_ortho   = Sum_R_2_mag_ortho  + right_mag_patch;
-                                                            Sum_L2_2_mag_ortho  = Sum_L2_2_mag_ortho + L2_mag;
-                                                            Sum_R2_2_mag_ortho  = Sum_R2_2_mag_ortho + R2_mag;
-                                                        }
-                                                    }
-                                                                            
-                                                                            
-                                                    size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                    {
-                                                      if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                      {
-                                                            Sum_LR_3_ortho  = Sum_LR_3_ortho + LR;
-                                                            Sum_L_3_ortho   = Sum_L_3_ortho  + left_patch;
-                                                            Sum_R_3_ortho   = Sum_R_3_ortho  + right_patch;
-                                                            Sum_L2_3_ortho  = Sum_L2_3_ortho + L2;
-                                                            Sum_R2_3_ortho  = Sum_R2_3_ortho + R2;
-                                                            Count_N_ortho[2]++;
-                                                                                            
-                                                            Sum_LR_3_mag_ortho  = Sum_LR_3_mag_ortho + LR_mag;
-                                                            Sum_L_3_mag_ortho   = Sum_L_3_mag_ortho  + left_mag_patch;
-                                                            Sum_R_3_mag_ortho   = Sum_R_3_mag_ortho  + right_mag_patch;
-                                                            Sum_L2_3_mag_ortho  = Sum_L2_3_mag_ortho + L2_mag;
-                                                            Sum_R2_3_mag_ortho  = Sum_R2_3_mag_ortho + R2_mag;
-                                                          
-                                                      }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        nccresult[grid_index].result1 = temp_1;
+                                        nccresult[grid_index].result3 = temp_2;
                                     }
                                 }
-
-                                N               = Count_N[0];
-                                val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
-                                val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de              = sqrt(val1*val2);
-                                  de2             = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
-                                  ncc_1         = de2/de;
-                                }
                                 else
-                                    ncc_1           = -1.0;
-                                
-                                val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
-                                val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
-                                if(Pyramid_step <= 1)
                                 {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de              = sqrt(val1*val2);
-                                  de2             = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
-                                  ncc_1_mag         = de2/de;
-                                }
-                                else
-                                    ncc_1_mag           = -1.0;
-                                
-                                N                   = Count_N[1];
-                                val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
-                                val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de                    = sqrt(val1*val2);
-                                  de2                   = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                                  ncc_2       = de2/de;
-                                }
-                                else
-                                    ncc_2           = -1.0;
-                                
-                                val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
-                                val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de                    = sqrt(val1*val2);
-                                  de2                   = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
-                                  ncc_2_mag       = de2/de;
-                                }
-                                else
-                                    ncc_2_mag           = -1.0;
-                                
-                                
-                                N                   = Count_N[2];
-                                val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
-                                val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de                    = sqrt(val1*val2);
-                                  de2                   = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                                  ncc_3       = de2/de;
-                                }
-                                else
-                                    ncc_3           = -1.0;
-                                
-                                val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
-                                val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
-                                if(Pyramid_step <= 1)
-                                {
-                                    if(val1 == 0)
-                                        val1 = 0.00001;
-                                    if(val2 == 0)
-                                        val2 = 0.00001;
-                                }
-                                
-                                if( val1*val2 > 0)
-                                {
-                                  de                    = sqrt(val1*val2);
-                                  de2                   = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
-                                  ncc_3_mag       = de2/de;
-                                }
-                                else
-                                    ncc_3_mag           = -1.0;
-                                
-                                
-                                //ortho_NCC
-                                if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
-                                {
-                                    N               = Count_N_ortho[0];
-                                    val1          = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
-                                    val2          = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
-                                    if(Pyramid_step <= 1)
+                                    if(nccresult[grid_index].result1 < pre_rho)
                                     {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
+                                        nccresult[grid_index].result1 = pre_rho;
+                                        nccresult[grid_index].result3 = pre_height;
                                     }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de              = sqrt(val1*val2);
-                      de2             = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
-                      ncc_1_ortho             = de2/de;
-                    }
-                                    else
-                                        ncc_1_ortho           = -1.0;
-                                    
-                                    
-                                    val1          = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
-                                    val2          = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
-                                    if(Pyramid_step <= 1)
-                                    {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
-                                    }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de              = sqrt(val1*val2);
-                      de2             = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
-                      ncc_1_mag_ortho             = de2/de;
-                    }
-                                    else
-                                        ncc_1_mag_ortho           = -1.0;
-                                    
-                                    N                   = Count_N_ortho[1];
-                                    val1                = (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
-                                    val2                = (double)(Sum_R2_2_ortho) - (double)(Sum_R_2_ortho*Sum_R_2_ortho)/N;
-                                    if(Pyramid_step <= 1)
-                                    {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
-                                    }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de                    = sqrt(val1*val2);
-                      de2                   = (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
-                      ncc_2_ortho           = de2/de;
-                    }
-                                    else
-                                        ncc_2_ortho           = -1.0;
-                                    
-                                    val1                = (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
-                                    val2                = (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-                                    if(Pyramid_step <= 1)
-                                    {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
-                                    }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de                    = sqrt(val1*val2);
-                      de2                   = (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-                      ncc_2_mag_ortho           = de2/de;
-                    }
-                                    else
-                                        ncc_2_mag_ortho           = -1.0;
-                                    
-                                    
-                                    N                   = Count_N_ortho[2];
-                                    val1                = (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
-                                    val2                = (double)(Sum_R2_3_ortho) - (double)(Sum_R_3_ortho*Sum_R_3_ortho)/N;
-                                    if(Pyramid_step <= 1)
-                                    {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
-                                    }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de                    = sqrt(val1*val2);
-                      de2                   = (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
-                      ncc_3_ortho           = de2/de;
-                    }
-                                    else
-                                        ncc_3_ortho           = -1.0;
-                                    
-                                    val1                = (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
-                                    val2                = (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-                                    if(Pyramid_step <= 1)
-                                    {
-                                        if(val1 == 0)
-                                            val1 = 0.00001;
-                                        if(val2 == 0)
-                                            val2 = 0.00001;
-                                    }
-                                    
-                                    if( val1*val2 > 0)
-                    {
-                      de                    = sqrt(val1*val2);
-                      de2                   = (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-                      ncc_3_mag_ortho           = de2/de;
-                    }
-                                    else
-                                        ncc_3_mag_ortho           = -1.0;
                                 }
-                                
-                                flag_value      = true;
-                                
-                                temp_INCC_roh = (double)(ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
-                                
-                            
-                            
-                                if(check_ortho && GridPT3[pt_index].ortho_ncc > ortho_th)
-                                {
-                                    temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
-                                    
-                                    temp_rho = temp_INCC_roh*ncc_alpha + temp_GNCC_roh*ncc_beta;
-                                }
-                                else
-                                    temp_rho = temp_INCC_roh;
-                        
-                                
-                                
-                                //saveroh[count_height] = temp_rho;
-                                //saverohcheck[count_height] = true;
-                             /*
                             }
                         }
-                    }
-                    
-                    rohsmoothing(saveroh, saverohcheck, NumOfHeights, Pyramid_step);
-                    
-                    for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
-                    {
-                        double iter_height      = start_H + count_height*height_step;
+
+                        pre_rho                = temp_rho;
                         
-                        if(saverohcheck[count_height])
-                        {
-                            int grid_index;
-                            double diff_rho;
-                            int t_direction;
-                            
-                            double temp_rho = saveroh[count_height];
-                    */
-                                grid_index           = pt_index;
-
-                                
-                                if(temp_rho >= 0 && pre_rho >= 0)
-                                    diff_rho = temp_rho - pre_rho;
-                                else if(temp_rho < 0 && pre_rho < 0)
-                                    diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
-                                else if(temp_rho >= 0 && pre_rho < 0)
-                                    diff_rho = 1;
-                                else
-                                    diff_rho = -1;
-
-                                if(diff_rho > 0)
-                                    t_direction = 1;
-                                else if(diff_rho < 0)
-                                    t_direction = -1;
-                                else
-                                    t_direction = 0;
-
-                                if(!check_rho)
-                                {
-                                    check_rho   = true;
-                                    t_direction = -1;
-                                }
-                                else if(pre_rho != -1)
-                                {
-                                    bool check_peak = false;
-                                    
-                                    if (Pyramid_step == 0 && iteration == 3)
-                                    {
-                                        if(direction > 0 && t_direction < 0 )
-                                            check_peak = true;
-                                    }
-                                    else if(Pyramid_step == 4 && iteration < 3)
-                                    {
-                                        if (direction > 0 && t_direction < 0)
-                                            check_peak = true;
-                                    }
-                                    else
-                                    {
-                                        
-                                        if (direction > 0 && t_direction < 0)
-                                            check_peak = true;
-                                    }
-                                    
-                                    if( check_peak )
-                                    {
-                                        nccresult[grid_index].result4 += 1;
-                                        if(nccresult[grid_index].result0 < pre_rho)
-                                        {
-                                            double temp_1, temp_2;
-                                            temp_1 = nccresult[grid_index].result0;
-                                            nccresult[grid_index].result0 = pre_rho;
-
-                                            temp_2 = nccresult[grid_index].result2;
-                                            nccresult[grid_index].result2 = pre_height;
-                                            
-                                            //nccresult[grid_index].INCC = pre_INCC_roh;
-                                            //nccresult[grid_index].GNCC = pre_GNCC_roh;
-                               
-                                            if(nccresult[grid_index].result1 < temp_1)
-                                            {
-                                                nccresult[grid_index].result1 = temp_1;
-                                                nccresult[grid_index].result3 = temp_2;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if(nccresult[grid_index].result1 < pre_rho)
-                                            {
-                                                nccresult[grid_index].result1 = pre_rho;
-                                                nccresult[grid_index].result3 = pre_height;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                pre_rho                = temp_rho;
-                                
-                                pre_height             = iter_height;
-                                direction              = t_direction;
-                                
-                                pre_INCC_roh           = temp_INCC_roh;
-                                pre_GNCC_roh           = temp_GNCC_roh;
-                                nccresult[grid_index].roh_count ++;
-                            
-                            }
-                        }
+                        pre_height             = iter_height;
+                        direction              = t_direction;
+                        
+                        pre_INCC_roh           = sum_INCC_multi/count_INCC;
+                        pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
+                        nccresult[grid_index].roh_count ++;
                     }
                     
                     //free(saveroh);
@@ -9860,8 +9880,16 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
     
     if(check_ortho)
     {
-        if (all_left_im_cd) free(all_left_im_cd);
-        if (all_right_im_cd) free(all_right_im_cd);
+        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+        {
+            if(proinfo->check_selected_image[ti])
+            {
+                if(all_im_cd[ti])
+                    free(all_im_cd[ti]);
+            }
+        }
+        if (all_im_cd)
+            free(all_im_cd);
     }
     
     return true;
@@ -9977,8 +10005,8 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     {
         if(proinfo->check_selected_image[ti])
         {
-            all_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-            if (all_im_cd == NULL)
+            all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+            if (all_im_cd[ti] == NULL)
             {
                 printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
                 exit(1);
@@ -10049,349 +10077,380 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
         int pt_index;
         pt_index = pts_row*Size_Grid2D.width + pts_col;
         
+        int reference_id = 0;
+        CSize LImagesize, RImagesize;
+        
+        LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
+        LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+        
+        
         if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
         {
-            
-            int i,j;
-            int row,col;
-            double Sum_LR = 0;
-            double Sum_L = 0;
-            double Sum_R = 0;
-            double Sum_L2 = 0;
-            double Sum_R2 = 0;
-            double Sum_LR_2 = 0;
-            double Sum_L_2 = 0;
-            double Sum_R_2 = 0;
-            double Sum_L2_2 = 0;
-            double Sum_R2_2 = 0;
-            double Sum_LR_3 = 0;
-            double Sum_L_3 = 0;
-            double Sum_R_3 = 0;
-            double Sum_L2_3 = 0;
-            double Sum_R2_3 = 0;
-            int Count_N[3] = {0};
-            int N;
-            
-            double Sum_LR_mag = 0;
-            double Sum_L_mag = 0;
-            double Sum_R_mag = 0;
-            double Sum_L2_mag = 0;
-            double Sum_R2_mag = 0;
-            double Sum_LR_2_mag = 0;
-            double Sum_L_2_mag = 0;
-            double Sum_R_2_mag = 0;
-            double Sum_L2_2_mag = 0;
-            double Sum_R2_2_mag = 0;
-            double Sum_LR_3_mag = 0;
-            double Sum_L_3_mag = 0;
-            double Sum_R_3_mag = 0;
-            double Sum_L2_3_mag = 0;
-            double Sum_R2_3_mag = 0;
-            
-            double ncc_1, ncc_1_mag, ncc_2, ncc_2_mag, ncc_3, ncc_3_mag;
-            double val1, val2, de, de2;
-            
-            double nccresult = -10.0;
-            //nccresult1[pt_index] = -10.0;
-            
-            if(GridPT3[pt_index].Height != -1000)
-                count_total+=1;
-            
-            for(row = -Half_template_size; row <= Half_template_size ; row++)
+            for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
             {
-                for(col = -Half_template_size; col <= Half_template_size ; col++)
+                if(proinfo->check_selected_image[ti])
                 {
-                    double pos_row_left = -100;
-                    double pos_col_left = -100;
-                    double pos_row_right= -100;
-                    double pos_col_right= -100;
+                    RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
+                    RImagesize.height = Imagesizes[ti][Pyramid_step].height;
                     
-                    long int pt_index_temp,pt_index_dem;
-                    double t_X, t_Y;
-                    int t_col, t_row, tt_col, tt_row;
+                    int i,j;
+                    int row,col;
+                    double Sum_LR = 0;
+                    double Sum_L = 0;
+                    double Sum_R = 0;
+                    double Sum_L2 = 0;
+                    double Sum_R2 = 0;
+                    double Sum_LR_2 = 0;
+                    double Sum_L_2 = 0;
+                    double Sum_R_2 = 0;
+                    double Sum_L2_2 = 0;
+                    double Sum_R2_2 = 0;
+                    double Sum_LR_3 = 0;
+                    double Sum_L_3 = 0;
+                    double Sum_R_3 = 0;
+                    double Sum_L2_3 = 0;
+                    double Sum_R2_3 = 0;
+                    int Count_N[3] = {0};
+                    int N;
                     
-                    t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                    t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+                    double Sum_LR_mag = 0;
+                    double Sum_L_mag = 0;
+                    double Sum_R_mag = 0;
+                    double Sum_L2_mag = 0;
+                    double Sum_R2_mag = 0;
+                    double Sum_LR_2_mag = 0;
+                    double Sum_L_2_mag = 0;
+                    double Sum_R_2_mag = 0;
+                    double Sum_L2_2_mag = 0;
+                    double Sum_R2_2_mag = 0;
+                    double Sum_LR_3_mag = 0;
+                    double Sum_L_3_mag = 0;
+                    double Sum_R_3_mag = 0;
+                    double Sum_L2_3_mag = 0;
+                    double Sum_R2_3_mag = 0;
                     
-                    t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                    t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
+                    double ncc_1, ncc_1_mag, ncc_2, ncc_2_mag, ncc_3, ncc_3_mag;
+                    double val1, val2, de, de2;
                     
-                    tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                    tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
+                    double nccresult = -10.0;
+                    //nccresult1[pt_index] = -10.0;
                     
-                    pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
-                    pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
+                    if(GridPT3[pt_index].Height != -1000)
+                        count_total+=1;
                     
-                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                       t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
-                       pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                       tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                        all_left_im_cd != NULL && all_right_im_cd != NULL)
+                    for(row = -Half_template_size; row <= Half_template_size ; row++)
                     {
-                        if(GridPT3[pt_index_dem].Height != -1000)
+                        for(col = -Half_template_size; col <= Half_template_size ; col++)
                         {
-                            pos_row_left    = all_left_im_cd[pt_index_temp].m_Y;
-                            pos_col_left    = all_left_im_cd[pt_index_temp].m_X;
-                            pos_row_right   = all_right_im_cd[pt_index_temp].m_Y;
-                            pos_col_right   = all_right_im_cd[pt_index_temp].m_X;
+                            double pos_row_left = -100;
+                            double pos_col_left = -100;
+                            double pos_row_right= -100;
+                            double pos_col_right= -100;
                             
-                            if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                            long int pt_index_temp,pt_index_dem;
+                            double t_X, t_Y;
+                            int t_col, t_row, tt_col, tt_row;
+                            
+                            t_X     = GridPts[pt_index].m_X + col*im_resolution;
+                            t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+                            
+                            t_col   = (int)((t_X - subBoundary[0])/im_resolution);
+                            t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
+                            
+                            tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
+                            tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
+                            
+                            pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
+                            pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
+                            
+                            if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
+                               t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
+                               pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
+                               tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+                                all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                             {
-                                //interpolate left_patch
-                                double dx = pos_col_left - (int) (pos_col_left);
-                                double dy = pos_row_left - (int) (pos_row_left);
-                                double dxdy = dx * dy;
-                                long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
-                                
-                                double left_patch;
-                                double right_patch;
-                                double left_mag_patch;
-                                double right_mag_patch;
-                                
-                                left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
-                                    (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) + (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
-                                
-                                left_mag_patch = (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_L[position + 1]) * (dx - dxdy) +
-                                    (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) +
-                                    (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
-                                
-                                
-                                //interpolate right_patch
-                                dx = pos_col_right - (int) (pos_col_right);
-                                dy = pos_row_right - (int) (pos_row_right);
-                                dxdy = dx * dy;
-                                position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
-                                    (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) + (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
-                                
-                                right_mag_patch = (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_R[position + 1]) * (dx - dxdy) +
-                                    (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) +
-                                    (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
-                                
-                                //end
-                                Count_N[0]++;
-                                
-                                double LR = left_patch * right_patch;
-                                double L2 = left_patch * left_patch;
-                                double R2 = right_patch * right_patch;
-                                double LR_mag = left_mag_patch * right_mag_patch;
-                                double L2_mag = left_mag_patch * left_mag_patch;
-                                double R2_mag = right_mag_patch * right_mag_patch;
-                                
-                                Sum_LR            = Sum_LR + LR;
-                                Sum_L             = Sum_L  + left_patch;
-                                Sum_R             = Sum_R  + right_patch;
-                                Sum_L2            = Sum_L2 + L2;
-                                Sum_R2            = Sum_R2 + R2;
-                                
-                                Sum_LR_mag            = Sum_LR_mag + LR_mag;
-                                Sum_L_mag             = Sum_L_mag  + left_mag_patch;
-                                Sum_R_mag             = Sum_R_mag  + right_mag_patch;
-                                Sum_L2_mag            = Sum_L2_mag + L2_mag;
-                                Sum_R2_mag            = Sum_R2_mag + R2_mag;
-                                
-                                int size_1, size_2;
-                                size_1        = (int)(Half_template_size/2);
-                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                if(GridPT3[pt_index_dem].Height != -1000)
                                 {
-                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                    pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
+                                    pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
+                                    pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
+                                    pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
+                                    
+                                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                     {
-                                        Sum_LR_2  = Sum_LR_2 + LR;
-                                        Sum_L_2   = Sum_L_2  + left_patch;
-                                        Sum_R_2   = Sum_R_2  + right_patch;
-                                        Sum_L2_2  = Sum_L2_2 + L2;
-                                        Sum_R2_2  = Sum_R2_2 + R2;
-                                        Count_N[1]++;
+                                        //interpolate left_patch
+                                        double dx = pos_col_left - (int) (pos_col_left);
+                                        double dy = pos_row_left - (int) (pos_row_left);
+                                        double dxdy = dx * dy;
+                                        long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
                                         
-                                        Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
-                                        Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
-                                        Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
-                                        Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
-                                        Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
+                                        double left_patch;
+                                        double right_patch;
+                                        double left_mag_patch;
+                                        double right_mag_patch;
                                         
-                                    }
-                                }
-                                
-                                size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                {
-                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                    {
-                                        Sum_LR_3  = Sum_LR_3 + LR;
-                                        Sum_L_3   = Sum_L_3  + left_patch;
-                                        Sum_R_3   = Sum_R_3  + right_patch;
-                                        Sum_L2_3  = Sum_L2_3 + L2;
-                                        Sum_R2_3  = Sum_R2_3 + R2;
-                                        Count_N[2]++;
+                                        left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
+                                                            (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
+                                                            (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
+                                                            (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
                                         
-                                        Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
-                                        Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
-                                        Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
-                                        Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
-                                        Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+                                        left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
+                                                            (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
+                                                            (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
+                                                            (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
+                                        
+                                        
+                                        //interpolate right_patch
+                                        dx = pos_col_right - (int) (pos_col_right);
+                                        dy = pos_row_right - (int) (pos_row_right);
+                                        dxdy = dx * dy;
+                                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                        
+                                        right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
+                                                            (double) (Images[ti][position + 1])                         * (dx - dxdy) +
+                                                            (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
+                                                            (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
+                                        
+                                        right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
+                                                            (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
+                                                            (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
+                                                            (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                                        
+                                        //end
+                                        Count_N[0]++;
+                                        
+                                        double LR = left_patch * right_patch;
+                                        double L2 = left_patch * left_patch;
+                                        double R2 = right_patch * right_patch;
+                                        double LR_mag = left_mag_patch * right_mag_patch;
+                                        double L2_mag = left_mag_patch * left_mag_patch;
+                                        double R2_mag = right_mag_patch * right_mag_patch;
+                                        
+                                        Sum_LR            = Sum_LR + LR;
+                                        Sum_L             = Sum_L  + left_patch;
+                                        Sum_R             = Sum_R  + right_patch;
+                                        Sum_L2            = Sum_L2 + L2;
+                                        Sum_R2            = Sum_R2 + R2;
+                                        
+                                        Sum_LR_mag            = Sum_LR_mag + LR_mag;
+                                        Sum_L_mag             = Sum_L_mag  + left_mag_patch;
+                                        Sum_R_mag             = Sum_R_mag  + right_mag_patch;
+                                        Sum_L2_mag            = Sum_L2_mag + L2_mag;
+                                        Sum_R2_mag            = Sum_R2_mag + R2_mag;
+                                        
+                                        int size_1, size_2;
+                                        size_1        = (int)(Half_template_size/2);
+                                        if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                        {
+                                            if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                            {
+                                                Sum_LR_2  = Sum_LR_2 + LR;
+                                                Sum_L_2   = Sum_L_2  + left_patch;
+                                                Sum_R_2   = Sum_R_2  + right_patch;
+                                                Sum_L2_2  = Sum_L2_2 + L2;
+                                                Sum_R2_2  = Sum_R2_2 + R2;
+                                                Count_N[1]++;
+                                                
+                                                Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
+                                                Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
+                                                Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
+                                                Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
+                                                Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
+                                                
+                                            }
+                                        }
+                                        
+                                        size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                                        if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                        {
+                                            if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                            {
+                                                Sum_LR_3  = Sum_LR_3 + LR;
+                                                Sum_L_3   = Sum_L_3  + left_patch;
+                                                Sum_R_3   = Sum_R_3  + right_patch;
+                                                Sum_L2_3  = Sum_L2_3 + L2;
+                                                Sum_R2_3  = Sum_R2_3 + R2;
+                                                Count_N[2]++;
+                                                
+                                                Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+                                                Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
+                                                Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
+                                                Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+                                                Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
-            
-            if(Count_N[0] > 0)
-            {
-                N               = Count_N[0];
-                val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
-                val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de            = sqrt(val1*val2);
-                de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
-                if( val1*val2 > 0)
-                    ncc_1           = de2/de;
-                else
-                    ncc_1           = -1.0;
-                
-                val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
-                val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de            = sqrt(val1*val2);
-                de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
-                if( val1*val2 > 0)
-                    ncc_1_mag           = de2/de;
-                else
-                    ncc_1_mag           = -1.0;
-                
-                
-                N                   = Count_N[1];
-                val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
-                val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                if( val1*val2 > 0)
-                    ncc_2         = de2/de;
-                else
-                    ncc_2           = -1.0;
-                
-                val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
-                val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
-                if( val1*val2 > 0)
-                    ncc_2_mag         = de2/de;
-                else
-                    ncc_2_mag           = -1.0;
-                
-                
-                N                   = Count_N[2];
-                val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
-                val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                if( val1*val2 > 0)
-                    ncc_3         = de2/de;
-                else
-                    ncc_3           = -1.0;
-                
-                val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
-                val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
-                if(Pyramid_step <= 4)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-                
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
-                if( val1*val2 > 0)
-                    ncc_3_mag         = de2/de;
-                else
-                    ncc_3_mag           = -1.0;
-                
-                
-                nccresult = (ncc_1 + ncc_1_mag + ncc_2 + ncc_2_mag + ncc_3_mag + ncc_3_mag)/6.0;
-            }
-            else 
-            {
-                nccresult = -1;
-            }
-            //nccresult1[pt_index] = nccresult;
-            
-            if(nccresult < 0.3)
-            {
-                GridPT3[pt_index].ortho_ncc = nccresult;
-    
-                if(!proinfo.check_Matchtag)
-                {
-                    GridPT3[pt_index].minHeight     -= 100;
-                    if(GridPT3[pt_index].minHeight < minmaxHeight[0])
-                        GridPT3[pt_index].minHeight     = minmaxHeight[0];
-                    GridPT3[pt_index].maxHeight     += 100;
-                    if(GridPT3[pt_index].maxHeight > minmaxHeight[1])
-                        GridPT3[pt_index].maxHeight     = minmaxHeight[1];
-                
-                    if(nccresult < 0.1)
+                    
+                    if(Count_N[0] > 0)
                     {
-                        GridPT3[pt_index].minHeight  = -9999;
-                        GridPT3[pt_index].maxHeight  = -9999;
+                        N               = Count_N[0];
+                        val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
+                        val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de            = sqrt(val1*val2);
+                        de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
+                        if( val1*val2 > 0)
+                            ncc_1           = de2/de;
+                        else
+                            ncc_1           = -1.0;
+                        
+                        val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
+                        val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de            = sqrt(val1*val2);
+                        de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_1_mag           = de2/de;
+                        else
+                            ncc_1_mag           = -1.0;
+                        
+                        
+                        N                   = Count_N[1];
+                        val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
+                        val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                        if( val1*val2 > 0)
+                            ncc_2         = de2/de;
+                        else
+                            ncc_2           = -1.0;
+                        
+                        val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
+                        val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_2_mag         = de2/de;
+                        else
+                            ncc_2_mag           = -1.0;
+                        
+                        
+                        N                   = Count_N[2];
+                        val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
+                        val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                        if( val1*val2 > 0)
+                            ncc_3         = de2/de;
+                        else
+                            ncc_3           = -1.0;
+                        
+                        val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
+                        val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
+                        if(Pyramid_step <= 4)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+                        
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_3_mag         = de2/de;
+                        else
+                            ncc_3_mag           = -1.0;
+                        
+                        
+                        nccresult = (ncc_1 + ncc_1_mag + ncc_2 + ncc_2_mag + ncc_3_mag + ncc_3_mag)/6.0;
                     }
-                }
-                
-                if(nccresult > -1)
-                    count_low += 1;
-            }
-            else
-            {
-                GridPT3[pt_index].ortho_ncc = nccresult;
-            }
+                    else 
+                    {
+                        nccresult = -1;
+                    }
+                    //nccresult1[pt_index] = nccresult;
+                    
+                    if(nccresult < 0.3)
+                    {
+                        GridPT3[pt_index].ortho_ncc[ti] = nccresult;
             
-            if(proinfo.check_Matchtag && nccresult >= 0.2)
-                GridPT3[pt_index].roh   = nccresult;
+                        if(!proinfo->check_Matchtag)
+                        {
+                            GridPT3[pt_index].minHeight     -= 100;
+                            if(GridPT3[pt_index].minHeight < minmaxHeight[0])
+                                GridPT3[pt_index].minHeight     = minmaxHeight[0];
+                            GridPT3[pt_index].maxHeight     += 100;
+                            if(GridPT3[pt_index].maxHeight > minmaxHeight[1])
+                                GridPT3[pt_index].maxHeight     = minmaxHeight[1];
+                        
+                            if(nccresult < 0.1)
+                            {
+                                GridPT3[pt_index].minHeight  = -9999;
+                                GridPT3[pt_index].maxHeight  = -9999;
+                            }
+                        }
+                        
+                        if(nccresult > -1)
+                            count_low += 1;
+                    }
+                    else
+                    {
+                        GridPT3[pt_index].ortho_ncc[ti] = nccresult;
+                    }
+                    
+                    if(proinfo->check_Matchtag && nccresult >= 0.2)
+                        GridPT3[pt_index].roh   = nccresult;
+                }
+            }
         }
         
     }
-    if (all_left_im_cd) free(all_left_im_cd);
-    if (all_right_im_cd) free(all_right_im_cd);
-               
+    
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    {
+        if(proinfo->check_selected_image[ti])
+        {
+            if(all_im_cd[ti])
+                free(all_im_cd[ti]);
+        }
+    }
+    if (all_im_cd)
+        free(all_im_cd);
+    
     //free(orthoheight);
     //free(nccresult1);
     printf("%d %d\n",count_low,count_total);
@@ -10399,11 +10458,11 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     return (double)(count_low)/(double)(count_total)*100;
 }
 
-bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs,
-                               CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, 
+bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
+                               CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-                               uint8 NumofIAparam, double* ImageAdjust, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, 
-                               char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary,uint8* left_ori, uint8* right_ori,int blunder_selected_level, bool bblunder)
+                               uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
+                               char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary,uint8 **ori_images, int blunder_selected_level, bool bblunder)
 {
   //uint16* orthoimage_l, *orthoimage_r;
     
@@ -10451,7 +10510,8 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
     double temp_LIA[2] = {0,0};
     
     int numofpts;
-    F2DPOINT *all_left_im_cd, *all_right_im_cd;
+    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+    
     int sub_imagesize_w, sub_imagesize_h;
     int pixel_buffer = 1000;
     int GNCC_level  = 3;
@@ -10480,17 +10540,17 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
     long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
     printf("sub_imagesize_total %ld\n",sub_imagesize_total);
     
-    all_left_im_cd = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-    if (all_left_im_cd == NULL)
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
-        printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-        exit(1);
-    }
-    all_right_im_cd= (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-    if (all_right_im_cd == NULL)
-    {
-        printf("ERROR: Out of memory - all_right_im_cd is NULL\n");
-        exit(1);
+        if(proinfo->check_selected_image[ti])
+        {
+            all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
+            if (all_im_cd[ti] == NULL)
+            {
+                printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
+                exit(1);
+            }
+        }
     }
     
 #pragma omp parallel for schedule(guided)
@@ -10517,11 +10577,10 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
         {
             if(GridPT3[pt_index].Height != -1000)
             {
-                double temp_LIA[2];
                 D3DPOINT temp_GP;
                 D2DPOINT temp_GP_p;
-                D2DPOINT Left_Imagecoord, Right_Imagecoord;
-                D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
+                D2DPOINT Imagecoord;
+                D2DPOINT Imagecoord_py;
                 
                 temp_GP_p.m_X = t_X;
                 temp_GP_p.m_Y = t_Y;
@@ -10532,19 +10591,17 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
                 temp_GP.m_Z   = GridPT3[pt_index].Height;
                 
                 //orthoheight[pt_index] = temp_GP.m_Z;
-                
-                temp_LIA[0] = 0.0;
-                temp_LIA[1] = 0.0;
-                Left_Imagecoord     = GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP);
-                Right_Imagecoord    = GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP);
-                
-                Left_Imagecoord_py  = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,blunder_selected_level);
-                Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,blunder_selected_level);
-                
-                all_left_im_cd[pt_index_im].m_X = Left_Imagecoord_py.m_X;
-                all_left_im_cd[pt_index_im].m_Y = Left_Imagecoord_py.m_Y;
-                all_right_im_cd[pt_index_im].m_X= Right_Imagecoord_py.m_X;
-                all_right_im_cd[pt_index_im].m_Y= Right_Imagecoord_py.m_Y;
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    if(proinfo->check_selected_image[ti])
+                    {
+                        Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
+                        
+                        all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
+                        all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
+                    }
+                }
                 
             }
             else {
@@ -10573,329 +10630,358 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
         int pt_index;
         pt_index = pts_row*Size_Grid2D.width + pts_col;
         
+        int reference_id = 0;
+        CSize LImagesize, RImagesize;
+        
+        LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
+        LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+        
         if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
         {
-            int i,j;
-            int row,col;
-            double Sum_LR = 0;
-            double Sum_L = 0;
-            double Sum_R = 0;
-            double Sum_L2 = 0;
-            double Sum_R2 = 0;
-            double Sum_LR_2 = 0;
-            double Sum_L_2 = 0;
-            double Sum_R_2 = 0;
-            double Sum_L2_2 = 0;
-            double Sum_R2_2 = 0;
-            double Sum_LR_3 = 0;
-            double Sum_L_3 = 0;
-            double Sum_R_3 = 0;
-            double Sum_L2_3 = 0;
-            double Sum_R2_3 = 0;
-            int Count_N[3] = {0};
-            int N;
-            
-            double Sum_LR_mag = 0;
-            double Sum_L_mag = 0;
-            double Sum_R_mag = 0;
-            double Sum_L2_mag = 0;
-            double Sum_R2_mag = 0;
-            double Sum_LR_2_mag = 0;
-            double Sum_L_2_mag = 0;
-            double Sum_R_2_mag = 0;
-            double Sum_L2_2_mag = 0;
-            double Sum_R2_2_mag = 0;
-            double Sum_LR_3_mag = 0;
-            double Sum_L_3_mag = 0;
-            double Sum_R_3_mag = 0;
-            double Sum_L2_3_mag = 0;
-            double Sum_R2_3_mag = 0;
-
-            double ncc_1, ncc_1_mag, ncc_2, ncc_2_mag, ncc_3, ncc_3_mag;
-            double ncc_1_I, ncc_1_mag_I, ncc_2_I, ncc_2_mag_I, ncc_3_I, ncc_3_mag_I;
-            double val1, val2, de, de2;
-            
-            nccresult[pt_index] = -1.0;
-            INCC[pt_index] = -1.0;
-
-            bool check_INCC = false;
-            
-            for(row = -Half_template_size; row <= Half_template_size ; row++)
+            for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
             {
-                for(col = -Half_template_size; col <= Half_template_size ; col++)
+                if(proinfo->check_selected_image[ti])
                 {
-                    double radius  = sqrt((double)(row*row + col*col));
-                    if(radius <= Half_template_size-1)
-                    {
-                        double pos_row_left = -100;
-                        double pos_col_left = -100;
-                        double pos_row_right= -100;
-                        double pos_col_right= -100;
-                        
-                        int pt_index_temp,pt_index_dem,pt_index_temp_c;
-                        double t_X, t_Y, t_X_c,t_Y_c;
-                        int t_col, t_row, tt_col, tt_row,t_col_c, t_row_c;
-                        
-                        t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                        t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
-                        
-                        t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                        t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
-                        
-                        tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                        tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
-                        
-                        pt_index_temp = t_row*sub_imagesize_w + t_col;
-                        
-                        pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
-                        
-                        if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                           t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
-                           pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                           tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                            all_left_im_cd != NULL && all_right_im_cd != NULL)
-                        {
-                            if(GridPT3[pt_index_dem].Height != -1000)
-                            {
-                                pos_row_left    = all_left_im_cd[pt_index_temp].m_Y;
-                                pos_col_left    = all_left_im_cd[pt_index_temp].m_X;
-                                pos_row_right   = all_right_im_cd[pt_index_temp].m_Y;
-                                pos_col_right   = all_right_im_cd[pt_index_temp].m_X;
-                                
-                                if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                    pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                {
-                                    //interpolate left_patch
-                                    double dx          =  pos_col_left - (int)(pos_col_left);
-                                    double dy          =  pos_row_left - (int)(pos_row_left);
-                                    double left_patch;
-                                    double right_patch;
-                                    double left_mag_patch;
-                                    double right_mag_patch;
-                                    double dxdy = dx * dy;
-                                    long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                                    
-                                    left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
-                                        (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) + (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
-                                    
-                                    left_mag_patch = (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_L[position + 1]) * (dx - dxdy) +
-                                        (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) +
-                                        (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
-                                    
-                                    
-                                    //interpolate right_patch
-                                    dx          =  pos_col_right - (int)(pos_col_right);
-                                    dy          =  pos_row_right - (int)(pos_row_right);
-                                    dxdy = dx * dy;
-                                    position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                    
-                                    right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
-                                        (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
-                                        (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
-                                    
-                                    right_mag_patch = (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_R[position + 1]) * (dx - dxdy) +
-                                        (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) +
-                                        (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
-        
-                                    //end
-                                    Count_N[0]++;
-                                    
-                                    double LR = left_patch * right_patch;
-                                    double L2 = left_patch * left_patch;
-                                    double R2 = right_patch * right_patch;
-                                    double LR_mag = left_mag_patch * right_mag_patch;
-                                    double L2_mag = left_mag_patch * left_mag_patch;
-                                    double R2_mag = right_mag_patch * right_mag_patch;
-                                    
-                                    Sum_LR            = Sum_LR + LR;
-                                    Sum_L             = Sum_L  + left_patch;
-                                    Sum_R             = Sum_R  + right_patch;
-                                    Sum_L2            = Sum_L2 + L2;
-                                    Sum_R2            = Sum_R2 + R2;
-                                    
-                                    Sum_LR_mag            = Sum_LR_mag + LR_mag;
-                                    Sum_L_mag             = Sum_L_mag  + left_mag_patch;
-                                    Sum_R_mag             = Sum_R_mag  + right_mag_patch;
-                                    Sum_L2_mag            = Sum_L2_mag + L2_mag;
-                                    Sum_R2_mag            = Sum_R2_mag + R2_mag;
-                                    
-                                    int size_1, size_2;
-                                    size_1        = (int)(Half_template_size/2);
-                                    if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                    {
-                                        if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                        {
-                                            Sum_LR_2  = Sum_LR_2 + LR;
-                                            Sum_L_2   = Sum_L_2  + left_patch;
-                                            Sum_R_2   = Sum_R_2  + right_patch;
-                                            Sum_L2_2  = Sum_L2_2 + L2;
-                                            Sum_R2_2  = Sum_R2_2 + R2;
-                                            Count_N[1]++;
-                                            
-                                            Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
-                                            Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
-                                            Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
-                                            Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
-                                            Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
-                                            
-                                        }
-                                    }
-                                    
-                                    size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                    {
-                                        if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                        {
-                                            Sum_LR_3  = Sum_LR_3 + LR;
-                                            Sum_L_3   = Sum_L_3  + left_patch;
-                                            Sum_R_3   = Sum_R_3  + right_patch;
-                                            Sum_L2_3  = Sum_L2_3 + L2;
-                                            Sum_R2_3  = Sum_R2_3 + R2;
-                                            Count_N[2]++;
-                                            
-                                            Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
-                                            Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
-                                            Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
-                                            Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
-                                            Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
-                                        }
-                                    }
-                                    
-                                    if(row == 0 && col == 0)
-                                    {
-                                      //orthoimage_l[pt_index] = (int)(left_patch);
-                                      //orthoimage_r[pt_index] = (int)(right_patch);
+                    RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
+                    RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                    
+                    int i,j;
+                    int row,col;
+                    double Sum_LR = 0;
+                    double Sum_L = 0;
+                    double Sum_R = 0;
+                    double Sum_L2 = 0;
+                    double Sum_R2 = 0;
+                    double Sum_LR_2 = 0;
+                    double Sum_L_2 = 0;
+                    double Sum_R_2 = 0;
+                    double Sum_L2_2 = 0;
+                    double Sum_R2_2 = 0;
+                    double Sum_LR_3 = 0;
+                    double Sum_L_3 = 0;
+                    double Sum_R_3 = 0;
+                    double Sum_L2_3 = 0;
+                    double Sum_R2_3 = 0;
+                    int Count_N[3] = {0};
+                    int N;
+                    
+                    double Sum_LR_mag = 0;
+                    double Sum_L_mag = 0;
+                    double Sum_R_mag = 0;
+                    double Sum_L2_mag = 0;
+                    double Sum_R2_mag = 0;
+                    double Sum_LR_2_mag = 0;
+                    double Sum_L_2_mag = 0;
+                    double Sum_R_2_mag = 0;
+                    double Sum_L2_2_mag = 0;
+                    double Sum_R2_2_mag = 0;
+                    double Sum_LR_3_mag = 0;
+                    double Sum_L_3_mag = 0;
+                    double Sum_R_3_mag = 0;
+                    double Sum_L2_3_mag = 0;
+                    double Sum_R2_3_mag = 0;
 
+                    double ncc_1, ncc_1_mag, ncc_2, ncc_2_mag, ncc_3, ncc_3_mag;
+                    double ncc_1_I, ncc_1_mag_I, ncc_2_I, ncc_2_mag_I, ncc_3_I, ncc_3_mag_I;
+                    double val1, val2, de, de2;
+                    
+                    nccresult[pt_index] = -1.0;
+                    INCC[pt_index] = -1.0;
+
+                    bool check_INCC = false;
+                    
+                    for(row = -Half_template_size; row <= Half_template_size ; row++)
+                    {
+                        for(col = -Half_template_size; col <= Half_template_size ; col++)
+                        {
+                            double radius  = sqrt((double)(row*row + col*col));
+                            if(radius <= Half_template_size-1)
+                            {
+                                double pos_row_left = -100;
+                                double pos_col_left = -100;
+                                double pos_row_right= -100;
+                                double pos_col_right= -100;
+                                
+                                int pt_index_temp,pt_index_dem,pt_index_temp_c;
+                                double t_X, t_Y, t_X_c,t_Y_c;
+                                int t_col, t_row, tt_col, tt_row,t_col_c, t_row_c;
+                                
+                                t_X     = GridPts[pt_index].m_X + col*im_resolution;
+                                t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+                                
+                                t_col   = (int)((t_X - subBoundary[0])/im_resolution);
+                                t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
+                                
+                                tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
+                                tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
+                                
+                                pt_index_temp = t_row*sub_imagesize_w + t_col;
+                                
+                                pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
+                                
+                                if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
+                                   t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
+                                   pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
+                                   tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+                                    all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                {
+                                    if(GridPT3[pt_index_dem].Height != -1000)
+                                    {
+                                        pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
+                                        pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
+                                        pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
+                                        pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
+                                        
+                                        if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                            pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                        {
+                                            //interpolate left_patch
+                                            double dx          =  pos_col_left - (int)(pos_col_left);
+                                            double dy          =  pos_row_left - (int)(pos_row_left);
+                                            double left_patch;
+                                            double right_patch;
+                                            double left_mag_patch;
+                                            double right_mag_patch;
+                                            double dxdy = dx * dy;
+                                            long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
+                                            
+                                            left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
+                                                                (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
+                                                                (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
+                                                                (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
+                                            
+                                            left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
+                                                                (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
+                                                                (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
+                                                                (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
+
+                                            
+                                            
+                                            //interpolate right_patch
+                                            dx          =  pos_col_right - (int)(pos_col_right);
+                                            dy          =  pos_row_right - (int)(pos_row_right);
+                                            dxdy = dx * dy;
+                                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                            
+                                            right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
+                                                                (double) (Images[ti][position + 1])                         * (dx - dxdy) +
+                                                                (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
+                                                                (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
+                                            
+                                            right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
+                                                                (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
+                                                                (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
+                                                                (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                
+                                            //end
+                                            Count_N[0]++;
+                                            
+                                            double LR = left_patch * right_patch;
+                                            double L2 = left_patch * left_patch;
+                                            double R2 = right_patch * right_patch;
+                                            double LR_mag = left_mag_patch * right_mag_patch;
+                                            double L2_mag = left_mag_patch * left_mag_patch;
+                                            double R2_mag = right_mag_patch * right_mag_patch;
+                                            
+                                            Sum_LR            = Sum_LR + LR;
+                                            Sum_L             = Sum_L  + left_patch;
+                                            Sum_R             = Sum_R  + right_patch;
+                                            Sum_L2            = Sum_L2 + L2;
+                                            Sum_R2            = Sum_R2 + R2;
+                                            
+                                            Sum_LR_mag            = Sum_LR_mag + LR_mag;
+                                            Sum_L_mag             = Sum_L_mag  + left_mag_patch;
+                                            Sum_R_mag             = Sum_R_mag  + right_mag_patch;
+                                            Sum_L2_mag            = Sum_L2_mag + L2_mag;
+                                            Sum_R2_mag            = Sum_R2_mag + R2_mag;
+                                            
+                                            int size_1, size_2;
+                                            size_1        = (int)(Half_template_size/2);
+                                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                            {
+                                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                                {
+                                                    Sum_LR_2  = Sum_LR_2 + LR;
+                                                    Sum_L_2   = Sum_L_2  + left_patch;
+                                                    Sum_R_2   = Sum_R_2  + right_patch;
+                                                    Sum_L2_2  = Sum_L2_2 + L2;
+                                                    Sum_R2_2  = Sum_R2_2 + R2;
+                                                    Count_N[1]++;
+                                                    
+                                                    Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
+                                                    Sum_L_2_mag   = Sum_L_2_mag  + left_mag_patch;
+                                                    Sum_R_2_mag   = Sum_R_2_mag  + right_mag_patch;
+                                                    Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
+                                                    Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
+                                                    
+                                                }
+                                            }
+                                            
+                                            size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                            {
+                                                if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                                {
+                                                    Sum_LR_3  = Sum_LR_3 + LR;
+                                                    Sum_L_3   = Sum_L_3  + left_patch;
+                                                    Sum_R_3   = Sum_R_3  + right_patch;
+                                                    Sum_L2_3  = Sum_L2_3 + L2;
+                                                    Sum_R2_3  = Sum_R2_3 + R2;
+                                                    Count_N[2]++;
+                                                    
+                                                    Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+                                                    Sum_L_3_mag   = Sum_L_3_mag  + left_mag_patch;
+                                                    Sum_R_3_mag   = Sum_R_3_mag  + right_mag_patch;
+                                                    Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+                                                    Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+                                                }
+                                            }
+                                            
+                                            if(row == 0 && col == 0)
+                                            {
+                                              //orthoimage_l[pt_index] = (int)(left_patch);
+                                              //orthoimage_r[pt_index] = (int)(right_patch);
+
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    
+                    if(Count_N[0] > 0)
+                    {
+                        N               = Count_N[0];
+                        val1          = fabs((double)(Sum_L2) - (double)(Sum_L*Sum_L)/N);
+                        val2          = fabs((double)(Sum_R2) - (double)(Sum_R*Sum_R)/N);
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de            = sqrt(val1*val2);
+                        de2           = ((double)(Sum_LR) - (double)(Sum_L*Sum_R)/N);
+                        if( val1*val2 > 0)
+                            ncc_1           = de2/de;
+                        else
+                            ncc_1           = -1.0;
+                        
+                        val1          = fabs((double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N);
+                        val2          = fabs((double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N);
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de            = sqrt(val1*val2);
+                        de2           = ((double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N);
+                        if( val1*val2 > 0)
+                            ncc_1_mag           = de2/de;
+                        else
+                            ncc_1_mag           = -1.0;
+                        
+                        
+                        N                   = Count_N[1];
+                        val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
+                        val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                        if( val1*val2 > 0)
+                            ncc_2         = de2/de;
+                        else
+                            ncc_2           = -1.0;
+                        
+                        val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
+                        val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_2_mag         = de2/de;
+                        else
+                            ncc_2_mag           = -1.0;
+                        
+                        
+                        N                   = Count_N[2];
+                        val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
+                        val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                        if( val1*val2 > 0)
+                            ncc_3         = de2/de;
+                        else
+                            ncc_3           = -1.0;
+                        
+                        val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
+                        val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
+                        if(Pyramid_step <= 1)
+                        {
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
+                        }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_3_mag         = de2/de;
+                        else
+                            ncc_3_mag           = -1.0;
+                        
+                        nccresult[pt_index] = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
+                    }
+                    else 
+                    {
+                        nccresult[pt_index] = -1;
+                    }
+                    
+                    GridPT3[pt_index].ortho_ncc[ti] = nccresult[pt_index];
                 }
             }
-            
-            if(Count_N[0] > 0)
-            {
-                N               = Count_N[0];
-                val1          = fabs((double)(Sum_L2) - (double)(Sum_L*Sum_L)/N);
-                val2          = fabs((double)(Sum_R2) - (double)(Sum_R*Sum_R)/N);
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de            = sqrt(val1*val2);
-                de2           = ((double)(Sum_LR) - (double)(Sum_L*Sum_R)/N);
-                if( val1*val2 > 0)
-                    ncc_1           = de2/de;
-                else
-                    ncc_1           = -1.0;
-                
-                val1          = fabs((double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N);
-                val2          = fabs((double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N);
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de            = sqrt(val1*val2);
-                de2           = ((double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N);
-                if( val1*val2 > 0)
-                    ncc_1_mag           = de2/de;
-                else
-                    ncc_1_mag           = -1.0;
-                
-                
-                N                   = Count_N[1];
-                val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
-                val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                if( val1*val2 > 0)
-                    ncc_2         = de2/de;
-                else
-                    ncc_2           = -1.0;
-                
-                val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
-                val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
-                if( val1*val2 > 0)
-                    ncc_2_mag         = de2/de;
-                else
-                    ncc_2_mag           = -1.0;
-                
-                
-                N                   = Count_N[2];
-                val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
-                val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                if( val1*val2 > 0)
-                    ncc_3         = de2/de;
-                else
-                    ncc_3           = -1.0;
-                
-                val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
-                val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
-                if(Pyramid_step <= 1)
-                {
-                    if(val1 == 0)
-                        val1 = 0.00001;
-                    if(val2 == 0)
-                        val2 = 0.00001;
-                }
-
-                de                  = sqrt(val1*val2);
-                de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
-                if( val1*val2 > 0)
-                    ncc_3_mag         = de2/de;
-                else
-                    ncc_3_mag           = -1.0;
-                
-                nccresult[pt_index] = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
-            }
-            else 
-            {
-                nccresult[pt_index] = -1;
-            }
-            
-            GridPT3[pt_index].ortho_ncc = nccresult[pt_index];
         }
     }
 
-    if (all_left_im_cd) free(all_left_im_cd);
-    if (all_right_im_cd) free(all_right_im_cd);
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    {
+        if(proinfo->check_selected_image[ti])
+        {
+            if(all_im_cd[ti])
+                free(all_im_cd[ti]);
+        }
+    }
+    if (all_im_cd)
+        free(all_im_cd);
     
     //free(orthoimage_l);
     //free(orthoimage_r);
@@ -10904,12 +10990,12 @@ bool VerticalLineLocus_blunder(double* nccresult, double* INCC, uint16 *MagImage
     return true;
 }
 
-bool VerticalLineLocus_Ortho(double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
-                             uint16 *MagImages_L,uint16 *MagImages_R, uint16* LeftImage, uint16* RightImage,
-                             double DEM_resolution, double im_resolution, double** LRPCs, double** RRPCs, 
-                             CSize LImagesize,  CSize RImagesize, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, 
-                             double* ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
-                             D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,
+bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
+                             uint16 **MagImages, uint16 **Images,
+                             double DEM_resolution, double im_resolution, double ***RPCs,
+                             CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
+                             double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
+                             D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,
                              double* boundary)
 {
     double h_divide;
@@ -10955,6 +11041,10 @@ bool VerticalLineLocus_Ortho(double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt
 
     for(int count_height = 0 ; count_height < NumOfHeights ; count_height++)
     {
+        double sum_NCC = 0;
+        int count_NCC = 0;
+        int sum_count_N = 0;
+        
         double TriP1[3];
         double TriP2[3];
         double TriP3[3];
@@ -10963,21 +11053,6 @@ bool VerticalLineLocus_Ortho(double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt
         int PixelMinXY[2]={0};
         int PixelMaxXY[2]={0};
         int Col, Row;
-        
-        double val1, val2, de, de2, ncc_1,ncc_2,ncc;
-        double Sum_LR = 0;
-        double Sum_L = 0;
-        double Sum_R = 0;
-        double Sum_L2 = 0;
-        double Sum_R2 = 0;
-        
-        double Sum_LR_mag = 0;
-        double Sum_L_mag = 0;
-        double Sum_R_mag = 0;
-        double Sum_L2_mag = 0;
-        double Sum_R2_mag = 0;
-        
-        int Count_N = 0;
         
         double iter_height      = start_H + count_height*height_step;
         
@@ -11015,241 +11090,279 @@ bool VerticalLineLocus_Ortho(double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt
         if (PixelMinXY[1] < 0)  
             PixelMinXY[1] = 0;
         
-        for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
-          {
-            for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
-              { 
-                double CurGPXY[2]={0.};
-                double Z = 0.0;
-                bool rtn = false;
-                double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
-                double v23[2], v2P[2], v31[2], v3P[2];
-                int Sum;
+        
+        for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
+        {
+            if(proinfo->check_selected_image[ti])
+            {
+                double val1, val2, de, de2, ncc_1,ncc_2,ncc;
+                double Sum_LR = 0;
+                double Sum_L = 0;
+                double Sum_R = 0;
+                double Sum_L2 = 0;
+                double Sum_R2 = 0;
                 
-                CurGPXY[0]  = (Col)*gridspace + boundary[0];
-                CurGPXY[1]  = (Row)*gridspace + boundary[1];
-                
-                _p1[0]      = TriP1[0];
-                _p1[1]      = TriP1[1];
-                _p1[2]      = TriP1[2];
-                
-                _p2[0]      = TriP2[0];
-                _p2[1]      = TriP2[1];
-                _p2[2]      = TriP2[2];
-                
-                _p3[0]      = TriP3[0];
-                _p3[1]      = TriP3[1];
-                _p3[2]      = TriP3[2];
-                
-                v12[0]      = _p2[0]-_p1[0];
-                v12[1]      = _p2[1]-_p1[1];
-                
-                v1P[0]      = CurGPXY[0]-_p1[0];
-                v1P[1]      = CurGPXY[1]-_p1[1];
-                
-                v23[0]      = _p3[0]-_p2[0];
-                v23[1]      = _p3[1]-_p2[1];
-                
-                v2P[0]      = CurGPXY[0]-_p2[0];
-                v2P[1]      = CurGPXY[1]-_p2[1];
-                
-                v31[0]      = _p1[0]-_p3[0];
-                v31[1]      = _p1[1]-_p3[1];
-                
-                v3P[0]      = CurGPXY[0]-_p3[0];
-                v3P[1]      = CurGPXY[1]-_p3[1];
-                
-                Sum = 3;
-                if (v12[0]*v1P[1]-v12[1]*v1P[0]<=0)
-                    Sum--;
-                if (v23[0]*v2P[1]-v23[1]*v2P[0]<=0)
-                    Sum--;
-                if (v31[0]*v3P[1]-v31[1]*v3P[0]<=0)
-                    Sum--;
-                
-                if (Sum==0 || Sum==3)
-                {
-                    double v12[3], v13[3], Len, A, B, C, D;
-                    double Normal[3]={0.};
-                    
-                    v12[0]  = _p2[0]-_p1[0];
-                    v12[1]  = _p2[1]-_p1[1];
-                    v12[2]  = _p2[2]-_p1[2];
-                    
-                    v13[0]  = _p3[0]-_p1[0];
-                    v13[1]  = _p3[1]-_p1[1];
-                    v13[2]  = _p3[2]-_p1[2];
-                    
-                    Normal[0]=v12[1]*v13[2] - v12[2]*v13[1];
-                    Normal[1]=v12[2]*v13[0] - v12[0]*v13[2];
-                    Normal[2]=v12[0]*v13[1] - v12[1]*v13[0];      
-                    
-                    Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
-                    if(Len > 0)
-                    {
-                        Normal[0]/=Len;
-                        Normal[1]/=Len;
-                        Normal[2]/=Len;
-                        
-                        A = Normal[0];
-                        B = Normal[1];
-                        C = Normal[2];
-                        D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
-                        
-                        if(C != 0)
-                        {
-                            Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
-                            rtn = true;
-                        }
-                        else
-                            rtn = false;
-                    }
-                    else
-                        rtn = false;
-                }
-                
-                if (rtn)
-                {
-                    D3DPOINT temp_GP;
-                    D2DPOINT Left_Imagecoord, Right_Imagecoord, temp_GP_p;
-                    D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
-                    double temp_LIA[2];
-                    
-                    double pos_row_left;
-                    double pos_col_left;
-                    double pos_row_right;
-                    double pos_col_right;
-                    
-                    temp_GP_p.m_X = CurGPXY[0];
-                    temp_GP_p.m_Y = CurGPXY[1];
-                    
-                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                double Sum_LR_mag = 0;
+                double Sum_L_mag = 0;
+                double Sum_R_mag = 0;
+                double Sum_L2_mag = 0;
+                double Sum_R2_mag = 0;
+                int Count_N = 0;
 
-                    temp_GP.m_X = temp_GP_p.m_X;
-                    temp_GP.m_Y = temp_GP_p.m_Y;
-                    temp_GP.m_Z = Z;
-                    
-                    temp_LIA[0] = 0.0;
-                    temp_LIA[1] = 0.0;
-                    Left_Imagecoord     = GetObjectToImageRPC_single(LRPCs,NumofIAparam,temp_LIA,temp_GP);
-                    Right_Imagecoord    = GetObjectToImageRPC_single(RRPCs,NumofIAparam,ImageAdjust,temp_GP);
-                    
-                    Left_Imagecoord_py  = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
-                    Right_Imagecoord_py = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
-                    
-                    pos_row_left      = Left_Imagecoord_py.m_Y;
-                    pos_col_left      = Left_Imagecoord_py.m_X;
-                    
-                    pos_row_right     = Right_Imagecoord_py.m_Y;
-                    pos_col_right     = Right_Imagecoord_py.m_X;
-                    
-                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                        pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                int reference_id = 0;
+                CSize LImagesize, RImagesize;
+                
+                LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
+                LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+                RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
+                RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                
+                for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
+                {
+                    for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                     {
-                        //interpolate left_patch
-                        double dx = pos_col_left - (int) (pos_col_left);
-                        double dy = pos_row_left - (int) (pos_row_left);
-                        double left_patch;
-                        double right_patch;
-                        double left_mag_patch;
-                        double right_mag_patch;
-                        double dxdy = dx * dy;
-                        long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                        left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
-                            (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) + (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
+                        double CurGPXY[2]={0.};
+                        double Z = 0.0;
+                        bool rtn = false;
+                        double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
+                        double v23[2], v2P[2], v31[2], v3P[2];
+                        int Sum;
                         
-                        left_mag_patch = (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_L[position + 1]) * (dx - dxdy) +
-                            (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) + (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
+                        CurGPXY[0]  = (Col)*gridspace + boundary[0];
+                        CurGPXY[1]  = (Row)*gridspace + boundary[1];
                         
-                        //interpolate right_patch
-                        dx = pos_col_right - (int) (pos_col_right);
-                        dy = pos_row_right - (int) (pos_row_right);
-                        dxdy = dx * dy;
-                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                        _p1[0]      = TriP1[0];
+                        _p1[1]      = TriP1[1];
+                        _p1[2]      = TriP1[2];
                         
-                        right_patch = (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
-                            (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) + (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
+                        _p2[0]      = TriP2[0];
+                        _p2[1]      = TriP2[1];
+                        _p2[2]      = TriP2[2];
                         
-                        right_mag_patch = (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_R[position + 1]) * (dx - dxdy) +
-                            (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) + (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
+                        _p3[0]      = TriP3[0];
+                        _p3[1]      = TriP3[1];
+                        _p3[2]      = TriP3[2];
                         
-                        //end
-                        Count_N++;
+                        v12[0]      = _p2[0]-_p1[0];
+                        v12[1]      = _p2[1]-_p1[1];
                         
-                        Sum_LR            = Sum_LR + left_patch*right_patch;
-                        Sum_L             = Sum_L  + left_patch;
-                        Sum_R             = Sum_R  + right_patch;
-                        Sum_L2            = Sum_L2 + left_patch*left_patch;
-                        Sum_R2            = Sum_R2 + right_patch*right_patch;
+                        v1P[0]      = CurGPXY[0]-_p1[0];
+                        v1P[1]      = CurGPXY[1]-_p1[1];
                         
-                        Sum_LR_mag            = Sum_LR_mag + left_mag_patch*right_mag_patch;
-                        Sum_L_mag             = Sum_L_mag  + left_mag_patch;
-                        Sum_R_mag             = Sum_R_mag  + right_mag_patch;
-                        Sum_L2_mag            = Sum_L2_mag + left_mag_patch*left_mag_patch;
-                        Sum_R2_mag            = Sum_R2_mag + right_mag_patch*right_mag_patch;
+                        v23[0]      = _p3[0]-_p2[0];
+                        v23[1]      = _p3[1]-_p2[1];
+                        
+                        v2P[0]      = CurGPXY[0]-_p2[0];
+                        v2P[1]      = CurGPXY[1]-_p2[1];
+                        
+                        v31[0]      = _p1[0]-_p3[0];
+                        v31[1]      = _p1[1]-_p3[1];
+                        
+                        v3P[0]      = CurGPXY[0]-_p3[0];
+                        v3P[1]      = CurGPXY[1]-_p3[1];
+                        
+                        Sum = 3;
+                        if (v12[0]*v1P[1]-v12[1]*v1P[0]<=0)
+                            Sum--;
+                        if (v23[0]*v2P[1]-v23[1]*v2P[0]<=0)
+                            Sum--;
+                        if (v31[0]*v3P[1]-v31[1]*v3P[0]<=0)
+                            Sum--;
+                        
+                        if (Sum==0 || Sum==3)
+                        {
+                            double v12[3], v13[3], Len, A, B, C, D;
+                            double Normal[3]={0.};
+                            
+                            v12[0]  = _p2[0]-_p1[0];
+                            v12[1]  = _p2[1]-_p1[1];
+                            v12[2]  = _p2[2]-_p1[2];
+                            
+                            v13[0]  = _p3[0]-_p1[0];
+                            v13[1]  = _p3[1]-_p1[1];
+                            v13[2]  = _p3[2]-_p1[2];
+                            
+                            Normal[0]=v12[1]*v13[2] - v12[2]*v13[1];
+                            Normal[1]=v12[2]*v13[0] - v12[0]*v13[2];
+                            Normal[2]=v12[0]*v13[1] - v12[1]*v13[0];      
+                            
+                            Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
+                            if(Len > 0)
+                            {
+                                Normal[0]/=Len;
+                                Normal[1]/=Len;
+                                Normal[2]/=Len;
+                                
+                                A = Normal[0];
+                                B = Normal[1];
+                                C = Normal[2];
+                                D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
+                                
+                                if(C != 0)
+                                {
+                                    Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
+                                    rtn = true;
+                                }
+                                else
+                                    rtn = false;
+                            }
+                            else
+                                rtn = false;
+                        }
+                        
+                        if (rtn)
+                        {
+                            D2DPOINT Ref_Imagecoord, temp_GP_p;
+                            D2DPOINT Ref_Imagecoord_py;
+                            double temp_LIA[2];
+                            D3DPOINT temp_GP;
+                            
+                            temp_LIA[0] = ImageAdjust[reference_id][0];
+                            temp_LIA[1] = ImageAdjust[reference_id][1];
+                            
+                            temp_GP_p.m_X = CurGPXY[0];
+                            temp_GP_p.m_Y = CurGPXY[1];
+                            
+                            temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                            
+                            temp_GP.m_X = temp_GP_p.m_X;
+                            temp_GP.m_Y = temp_GP_p.m_Y;
+                            temp_GP.m_Z = Z;
+
+                            Ref_Imagecoord     = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP);
+                            Ref_Imagecoord_py  = OriginalToPyramid_single(Ref_Imagecoord,Startpos[reference_id],Pyramid_step);
+                            
+                            
+                            D2DPOINT Tar_Imagecoord;
+                            D2DPOINT Tar_Imagecoord_py;
+                           
+                            double pos_row_left;
+                            double pos_col_left;
+                            double pos_row_right;
+                            double pos_col_right;
+                        
+                            
+                            Tar_Imagecoord    = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                            Tar_Imagecoord_py = OriginalToPyramid_single(Tar_Imagecoord,Startpos[ti],Pyramid_step);
+                            
+                            pos_row_left      = Ref_Imagecoord_py.m_Y;
+                            pos_col_left      = Ref_Imagecoord_py.m_X;
+                            
+                            pos_row_right     = Tar_Imagecoord_py.m_Y;
+                            pos_col_right     = Tar_Imagecoord_py.m_X;
+                            
+                            if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                            {
+                                //interpolate left_patch
+                                double dx = pos_col_left - (int) (pos_col_left);
+                                double dy = pos_row_left - (int) (pos_row_left);
+                                double left_patch;
+                                double right_patch;
+                                double left_mag_patch;
+                                double right_mag_patch;
+                                double dxdy = dx * dy;
+                                long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
+                                
+                                left_patch =        (double) (Images[reference_id][position])                          * (1 - dx - dy + dxdy) +
+                                                    (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
+                                                    (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
+                                                    (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
+                                
+                                left_mag_patch =    (double) (MagImages[reference_id][position])                       * (1 - dx - dy + dxdy) +
+                                                    (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
+                                                    (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
+                                                    (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
+                                
+                                //interpolate right_patch
+                                dx = pos_col_right - (int) (pos_col_right);
+                                dy = pos_row_right - (int) (pos_row_right);
+                                dxdy = dx * dy;
+                                position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                
+                                right_patch =       (double) (Images[ti][position])                         * (1 - dx - dy + dxdy) +
+                                                    (double) (Images[ti][position + 1])                     * (dx - dxdy) +
+                                                    (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
+                                                    (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
+                                
+                                right_mag_patch =   (double) (MagImages[ti][position])                      * (1 - dx - dy + dxdy) +
+                                                    (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
+                                                    (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
+                                                    (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
+                                
+                                //end
+                                Count_N++;
+                                
+                                Sum_LR            = Sum_LR + left_patch*right_patch;
+                                Sum_L             = Sum_L  + left_patch;
+                                Sum_R             = Sum_R  + right_patch;
+                                Sum_L2            = Sum_L2 + left_patch*left_patch;
+                                Sum_R2            = Sum_R2 + right_patch*right_patch;
+                                
+                                Sum_LR_mag            = Sum_LR_mag + left_mag_patch*right_mag_patch;
+                                Sum_L_mag             = Sum_L_mag  + left_mag_patch;
+                                Sum_R_mag             = Sum_R_mag  + right_mag_patch;
+                                Sum_L2_mag            = Sum_L2_mag + left_mag_patch*left_mag_patch;
+                                Sum_R2_mag            = Sum_R2_mag + right_mag_patch*right_mag_patch;
+                            }
+                        }
                     }
+                }
+        
+                if(Count_N >= 1)
+                {
+                    val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/Count_N;
+                    val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/Count_N;
+                    de            = sqrt(val1*val2);
+                    de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/Count_N;
+                    if( val1*val2 > 0)
+                        ncc_1           = de2/de;
+                    else
+                        ncc_1           = -1.0;
+                    
+                    val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/Count_N;
+                    val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/Count_N;
+                    de            = sqrt(val1*val2);
+                    de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/Count_N;
+                    if( val1*val2 > 0)
+                        ncc_2           = de2/de;
+                    else
+                        ncc_2           = -1.0;
+                    
+                    ncc = (ncc_1 + ncc_2)/2.0;
+                    
+                    sum_count_N += Count_N;
+                    
+                    sum_NCC += ncc;
+                    
+                    count_NCC ++;
                 }
             }
         }
         
-        if(Count_N >= th_count)
+        if(sum_count_N/count_NCC >= th_count)
         {
-            val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/Count_N;
-            val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/Count_N;
-            de            = sqrt(val1*val2);
-            de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/Count_N;
-            if( val1*val2 > 0)
-                ncc_1           = de2/de;
-            else
-                ncc_1           = -1.0;
-            
-            val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/Count_N;
-            val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/Count_N;
-            de            = sqrt(val1*val2);
-            de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/Count_N;
-            if( val1*val2 > 0)
-                ncc_2           = de2/de;
-            else
-                ncc_2           = -1.0;
-            
-            ncc = (ncc_1 + ncc_2)/2.0;
-            if(ncc > 0.5)
+            double sncc = sum_NCC/count_NCC;
+            if(sncc > 0.5)
             {
                 check_ncc = true;
-                if(F_NCC < ncc)
+                if(F_NCC < sncc)
                 {
-                    F_NCC = ncc;
+                    F_NCC = sncc;
                     *F_Height = iter_height;
                 }
             }
         }
-        else if(Count_N > 0)
+        else if(sum_count_N/count_NCC > 0)
         {
-            val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/Count_N;
-            val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/Count_N;
-            de            = sqrt(val1*val2);
-            de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/Count_N;
-            if( val1*val2 > 0)
-                ncc_1           = de2/de;
-            else
-                ncc_1           = -1.0;
-            
-            val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/Count_N;
-            val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/Count_N;
-            de            = sqrt(val1*val2);
-            de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/Count_N;
-            if( val1*val2 > 0)
-                ncc_2           = de2/de;
-            else
-                ncc_2           = -1.0;
-            
-            ncc = (ncc_1 + ncc_2)/2.0;
-            if(ncc > 0.7)
-            { 
+            double sncc = sum_NCC/count_NCC;
+            if(sncc > 0.7)
+            {
                 check_ncc = true;
                 *F_Height = (ref1_pt.m_Z + ref2_pt.m_Z)/2.0;
             }
         }
+        
     }
     
     return true;
@@ -11899,14 +12012,14 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
     return trilists_f;
 }
 
-int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
                 uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, double Hinterval,
                 bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
                 uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
                 CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                 TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
                 uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
-                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level);
+                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level)
 {
     char *filename_tri = proinfo->save_filepath;
     char* save_filepath = proinfo->save_filepath;
@@ -12089,11 +12202,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Bounda
                         
                         printf("mt_minmax %f %f\n",mt_minmaxheight[0],mt_minmaxheight[1]);
                         
-                        VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
-                                                  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size, 
+                        VerticalLineLocus_blunder(proinfo,ortho_ncc, INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                                                  Images, Template_size,
                                                   Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                                                  NumofIAparam, ImageAdjust, Pyramid_step, Lstartpos, Rstartpos, 
-                                                  save_filepath, tile_row, tile_col, iteration,count,Boundary,left_ori, right_ori,blunder_selected_level,true);
+                                                  NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
+                                                  save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,true);
                     }
                     blunder_detection_TIN(pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, count_MPs,
                                           trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight,IsRA,seedDEMsigma);
@@ -12205,11 +12318,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Bounda
                         double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
                         double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
                         
-                        VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
-                                                  LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size,
+                        VerticalLineLocus_blunder(proinfo,ortho_ncc, INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                                                  Images, Template_size,
                                                   Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                                                  NumofIAparam, ImageAdjust, Pyramid_step, Lstartpos, Rstartpos,
-                                                  save_filepath, tile_row, tile_col, iteration,count,Boundary,left_ori, right_ori,blunder_selected_level,false);
+                                                  NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
+                                                  save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,false);
                         
                         free(trilists);
                         free(INCC);
@@ -12339,11 +12452,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs, double* Bounda
                 double* ortho_ncc = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
                 double* INCC = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
                 
-                VerticalLineLocus_blunder(ortho_ncc, INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
-                                          LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size, 
+                VerticalLineLocus_blunder(proinfo,ortho_ncc, INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                                          Images, Template_size,
                                           Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                                          NumofIAparam, ImageAdjust, Pyramid_step, Lstartpos, Rstartpos, 
-                                          save_filepath, tile_row, tile_col, iteration,count,Boundary,left_ori, right_ori,blunder_selected_level,false);
+                                          NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
+                                          save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,false);
                 free(ortho_ncc);
                 free(INCC);
                 
@@ -12379,7 +12492,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
                           uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
                           bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
                           uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
-                          CSize *Imagesizes_ori, CSize **LImagesizes, uint16 **Images, uint8 Template_size,
+                          CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                           TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
                           uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
                           char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level)
@@ -12408,11 +12521,11 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     
     SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,numoftri, GridPT3, blunder_param,mt_minmaxheight,false);
     
-    VerticalLineLocus_blunder(ortho_ncc,INCC, MagImages_L,MagImages_R,DEM_resolution, im_resolution, LRPCs, RRPCs, LImagesize_ori, LImagesize,
-                              LeftImage, RImagesize_ori, RImagesize, RightImage, Template_size, 
+    VerticalLineLocus_blunder(proinfo,ortho_ncc,INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                              Images, Template_size,
                               Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                              NumofIAparam, ImageAdjust, Pyramid_step, Lstartpos, Rstartpos, 
-                              save_filepath, tile_row, tile_col, iteration,100,Boundary,left_ori, right_ori,blunder_selected_level,false);
+                              NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
+                              save_filepath, tile_row, tile_col, iteration,100,Boundary,ori_images,blunder_selected_level,false);
     free(ortho_ncc);
     free(INCC);
     
@@ -13388,7 +13501,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                   double DEM_resolution, double im_resolution, double ***RPCs,
                   CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
                   double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
-                  D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
+                  D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps)
 {
     char *save_path = proinfo->save_filepath;
     uint32 num_triangles;
@@ -13581,12 +13694,12 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                                     target_pt_index = pdex2;
                                 }
 
-                                VerticalLineLocus_Ortho(&F_height,ref1_pt,ref2_pt,target_pt,
-                                                        MagImages_L,MagImages_R, LeftImage, RightImage,
-                                                        DEM_resolution, im_resolution, LRPCs, RRPCs, 
-                                                        LImagesize,  RImagesize, Size_Grid2D, param, NumofIAparam, 
+                                VerticalLineLocus_Ortho(proinfo,&F_height,ref1_pt,ref2_pt,target_pt,
+                                                        MagImages, Images,
+                                                        DEM_resolution, im_resolution, RPCs,
+                                                        Imagesizes, Size_Grid2D, param, NumofIAparam,
                                                         ImageAdjust, minmaxHeight, Pyramid_step, meters_per_pixel,
-                                                        Lstartpos, Rstartpos, iteration,  GridPT3,target_index,ref1_index,ref2_index,boundary);
+                                                        Startpos, iteration,  GridPT3,target_index,ref1_index,ref2_index,boundary);
                           
                           
                                 if(F_height != -9999 )
@@ -15164,74 +15277,74 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
             proinfo->check_selected_image[ti] = false;
     }
     
+    if(!proinfo->check_selected_image[0])
+    {
+        printf("SubsetImage : Subset of reference image is too small to cover the kernel size!!\n");
+        ret = false;
+    }
+    
     return ret;
 }
 
-bool check_image_boundary(double **lrpc, double **rrpc, uint8 numofparam, double *Imageparams, D2DPOINT Lstartpos, D2DPOINT Rstartpos,
-                          D2DPOINT pos_xy, double minH, double maxH, CSize Lsize, CSize Rsize, int H_template_size, int pyramid_step)
+bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, double **imageparam, D2DPOINT *Startpos,
+                          D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step)
 {
     bool check = true;
 
     bool bleft_s, bright_s, bleft_e, bright_e;
+    int selected_images = 0;
+    
     D3DPOINT temp_gp;
     D2DPOINT temp;
     double Imageparam_ref[2] = {0.0};
 
     int buff_pixel = 1;
-    //left start
-    temp_gp.m_X = pos_xy.m_X;
-    temp_gp.m_Y = pos_xy.m_Y;
-    temp_gp.m_Z = minH;
-    temp        = GetObjectToImageRPC_single(lrpc,numofparam,Imageparam_ref,temp_gp);
-    temp        = OriginalToPyramid_single(temp,Lstartpos,pyramid_step);
-
-    if(temp.m_X > H_template_size +buff_pixel && temp.m_X < Lsize.width - H_template_size -buff_pixel &&
-       temp.m_Y > H_template_size +buff_pixel && temp.m_Y < Lsize.height - H_template_size -buff_pixel)
-        bleft_s     = true;
-    else 
-        bleft_s     = false;
-
-
-    //left end
-    temp_gp.m_Z = maxH;
-    temp        = GetObjectToImageRPC_single(lrpc,numofparam,Imageparam_ref,temp_gp);
-    temp        = OriginalToPyramid_single(temp,Lstartpos,pyramid_step);
-
-    if(temp.m_X > H_template_size +buff_pixel && temp.m_X < Lsize.width - H_template_size -buff_pixel &&
-       temp.m_Y > H_template_size +buff_pixel && temp.m_Y < Lsize.height - H_template_size -buff_pixel)
-        bleft_e     = true;
-    else 
-        bleft_e     = false;
-
-
-    //right start
-    temp_gp.m_Z = minH;
-    temp        = GetObjectToImageRPC_single(rrpc,numofparam,Imageparams,temp_gp);
-    temp        = OriginalToPyramid_single(temp,Rstartpos,pyramid_step);
-
-    if(temp.m_X > H_template_size +buff_pixel && temp.m_X < Rsize.width - H_template_size -buff_pixel &&
-       temp.m_Y > H_template_size +buff_pixel && temp.m_Y < Rsize.height - H_template_size -buff_pixel)
-        bright_s     = true;
-    else 
-        bright_s     = false;
-
-
-    //left end
-    temp_gp.m_Z = maxH;
-    temp        = GetObjectToImageRPC_single(rrpc,numofparam,Imageparams,temp_gp);
-    temp        = OriginalToPyramid_single(temp,Rstartpos,pyramid_step);
-
-    if(temp.m_X > H_template_size +buff_pixel && temp.m_X < Rsize.width - H_template_size -buff_pixel &&
-       temp.m_Y > H_template_size +buff_pixel && temp.m_Y < Rsize.height - H_template_size -buff_pixel)
-        bright_e     = true;
-    else 
-        bright_e     = false;
-
-    if((bleft_s && bleft_e) && (bright_s && bright_e))
-        check   = true;
+    
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    {
+        if(proinfo->check_selected_image[ti])
+        {
+            //min height
+            temp_gp.m_X = pos_xy.m_X;
+            temp_gp.m_Y = pos_xy.m_Y;
+            temp_gp.m_Z = minH;
+            temp        = GetObjectToImageRPC_single(lrpc[ti],numofparam,imageparam[ti],temp_gp);
+            temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
+            
+            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
+               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height - H_template_size -buff_pixel)
+                bleft_s     = true;
+            else
+                bleft_s     = false;
+            
+            
+            //max height
+            temp_gp.m_Z = maxH;
+            temp        = GetObjectToImageRPC_single(lrpc[ti],numofparam,imageparam[ti],temp_gp);
+            temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
+            
+            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
+               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height - H_template_size -buff_pixel)
+                bleft_e     = true;
+            else 
+                bleft_e     = false;
+            
+            if( bleft_s && bleft_e)
+                selected_images++;
+            else
+                proinfo->check_selected_image[ti] = false;
+        }
+    }
+    
+    if(!proinfo->check_selected_image[0])
+        check = false;
     else
-        check   = false;
-
+    {
+        if(selected_images >= 2)
+            check   = true;
+        else
+            check   = false;
+    }
 
     return check;
 

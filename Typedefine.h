@@ -34,6 +34,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
+#define MaxImages 20
 
 #ifndef bool
 #define bool unsigned char
@@ -143,7 +144,7 @@ typedef struct UpdateGrid{
 	double Height; //after blunder detection
 	double roh;
 	double Matched_height;//before blunder detection
-	double ortho_ncc;
+	double ortho_ncc[MaxImages];
 	double angle;
 //	double *false_h;
 
@@ -172,7 +173,7 @@ typedef struct ProjectInfo{
 	double DEM_resolution;
 	double preDEM_space;
 	double cal_boundary[4];
-	double RA_param[20][2];
+	double RA_param[MaxImages][2];
 	double seedDEMsigma;
 	
 	double minHeight;
@@ -185,8 +186,8 @@ typedef struct ProjectInfo{
 	int threads_num;
     int number_of_images;
     
-	char Imagefilename[20][500];
-	char RPCfilename[20][500];
+	char Imagefilename[MaxImages][500];
+	char RPCfilename[MaxImages][500];
 	char save_filepath[500];
 	char Outputpath_name[500];
 	char tmpdir[500];
@@ -207,7 +208,7 @@ typedef struct ProjectInfo{
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
     bool check_sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
-    bool check_selected_image[20];
+    bool check_selected_image[MaxImages];
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 } ProInfo;
@@ -217,8 +218,8 @@ typedef struct ArgumentInfo{
 	double seedDEMsigma;
 	double minHeight;
 	double maxHeight;
-	double ra_line[20];
-	double ra_sample[20];
+	double ra_line[MaxImages];
+	double ra_sample[MaxImages];
 	double Min_X, Max_X, Min_Y, Max_Y;
 	double image_resolution;
 	double overlap_length;
@@ -239,7 +240,7 @@ typedef struct ArgumentInfo{
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
 	
-    char Image[20][500];
+    char Image[MaxImages][500];
 	char Outputpath[500];
 	char Outputpath_name[500];
 	char seedDEMfilename[500];
