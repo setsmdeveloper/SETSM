@@ -614,98 +614,81 @@ int main(int argc,char *argv[])
         {
             args.check_arg = 1;
             
-            if (strcmp("-Sensor",argv[i]) == 0)
-            {
-                if (argc == i+1) {
-                    printf("Please input '1' for RFM(default) or '2' for Collinear Equation(Frame)\n");
-                    cal_flag = false;
-                }
-                else
-                {
-                    args.check_sensor_type = atoi(argv[i+1]);
-                    printf("Sensor %d\n",args.check_sensor_type);
-                }
-            }
-            
-            if (strcmp("-NImages",argv[i]) == 0)
-            {
-                if (argc == i+1) {
-                    printf("Please input Number of images (default is 2 for stereo)\n");
-                    cal_flag = false;
-                }
-                else
-                {
-                    args.number_of_images = atoi(argv[i+1]);
-                    printf("Number of Images %d\n",args.number_of_images);
-                }
-            }
-            
-            if (strcmp("-EO",argv[i]) == 0)
-            {
-                if (argc == i+1) {
-                    printf("Please input Exterior Orientation informations\n");
-                    cal_flag = false;
-                }
-                else
-                {
-                    sprintf(args.EO_Path,"%s",argv[i+1]);
-                    args.check_EO = true;
-                    printf("EO_path %s\n",args.EO_Path);
-                }
-            }
-
-            
-            
-            
-            if (strcmp("-Image",argv[i]) == 0)
-            {
-                if (argc == i+1) {
-                    printf("Please input image path\n");
-                    cal_flag = false;
-                }
-                else
-                {
-                    sprintf(args.Image[image_count],"%s",argv[i+1]);
-                    printf("Image%d %s\n",image_count,args.Image[image_count]);
-                    
-                    image_count++;
-                }
-            }
-            
-            if (strcmp("-outpath",argv[i]) == 0)
-            {
-                if (argc == i+1) {
-                    printf("Please input outpath\n");
-                    cal_flag = false;
-                }
-                else
-                {
-                    sprintf(args.Outputpath,"%s",argv[i+1]);
-                    printf("Out path %s\n",args.Outputpath);
-                }
-            }
-            
-            //sprintf(args.Image1,"%s",argv[1]);
-            //sprintf(args.Image2,"%s",argv[2]);
-            //sprintf(args.Outputpath,"%s",argv[3]);
-            
-            char *Outputpath_name  = SetOutpathName(args.Outputpath);
-            sprintf(args.Outputpath_name,"%s",Outputpath_name);
-            printf("after pathname %s\n",args.Outputpath_name);
-            
-            //printf("%s\n",args.Image1);
-            //printf("%s\n",args.Image2);
-            printf("%s\n",args.Outputpath);
-            printf("%s\n", args.Outputpath_name);
-            
-            
             bool bminx  = false;
             bool bmaxx  = false;
             bool bminy  = false;
             bool bmaxy  = false;
             
-            for (i=4; i<argc; i++)
+            for (i=0; i<argc; i++)
             {
+                if (strcmp("-Sensor",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input '1' for RFM(default) or '2' for Collinear Equation(Frame)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.check_sensor_type = atoi(argv[i+1]);
+                        printf("Sensor %d\n",args.check_sensor_type);
+                    }
+                }
+                
+                if (strcmp("-NImages",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input Number of images (default is 2 for stereo)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.number_of_images = atoi(argv[i+1]);
+                        printf("Number of Images %d\n",args.number_of_images);
+                    }
+                }
+                
+                if (strcmp("-EO",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input Exterior Orientation informations\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        sprintf(args.EO_Path,"%s",argv[i+1]);
+                        args.check_EO = true;
+                        printf("EO_path %s\n",args.EO_Path);
+                    }
+                }
+                
+                if (strcmp("-Image",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input image path\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        sprintf(args.Image[image_count],"%s",argv[i+1]);
+                        printf("Image%d %s\n",image_count,args.Image[image_count]);
+                        
+                        image_count++;
+                    }
+                }
+                
+                if (strcmp("-outpath",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input outpath\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        sprintf(args.Outputpath,"%s",argv[i+1]);
+                        printf("Out path %s\n",args.Outputpath);
+                    }
+                }
+                
                 if (strcmp("-provider", argv[i]) == 0) {
                     if (argc == i + 1) {
                         printf("Please input Provider info\n");
@@ -1265,7 +1248,14 @@ int main(int argc,char *argv[])
                 if(image_count > 1)
                 {
                     args.number_of_images = image_count;
-                
+                    
+                    char *Outputpath_name  = SetOutpathName(args.Outputpath);
+                    sprintf(args.Outputpath_name,"%s",Outputpath_name);
+                    printf("after pathname %s\n",args.Outputpath_name);
+                    
+                    printf("%s\n",args.Outputpath);
+                    printf("%s\n", args.Outputpath_name);
+
                     if(args.check_checktiff)
                     {
                         SETSMmainfunction(&param,projectfilename,args,save_filepath);
