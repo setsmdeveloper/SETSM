@@ -2481,6 +2481,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+1));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level);
+                                
+                                for (int ttt = 0 ; ttt < level+1 ;ttt++)
+                                    printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
                             }
                         }
                     }
@@ -2492,6 +2495,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+2));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level+1);
+                                for (int ttt = 0 ; ttt < level+2 ;ttt++)
+                                    printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
                             }
                         }
                     }
@@ -2636,6 +2641,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
  
                             BStartpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pow(2,blunder_selected_level));
                             BStartpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pow(2,blunder_selected_level));
+                            
+                            printf("Startpos %f\t%f\t%f\t%f\t%f\t%f\n",Startpos_ori[ti].m_X,Startpos_ori[ti].m_Y,Startpos[ti].m_X,Startpos[ti].m_Y,BStartpos[ti].m_X,BStartpos[ti].m_Y);
                         }
                         
                         if(proinfo->IsRA)
@@ -2996,7 +3003,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 }
                                 else
                                 {
-                                if(check_ortho_cal && proinfo->IsRA != 1)
+                                    if(check_ortho_cal && proinfo->IsRA != 1)
                                     {
                                         char bufstr[500];
                                         D3DPOINT *ptslists;
@@ -10598,7 +10605,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     if(proinfo->check_selected_image[ti])
                     {
                         Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
-                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
+                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],blunder_selected_level);
                         
                         all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
                         all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
@@ -10624,6 +10631,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
     if(ncc_alpha < 0.1)
         ncc_alpha = 0.1;
     
+    printf("VerticalLineLocus_blunder : ortho_ncc\n");
 #pragma omp parallel for schedule(guided)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
     {
@@ -10638,8 +10646,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         int reference_id = 0;
         CSize LImagesize, RImagesize;
         
-        LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-        LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+        LImagesize.width  = Imagesizes[reference_id][blunder_selected_level].width;
+        LImagesize.height = Imagesizes[reference_id][blunder_selected_level].height;
         
         if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
         {
@@ -10647,8 +10655,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             {
                 if(proinfo->check_selected_image[ti])
                 {
-                    RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                    RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                    RImagesize.width  = Imagesizes[ti][blunder_selected_level].width;
+                    RImagesize.height = Imagesizes[ti][blunder_selected_level].height;
                     
                     int i,j;
                     int row,col;
@@ -10983,6 +10991,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         }
     }
 
+    printf("VerticalLineLocus_blunder : release memory\n");
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
@@ -12322,7 +12331,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     
                     //blunder remove from TIN minmax height
                     int floor_ieration = 2;
-                    if((flag == false || count >= max_count || count_tri <= 20) && flag_blunder && (Pyramid_step > 10))
+                    /*if((flag == false || count >= max_count || count_tri <= 20) && flag_blunder && (Pyramid_step > 10))
                     {
                         SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
                         
@@ -12434,6 +12443,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         }
                         fclose(pfile);
                     }
+                    */
                 }
                 
                 FILE *pfile = fopen(filename_mps,"w");
@@ -12468,6 +12478,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                           Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
                                           NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                                           save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,false);
+                printf("DecisionMP : end VerticalLineLocus_blunder\n");
                 free(ortho_ncc);
                 free(INCC);
                 
@@ -15355,6 +15366,7 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
     double Imageparam_ref[2] = {0.0};
 
     int buff_pixel = 1;
+    bool check_reference = true;
     
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
@@ -15387,12 +15399,12 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
             
             if( bleft_s && bleft_e)
                 selected_images++;
-            else
-                proinfo->check_selected_image[ti] = false;
+            else if(ti == 0)
+                check_reference = false;
         }
     }
     
-    if(!proinfo->check_selected_image[0])
+    if(!check_reference)
         check = false;
     else
     {
@@ -15427,7 +15439,7 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
         end_lv      = -2;
     }
 
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti)
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
         {
