@@ -145,6 +145,7 @@ typedef struct UpdateGrid{
 	double roh;
 	double Matched_height;//before blunder detection
 	double ortho_ncc[MaxImages];
+    double Mean_ortho_ncc;
 	double angle;
 //	double *false_h;
 
