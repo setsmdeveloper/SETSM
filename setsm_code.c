@@ -11058,7 +11058,8 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
     NumOfHeights = (int)((end_H -  start_H)/height_step) + 1;
     
     int th_count = 20;
-
+    //printf("start height iter %f\t%f\n",start_H,end_H);
+    
     for(int count_height = 0 ; count_height < NumOfHeights ; count_height++)
     {
         double sum_NCC = 0;
@@ -11136,6 +11137,8 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
                 LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
                 RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
                 RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                
+                //printf("image size %d\t%d\%d\t%d\n",LImagesize.width,LImagesize.height,RImagesize.width,RImagesize.height);
                 
                 for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
                 {
@@ -11251,7 +11254,7 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
 
                             Ref_Imagecoord     = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP);
                             Ref_Imagecoord_py  = OriginalToPyramid_single(Ref_Imagecoord,Startpos[reference_id],Pyramid_step);
-                            
+                            //printf("ref coord %f\t%f\n",Ref_Imagecoord_py.m_X,Ref_Imagecoord_py.m_Y);
                             
                             D2DPOINT Tar_Imagecoord;
                             D2DPOINT Tar_Imagecoord_py;
@@ -11264,6 +11267,7 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
                             
                             Tar_Imagecoord    = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
                             Tar_Imagecoord_py = OriginalToPyramid_single(Tar_Imagecoord,Startpos[ti],Pyramid_step);
+                            //printf("tar coord %f\t%f\n",Ref_Imagecoord_py.m_X,Ref_Imagecoord_py.m_Y);
                             
                             pos_row_left      = Ref_Imagecoord_py.m_Y;
                             pos_col_left      = Ref_Imagecoord_py.m_X;
@@ -11360,26 +11364,29 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
             }
         }
         
-        if(sum_count_N/count_NCC >= th_count)
+        if(count_NCC > 0)
         {
-            double sncc = sum_NCC/count_NCC;
-            if(sncc > 0.5)
+            if(sum_count_N/count_NCC >= th_count)
             {
-                check_ncc = true;
-                if(F_NCC < sncc)
+                double sncc = sum_NCC/count_NCC;
+                if(sncc > 0.5)
                 {
-                    F_NCC = sncc;
-                    *F_Height = iter_height;
+                    check_ncc = true;
+                    if(F_NCC < sncc)
+                    {
+                        F_NCC = sncc;
+                        *F_Height = iter_height;
+                    }
                 }
             }
-        }
-        else if(sum_count_N/count_NCC > 0)
-        {
-            double sncc = sum_NCC/count_NCC;
-            if(sncc > 0.7)
+            else if(sum_count_N/count_NCC > 0)
             {
-                check_ncc = true;
-                *F_Height = (ref1_pt.m_Z + ref2_pt.m_Z)/2.0;
+                double sncc = sum_NCC/count_NCC;
+                if(sncc > 0.7)
+                {
+                    check_ncc = true;
+                    *F_Height = (ref1_pt.m_Z + ref2_pt.m_Z)/2.0;
+                }
             }
         }
         
@@ -13553,6 +13560,9 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
     tris_check = (uint8*)calloc(num_triangles,sizeof(uint8));
     check_stop_TIN = false;
     
+    printf("tric_check done\n");
+    for (int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+        printf("RA %f\t%f\n",ImageAdjust[ti][0],ImageAdjust[ti][1]);
     while(!check_stop_TIN && while_count < max_count)
     {
         bool check_ortho_cal = false;
@@ -13716,13 +13726,14 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                                     target_pt_index = pdex2;
                                 }
 
+                                //printf("tri id %d VerticalLineLocus_Ortho start\n",tcnt);
                                 VerticalLineLocus_Ortho(proinfo,&F_height,ref1_pt,ref2_pt,target_pt,
                                                         MagImages, Images,
                                                         DEM_resolution, im_resolution, RPCs,
                                                         Imagesizes, Size_Grid2D, param, NumofIAparam,
                                                         ImageAdjust, minmaxHeight, Pyramid_step, meters_per_pixel,
                                                         Startpos, iteration,  GridPT3,target_index,ref1_index,ref2_index,boundary);
-                          
+                                //printf("tri id %d VerticalLineLocus_Ortho Done %f\n",tcnt,F_height);
                           
                                 if(F_height != -9999 )
                                 {
