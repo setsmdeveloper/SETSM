@@ -2713,6 +2713,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         {
                             if(proinfo->check_selected_image[ti])
                             {
+                                printf("load subimage %d\n",ti);
                                 SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
                                 SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
                                 SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level,&left_mag_var,&left_mag_avg);
@@ -3481,8 +3482,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                                  bin_angle, pyramid_step, Hemisphere, proinfo->save_filepath, proinfo->tmpdir);
                                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                     {
-                                        fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
-                                        printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                        if(proinfo->check_selected_image[ti])
+                                        {
+                                            fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                            printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                        }
                                     }
                                     
                                     if (level <= 1)
@@ -14831,7 +14835,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir)
 {
     int i,iter_count;
-    bool check_stop = false;
+    
     
     int reference_id = 0;
     CSize LImagesize;
@@ -14902,7 +14906,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
  
     fclose(fid_pts);
 
-    iter_count = 1;
+    
 
     Coord           = ps2wgs_3D(param,NumofPts,MPs);
 
@@ -14910,6 +14914,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     {
         if(proinfo->check_selected_image[ti])
         {
+            bool check_stop = false;
+            iter_count = 1;
             while(!check_stop && iter_count < 10)
             {
                 uint8   Half_template_size;
@@ -14986,6 +14992,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                     if(fabs(shift_Y) < 0.1 && fabs(shift_X) < 0.1)
                         check_stop = true;
          
+                    printf("ti %d\t%d\t%f\t%f\t%f\t%f\n",ti, iter_count,shift_X,shift_Y,ImageAdjust[ti][1],ImageAdjust[ti][0]);
+                    
                     shift_X             += ImageAdjust[ti][1];
                     shift_Y             += ImageAdjust[ti][0];
 
@@ -14999,6 +15007,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 }
 
                 iter_count++;
+                
+                
             }
         }
     }
