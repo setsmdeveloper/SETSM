@@ -2283,7 +2283,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     int final_iteration = -1;
     bool lower_level_match;
     int row,col;
-    int RA_count        = 0;
+    int* RA_count = (int*)calloc(sizeof(int),proinfo->number_of_images);
 
     int row_length = iter_row_end-iter_row_start;
     int col_length = t_col_end-t_col_start;
@@ -2421,6 +2421,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             
 
             printf("subsetimage\n");
+            
+            
+            for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+            {
+                printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
+            }
             
             if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,
                            Startpos_ori,Subsetfilename,Subsetsize,fid,proinfo->check_checktiff))
@@ -2998,7 +3004,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     
                                     if(!proinfo->IsRA)
                                     {
-                                        echoprint_Gridinfo(proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
+                                        echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
                                     }
                                     free(ptslists);
                                 }
@@ -3754,7 +3760,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 {
                     if(t_Imageparams[ti][0] != 0 && t_Imageparams[ti][1] != 0 && ti > 0)
                     {
-                        RA_count++;
+                        RA_count[ti]++;
                         Imageparams[ti][0] += t_Imageparams[ti][0];
                         Imageparams[ti][1] += t_Imageparams[ti][1];
                     }
@@ -3784,11 +3790,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
         {
             if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
             {
-                Imageparams[ti][0] /= RA_count;
-                Imageparams[ti][1] /= RA_count;
+                Imageparams[ti][0] /= RA_count[ti];
+                Imageparams[ti][1] /= RA_count[ti];
             }
         }
     }
+    free(RA_count);
 #ifdef BUILDMPI
     MPI_Bcast(Imageparams, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
@@ -9091,9 +9098,12 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                         
                                 int ori_diff;
                         
-                                ori_diff = ori_images[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] -
-                                           ori_images[ti][          (int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
+                                if((int)Ref_Imagecoord_py[0].m_Y >= 0 && (int)Ref_Imagecoord_py[0].m_Y < LImagesize.height && (int)Ref_Imagecoord_py[0].m_X >= 0 && (int)Ref_Imagecoord_py[0].m_X < LImagesize.width &&
+                                   (int)Tar_Imagecoord_py[0].m_Y >= 0 && (int)Tar_Imagecoord_py[0].m_Y < RImagesize.height && (int)Tar_Imagecoord_py[0].m_X >= 0 && (int)Tar_Imagecoord_py[0].m_X < RImagesize.width)
                                 {
+                                    ori_diff = ori_images[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] -
+                                    ori_images[ti][          (int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
+                                    
                                     double Left_CR, Left_CC, Right_CR, Right_CC, diff_theta;
                                     bool b_count;
                                     double left_bin[36] = {0.0};
@@ -10655,6 +10665,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         
         if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
         {
+            nccresult[pt_index] = -1.0;
+            
             for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
             {
                 if(proinfo->check_selected_image[ti])
@@ -10702,7 +10714,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     double ncc_1_I, ncc_1_mag_I, ncc_2_I, ncc_2_mag_I, ncc_3_I, ncc_3_mag_I;
                     double val1, val2, de, de2;
                     
-                    nccresult[pt_index] = -1.0;
+                    double t_nccresult;
                     INCC[pt_index] = -1.0;
 
                     bool check_INCC = false;
@@ -10976,22 +10988,27 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                         else
                             ncc_3_mag           = -1.0;
                         
-                        nccresult[pt_index] = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
+                        t_nccresult = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
                     }
                     else 
                     {
-                        nccresult[pt_index] = -1;
+                        t_nccresult = -1;
                     }
                     
-                    GridPT3[pt_index].ortho_ncc[ti] = nccresult[pt_index];
-                    
-                    Sum_ortho_ncc += GridPT3[pt_index].ortho_ncc[ti];
-                    count_ncc++;
+                    GridPT3[pt_index].ortho_ncc[ti] = t_nccresult;
+                    if(t_nccresult > -1)
+                    {
+                        Sum_ortho_ncc += GridPT3[pt_index].ortho_ncc[ti];
+                        count_ncc++;
+                    }
                 }
             }
             
             if(count_ncc > 0)
+            {
                 GridPT3[pt_index].Mean_ortho_ncc = Sum_ortho_ncc/count_ncc;
+                nccresult[pt_index] = GridPT3[pt_index].Mean_ortho_ncc;
+            }
         }
     }
 
@@ -14699,13 +14716,15 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
     return true;
 }
 
-void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str)
+void echoprint_Gridinfo(ProInfo *proinfo,char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str)
 {
-    FILE *outfile_h,*outfile_min, *outfile_max,  *outfile_roh, *outfile_flag;
+    FILE *outfile_h,*outfile_min, *outfile_max,   *outfile_flag, *outMean_ortho;
     CSize temp_S;
     char t_str[500];
     int k,j;
-
+    FILE **outfile_roh;
+    outfile_roh = (FILE**)malloc(sizeof(FILE*)*proinfo->number_of_images);
+    
     //sprintf(t_str,"%s/txt/tin_min_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     //outfile_min   = fopen(t_str,"w");
     //sprintf(t_str,"%s/txt/tin_max_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
@@ -14713,7 +14732,13 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
     sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     outfile_h   = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-    outfile_roh = fopen(t_str,"w");
+    outMean_ortho = fopen(t_str,"w");
+    
+    for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+    {
+        sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_%d.txt",save_path,row,col,level,iteration,add_str,ti);
+        outfile_roh[ti] = fopen(t_str,"w");
+    }
     /*sprintf(t_str,"%s/txt/tin_flag_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
       outfile_flag  = fopen(t_str,"w");*/
     
@@ -14740,20 +14765,27 @@ void echoprint_Gridinfo(char *save_path,int row,int col,int level, int iteration
                 //fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight);
                 //if(GridPT3[matlab_index].Matched_flag != 0)
                 fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].ortho_ncc);
+                fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
+                
+                for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+                    fprintf(outfile_roh[ti],"%f\t",GridPT3[matlab_index].ortho_ncc[ti]);
                 /*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
             }
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
             fprintf(outfile_h,"\n");
-            fprintf(outfile_roh,"\n");
+            fprintf(outMean_ortho,"\n");
+            for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+                fprintf(outfile_roh[ti],"\n");
             /*fprintf(outfile_flag,"\n");*/
         }
 
         //fclose(outfile_min);
         //fclose(outfile_max);
         fclose(outfile_h);
-        fclose(outfile_roh);
+        fclose(outMean_ortho);
+        for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+            fclose(outfile_roh[ti]);
         /*fclose(outfile_flag);*/
     }
 }
