@@ -71,7 +71,7 @@ char* GetFileName(char file_path[]);
 char* GetFileDir(char file_path[],int *size);
 
 bool GetImageSize(char *filename, CSize *Imagesize);
-bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, double *ImageParam, char *ImageFilename, CSize Imagesize,
+bool GetsubareaImage(ProInfo *proinfo, int ImageID, TransParam transparam, uint8 NumofIAparam, double **RPCs, double *ImageParam, char *ImageFilename, CSize Imagesize,
 					 double *subBoundary, double *minmaxHeight, int *cols, int *rows);
 uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size,bool check_checktiff);
 bool Writetiff(char *filename, double* input, CSize Imagesize);
@@ -82,7 +82,7 @@ void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_ar
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
 void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight);
 
-double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
+double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
@@ -200,7 +200,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 				   CSize *Imagesizes,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary,int row_iter, int col_iter, double CA,double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile);
 bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, int pyramid_step);
 bool check_image_boundary(ProInfo *proinfo, double ***rpc, uint8 numofparam, double **imageparam, D2DPOINT *Startpos,
-						  D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step);
+						  D2DPOINT pos_xy_m,D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step);
 void RemoveFiles(ProInfo *proinfo,char *save_path, char **filename, int py_level, bool flag);
 double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration);
 
@@ -222,12 +222,12 @@ uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_si
 
 void SetPySizes_ortho(CSize *data_size, CSize subsetsize, int level);
 
-uint16 *subsetImage_ortho(TransParam transparam, double **RPCs, char *ImageFilename,
+uint16 *subsetImage_ortho(int check_sensor_type,FrameInfo m_frameinfo, TransParam transparam, double **RPCs, char *ImageFilename,
                           double *subBoundary, double *minmaxHeight, D2DPOINT *startpos, char *subsetImage, CSize* subsetsize, bool *ret);
 
 bool GetImageSize_ortho(char *filename, CSize *Imagesize);
 
-bool GetsubareaImage_ortho(TransParam transparam, double **RPCs, char *ImageFilename, CSize *Imagesize,
+bool GetsubareaImage_ortho(int check_sensor_type,FrameInfo m_frameinfo, TransParam transparam, double **RPCs, char *ImageFilename, CSize *Imagesize,
                            double *subBoundary, double *minmaxHeight, int *cols, int *rows);
 
 uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CSize *data_size);
@@ -261,10 +261,16 @@ void GMA_double_sub(GMA_double *a, GMA_double *b, GMA_double *out);
 void GMA_double_printf(GMA_double *a);
 
 RM MakeRotationMatrix(double o, double p, double k);
-D2DPOINT GetPhotoCoordinate(D3DPOINT A, EO Photo, CAMERA_INFO Camera, RM M);
-D3DPOINT GetObjectCoordinate(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, RM M);
-D2DPOINT PhotoToImage(D2DPOINT _photo, float _CCDSize, CSize _imgsize);
-D2DPOINT ImageToPhoto(D2DPOINT _image, float _CCDSize, CSize _imgsize);
+D2DPOINT *GetPhotoCoordinate(D3DPOINT *A, EO Photo, int _numofpts, CAMERA_INFO Camera, RM M);
+D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAMERA_INFO Camera, RM M);
+D2DPOINT *PhotoToImage(D2DPOINT *_photo, int _numofpts, float _CCDSize, CSize _imgsize);
+D2DPOINT *ImageToPhoto(D2DPOINT *_image, int _numofpts, float _CCDSize, CSize _imgsize);
 
-bool OpenDMCproject(char* project_path,FrameInfo *t_frame);
+D2DPOINT GetPhotoCoordinate_single(D3DPOINT A, EO Photo, CAMERA_INFO Camera, RM M);
+D3DPOINT GetObjectCoordinate_single(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, RM M);
+D2DPOINT PhotoToImage_single(D2DPOINT _photo, float _CCDSize, CSize _imgsize);
+D2DPOINT ImageToPhoto_single(D2DPOINT _image, float _CCDSize, CSize _imgsize);
+
+bool OpenDMCproject(char* project_path,ProInfo *proinfo, ARGINFO args);
 void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundary, double* _minmaxheight, double* _Hinterval);
+bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double gridspace, CSize DEM_size, double minX, double maxY, double Ortho_resolution, EO Photo, CAMERA_INFO m_Camera, RM M);

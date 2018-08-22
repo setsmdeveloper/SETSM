@@ -122,6 +122,8 @@ int main(int argc,char *argv[])
     args.check_LSF2  = false;
     args.check_Matchtag = false;
     args.check_EO = false;
+    args.check_fl = false;
+    args.check_ccd = false;
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
@@ -131,6 +133,8 @@ int main(int argc,char *argv[])
     args.ortho_count = 1;
     args.overlap_length = 50;
     args.RA_only = 0;
+    args.focal_length = 120;
+    args.CCD_size = 12;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -624,7 +628,7 @@ int main(int argc,char *argv[])
                 if (strcmp("-Sensor",argv[i]) == 0)
                 {
                     if (argc == i+1) {
-                        printf("Please input '1' for RFM(default) or '2' for Collinear Equation(Frame)\n");
+                        printf("Please input '1' for RFM(default) or '0' for Collinear Equation(Frame)\n");
                         cal_flag = false;
                     }
                     else
@@ -644,6 +648,34 @@ int main(int argc,char *argv[])
                     {
                         args.number_of_images = atoi(argv[i+1]);
                         printf("Number of Images %d\n",args.number_of_images);
+                    }
+                }
+                
+                if (strcmp("-FL",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input focal length[mm]\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.focal_length = atof(argv[i+1]);
+                        printf("focal length %f\n",args.focal_length);
+                        args.check_fl = true;
+                    }
+                }
+                
+                if (strcmp("-CCDsize",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input CCD size[um]\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.CCD_size = atof(argv[i+1]);
+                        printf("focal length %f\n",args.CCD_size);
+                        args.check_ccd = true;
                     }
                 }
                 
@@ -1245,6 +1277,8 @@ int main(int argc,char *argv[])
                 char save_filepath[500];
                 char LeftImagefilename[500];
                 
+                bool check_frame_info = true;
+                
                 if(image_count > 1)
                 {
                     args.number_of_images = image_count;
@@ -1361,10 +1395,9 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
     proinfo->number_of_images = args.number_of_images;
     proinfo->check_sensor_type = args.check_sensor_type;
     
-    FrameInfo frameinfo;
-    if(OpenProject(_filename,proinfo,args) || OpenDMCproject(args.EO_Path, &frameinfo))
+    
+    if(OpenProject(_filename,proinfo,args))
     {
-        
         double Boundary[4]  = {0.0};
         double LBoundary[4],RBoundary[4],LminmaxHeight[2],RminmaxHeight[2],ori_minmaxHeight[2];
         double LHinterval, RHinterval[1], Hinterval;
@@ -1445,50 +1478,75 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             GSD_image1.col_GSD = 0;
             GSD_image1.pro_GSD = 0;
             
-            if(args.sensor_provider == 1)
+            
+            double mean_FH = 0;
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            {
+                if(args.sensor_provider == 1)
+                    RPCs[ti]       = OpenXMLFile(proinfo,ti,&Image1_gsd_r,&Image1_gsd_c,&Image1_gsd,&left_band);
+                else
+                    RPCs[ti]       = OpenXMLFile_Pleiades(proinfo->RPCfilename[ti]);
+            
+                GSD_image1.row_GSD += Image1_gsd_r;
+                GSD_image1.col_GSD += Image1_gsd_c;
+                GSD_image1.pro_GSD += Image1_gsd;
+                
+                GetImageSize(proinfo->Imagefilename[ti],&Limagesize[ti]);
+                proinfo->frameinfo.m_Camera.m_ImageSize.width = Limagesize[ti].width;
+                proinfo->frameinfo.m_Camera.m_ImageSize.height = Limagesize[ti].height;
+            }
+           
+            if(args.sensor_provider != 1)
+            {
+                for(int j=0;j<proinfo->number_of_images ;j++)
+                {
+                    printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                           proinfo->frameinfo.Photoinfo[j].path,
+                           proinfo->frameinfo.Photoinfo[j].m_Xl,proinfo->frameinfo.Photoinfo[j].m_Yl,proinfo->frameinfo.Photoinfo[j].m_Zl,
+                           proinfo->frameinfo.Photoinfo[j].m_Wl,proinfo->frameinfo.Photoinfo[j].m_Pl,proinfo->frameinfo.Photoinfo[j].m_Kl);
+                }
+                printf("Load EO\n");
+            }
+            
+            mean_product_res = GSD_image1.pro_GSD/proinfo->number_of_images;
+            
+            if(proinfo->check_sensor_type == 1)
             {
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
-                    RPCs[ti]       = OpenXMLFile(proinfo->RPCfilename[ti],&Image1_gsd_r,&Image1_gsd_c,&Image1_gsd,&left_band);
-                
-                    GSD_image1.row_GSD += Image1_gsd_r;
-                    GSD_image1.col_GSD += Image1_gsd_c;
-                    GSD_image1.pro_GSD += Image1_gsd;
+                    OpenXMLFile_orientation(proinfo->RPCfilename[ti],&leftimage_info);
+                    //OpenXMLFile_orientation(proinfo->RPCfilename[ti],&rightimage_info);
+                    
+                    leftimage_info.convergence_angle = acos(sin(leftimage_info.Mean_sat_elevation*DegToRad)*sin(rightimage_info.Mean_sat_elevation*DegToRad) + cos(leftimage_info.Mean_sat_elevation*DegToRad)*cos(rightimage_info.Mean_sat_elevation*DegToRad)*cos( (leftimage_info.Mean_sat_azimuth_angle - rightimage_info.Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
+                    rightimage_info.convergence_angle = leftimage_info.convergence_angle;
+                    convergence_angle = leftimage_info.convergence_angle;
+                    
+                    printf("leftimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor,leftimage_info.convergence_angle);
                 }
-                
-                mean_product_res = GSD_image1.pro_GSD/proinfo->number_of_images;
-                
-                OpenXMLFile_orientation(proinfo->RPCfilename[0],&leftimage_info);
-                OpenXMLFile_orientation(proinfo->RPCfilename[1],&rightimage_info);
-                
-                leftimage_info.convergence_angle = acos(sin(leftimage_info.Mean_sat_elevation*DegToRad)*sin(rightimage_info.Mean_sat_elevation*DegToRad) + cos(leftimage_info.Mean_sat_elevation*DegToRad)*cos(rightimage_info.Mean_sat_elevation*DegToRad)*cos( (leftimage_info.Mean_sat_azimuth_angle - rightimage_info.Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
-                rightimage_info.convergence_angle = leftimage_info.convergence_angle;
-                convergence_angle = leftimage_info.convergence_angle;
-                
-                printf("leftimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor,leftimage_info.convergence_angle);
-                printf("rightimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor,rightimage_info.convergence_angle);
+                //printf("rightimage info\nSatID = %s\nAcquisition_time = %s\nMean_row_GSD = %f\nMean_col_GSD = %f\nMean_GSD = %f\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\ntdi = %d\neffbw = %f\nabscalfact = %f\nconvergence_angle = %f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor,rightimage_info.convergence_angle);
             }
             else
-            {
-                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                    RPCs[ti]       = OpenXMLFile_Pleiades(proinfo->RPCfilename[ti]);
-            }
+                convergence_angle = 40;
             
 
             if(!args.check_imageresolution)
             {
                 if(args.sensor_provider == 1)
                 {
-                    proinfo->resolution = (int)(((Image1_gsd_r + Image1_gsd_c + Image2_gsd_r + Image2_gsd_c)/4.0)*10 + 0.5)/10.0;
+                    proinfo->resolution = (int)((mean_product_res)*10 + 0.5)/10.0;
                     
-                    if (proinfo->resolution < 0.75)
+                    if(proinfo->check_sensor_type == 1)
                     {
-                        proinfo->resolution = 0.5;
+                        if (proinfo->resolution < 0.75)
+                        {
+                            proinfo->resolution = 0.5;
+                        }
+                        else if(proinfo->resolution < 2.0)
+                            proinfo->resolution = 1.0;
+                        else
+                            proinfo->resolution = floor(proinfo->resolution);
                     }
-                    else if(proinfo->resolution < 2.0)
-                        proinfo->resolution = 1.0;
-                    else
-                        proinfo->resolution = floor(proinfo->resolution);
+                    
                 }
                 else
                     proinfo->resolution = 0.5;
@@ -1522,15 +1580,16 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             Res[0]      = proinfo->resolution;                       Res[1]      = proinfo->DEM_resolution;
             Image_res[0]= proinfo->resolution;                       Image_res[1]= proinfo->resolution;
 
-            
-
-            minLat      = RPCs[0][0][3];
-            minLon = (double) RPCs[0][0][2];
             param.projection = args.projection;
             param.utm_zone   = args.utm_zone;
             
-            SetTransParam((double)(minLat),(double)(minLon),&Hemisphere, &param);
-
+            if(proinfo->check_sensor_type == 1)
+            {
+                minLat      = RPCs[0][0][3];
+                minLon = (double) RPCs[0][0][2];
+                SetTransParam((double)(minLat),(double)(minLon),&Hemisphere, &param);
+            }
+            
             printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
             *return_param = param;
             
@@ -1540,7 +1599,11 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                 Imageparams[ti][0]  = proinfo->RA_param[ti][0];
                 Imageparams[ti][1]  = proinfo->RA_param[ti][1];
                 
-                SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
+                if(proinfo->check_sensor_type == 1)
+                    SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
+                else
+                    SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+                
                 if(ti == 0)
                 {
                     for(i=0;i<4;i++)
@@ -1568,7 +1631,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
                 }
                 
-                GetImageSize(proinfo->Imagefilename[ti],&Limagesize[ti]);
+                
                 
                 
             }
@@ -1582,7 +1645,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             }
             printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
             
-
             CSize Boundary_size;
             Boundary_size.width     = Boundary[2] - Boundary[0];
             Boundary_size.height    = Boundary[3] - Boundary[1];
@@ -1594,8 +1656,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             }
             
             
-            
-
             if (args.check_minH) {
                 ori_minmaxHeight[0] = (int)args.minHeight;
                 printf("minmaxH = %f\t%f\n", ori_minmaxHeight[0], ori_minmaxHeight[1]);
@@ -2057,7 +2117,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         
                         printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                         
-                        if(!args.check_gridonly)
+                       if(!args.check_gridonly)
                         {
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
@@ -2186,8 +2246,12 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                         fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
             
-                        fprintf(pMetafile,"Image 1 info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
-                        fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                        {
+                            fprintf(pMetafile,"Image %d info\nImage_1_satID=%s\nImage_1_Acquisition_time=%s\nImage_1_Mean_row_GSD=%f\nImage_1_Mean_col_GSD=%f\nImage_1_Mean_GSD=%f\nImage_1_Mean_sun_azimuth_angle=%f\nImage_1_Mean_sun_elevation=%f\nImage_1_Mean_sat_azimuth_angle=%f\nImage_1_Mean_sat_elevation=%f\nImage_1_Intrack_angle=%f\nImage_1_Crosstrack_angle=%f\nImage_1_Offnadir_angle=%f\nImage_1_tdi=%d\nImage_1_effbw=%f\nImage_1_abscalfact=%f\n",ti,leftimage_info.SatID,leftimage_info.imagetime,Image1_gsd_r,Image1_gsd_c,Image1_gsd,leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle,(int)left_band.tdi,left_band.effbw,left_band.abscalfactor);
+                            //fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
+                        }
+                        
                         fprintf(pMetafile,"Stero_pair_convergence_angle=%f\n",rightimage_info.convergence_angle);
                         fprintf(pMetafile,"Setereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                         fclose(pMetafile);
@@ -2536,7 +2600,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     else
                         pre_blunder_selected_level = 0;
                     
-                    D2DPOINT *GridPT = NULL;
+                    
                     int final_level_iteration = 1;
                     if(proinfo->check_Matchtag)
                         final_level_iteration = 2;
@@ -2630,6 +2694,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         uint16 **SubMagImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                         
                         D2DPOINT *Grid_wgs;
+                        D2DPOINT *GridPT;
                         
                         if(level == 4)
                             blunder_selected_level = level;
@@ -2785,7 +2850,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
                         
-                        CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                        if(proinfo->check_sensor_type == 1)
+                            CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                        else
+                        {
+                            MPP_simgle_image = proinfo->resolution*1.5;
+                            MPP_stereo_angle = MPP_simgle_image;
+                        }
                         
                         *stereo_angle_accuracy = MPP_stereo_angle;
                         
@@ -3568,7 +3639,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
-                            if (level == 0 && iteration == 3)
+                            /*if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
                                 if(level >= ortho_level && proinfo->IsRA != 1)
@@ -3590,7 +3661,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     remove(filename_mps_anchor);
                                 }
                             }
-                            
+                            */
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -3811,7 +3882,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     FILE *pFile;
     char bufstr[500];
 
-    info->IsRA          = false;
+    info->IsRA          = true;
     info->IsRR          = false;
     info->IsSP          = false;
     info->IsSaveStep    = false;
@@ -3827,247 +3898,294 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     info->priori_DEM_tif[0] = '\0';
     info->metafilename[0]   = '\0';
     
+    FILE *limage;
+    bopened = true;
+    char* tmp_chr;
+    
     for(int ti=0;ti < args.number_of_images ; ti++)
         info->check_selected_image[ti] = true;
     
-    pFile       = fopen(_filename,"r");
-    if( pFile == NULL)
+    if(args.check_sensor_type != 1)
+        info->IsRA = 0;
+    
+    if (args.check_arg == 0) // project file open
     {
-        printf("'default.txt' file doesn't exist in SETSM execution folder, please check it!!\n");
-        exit(1);
+        if(args.check_sensor_type == 1) // RFM, pushbroom sensor
+        {
+            pFile       = fopen(_filename,"r");
+            if( pFile == NULL)
+            {
+                printf("'default.txt' file doesn't exist in SETSM execution folder, please check it!!\n");
+                exit(1);
+            }
+            else
+            {
+                int count_images = 0;
+                        
+                while(!feof(pFile))
+                {
+                    fgets(bufstr,500,pFile);
+                    if (strstr(bufstr,"Image_GSD")!=NULL)
+                        sscanf(bufstr,"Image_GSD %lf\n",&info->resolution);
+                    else if (!args.check_DEM_space && strstr(bufstr,"DEM_space")!=NULL)
+                        sscanf(bufstr,"DEM_space %lf\n",&info->DEM_resolution);
+                    else if (strstr(bufstr,"Image_RA")!=NULL)
+                    {
+                        if(!args.check_RA_line || !args.check_RA_sample)
+                        {
+                            for(int ti=0;ti < args.number_of_images ; ti++)
+                            {
+                                sscanf(bufstr,"Image_RA %hhd %lf %lf\n",&info->IsRA,&info->RA_param[ti][0],&info->RA_param[ti][1]);
+                                if (info->IsRA == 1) {
+                                    info->RA_param[ti][0] = 0.0;
+                                    info->RA_param[ti][1] = 0.0;
+                                }
+                            }
+                        }
+                    }
+                    else if (!args.check_Threads_num && strstr(bufstr,"Threads_num")!=NULL)
+                        sscanf(bufstr,"Threads_num %d\n",&info->threads_num);
+                    else if (args.check_arg == 0 && strstr(bufstr,"Image")!=NULL)
+                    {
+                        sscanf(bufstr,"Image1 %s\n",info->Imagefilename[count_images]);
+                        
+                        FILE *temp_ptif = fopen(info->Imagefilename[count_images],"r");
+                        if(temp_ptif)
+                            printf("image %d load completed!\n",count_images);
+                        else
+                        {
+                            printf("image %d load faied. Please check filename!!\n",count_images);
+                            exit(1);
+                        }
+                        
+                        tmp_chr = remove_ext(info->Imagefilename[count_images]);
+                        sprintf(info->RPCfilename[count_images],"%s.xml",tmp_chr);
+                        
+                        FILE *temp_pFile;
+                        temp_pFile           = fopen(info->RPCfilename[count_images],"r");
+                        //printf("xml file %s\n",info->LeftRPCfilename);
+                        if(temp_pFile)
+                            printf("image %d xml load completed!\n",count_images);
+                        else
+                        {
+                            sprintf(info->RPCfilename[count_images],"%s.XML",tmp_chr);
+                            //printf("xml file %s\n",info->LeftRPCfilename);
+                            temp_pFile           = fopen(info->RPCfilename[count_images],"r");
+                            if(temp_pFile)
+                                printf("image %d XML load completed!\n",count_images);
+                            else
+                            {
+                                printf("image %d xml/XML load failed!\n",count_images);
+                                exit(0);
+                            }
+                        }
+                        count_images++;
+                    }
+                    else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
+                    {
+                        sscanf(bufstr,"outputpath %s\n",info->save_filepath);
+                        
+                        
+                        char *Outputpath_name  = SetOutpathName(info->save_filepath);
+                        sprintf(info->Outputpath_name,"%s",Outputpath_name);
+                        printf("after pathname %s\n",info->Outputpath_name);
+                        
+                        sprintf(info->tmpdir, "%s/tmp", info->save_filepath);
+                    }
+                    else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
+                    {
+                        sscanf(bufstr,"seeddempath %hhd ",&info->pre_DEMtif);
+                        if(info->pre_DEMtif)
+                        {
+                            sscanf(bufstr,"seeddempath %hhd %s %lf\n",&info->pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
+                        }
+                        printf("seeddempath %d %s %lf\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
+                    }
+                    else if (args.check_tiles_SR == 0 && strstr(bufstr,"tile_SR")!=NULL)
+                    {
+                        sscanf(bufstr,"tile_SR %d\n",&info->start_row);
+                        info->check_tiles_SR = true;
+                        printf("%d\n",info->start_row);
+                    }
+                    else if (args.check_tiles_ER == 0 && strstr(bufstr,"tile_ER")!=NULL)
+                    {
+                        sscanf(bufstr,"tile_ER %d\n",&info->end_row);
+                        info->check_tiles_ER = true;
+                        printf("%d\n",info->end_row);
+                    }
+                    else if (args.check_tiles_SC == 0 && strstr(bufstr,"tile_SC")!=NULL)
+                    {
+                        sscanf(bufstr,"tile_SC %d\n",&info->start_col);
+                        info->check_tiles_SC = true;
+                        printf("%d\n",info->start_col);
+                    }
+                    else if (args.check_tiles_EC == 0 && strstr(bufstr,"tile_EC")!=NULL)
+                    {
+                        sscanf(bufstr,"tile_EC %d\n",&info->end_col);
+                        info->check_tiles_EC = true;
+                        printf("%d\n",info->end_col);
+                    }
+                    else if (args.check_minH == 0 && strstr(bufstr,"minH")!=NULL)
+                    {
+                        sscanf(bufstr,"minH %lf\n",&info->minHeight);
+                        info->check_minH = true;
+                        printf("%f\n",info->minHeight);
+                    }
+                    else if (args.check_maxH == 0 && strstr(bufstr,"maxH")!=NULL)
+                    {
+                        sscanf(bufstr,"maxH %lf\n",&info->maxHeight);
+                        info->check_maxH = true;
+                        printf("%f\n",info->maxHeight);
+                    }
+                }
+                
+                if(count_images > 1)
+                    args.number_of_images = count_images;
+                else
+                {
+                    printf("Please check input images!!\n");
+                    exit(1);
+                }
+            }
+            
+            
+        }
+        else  // Collinear Equation, Frame sensor
+        {
+            bopened = OpenDMCproject(args.EO_Path, info, args);
+        }
+        
+        
     }
     else
     {
-        FILE *limage, *rimage;
-        bopened = true;
-        char* tmp_chr;
-        
-        int count_images = 0;
-                
-        while(!feof(pFile))
-        {
-            fgets(bufstr,500,pFile);
-            if (strstr(bufstr,"Image_GSD")!=NULL)
-                sscanf(bufstr,"Image_GSD %lf\n",&info->resolution);
-            else if (!args.check_DEM_space && strstr(bufstr,"DEM_space")!=NULL)
-                sscanf(bufstr,"DEM_space %lf\n",&info->DEM_resolution);
-            else if (strstr(bufstr,"Image_RA")!=NULL)
-            {
-                if(!args.check_RA_line || !args.check_RA_sample)
-                {
-                    for(int ti=0;ti < args.number_of_images ; ti++)
-                    {
-                        sscanf(bufstr,"Image_RA %hhd %lf %lf\n",&info->IsRA,&info->RA_param[ti][0],&info->RA_param[ti][1]);
-                        if (info->IsRA == 1) {
-                            info->RA_param[ti][0] = 0.0;
-                            info->RA_param[ti][1] = 0.0;
-                        }
-                    }
-                }
-            }
-            else if (!args.check_Threads_num && strstr(bufstr,"Threads_num")!=NULL)
-                sscanf(bufstr,"Threads_num %d\n",&info->threads_num);
-            else if (args.check_arg == 0 && strstr(bufstr,"Image")!=NULL)
-            {
-                sscanf(bufstr,"Image1 %s\n",info->Imagefilename[count_images]);
-                
-                FILE *temp_ptif = fopen(info->Imagefilename[count_images],"r");
-                if(temp_ptif)
-                    printf("image %d load completed!\n",count_images);
-                else
-                {
-                    printf("image %d load faied. Please check filename!!\n",count_images);
-                    exit(1);
-                }
-                
-                tmp_chr = remove_ext(info->Imagefilename[count_images]);
-                sprintf(info->RPCfilename[count_images],"%s.xml",tmp_chr);
-                
-                FILE *temp_pFile;
-                temp_pFile           = fopen(info->RPCfilename[count_images],"r");
-                //printf("xml file %s\n",info->LeftRPCfilename);
-                if(temp_pFile)
-                    printf("image %d xml load completed!\n",count_images);
-                else
-                {
-                    sprintf(info->RPCfilename[count_images],"%s.XML",tmp_chr);
-                    //printf("xml file %s\n",info->LeftRPCfilename);
-                    temp_pFile           = fopen(info->RPCfilename[count_images],"r");
-                    if(temp_pFile)
-                        printf("image %d XML load completed!\n",count_images);
-                    else
-                    {
-                        printf("image %d xml/XML load failed!\n",count_images);
-                        exit(0);
-                    }
-                }
-                count_images++;
-            }
-            else if (args.check_arg == 0 && strstr(bufstr,"outputpath")!=NULL)
-            {
-                sscanf(bufstr,"outputpath %s\n",info->save_filepath);
-                
-                
-                char *Outputpath_name  = SetOutpathName(info->save_filepath);
-                sprintf(info->Outputpath_name,"%s",Outputpath_name);
-                printf("after pathname %s\n",info->Outputpath_name);
-                
-                sprintf(info->tmpdir, "%s/tmp", info->save_filepath);
-            }
-            else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
-            {
-                sscanf(bufstr,"seeddempath %hhd ",&info->pre_DEMtif);
-                if(info->pre_DEMtif)
-                {
-                    sscanf(bufstr,"seeddempath %hhd %s %lf\n",&info->pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
-                }
-                printf("seeddempath %d %s %lf\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
-            }
-            else if (args.check_tiles_SR == 0 && strstr(bufstr,"tile_SR")!=NULL)
-            {
-                sscanf(bufstr,"tile_SR %d\n",&info->start_row);
-                info->check_tiles_SR = true;
-                printf("%d\n",info->start_row);
-            }
-            else if (args.check_tiles_ER == 0 && strstr(bufstr,"tile_ER")!=NULL)
-            {
-                sscanf(bufstr,"tile_ER %d\n",&info->end_row);
-                info->check_tiles_ER = true;
-                printf("%d\n",info->end_row);
-            }
-            else if (args.check_tiles_SC == 0 && strstr(bufstr,"tile_SC")!=NULL)
-            {
-                sscanf(bufstr,"tile_SC %d\n",&info->start_col);
-                info->check_tiles_SC = true;
-                printf("%d\n",info->start_col);
-            }
-            else if (args.check_tiles_EC == 0 && strstr(bufstr,"tile_EC")!=NULL)
-            {
-                sscanf(bufstr,"tile_EC %d\n",&info->end_col);
-                info->check_tiles_EC = true;
-                printf("%d\n",info->end_col);
-            }
-            else if (args.check_minH == 0 && strstr(bufstr,"minH")!=NULL)
-            {
-                sscanf(bufstr,"minH %lf\n",&info->minHeight);
-                info->check_minH = true;
-                printf("%f\n",info->minHeight);
-            }
-            else if (args.check_maxH == 0 && strstr(bufstr,"maxH")!=NULL)
-            {
-                sscanf(bufstr,"maxH %lf\n",&info->maxHeight);
-                info->check_maxH = true;
-                printf("%f\n",info->maxHeight);
-            }
-        }
-        
-        if (args.check_arg != 0)
-        {
-            sprintf(info->tmpdir,"%s/tmp",args.Outputpath);
-            
-            for(int ti= 0 ; ti < args.number_of_images ; ti++)
-            {
-                sprintf(info->Imagefilename[ti],"%s", args.Image[ti]);
-            
-                FILE *temp_ptif = fopen(info->Imagefilename[ti],"r");
-                if(temp_ptif)
-                    printf("image%d load completed!\n",ti);
-                else
-                {
-                    printf("image%d load faied. Please check filename!!\n",ti);
-                    exit(1);
-                }
-                
-                tmp_chr = remove_ext(args.Image[ti]);
-                sprintf(info->RPCfilename[ti],"%s.xml",tmp_chr);
-                
-                FILE *temp_pFile;
-                temp_pFile           = fopen(info->RPCfilename[ti],"r");
-                //printf("xml file %s\n",info->LeftRPCfilename);
-                if(temp_pFile)
-                    printf("image%d xml load completed!\n",ti);
-                else
-                {
-                    sprintf(info->RPCfilename[ti],"%s.XML",tmp_chr);
-                    //printf("xml file %s\n",info->LeftRPCfilename);
-                    temp_pFile           = fopen(info->RPCfilename[ti],"r");
-                    if(temp_pFile)
-                        printf("image%d XML load completed!\n",ti);
-                    else
-                    {
-                        printf("image%d xml/XML load failed!\n",ti);
-                        exit(0);
-                    }
-                }
-            }
-            
-            sprintf(info->save_filepath,"%s",args.Outputpath);
-            sprintf(info->Outputpath_name, "%s", args.Outputpath_name);
-        }
-        else
-        {
-            if(count_images > 1)
-                args.number_of_images = count_images;
-            else
-            {
-                printf("Please check input images!!\n");
-                exit(1);
-            }
-        }
-        
-        if (args.check_gridonly) {
-            info->check_gridonly = true;
-            sprintf(info->save_filepath,"%s",args.Outputpath);
-        }
-        
-        if (args.check_checktiff)
-        {
-            info->check_checktiff = true;
-        }
-        
-        if (args.check_DEM_space) {
-            info->DEM_resolution = args.DEM_space;
-        }
-        if (args.check_Threads_num) {
-            info->threads_num = args.Threads_num;
-        }
-        if (args.check_seeddem) {
-            sprintf(info->priori_DEM_tif,"%s",args.seedDEMfilename);
-            sprintf(info->metafilename,"%s",args.metafilename);
-            info->pre_DEMtif = args.check_seeddem;
-            info->seedDEMsigma = args.seedDEMsigma;
-        }
+        sprintf(info->tmpdir,"%s/tmp",args.Outputpath);
         
         for(int ti= 0 ; ti < args.number_of_images ; ti++)
         {
-            printf("image%d = %s\n",ti,info->Imagefilename[ti]);
-            printf("rpc%d = %s\n",ti,info->RPCfilename[ti]);
-            
-            //check image
-            limage = fopen(info->Imagefilename[ti],"r");
-            if(!limage)
+            sprintf(info->Imagefilename[ti],"%s", args.Image[ti]);
+        
+            FILE *temp_ptif = fopen(info->Imagefilename[ti],"r");
+            if(temp_ptif)
+                printf("image%d load completed!\n",ti);
+            else
             {
-                bopened     = false;
-                printf("Check input image%d filename!!\n",ti);
+                printf("image%d load faied. Please check filename!!\n",ti);
                 exit(1);
             }
-            if(limage)
-                fclose(limage);
+            
+            tmp_chr = remove_ext(args.Image[ti]);
+            sprintf(info->RPCfilename[ti],"%s.xml",tmp_chr);
+            
+            FILE *temp_pFile;
+            temp_pFile           = fopen(info->RPCfilename[ti],"r");
+            //printf("xml file %s\n",info->LeftRPCfilename);
+            if(temp_pFile)
+                printf("image%d xml load completed!\n",ti);
+            else
+            {
+                sprintf(info->RPCfilename[ti],"%s.XML",tmp_chr);
+                //printf("xml file %s\n",info->LeftRPCfilename);
+                temp_pFile           = fopen(info->RPCfilename[ti],"r");
+                if(temp_pFile)
+                    printf("image%d XML load completed!\n",ti);
+                else
+                {
+                    printf("image%d xml/XML load failed!\n",ti);
+                    exit(0);
+                }
+            }
         }
         
-        printf("save = %s\n",info->save_filepath);
-        printf("save_name = %s\n", info->Outputpath_name);
-        printf("DEM space = %f\n",info->DEM_resolution);
-        printf("Threads = %d\n",info->threads_num);
-        printf("seeddem flag = %d\n",info->pre_DEMtif);
-        if(info->pre_DEMtif)
-        {
-            printf("seeddem = %s seedDEMsigma = %f\n",info->priori_DEM_tif, info->seedDEMsigma);
-            printf("meta file = %s\n",info->metafilename);
-            
-        }
+        sprintf(info->save_filepath,"%s",args.Outputpath);
+        sprintf(info->Outputpath_name, "%s", args.Outputpath_name);
     }
-
+    
+    //default proinfo info loading
+    if (args.check_gridonly) {
+        info->check_gridonly = true;
+        sprintf(info->save_filepath,"%s",args.Outputpath);
+    }
+    
+    if (args.check_checktiff)
+    {
+        info->check_checktiff = true;
+    }
+    
+    if (args.check_DEM_space) {
+        info->DEM_resolution = args.DEM_space;
+    }
+    if (args.check_Threads_num) {
+        info->threads_num = args.Threads_num;
+    }
+    if (args.check_seeddem) {
+        sprintf(info->priori_DEM_tif,"%s",args.seedDEMfilename);
+        sprintf(info->metafilename,"%s",args.metafilename);
+        info->pre_DEMtif = args.check_seeddem;
+        info->seedDEMsigma = args.seedDEMsigma;
+    }
+    
+    for(int ti= 0 ; ti < args.number_of_images ; ti++)
+    {
+        printf("image%d = %s\n",ti,info->Imagefilename[ti]);
+        printf("rpc%d = %s\n",ti,info->RPCfilename[ti]);
+        
+        //check image
+        limage = fopen(info->Imagefilename[ti],"r");
+        if(!limage)
+        {
+            bopened     = false;
+            printf("Check input image%d filename!!\n",ti);
+            exit(1);
+        }
+        if(limage)
+            fclose(limage);
+    }
+    
+    printf("save = %s\n",info->save_filepath);
+    printf("save_name = %s\n", info->Outputpath_name);
+    printf("DEM space = %f\n",info->DEM_resolution);
+    printf("Threads = %d\n",info->threads_num);
+    printf("seeddem flag = %d\n",info->pre_DEMtif);
+    if(info->pre_DEMtif)
+    {
+        printf("seeddem = %s seedDEMsigma = %f\n",info->priori_DEM_tif, info->seedDEMsigma);
+        printf("meta file = %s\n",info->metafilename);
+        
+    }
+ 
+    if(args.check_sensor_type != 1) // Collinear Equation, Frame sensor
+    {
+        if(args.check_fl && args.check_ccd)
+        {
+            info->frameinfo.m_Camera.m_focalLength = args.focal_length;
+            info->frameinfo.m_Camera.m_CCDSize = args.CCD_size;
+            info->frameinfo.m_Camera.m_ppx = 0.0;
+            info->frameinfo.m_Camera.m_ppy = 0.0;
+            
+//            printf("%f\t%d\t%d\t%f\n",info->frameinfo.m_Camera.m_focalLength,info->frameinfo.m_Camera.m_ImageSize.width,
+//                   info->frameinfo.m_Camera.m_ImageSize.height,info->frameinfo.m_Camera.m_CCDSize);
+            
+            info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
+            
+/*            for(int ti = 0 ; ti < info->number_of_images ; ti++)
+            {
+                sprintf(info->frameinfo.Photoinfo[ti].path,"%s",info->Imagefilename[ti]);
+                printf("%s\n",info->Imagefilename[ti]);
+                printf("%s\n",info->frameinfo.Photoinfo[ti].path);
+            }
+*/
+            bopened = true;
+        }
+        else
+        {
+            bopened = false;
+            printf("Please input focal length and CCD size!!\n");
+            exit(1);
+        }
+        
+    }
+    
     return bopened;
 }
 
@@ -4734,220 +4852,12 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
             }
         }
         
+        if(*py_resolution < DEM_resolution)
+            *py_resolution = DEM_resolution;
+        
         *grid_resolution = *py_resolution;
         
         
-        /*if(resolution < 0.5)
-        {
-            if(*py_resolution < DEM_resolution)
-            {
-                *py_resolution   = DEM_resolution;
-                *grid_resolution = DEM_resolution;
-            }
-        }
-        else
-        {
-            if(DEM_resolution >= 8)
-            {
-                if(*py_resolution < DEM_resolution)
-                {
-                    *py_resolution   = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
-                
-                if(level == 0)
-                {
-                    *py_resolution   = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
-            }
-            else if(DEM_resolution >= 4 && DEM_resolution < 8)
-            {
-                if(level == 0)
-                {
-                    *py_resolution   = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
-                else if(level <= 3)
-                {
-                    if(*py_resolution <= 4)
-                    {
-                        *py_resolution   = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                    }
-                }
-                else
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-            }
-            else if(DEM_resolution >= 2 && DEM_resolution < 4)
-            {
-                if(level == 1)
-                {
-                    if(*py_resolution < 4)
-                    {
-                        *py_resolution   = 4;
-                        *grid_resolution = 4;
-                    }
-                    
-                }
-                else if(level >= 2)
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-                else if(level == 0)
-                {
-                    *py_resolution   = DEM_resolution;
-                    *grid_resolution = DEM_resolution;
-                }
-                else
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-            }
-            else if(DEM_resolution < 2)
-            {
-                
-                if(level == 1)
-                {
-                    if(*py_resolution < 4)
-                    {
-                        *py_resolution   = 4;
-                        *grid_resolution = 4;
-                    }
-                    
-                }
-                else if(level == 2)
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-                else if(level >= 3)
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-                else if(level == 0)
-                {
-                    if(final_level_iteration == 1)
-                    {
-                        if((*py_resolution)*4 > DEM_resolution)
-                        {
-                            *py_resolution   = (*py_resolution)*4;
-                            *grid_resolution = *py_resolution;
-                        }
-                        else
-                        {
-                            *py_resolution   = DEM_resolution;
-                            *grid_resolution = DEM_resolution;
-                        }
-                    }
-                    else if(final_level_iteration == 2)
-                    {
-                        if((*py_resolution)*2 > DEM_resolution)
-                        {
-                            *py_resolution   = (*py_resolution)*2;
-                            *grid_resolution = *py_resolution;
-                        }
-                        else
-                        {
-                            *py_resolution   = DEM_resolution;
-                            *grid_resolution = DEM_resolution;
-                        }
-                    }
-                    else
-                    {
-                        *py_resolution   = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                    }
-                }
-                else
-                {
-                    if(*py_resolution < 8)
-                    {
-                        *py_resolution   = 8;
-                        *grid_resolution = 8;
-                    }
-                }
-                
-            }
-         
-            if(pre_DEMtif && level == 2)
-            {
-                if(DEM_resolution == 2)
-                {
-                    if(level == 1)
-                    {
-                        if(*py_resolution < 4)
-                        {
-                            *py_resolution   = 4;
-                            *grid_resolution = 4;
-                        }
-                        
-                    }
-                    else if(level == 0)
-                    {
-                        *py_resolution   = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                }
-                    else
-                    {
-                        if(*py_resolution < 8)
-                        {
-                            *py_resolution   = 8;
-                            *grid_resolution = 8;
-                        }
-                    }
-                }
-                else if(DEM_resolution < 2)
-                {
-                    if(level == 1)
-                    {
-                        if(*py_resolution < 2)
-                        {
-                            *py_resolution   = 2;
-                            *grid_resolution = 2;
-                        }
-                        
-                    }
-                    else if(level == 0)
-                    {
-                        *py_resolution   = DEM_resolution;
-                        *grid_resolution = DEM_resolution;
-                    }
-                    else
-                    {
-                        if(*py_resolution < 4)
-                        {
-                            *py_resolution   = 4;
-                            *grid_resolution = 4;
-                        }
-                    }
-                }
-                
-            }
-         
-        }
-        */
         Size_Grid2D->width  = (int)(ceil((double)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
         Size_Grid2D->height = (int)(ceil((double)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
     }
@@ -5116,7 +5026,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 }
 
 
-bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, double *ImageParam, char *ImageFilename, CSize Imagesize,
+bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 NumofIAparam, double **RPCs, double *ImageParam, char *ImageFilename, CSize Imagesize,
                      double *subBoundary, double *minmaxHeight, int *cols, int *rows)
 {
     bool ret = false;
@@ -5126,7 +5036,7 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
         int i;
         
         D3DPOINT t_pts[8];
-        D3DPOINT *t_pts1;
+        
         D2DPOINT *ImageCoord;
         int buffer, null_buffer;
 
@@ -5162,9 +5072,26 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
         t_pts[6].m_Z    = minmaxHeight[1];
         t_pts[7].m_Z    = minmaxHeight[1];
 
-        t_pts1          = ps2wgs_3D(transparam,8,t_pts);
-
-        ImageCoord      = GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
+        if(proinfo->check_sensor_type == 1)
+        {
+            D3DPOINT *t_pts1;
+            
+            t_pts1          = ps2wgs_3D(transparam,8,t_pts);
+            ImageCoord      = GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
+            
+            free(t_pts1);
+        }
+        else
+        {
+            D2DPOINT *t_image;
+            t_image     = GetPhotoCoordinate(t_pts, proinfo->frameinfo.Photoinfo[ImageID], 8, proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ImageID].m_Rm);
+            
+            printf("t_image %f\t%f\n",t_image[0].m_X,t_image[0].m_Y);
+            ImageCoord  = PhotoToImage(t_image,8,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+            printf("ImageCoord %f\t%f\n",ImageCoord[0].m_X,ImageCoord[0].m_Y);
+            
+            free(t_image);
+        }
         
         for(i=0;i<8;i++)
         {
@@ -5206,9 +5133,9 @@ bool GetsubareaImage(TransParam transparam, uint8 NumofIAparam, double **RPCs, d
         if(rows[1]          > Imagesize.height - null_buffer)
             rows[1]         = Imagesize.height - null_buffer;
 
-        //printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
+        printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
         
-        free(t_pts1);
+        
         free(ImageCoord);
 
         ret = true;
@@ -6347,7 +6274,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
 }
 
 
-double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
+double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
 {
     double** out = NULL;
     
@@ -6365,482 +6292,302 @@ double** OpenXMLFile(char* _filename, double* gsd_r, double* gsd_c, double* gsd,
     double aa;
     bool band_check = false;
     
-    pFile           = fopen(_filename,"r");
+    pFile           = fopen(proinfo->RPCfilename[ImageID],"r");
     if(pFile)
     {
-        out = (double**)malloc(sizeof(double*)*7);
-        out[0] = (double*)malloc(sizeof(double)*5);
-        out[1] = (double*)malloc(sizeof(double)*5);
-        out[6] = (double*)malloc(sizeof(double)*2);
-        
-        while(!feof(pFile))
+        if(proinfo->check_sensor_type == 1) //RPCs info
         {
-            fgets(linestr,sizeof(linestr),pFile);
-            strcpy(linestr1,linestr);
-            token1 = strstr(linestr,"<");
-            token = strtok(token1,">");
-            if(strcmp(token,"<ABSCALFACTOR") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->abscalfactor          = atof(pos2);
-                printf("abscalfactor %f\n",band->abscalfactor);
-            }
+            out = (double**)malloc(sizeof(double*)*7);
+            out[0] = (double*)malloc(sizeof(double)*5);
+            out[1] = (double*)malloc(sizeof(double)*5);
+            out[6] = (double*)malloc(sizeof(double)*2);
             
-            if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
+            while(!feof(pFile))
             {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->effbw         = atof(pos2);
-                printf("effbw %f\n",band->effbw);
-            }
-            
-            if(strcmp(token,"<TDILEVEL") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                band->tdi           = atof(pos2);
-                printf("tdi %f\n",band->tdi);
-            }
-            
-            if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd_r          = atof(pos2);
-                printf("collect row %f\n",*gsd_r);
-            }
-            if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd_c          = atof(pos2);
-                printf("collect col %f\n",*gsd_c);
-            }
-            if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd            = atof(pos2);
-                printf("collect gsd %f\n",*gsd);
-            }
-            
-            if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd_r          = atof(pos2);
-                printf("product row %f\n",*gsd_r);
-            }
-            if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd_c          = atof(pos2);
-                printf("product col %f\n",*gsd_c);
-            }
-            if(strcmp(token,"<MEANPRODUCTGSD") == 0)
-            {
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                *gsd            = atof(pos2);
-                printf("product gsd %f\n",*gsd);
-            }
-            
-            
-            if(strcmp(token,"<ERRBIAS") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[6][0]           = atof(pos2);
-                printf("ERRBIAS %f\n",out[6][0]);
-            }
-            if(strcmp(token,"<ERRRAND") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[6][1]           = atof(pos2);
-            }
-            if(strcmp(token,"<LINEOFFSET") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[0][0]           = atof(pos2);
-            }
-            if(strcmp(token,"<SAMPOFFSET") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[0][1]           = atof(pos2);
-            }
-            if(strcmp(token,"<LATOFFSET") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[0][2]           = atof(pos2);
-            }
-            if(strcmp(token,"<LONGOFFSET") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[0][3]           = atof(pos2);
-            }
-            if(strcmp(token,"<HEIGHTOFFSET") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[0][4]           = atof(pos2);
-            }
-            
-            
-            if(strcmp(token,"<LINESCALE") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[1][0]           = atof(pos2);
-            }
-            if(strcmp(token,"<SAMPSCALE") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[1][1]           = atof(pos2);
-            }
-            if(strcmp(token,"<LATSCALE") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[1][2]           = atof(pos2);
-            }
-            if(strcmp(token,"<LONGSCALE") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[1][3]           = atof(pos2);
-            }
-            if(strcmp(token,"<HEIGHTSCALE") == 0)
-            {
-                //fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr1,">")+1;
-                pos2 = strtok(pos1,"<");
-                out[1][4]           = atof(pos2);
-            }
-         
-            
-            if(strcmp(token,"<LINENUMCOEFList") == 0)
-            {
-                out[2] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token2 = strtok(pos2," ");
-                
-                
-                i=0;
-                while(token2 != NULL && i<20)
+                strcpy(linestr1,linestr);
+                token1 = strstr(linestr,"<");
+                token = strtok(token1,">");
+                if(strcmp(token,"<ABSCALFACTOR") == 0)
                 {
-                    out[2][i]           = atof(token2);
-                    token2 = strtok(NULL," ");
-                    
-                    //printf("out[2][i] %f\n",out[2][i]);
-                    
-                    i++;
-                    
-                    
-                }
-            }
-            if(strcmp(token,"<LINEDENCOEFList") == 0)
-            {
-                out[3] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token2 = strtok(pos2," ");
-                i=0;
-                while(token != NULL && i<20)
-                {
-                    out[3][i]           = atof(token2);
-                    token2 = strtok(NULL," ");
-                    
-                    //printf("out[3][i] %f\n",out[3][i]);
-                    
-                    i++;
-                }
-            }
-            if(strcmp(token,"<SAMPNUMCOEFList") == 0)
-            {
-                out[4] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token2 = strtok(pos2," ");
-                
-                printf("token2 %s\n",token2);
-                
-                i=0;
-                while(token != NULL && i<20)
-                {
-                    out[4][i]           = atof(token2);
-                    token2 = strtok(NULL," ");
-                    
-                    //printf("out[4][i] %f\n",out[4][i]);
-                    
-                    i++;
-                }
-            }
-            if(strcmp(token,"<SAMPDENCOEFList") == 0)
-            {
-                out[5] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token2 = strtok(pos2," ");
-                i=0;
-                while(token != NULL && i<20)
-                {
-                    out[5][i]           = atof(token2);
-                    token2 = strtok(NULL," ");
-                    
-                    //printf("out[5][i] %f\n",out[5][i]);
-                    
-                    i++;
-                }
-            }
-            /*
-            fscanf(pFile,"%s",temp_str);
-            if(strcmp(temp_str,"<BAND_P>") == 0 && !band_check)
-            {
-                fgets(temp_str,sizeof(temp_str),pFile);
-                bool check_end = false;
-                int t_count = 0;
-                while(!check_end && t_count < 20)
-                {
-                    t_count++;
-                    fgets(linestr,sizeof(linestr),pFile);
-                    strcpy(linestr1,linestr);
-                    token1 = strstr(linestr,"<");
-                    token = strtok(token1,">");
-                    if(strcmp(token,"<ABSCALFACTOR") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        band->abscalfactor          = atof(pos2);
-                    }
-                    
-                    if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        band->effbw         = atof(pos2);
-                    }
-                    
-                    if(strcmp(token,"<TDILEVEL") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        band->tdi           = atof(pos2);
-                        check_end = true;
-                    }
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    band->abscalfactor          = atof(pos2);
+                    printf("abscalfactor %f\n",band->abscalfactor);
                 }
                 
-                if(check_end)
-                    band_check = true;
-            }
-            
-            if(strcmp(temp_str,"<IMAGE>") == 0)
-            {
-                fgets(temp_str,sizeof(temp_str),pFile);
-                
-                bool check_end = false;
-                int t_count = 0;
-                while(!check_end && t_count < 30)
+                if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
                 {
-                    t_count++;
-                    fgets(linestr,sizeof(linestr),pFile);
-                    strcpy(linestr1,linestr);
-                    token1 = strstr(linestr,"<");
-                    token = strtok(token1,">");
-                    bool b_rowgsd = false;
-                    bool b_colgsd = false;
-                    if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd_r          = atof(pos2);
-                        b_rowgsd = true;
-                    }
-                    if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd_c          = atof(pos2);
-                        b_colgsd = true;
-                    }
-                    if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
-                    {
-                        fgets(linestr,sizeof(linestr),pFile);
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd            = atof(pos2);
-                    }
-
-                    if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd_r          = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd_c          = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANPRODUCTGSD") == 0)
-                    {
-                        fgets(linestr,sizeof(linestr),pFile);
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        *gsd            = atof(pos2);
-                        check_end = true;
-                    }
-                    
-                    if(b_rowgsd && b_colgsd)
-                        check_end = true;
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    band->effbw         = atof(pos2);
+                    printf("effbw %f\n",band->effbw);
                 }
-            }
-            
-            if(strcmp(linestr,"<RPB>")==0)
-            {
-                for(i=0;i<5;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
                 
-                out[6] = (double*)malloc(sizeof(double)*2);
-                for(i=0;i<2;i++)
+                if(strcmp(token,"<TDILEVEL") == 0)
                 {
-                    
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    band->tdi           = atof(pos2);
+                    printf("tdi %f\n",band->tdi);
+                }
+                
+                if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd_r          = atof(pos2);
+                    printf("collect row %f\n",*gsd_r);
+                }
+                if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd_c          = atof(pos2);
+                    printf("collect col %f\n",*gsd_c);
+                }
+                if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd            = atof(pos2);
+                    printf("collect gsd %f\n",*gsd);
+                }
+                
+                if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd_r          = atof(pos2);
+                    printf("product row %f\n",*gsd_r);
+                }
+                if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd_c          = atof(pos2);
+                    printf("product col %f\n",*gsd_c);
+                }
+                if(strcmp(token,"<MEANPRODUCTGSD") == 0)
+                {
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    *gsd            = atof(pos2);
+                    printf("product gsd %f\n",*gsd);
+                }
+                
+                
+                if(strcmp(token,"<ERRBIAS") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[6][0]           = atof(pos2);
+                    printf("ERRBIAS %f\n",out[6][0]);
+                }
+                if(strcmp(token,"<ERRRAND") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[6][1]           = atof(pos2);
+                }
+                if(strcmp(token,"<LINEOFFSET") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][0]           = atof(pos2);
+                }
+                if(strcmp(token,"<SAMPOFFSET") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][1]           = atof(pos2);
+                }
+                if(strcmp(token,"<LATOFFSET") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][2]           = atof(pos2);
+                }
+                if(strcmp(token,"<LONGOFFSET") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][3]           = atof(pos2);
+                }
+                if(strcmp(token,"<HEIGHTOFFSET") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[0][4]           = atof(pos2);
+                }
+                
+                
+                if(strcmp(token,"<LINESCALE") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][0]           = atof(pos2);
+                }
+                if(strcmp(token,"<SAMPSCALE") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][1]           = atof(pos2);
+                }
+                if(strcmp(token,"<LATSCALE") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][2]           = atof(pos2);
+                }
+                if(strcmp(token,"<LONGSCALE") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][3]           = atof(pos2);
+                }
+                if(strcmp(token,"<HEIGHTSCALE") == 0)
+                {
+                    //fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    out[1][4]           = atof(pos2);
+                }
+             
+                
+                if(strcmp(token,"<LINENUMCOEFList") == 0)
+                {
+                    out[2] = (double*)malloc(sizeof(double)*20);
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
-                    out[6][i]           = atof(pos2);
-                    printf("Err %f\n",out[6][i]);
-                }
-                
-                out[0] = (double*)malloc(sizeof(double)*5);
-                for(i=0;i<5;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][i]           = atof(pos2);
+                    token2 = strtok(pos2," ");
                     
-                    printf("param %f\n",out[0][i]);
+                    
+                    i=0;
+                    while(token2 != NULL && i<20)
+                    {
+                        out[2][i]           = atof(token2);
+                        token2 = strtok(NULL," ");
+                        
+                        //printf("out[2][i] %f\n",out[2][i]);
+                        
+                        i++;
+                        
+                        
+                    }
                 }
-                aa                      = out[0][2];
-                out[0][2]               = out[0][3];
-                out[0][3]               = aa;
-                
-                out[1] = (double*)malloc(sizeof(double)*5);
-                for(i=0;i<5;i++)
+                if(strcmp(token,"<LINEDENCOEFList") == 0)
                 {
+                    out[3] = (double*)malloc(sizeof(double)*20);
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
-                    out[1][i]           = atof(pos2);
+                    token2 = strtok(pos2," ");
+                    i=0;
+                    while(token != NULL && i<20)
+                    {
+                        out[3][i]           = atof(token2);
+                        token2 = strtok(NULL," ");
+                        
+                        //printf("out[3][i] %f\n",out[3][i]);
+                        
+                        i++;
+                    }
                 }
-                
-                aa                      = out[1][2];
-                out[1][2]               = out[1][3];
-                out[1][3]               = aa;
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                out[2] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
-                i=0;
-                while(token != NULL)
+                if(strcmp(token,"<SAMPNUMCOEFList") == 0)
                 {
-                    out[2][i]           = atof(token);
-                    token = strtok(NULL," ");
-                    i++;
+                    out[4] = (double*)malloc(sizeof(double)*20);
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    token2 = strtok(pos2," ");
+                    
+                    printf("token2 %s\n",token2);
+                    
+                    i=0;
+                    while(token != NULL && i<20)
+                    {
+                        out[4][i]           = atof(token2);
+                        token2 = strtok(NULL," ");
+                        
+                        //printf("out[4][i] %f\n",out[4][i]);
+                        
+                        i++;
+                    }
+                }
+                if(strcmp(token,"<SAMPDENCOEFList") == 0)
+                {
+                    out[5] = (double*)malloc(sizeof(double)*20);
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    token2 = strtok(pos2," ");
+                    i=0;
+                    while(token != NULL && i<20)
+                    {
+                        out[5][i]           = atof(token2);
+                        token2 = strtok(NULL," ");
+                        
+                        //printf("out[5][i] %f\n",out[5][i]);
+                        
+                        i++;
+                    }
                 }
                 
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
-                out[3] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
-                i=0;
-                while(token != NULL)
-                {
-                    out[3][i]           = atof(token);
-                    token = strtok(NULL," ");
-                    i++;
-                }
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
-                out[4] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
-                i=0;
-                while(token != NULL)
-                {
-                    out[4][i]           = atof(token);
-                    token = strtok(NULL," ");
-                    i++;
-                }
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
-                out[5] = (double*)malloc(sizeof(double)*20);
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
-                pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
-                i=0;
-                while(token != NULL)
-                {
-                    out[5][i]           = atof(token);
-                    token = strtok(NULL," ");
-                    i++;
-                }
             }
-             */
+            
+            aa                      = out[0][2];
+            out[0][2]               = out[0][3];
+            out[0][3]               = aa;
+            
+            aa                      = out[1][2];
+            out[1][2]               = out[1][3];
+            out[1][3]               = aa;
+            
+            fclose(pFile);
+            
+            if(pos1)
+                pos1 = NULL;
+            if(pos2)
+                pos2 = NULL;
+            if(token)
+                token = NULL;
         }
-        
-        aa                      = out[0][2];
-        out[0][2]               = out[0][3];
-        out[0][3]               = aa;
-        
-        aa                      = out[1][2];
-        out[1][2]               = out[1][3];
-        out[1][3]               = aa;
-        
-        fclose(pFile);
-        
-        if(pos1)
-            pos1 = NULL;
-        if(pos2)
-            pos2 = NULL;
-        if(token)
-            token = NULL;
+        else //Exterior orientation
+        {
+            fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                   &proinfo->frameinfo.Photoinfo[ImageID].m_Xl,&proinfo->frameinfo.Photoinfo[ImageID].m_Yl,&proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
+                   &proinfo->frameinfo.Photoinfo[ImageID].m_Wl,&proinfo->frameinfo.Photoinfo[ImageID].m_Pl,&proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+            
+            //printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+            //       proinfo->frameinfo.Photoinfo[ImageID].path,
+            //       proinfo->frameinfo.Photoinfo[ImageID].m_Xl,proinfo->frameinfo.Photoinfo[ImageID].m_Yl,proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
+            //       proinfo->frameinfo.Photoinfo[ImageID].m_Wl,proinfo->frameinfo.Photoinfo[ImageID].m_Pl,proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+            double o = proinfo->frameinfo.Photoinfo[ImageID].m_Wl;
+            double p = proinfo->frameinfo.Photoinfo[ImageID].m_Pl;
+            double k = proinfo->frameinfo.Photoinfo[ImageID].m_Kl;
+            
+            proinfo->frameinfo.Photoinfo[ImageID].m_Rm = MakeRotationMatrix(o, p, k);
+            
+            *gsd_r = proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM/(proinfo->frameinfo.m_Camera.m_focalLength/proinfo->frameinfo.Photoinfo[ImageID].m_Zl);
+            *gsd_c = *gsd_r;
+            *gsd = *gsd_r;
+            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m11,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m12,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m13);
+            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m21,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m22,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m23);
+            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m31,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m32,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m33);
+        }
     }
     return out;
 }
@@ -7259,7 +7006,7 @@ bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, do
         if(GetImageSize(proinfo->Imagefilename[ti],&Imagesize))
         {
             int Lcols[2], Lrows[2];
-            if(GetsubareaImage(transparam,NumofIAparam,RPCs[ti],ImageParams[ti],proinfo->Imagefilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
+            if(GetsubareaImage(proinfo,ti,transparam,NumofIAparam,RPCs[ti],ImageParams[ti],proinfo->Imagefilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
             {
                 uint16 *leftimage;
 
@@ -8753,19 +8500,33 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                     D2DPOINT Imagecoord;
                     D2DPOINT Imagecoord_py;
                    
-                    temp_GP_p.m_X = t_X;
-                    temp_GP_p.m_Y = t_Y;
-                   
-                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                    temp_GP.m_X   = temp_GP_p.m_X;
-                    temp_GP.m_Y   = temp_GP_p.m_Y;
+                    if(proinfo->check_sensor_type == 1)
+                    {
+                        temp_GP_p.m_X = t_X;
+                        temp_GP_p.m_Y = t_Y;
+                       
+                        temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                        temp_GP.m_X   = temp_GP_p.m_X;
+                        temp_GP.m_Y   = temp_GP_p.m_Y;
+                    }
+                    else
+                    {
+                        temp_GP.m_X   = t_X;
+                        temp_GP.m_Y   = t_Y;
+                    }
                     temp_GP.m_Z   = GridPT3[pt_index].Height;
                     
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     {
                         if(proinfo->check_selected_image[ti])
                         {
-                            Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                            if(proinfo->check_sensor_type == 1)
+                                Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                            else
+                            {
+                                D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                                Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+                            }
                             Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
                             
                             all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
@@ -8903,7 +8664,7 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
             end_H       = GridPT3[pt_index].maxHeight;
 
             
-            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,Grid_wgs[pt_index],start_H,end_H,Imagesizes,Half_template_size,Pyramid_step))
+            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes,Half_template_size,Pyramid_step))
             {
                 char t_temp_path[500];
                 bool check_blunder_cell = false;
@@ -9068,15 +8829,26 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                         double diff_rho;
                         int t_direction;
 
-                        temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
-                        temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
+                        
                         temp_GP[0].m_Z = iter_height;
                         
                         //reference image point
                         temp_LIA[0] = ImageAdjust[reference_id][0];
                         temp_LIA[1] = ImageAdjust[reference_id][1];
                         
-                        Ref_Imagecoord[0]      = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP[0]);
+                        if(proinfo->check_sensor_type == 1)
+                        {
+                            temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
+                            temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
+                            Ref_Imagecoord[0]      = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP[0]);
+                        }
+                        else
+                        {
+                            temp_GP[0].m_X = GridPts[pt_index].m_X;
+                            temp_GP[0].m_Y = GridPts[pt_index].m_Y;
+                            D2DPOINT photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[reference_id],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[reference_id].m_Rm);
+                            Ref_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+                        }
                         Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos[reference_id],Pyramid_step);
                         
                         // target image point and ncc
@@ -9092,7 +8864,19 @@ bool VerticalLineLocus(ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImage
                                 RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
                                 RImagesize.height = Imagesizes[ti][Pyramid_step].height;
                                 
-                                Tar_Imagecoord[0]     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP[0]);
+                                if(proinfo->check_sensor_type == 1)
+                                {
+                                    temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
+                                    temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
+                                    Tar_Imagecoord[0]     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP[0]);
+                                }
+                                else
+                                {
+                                    temp_GP[0].m_X = GridPts[pt_index].m_X;
+                                    temp_GP[0].m_Y = GridPts[pt_index].m_Y;
+                                    D2DPOINT photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                                    Tar_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+                                }
                                 Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos[ti],Pyramid_step);
 
                         
@@ -10066,20 +9850,33 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                 D2DPOINT Imagecoord;
                 D2DPOINT Imagecoord_py;
                 
-                temp_GP_p.m_X = t_X;
-                temp_GP_p.m_Y = t_Y;
-                
-                temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                temp_GP.m_X   = temp_GP_p.m_X;
-                temp_GP.m_Y   = temp_GP_p.m_Y;
+                if(proinfo->check_sensor_type == 1)
+                {
+                    temp_GP_p.m_X = t_X;
+                    temp_GP_p.m_Y = t_Y;
+                    
+                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                    temp_GP.m_X   = temp_GP_p.m_X;
+                    temp_GP.m_Y   = temp_GP_p.m_Y;
+                }
+                else
+                {
+                    temp_GP.m_X   = t_X;
+                    temp_GP.m_Y   = t_Y;
+                }
                 temp_GP.m_Z   = GridPT3[pt_index].Height;
                 
-                //orthoheight[pt_index] = temp_GP.m_Z;
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
                     if(proinfo->check_selected_image[ti])
                     {
-                        Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                        if(proinfo->check_sensor_type == 1)
+                            Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                        else
+                        {
+                            D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                            Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+                        }
                         Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
                         
                         all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
@@ -10605,27 +10402,39 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                 D2DPOINT Imagecoord;
                 D2DPOINT Imagecoord_py;
                 
-                temp_GP_p.m_X = t_X;
-                temp_GP_p.m_Y = t_Y;
-                
-                temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                temp_GP.m_X   = temp_GP_p.m_X;
-                temp_GP.m_Y   = temp_GP_p.m_Y;
+                if(proinfo->check_sensor_type == 1)
+                {
+                    temp_GP_p.m_X = t_X;
+                    temp_GP_p.m_Y = t_Y;
+                    
+                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                    temp_GP.m_X   = temp_GP_p.m_X;
+                    temp_GP.m_Y   = temp_GP_p.m_Y;
+                }
+                else
+                {
+                    temp_GP.m_X   = t_X;
+                    temp_GP.m_Y   = t_Y;
+                }
                 temp_GP.m_Z   = GridPT3[pt_index].Height;
                 
-                //orthoheight[pt_index] = temp_GP.m_Z;
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
                     if(proinfo->check_selected_image[ti])
                     {
-                        Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                        if(proinfo->check_sensor_type == 1)
+                            Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                        else
+                        {
+                            D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                            Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+                        }
                         Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],blunder_selected_level);
                         
                         all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
                         all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
                     }
                 }
-                
             }
             else {
               //orthoheight[pt_index]   = -1000;
@@ -10666,6 +10475,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
         {
             nccresult[pt_index] = -1.0;
+            double max_ncc = -100;
             
             for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
             {
@@ -10995,18 +10805,22 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                         t_nccresult = -1;
                     }
                     
+                    if(max_ncc < t_nccresult)
+                        max_ncc = t_nccresult;
+                    
                     GridPT3[pt_index].ortho_ncc[ti] = t_nccresult;
-                    if(t_nccresult > -1)
+                    
+                    /*if(t_nccresult > -1)
                     {
                         Sum_ortho_ncc += GridPT3[pt_index].ortho_ncc[ti];
                         count_ncc++;
-                    }
+                    }*/
                 }
             }
             
-            if(count_ncc > 0)
+            //if(count_ncc > 0)
             {
-                GridPT3[pt_index].Mean_ortho_ncc = Sum_ortho_ncc/count_ncc;
+                GridPT3[pt_index].Mean_ortho_ncc = max_ncc;
                 nccresult[pt_index] = GridPT3[pt_index].Mean_ortho_ncc;
             }
         }
@@ -11264,16 +11078,28 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
                             temp_LIA[0] = ImageAdjust[reference_id][0];
                             temp_LIA[1] = ImageAdjust[reference_id][1];
                             
-                            temp_GP_p.m_X = CurGPXY[0];
-                            temp_GP_p.m_Y = CurGPXY[1];
-                            
-                            temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                            
-                            temp_GP.m_X = temp_GP_p.m_X;
-                            temp_GP.m_Y = temp_GP_p.m_Y;
                             temp_GP.m_Z = Z;
-
-                            Ref_Imagecoord     = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP);
+                            if(proinfo->check_sensor_type == 1)
+                            {
+                                temp_GP_p.m_X = CurGPXY[0];
+                                temp_GP_p.m_Y = CurGPXY[1];
+                                
+                                temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                                
+                                temp_GP.m_X = temp_GP_p.m_X;
+                                temp_GP.m_Y = temp_GP_p.m_Y;
+                                
+                                Ref_Imagecoord     = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP);
+                            }
+                            else
+                            {
+                                temp_GP.m_X = CurGPXY[0];
+                                temp_GP.m_Y = CurGPXY[1];
+                                
+                                D2DPOINT photo = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[reference_id],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[reference_id].m_Rm);
+                                
+                                Ref_Imagecoord = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+                            }
                             Ref_Imagecoord_py  = OriginalToPyramid_single(Ref_Imagecoord,Startpos[reference_id],Pyramid_step);
                             //printf("ref coord %f\t%f\n",Ref_Imagecoord_py.m_X,Ref_Imagecoord_py.m_Y);
                             
@@ -11285,8 +11111,27 @@ bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt
                             double pos_row_right;
                             double pos_col_right;
                         
-                            
-                            Tar_Imagecoord    = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
+                            if(proinfo->check_sensor_type == 1)
+                            {
+                                temp_GP_p.m_X = CurGPXY[0];
+                                temp_GP_p.m_Y = CurGPXY[1];
+                                
+                                temp_GP_p     = ps2wgs_single(param,temp_GP_p);
+                                
+                                temp_GP.m_X = temp_GP_p.m_X;
+                                temp_GP.m_Y = temp_GP_p.m_Y;
+                                
+                                Tar_Imagecoord     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,temp_LIA,temp_GP);
+                            }
+                            else
+                            {
+                                temp_GP.m_X = CurGPXY[0];
+                                temp_GP.m_Y = CurGPXY[1];
+                                
+                                D2DPOINT photo = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                                
+                                Tar_Imagecoord = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+                            }
                             Tar_Imagecoord_py = OriginalToPyramid_single(Tar_Imagecoord,Startpos[ti],Pyramid_step);
                             //printf("tar coord %f\t%f\n",Ref_Imagecoord_py.m_X,Ref_Imagecoord_py.m_Y);
                             
@@ -12815,7 +12660,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         gridsize.height = BL_param.Size_Grid2D.height;
             
         if(pyramid_step >= 1)
+        {
             GSD = gridspace;
+            if(pyramid_step >= 3 && gridspace < 0.5*pow(2.0,pyramid_step))
+                GSD = 0.5*pow(2.0,pyramid_step);
+        }
         else
             GSD = 0.5*pow(2.0,pyramid_step);
 
@@ -12867,9 +12716,12 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                 t_col         = (int)((pt0.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt0.m_Y - boundary[1])/gridspace + 0.5);
                 int pt0_index     = gridsize.width*t_row + t_col;
-                sum_oncc += ortho_ncc[pt0_index];
-                sum2_oncc += ortho_ncc[pt0_index]* ortho_ncc[pt0_index];
-                total_oncc_count++;
+                if( ortho_ncc[pt0_index] > -1)
+                {
+                    sum_oncc += ortho_ncc[pt0_index];
+                    sum2_oncc += ortho_ncc[pt0_index]* ortho_ncc[pt0_index];
+                    total_oncc_count++;
+                }
             }
             else
                 check_pt_index = false;
@@ -12888,9 +12740,12 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                 t_col         = (int)((pt1.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt1.m_Y - boundary[1])/gridspace + 0.5);
                 int pt1_index     = gridsize.width*t_row + t_col;
-                sum_oncc += ortho_ncc[pt1_index];
-                sum2_oncc += ortho_ncc[pt1_index]* ortho_ncc[pt1_index];
-                total_oncc_count++;
+                if( ortho_ncc[pt1_index] > -1)
+                {
+                    sum_oncc += ortho_ncc[pt1_index];
+                    sum2_oncc += ortho_ncc[pt1_index]* ortho_ncc[pt1_index];
+                    total_oncc_count++;
+                }
             }
             else
                 check_pt_index = false;
@@ -12909,9 +12764,12 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                 t_col         = (int)((pt2.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt2.m_Y - boundary[1])/gridspace + 0.5);
                 int pt2_index     = gridsize.width*t_row + t_col;
-                sum_oncc += ortho_ncc[pt2_index];
-                sum2_oncc += ortho_ncc[pt2_index]* ortho_ncc[pt2_index];
-                total_oncc_count++;
+                if( ortho_ncc[pt2_index] > -1)
+                {
+                    sum_oncc += ortho_ncc[pt2_index];
+                    sum2_oncc += ortho_ncc[pt2_index]* ortho_ncc[pt2_index];
+                    total_oncc_count++;
+                }
             }
             else
                 check_pt_index = false;
@@ -12979,25 +12837,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
             
             printf("height_th = %f\t3sigma = %f\theight_th_2 = %f\n",height_th,up_3sigma,height_th_2);
             
-            if(pyramid_step  <= 4)
+            if(up_3sigma < height_th)
             {
-                /*if(pyramid_step <= 4 && pyramid_step >= 3 && iteration <= 4)
-                {
-                    if(up_3sigma < height_th)
-                        height_th = up_3sigma;
-                }
-                else if(pyramid_step == 2 && iteration <= 2)
-                {
-                    if(up_3sigma < height_th)
-                        height_th = up_3sigma;
-                }
-                else if(iteration <= 2)
-                {
-                    if(up_3sigma < height_th)
-                        height_th = up_3sigma;
-                }
-                */
-                if(up_3sigma < height_th)
+                if(up_3sigma < height_th/2.0)
+                    height_th = height_th/2.0;
+                else
                     height_th = up_3sigma;
             }
         }
@@ -15407,7 +15251,7 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
 }
 
 bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, double **imageparam, D2DPOINT *Startpos,
-                          D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step)
+                          D2DPOINT pos_xy_m, D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step)
 {
     bool check = true;
 
@@ -15426,10 +15270,21 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
         if(proinfo->check_selected_image[ti])
         {
             //min height
-            temp_gp.m_X = pos_xy.m_X;
-            temp_gp.m_Y = pos_xy.m_Y;
             temp_gp.m_Z = minH;
-            temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+            if(proinfo->check_sensor_type == 1)
+            {
+                temp_gp.m_X = pos_xy.m_X;
+                temp_gp.m_Y = pos_xy.m_Y;
+                temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+            }
+            else
+            {
+                temp_gp.m_X = pos_xy_m.m_X;
+                temp_gp.m_Y = pos_xy_m.m_Y;
+                
+                D2DPOINT photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                temp            = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+            }
             temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
             
             if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
@@ -15441,7 +15296,20 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
             
             //max height
             temp_gp.m_Z = maxH;
-            temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+            if(proinfo->check_sensor_type == 1)
+            {
+                temp_gp.m_X = pos_xy.m_X;
+                temp_gp.m_Y = pos_xy.m_Y;
+                temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+            }
+            else
+            {
+                temp_gp.m_X = pos_xy_m.m_X;
+                temp_gp.m_Y = pos_xy_m.m_Y;
+                
+                D2DPOINT photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                temp            = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+            }
             temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
             
             if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
@@ -17026,6 +16894,20 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     double minLat,minLon;
     CSize DEM_size, Image_size;
     TransParam param;
+    FrameInfo m_frameinfo;
+    
+    if(args.check_sensor_type != 1)
+    {
+        m_frameinfo.m_Camera.m_focalLength  = args.focal_length;
+        m_frameinfo.m_Camera.m_CCDSize      = args.CCD_size;
+        m_frameinfo.m_Camera.m_ppx = 0;
+        m_frameinfo.m_Camera.m_ppy = 0;
+        
+        m_frameinfo.Photoinfo = (EO*)malloc(sizeof(EO));
+        sprintf(m_frameinfo.Photoinfo[0].path,"%s",ImageFilename);
+    }
+    
+    printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
     
     tmp_chr = remove_ext_ortho(ImageFilename);
     sprintf(RPCFilename,"%s.xml",tmp_chr);
@@ -17077,36 +16959,67 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     Image_resolution = 0.5;
     
     // load RPCs info from xml file
-    if(args.sensor_provider == 1)
-    {
-        RPCs            = OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
-    }
-    else
-    {
-        RPCs            = OpenXMLFile_Pleiades(RPCFilename);
-    }
-    
-    
-    if(!args.check_imageresolution)
+    if(args.check_sensor_type == 1)
     {
         if(args.sensor_provider == 1)
         {
-            Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
-            
-            if (Image_resolution < 0.75) {
-                Image_resolution = 0.5;
-            }
-            else if(Image_resolution < 1.25)
-                Image_resolution = 1.0;
-            else
-                Image_resolution = floor(Image_resolution);
+            RPCs            = OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
         }
         else
-            Image_resolution = 0.5;
+        {
+            RPCs            = OpenXMLFile_Pleiades(RPCFilename);
+        }
     }
     else
     {
-        Image_resolution  = args.image_resolution;
+        FILE *pFile;
+        pFile           = fopen(RPCFilename,"r");
+        
+        fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+               &m_frameinfo.Photoinfo[0].m_Xl,&m_frameinfo.Photoinfo[0].m_Yl,&m_frameinfo.Photoinfo[0].m_Zl,
+               &m_frameinfo.Photoinfo[0].m_Wl,&m_frameinfo.Photoinfo[0].m_Pl,&m_frameinfo.Photoinfo[0].m_Kl);
+        
+        printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+               m_frameinfo.Photoinfo[0].path,
+               m_frameinfo.Photoinfo[0].m_Xl,m_frameinfo.Photoinfo[0].m_Yl,m_frameinfo.Photoinfo[0].m_Zl,
+               m_frameinfo.Photoinfo[0].m_Wl,m_frameinfo.Photoinfo[0].m_Pl,m_frameinfo.Photoinfo[0].m_Kl);
+        double o = m_frameinfo.Photoinfo[0].m_Wl;
+        double p = m_frameinfo.Photoinfo[0].m_Pl;
+        double k = m_frameinfo.Photoinfo[0].m_Kl;
+        
+        m_frameinfo.Photoinfo[0].m_Rm = MakeRotationMatrix(o, p, k);
+        
+        printf("%f\t%f\t%f\n%f\t%f\t%f\n%f\t%f\t%f\n",m_frameinfo.Photoinfo[0].m_Rm.m11,m_frameinfo.Photoinfo[0].m_Rm.m12,
+               m_frameinfo.Photoinfo[0].m_Rm.m13,m_frameinfo.Photoinfo[0].m_Rm.m21,m_frameinfo.Photoinfo[0].m_Rm.m22,m_frameinfo.Photoinfo[0].m_Rm.m23,
+               m_frameinfo.Photoinfo[0].m_Rm.m31,m_frameinfo.Photoinfo[0].m_Rm.m32,m_frameinfo.Photoinfo[0].m_Rm.m33);
+        Image_resolution = m_frameinfo.m_Camera.m_CCDSize*UMToMM/(m_frameinfo.m_Camera.m_focalLength/m_frameinfo.Photoinfo[0].m_Zl);
+        
+        Image_resolution = (int)((Image_resolution)*10 + 0.5)/10.0;
+    }
+    
+    if(args.check_sensor_type == 1)
+    {
+        if(!args.check_imageresolution)
+        {
+            if(args.sensor_provider == 1)
+            {
+                Image_resolution = (int)(((row_grid_size + col_grid_size)/2.0)*10 + 0.5)/10.0;
+                
+                if (Image_resolution < 0.75) {
+                    Image_resolution = 0.5;
+                }
+                else if(Image_resolution < 1.25)
+                    Image_resolution = 1.0;
+                else
+                    Image_resolution = floor(Image_resolution);
+            }
+            else
+                Image_resolution = 0.5;
+        }
+        else
+        {
+            Image_resolution  = args.image_resolution;
+        }
     }
 
     
@@ -17123,17 +17036,20 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     */
     printf("Image resolution %f\n",Image_resolution);
     
-    minLat = RPCs[0][3];
-    minLon = RPCs[0][2];
-    
-    //set projection conversion info.
-    param.utm_zone   = args.utm_zone;
-    _param.utm_zone  = args.utm_zone;
-    
-    SetTransParam(minLat, minLon, &Hemisphere, &_param);
-    SetTransParam(minLat, minLon, &Hemisphere, &param);
-    
-    param.projection = _param.projection;
+    if(args.check_sensor_type == 1)
+    {
+        minLat = RPCs[0][3];
+        minLon = RPCs[0][2];
+        
+        //set projection conversion info.
+        param.utm_zone   = args.utm_zone;
+        _param.utm_zone  = args.utm_zone;
+        
+        SetTransParam(minLat, minLon, &Hemisphere, &_param);
+        SetTransParam(minLat, minLon, &Hemisphere, &param);
+        
+        param.projection = _param.projection;
+    }
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
 
     // load DEM infor from geotiff file.
@@ -17156,13 +17072,19 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     OrthoGridFactor = resolution[2]/resolution[0];
     
     impyramid_step  = ceil(log(resolution[2]/resolution[1])/log(2));
-    printf("impyramid_step %d\n",impyramid_step);
+    printf("impyramid_step %d\n ortho_Resolution %f\n",impyramid_step,Ortho_resolution);
     
     CSize Orthoimagesize;
     double OrthoBoundary[4];
     
     // set generated orthoimage info by comparing DEM info
-    SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param, Ortho_resolution);
+    if(args.check_sensor_type == 1)
+        SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param, Ortho_resolution);
+    else
+    {
+        GetImageSize_ortho(ImageFilename,&m_frameinfo.m_Camera.m_ImageSize);
+        SetDEMBoundary_ortho_photo(&Orthoimagesize, OrthoBoundary,DEM_resolution, DEM_size, DEM_minX, DEM_maxY, Ortho_resolution, m_frameinfo.Photoinfo[0], m_frameinfo.m_Camera, m_frameinfo.Photoinfo[0].m_Rm);
+    }
     
     // set saving pointer for orthoimage
     uint16 *result_ortho    = (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
@@ -17252,7 +17174,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
             uint16 *subimage;
             bool check_subsetImage = false;
             
-            subimage = subsetImage_ortho(param, RPCs, ImageFilename,
+            subimage = subsetImage_ortho(args.check_sensor_type, m_frameinfo, param, RPCs, ImageFilename,
                                          subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
             if(check_subsetImage)
             {
@@ -17274,6 +17196,8 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                     pyimg = Preprocessing_ortho(ori_impyramid_step,data_size,subimage);
                 
                 Image_size  = data_size[impyramid_step];
+                
+                //printf("Image_size %d\t%d\n",Image_size.width,Image_size.height);
                 
                 int col_size    = (int)((X_size[1] - X_size[0])/Ortho_resolution + 0.5);
                 int row_size    = (int)((Y_size[1] - Y_size[0])/Ortho_resolution + 0.5);
@@ -17328,12 +17252,24 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                         
                         if(value > -1000)
                         {
-                            D2DPOINT wgsPt = ps2wgs_single(param, objectXY);
+                            D2DPOINT image;
                             D2DPOINT temp_pt;
+                            if(args.check_sensor_type == 1)
+                            {
+                                D2DPOINT wgsPt = ps2wgs_single(param, objectXY);
+                               
+                                object.m_X  = wgsPt.m_X;
+                                object.m_Y  = wgsPt.m_Y;
+                                image = GetObjectToImageRPC_single_ortho(RPCs, 2, imageparam, object);
+                            }
+                            else
+                            {
+                                D2DPOINT photo  = GetPhotoCoordinate_single(object,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera,m_frameinfo.Photoinfo[0].m_Rm);
+                                image = PhotoToImage_single(photo, m_frameinfo.m_Camera.m_CCDSize, m_frameinfo.m_Camera.m_ImageSize);
+                                
+                                //printf("done photoToImage %f\t%f\n",image.m_X,image.m_Y);
+                            }
                             
-                            object.m_X  = wgsPt.m_X;
-                            object.m_Y  = wgsPt.m_Y;
-                            D2DPOINT image = GetObjectToImageRPC_single_ortho(RPCs, 2, imageparam, object);
                             
                             temp_pt     = OriginalToPyramid_single_ortho(image, startpos, impyramid_step);
                             
@@ -17346,9 +17282,11 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                             dcol        = t_col - t_col_int;
                             drow        = t_row - t_row_int;
                             
+                            //printf("temp_pt %f\t%f\n",temp_pt.m_X,temp_pt.m_Y);
                             if(t_col_int >= 0 && t_col_int +1 < Image_size.width && t_row_int >= 0 && t_row_int +1 < Image_size.height
                                && (t_col_int +1) + (t_row_int +1)*Image_size.width < Image_size.width*Image_size.height)
                             {
+                                //printf("inside of image value\n");
                                 double value1, value2, value3, value4, value;
                                 int index;
                                 index1  = (t_col_int   ) + (t_row_int   )*Image_size.width;
@@ -17379,6 +17317,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                                 
                                 if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < Orthoimagesize.width*Orthoimagesize.height)
                                 {
+                                    //printf("inside of ortho\n");
                                     result_ortho[index] = value1;
                                 }
                             }
@@ -17538,7 +17477,7 @@ void SetPySizes_ortho(CSize *data_size, CSize subsetsize, int level)
 }
 
 
-uint16 *subsetImage_ortho(TransParam transparam, double **RPCs, char *ImageFilename, 
+uint16 *subsetImage_ortho(int check_sensor_type, FrameInfo m_frameinfo, TransParam transparam, double **RPCs, char *ImageFilename,
                           double *subBoundary, double *minmaxHeight, D2DPOINT *startpos, char *subsetImage, CSize* subsetsize, bool *ret)
 {
     *ret = false;
@@ -17548,7 +17487,7 @@ uint16 *subsetImage_ortho(TransParam transparam, double **RPCs, char *ImageFilen
     if(GetImageSize_ortho(ImageFilename,&Imagesize))
     {
         int cols[2], rows[2];
-        if(GetsubareaImage_ortho(transparam,RPCs,ImageFilename,&Imagesize,subBoundary,minmaxHeight,cols,rows) )
+        if(GetsubareaImage_ortho(check_sensor_type,m_frameinfo,transparam,RPCs,ImageFilename,&Imagesize,subBoundary,minmaxHeight,cols,rows) )
         {
             
             
@@ -17612,7 +17551,7 @@ CSize Envihdr_reader_ortho(char *filename)
     return image_size;
 }
 
-bool GetsubareaImage_ortho(TransParam transparam, double **RPCs, char *ImageFilename, CSize *Imagesize,
+bool GetsubareaImage_ortho(int check_sensor_type, FrameInfo m_frameinfo, TransParam transparam, double **RPCs, char *ImageFilename, CSize *Imagesize,
                            double *subBoundary, double *minmaxHeight, int *cols, int *rows)
 {
     bool ret = false;
@@ -17622,7 +17561,7 @@ bool GetsubareaImage_ortho(TransParam transparam, double **RPCs, char *ImageFile
         int i;
         
         D3DPOINT t_pts[8];
-        D3DPOINT *t_pts1;
+        
         D2DPOINT *ImageCoord;
         int buffer, null_buffer;
         double ImageParam[2] = {0.};
@@ -17658,9 +17597,22 @@ bool GetsubareaImage_ortho(TransParam transparam, double **RPCs, char *ImageFile
         t_pts[6].m_Z    = minmaxHeight[1];
         t_pts[7].m_Z    = minmaxHeight[1];
         
-        t_pts1          = ps2wgs_3D(transparam,8,t_pts);
-        
-        ImageCoord      = GetObjectToImageRPC_ortho(RPCs, 2, ImageParam, 8, t_pts1);
+        if(check_sensor_type == 1)
+        {
+            D3DPOINT *t_pts1;
+            t_pts1          = ps2wgs_3D(transparam,8,t_pts);
+            ImageCoord      = GetObjectToImageRPC(RPCs, 2, ImageParam, 8, t_pts1);
+            
+            free(t_pts1);
+        }
+        else
+        {
+            D2DPOINT *t_image;
+            t_image     = GetPhotoCoordinate(t_pts, m_frameinfo.Photoinfo[0], 8, m_frameinfo.m_Camera, m_frameinfo.Photoinfo[0].m_Rm);
+            ImageCoord  = PhotoToImage(t_image,8,m_frameinfo.m_Camera.m_CCDSize,m_frameinfo.m_Camera.m_ImageSize);
+            
+            free(t_image);
+        }
         
         for(i=0;i<8;i++)
         {
@@ -17700,7 +17652,7 @@ bool GetsubareaImage_ortho(TransParam transparam, double **RPCs, char *ImageFile
         if(rows[1]          > Imagesize->height - null_buffer)
             rows[1]         = Imagesize->height - null_buffer;
         
-        free(t_pts1);
+        
         free(ImageCoord);
         
         ret = true;
@@ -18067,6 +18019,73 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     
     
     printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
+    return true;
+}
+
+bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double gridspace, CSize DEM_size, double minX, double maxY, double Ortho_resolution, EO Photo, CAMERA_INFO m_Camera, RM M)
+{
+    double TopLeft[2];
+    TopLeft[0]  = minX;
+    TopLeft[1]  = maxY;
+    double DEMboundary[4];
+    DEMboundary[0]  = TopLeft[0];
+    DEMboundary[1]  = TopLeft[1]-DEM_size.height*gridspace;
+    DEMboundary[2]  = TopLeft[0]+DEM_size.width*gridspace;
+    DEMboundary[3]  = TopLeft[1];
+
+    
+    double MSL = 0;
+    
+    D3DPOINT top_left_3D,top_right_3D,bottom_right_3D,bottom_left_3D;
+    D2DPOINT top_left, top_right, bottom_right,bottom_left;
+    
+    top_left.m_X = 0.0;
+    top_left.m_Y = 0.0;
+    top_right.m_X = m_Camera.m_ImageSize.width;
+    top_right.m_Y = 0.0;
+    bottom_right.m_X = m_Camera.m_ImageSize.width;
+    bottom_right.m_Y = m_Camera.m_ImageSize.height;
+    bottom_left.m_X = 0.0;
+    bottom_left.m_Y = m_Camera.m_ImageSize.height;
+    
+    //printf("photo coord %f\t%f\n%f\t%f\n%f\t%f\n%f\t%f\n",top_left.m_X,top_left.m_Y,top_right.m_X,top_right.m_Y,bottom_right.m_X,bottom_right.m_Y,bottom_left.m_X,bottom_left.m_Y);
+    
+    top_left = ImageToPhoto_single(top_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    top_right = ImageToPhoto_single(top_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    bottom_right = ImageToPhoto_single(bottom_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    bottom_left = ImageToPhoto_single(bottom_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    
+    top_left_3D     = GetObjectCoordinate_single(top_left,MSL,Photo, m_Camera, M);
+    top_right_3D    = GetObjectCoordinate_single(top_right,MSL,Photo, m_Camera, M);
+    bottom_right_3D = GetObjectCoordinate_single(bottom_right,MSL,Photo, m_Camera, M);
+    bottom_left_3D  = GetObjectCoordinate_single(bottom_left,MSL,Photo, m_Camera, M);
+    
+    double IminX = (top_left_3D.m_X < bottom_left_3D.m_X) ? top_left_3D.m_X : bottom_left_3D.m_X;
+    double IminY = (bottom_left_3D.m_Y < bottom_right_3D.m_Y) ? bottom_left_3D.m_Y : bottom_right_3D.m_Y;
+    double ImaxX = (top_right_3D.m_X > bottom_right_3D.m_X) ? top_right_3D.m_X : bottom_right_3D.m_X;
+    double ImaxY = (top_left_3D.m_Y > top_right_3D.m_Y) ? top_left_3D.m_Y : top_right_3D.m_Y;
+    
+    double ImageBoundary[4];
+    
+    ImageBoundary[0] =  floor(IminX);
+    ImageBoundary[1] =  floor(IminY);
+    ImageBoundary[2] =  ceil(ImaxX);
+    ImageBoundary[3] =  ceil(ImaxY);
+    //printf("photo coord %f\t%f\n%f\t%f\n%f\t%f\n%f\t%f\n",top_left.m_X,top_left.m_Y,top_right.m_X,top_right.m_Y,bottom_right.m_X,bottom_right.m_Y,bottom_left.m_X,bottom_left.m_Y);
+    //printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
+    //printf("DEMboundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
+    
+    Boundary[0] = (max(DEMboundary[0],ImageBoundary[0]));
+    Boundary[1] = (max(DEMboundary[1],ImageBoundary[1]));
+    Boundary[2] = (min(DEMboundary[2],ImageBoundary[2]));
+    Boundary[3] = (min(DEMboundary[3],ImageBoundary[3]));
+    
+    Imagesize->height    = ceil(fabs(Boundary[3] - Boundary[1])/Ortho_resolution);
+    Imagesize->width     = ceil(fabs(Boundary[2] - Boundary[0])/Ortho_resolution);
+    
+    
+    printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
+    
     return true;
 }
 
@@ -19595,21 +19614,93 @@ RM MakeRotationMatrix(double o, double p, double k)
     return m_rm;
 }
 
-D2DPOINT GetPhotoCoordinate(D3DPOINT A, EO Photo, CAMERA_INFO Camera, RM M)
+D2DPOINT *GetPhotoCoordinate(D3DPOINT *A, EO Photo, int _numofpts, CAMERA_INFO Camera, RM M)
 {
-    D2DPOINT a;
+    D2DPOINT *IP;
+    
+    IP      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        double q = M.m31*(A[i].m_X - Photo.m_Xl) + M.m32*(A[i].m_Y - Photo.m_Yl) + M.m33*(A[i].m_Z - Photo.m_Zl);
+        double r = M.m11*(A[i].m_X - Photo.m_Xl) + M.m12*(A[i].m_Y - Photo.m_Yl) + M.m13*(A[i].m_Z - Photo.m_Zl);
+        double s = M.m21*(A[i].m_X - Photo.m_Xl) + M.m22*(A[i].m_Y - Photo.m_Yl) + M.m23*(A[i].m_Z - Photo.m_Zl);
+        
+        IP[i].m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
+        IP[i].m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
+    }
+    
+    return IP;
+}
+
+D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAMERA_INFO Camera, RM M)
+{
+    D3DPOINT *A;
+    A      = (D3DPOINT*)malloc(sizeof(D3DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        A[i].m_Z = z;
+        A[i].m_X =  (A[i].m_Z - Photo.m_Zl)*(M.m11*(a[i].m_X - Camera.m_ppx) + M.m21*(a[i].m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
+        /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
+        A[i].m_Y =  (A[i].m_Z - Photo.m_Zl)*(M.m12*(a[i].m_X - Camera.m_ppx) + M.m22*(a[i].m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
+        /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
+    }
+    
+    return A;
+}
+
+D2DPOINT *PhotoToImage(D2DPOINT *_photo, int _numofpts, float _CCDSize, CSize _imgsize)
+{
+    D2DPOINT *m_ImageCoord;
+    m_ImageCoord      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        m_ImageCoord[i].m_X = ( _photo[i].m_X + _imgsize.width*(_CCDSize*UMToMM)/2.)/(_CCDSize*UMToMM);
+        m_ImageCoord[i].m_Y = (-_photo[i].m_Y + _imgsize.height*(_CCDSize*UMToMM)/2.)/(_CCDSize*UMToMM);
+    }
+    
+    return m_ImageCoord;
+}
+
+D2DPOINT *ImageToPhoto(D2DPOINT *_image, int _numofpts, float _CCDSize, CSize _imgsize)
+{
+    D2DPOINT *m_PhotoCoord;
+    m_PhotoCoord      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        m_PhotoCoord[i].m_X =   _image[i].m_X*(_CCDSize*UMToMM) - _imgsize.width*(_CCDSize*UMToMM)/2.;
+        m_PhotoCoord[i].m_Y = -(_image[i].m_Y*(_CCDSize*UMToMM) - _imgsize.height*(_CCDSize*UMToMM)/2.);
+    }
+    
+    return m_PhotoCoord;
+}
+
+
+
+
+D2DPOINT GetPhotoCoordinate_single(D3DPOINT A, EO Photo, CAMERA_INFO Camera, RM M)
+{
+    D2DPOINT IP;
     
     double q = M.m31*(A.m_X - Photo.m_Xl) + M.m32*(A.m_Y - Photo.m_Yl) + M.m33*(A.m_Z - Photo.m_Zl);
     double r = M.m11*(A.m_X - Photo.m_Xl) + M.m12*(A.m_Y - Photo.m_Yl) + M.m13*(A.m_Z - Photo.m_Zl);
     double s = M.m21*(A.m_X - Photo.m_Xl) + M.m22*(A.m_Y - Photo.m_Yl) + M.m23*(A.m_Z - Photo.m_Zl);
+        
+    IP.m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
+    IP.m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
+
     
-    a.m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
-    a.m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
-    
-    return a;
+    return IP;
 }
 
-D3DPOINT GetObjectCoordinate(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, RM M)
+D3DPOINT GetObjectCoordinate_single(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, RM M)
 {
     D3DPOINT A;
     
@@ -19618,101 +19709,137 @@ D3DPOINT GetObjectCoordinate(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, 
     /(M.m13*(a.m_X - Camera.m_ppx) + M.m23*(a.m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
     A.m_Y =  (A.m_Z - Photo.m_Zl)*(M.m12*(a.m_X - Camera.m_ppx) + M.m22*(a.m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
     /(M.m13*(a.m_X - Camera.m_ppx) + M.m23*(a.m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
+
     
     return A;
 }
 
-D2DPOINT PhotoToImage(D2DPOINT _photo, float _CCDSize, CSize _imgsize)
+D2DPOINT PhotoToImage_single(D2DPOINT _photo, float _CCDSize, CSize _imgsize)
 {
     D2DPOINT m_ImageCoord;
     
-    m_ImageCoord.m_X = (_photo.m_X + _imgsize.width*(_CCDSize*UMToMM)/2.)/(_CCDSize*UMToMM);
+    m_ImageCoord.m_X = ( _photo.m_X + _imgsize.width*(_CCDSize*UMToMM)/2.)/(_CCDSize*UMToMM);
     m_ImageCoord.m_Y = (-_photo.m_Y + _imgsize.height*(_CCDSize*UMToMM)/2.)/(_CCDSize*UMToMM);
     
     return m_ImageCoord;
 }
 
-D2DPOINT ImageToPhoto(D2DPOINT _image, float _CCDSize, CSize _imgsize)
+D2DPOINT ImageToPhoto_single(D2DPOINT _image, float _CCDSize, CSize _imgsize)
 {
     D2DPOINT m_PhotoCoord;
     
-    m_PhotoCoord.m_X = _image.m_X*(_CCDSize*UMToMM) - _imgsize.width*(_CCDSize*UMToMM)/2.;
+    m_PhotoCoord.m_X =   _image.m_X*(_CCDSize*UMToMM) - _imgsize.width*(_CCDSize*UMToMM)/2.;
     m_PhotoCoord.m_Y = -(_image.m_Y*(_CCDSize*UMToMM) - _imgsize.height*(_CCDSize*UMToMM)/2.);
     
     return m_PhotoCoord;
 }
 
-bool OpenDMCproject(char* project_path, FrameInfo *t_frame)
+bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
 {
     bool ret = true;
     
     FILE *fp;
     char garbage[200];
     char temp_str[500];
-    fp = fopen(project_path, "r");
-    if(fp)
+    
+    if(args.check_EO)
     {
-        while(!feof(fp))
+        fp = fopen(project_path, "r");
+        
+        if(fp)
         {
-            fscanf(fp, "%s\n", &garbage);
-            fscanf(fp, "%s\t%lf\n", &garbage,&t_frame->m_Camera.m_focalLength);
-            fscanf(fp, "%s\t%d\t%d\n", &garbage,&t_frame->m_Camera.m_ImageSize.width,&t_frame->m_Camera.m_ImageSize.height);
-            fscanf(fp, "%s\t%lf\n", &garbage,&t_frame->m_Camera.m_CCDSize);
-            t_frame->m_Camera.m_ppx = 0.0;
-            t_frame->m_Camera.m_ppy = 0.0;
-            
-            printf("%f\t%d\t%d\t%f\n",t_frame->m_Camera.m_focalLength,t_frame->m_Camera.m_ImageSize.width,t_frame->m_Camera.m_ImageSize.height,t_frame->m_Camera.m_CCDSize);
-            
-            fscanf(fp, "%s\n", &garbage);
-            fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", &garbage,&t_frame->NumberofStip,&t_frame->NumberofPhotos,&t_frame->start_stripID,&t_frame->end_stripID);
-            printf("%d\t%d\t%d\t%d\n",t_frame->NumberofStip,t_frame->NumberofPhotos,t_frame->start_stripID,t_frame->end_stripID);
-            
-            fscanf(fp, "%s\n", &garbage);
-            
-            t_frame->Photoinfo = (EO*)calloc(sizeof(EO),t_frame->NumberofPhotos);
-            
-            int total_photos = 0;
-            for(int i=0;i<t_frame->NumberofStip;i++)
+            while(!feof(fp))
             {
-                int image_number;
-                int strip_id;
-                fscanf(fp, "%s\t%d\t%d\n", &garbage,&strip_id,&image_number);
+                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
+                fscanf(fp, "%s\t%d\t%d\n", &garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
+                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
+                proinfo->frameinfo.m_Camera.m_ppx = 0.0;
+                proinfo->frameinfo.m_Camera.m_ppy = 0.0;
                 
-                for(int j=0;j<image_number;j++)
+                printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
+                       proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
+                
+                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", &garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
+                printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
+                
+                fscanf(fp, "%s\n", &garbage);
+                
+                proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->frameinfo.NumberofPhotos);
+                proinfo->number_of_images = proinfo->frameinfo.NumberofPhotos;
+                
+                int total_photos = 0;
+                for(int i=0;i<proinfo->frameinfo.NumberofStip;i++)
                 {
-                    t_frame->Photoinfo[total_photos].strip_ID = strip_id;
-                    fscanf(fp, "%d", &t_frame->Photoinfo[total_photos].photo_ID);
+                    int image_number;
+                    int strip_id;
+                    fscanf(fp, "%s\t%d\t%d\n", &garbage,&strip_id,&image_number);
                     
-                    fscanf(fp, "%s", t_frame->Photoinfo[total_photos].path);
-                    
-                    
-                    fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", 
-                           &t_frame->Photoinfo[total_photos].m_Xl,&t_frame->Photoinfo[total_photos].m_Yl,&t_frame->Photoinfo[total_photos].m_Zl,
-                           &t_frame->Photoinfo[total_photos].m_Wl,&t_frame->Photoinfo[total_photos].m_Pl,&t_frame->Photoinfo[total_photos].m_Kl);
-                    
-                    printf("%d\t%d\t%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-                           t_frame->Photoinfo[total_photos].strip_ID,t_frame->Photoinfo[total_photos].photo_ID,
-                           t_frame->Photoinfo[total_photos].path,
-                           t_frame->Photoinfo[total_photos].m_Xl,t_frame->Photoinfo[total_photos].m_Yl,t_frame->Photoinfo[total_photos].m_Zl,
-                           t_frame->Photoinfo[total_photos].m_Wl,t_frame->Photoinfo[total_photos].m_Pl,t_frame->Photoinfo[total_photos].m_Kl);
-                    double o = t_frame->Photoinfo[total_photos].m_Wl;
-                    double p = t_frame->Photoinfo[total_photos].m_Pl;
-                    double k = t_frame->Photoinfo[total_photos].m_Kl;
-                    
-                    t_frame->Photoinfo[total_photos].m_Rm = MakeRotationMatrix(o, p, k);
-                    
-                    total_photos++;
+                    for(int j=0;j<image_number;j++)
+                    {
+                        proinfo->frameinfo.Photoinfo[total_photos].strip_ID = strip_id;
+                        fscanf(fp, "%d", &proinfo->frameinfo.Photoinfo[total_photos].photo_ID);
+                        
+                        fscanf(fp, "%s", proinfo->frameinfo.Photoinfo[total_photos].path);
+                        
+                        
+                        fscanf(fp, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n", 
+                               &proinfo->frameinfo.Photoinfo[total_photos].m_Xl,&proinfo->frameinfo.Photoinfo[total_photos].m_Yl,&proinfo->frameinfo.Photoinfo[total_photos].m_Zl,
+                               &proinfo->frameinfo.Photoinfo[total_photos].m_Wl,&proinfo->frameinfo.Photoinfo[total_photos].m_Pl,&proinfo->frameinfo.Photoinfo[total_photos].m_Kl);
+                        
+                        printf("%d\t%d\t%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                               proinfo->frameinfo.Photoinfo[total_photos].strip_ID,proinfo->frameinfo.Photoinfo[total_photos].photo_ID,
+                               proinfo->frameinfo.Photoinfo[total_photos].path,
+                               proinfo->frameinfo.Photoinfo[total_photos].m_Xl,proinfo->frameinfo.Photoinfo[total_photos].m_Yl,proinfo->frameinfo.Photoinfo[total_photos].m_Zl,
+                               proinfo->frameinfo.Photoinfo[total_photos].m_Wl,proinfo->frameinfo.Photoinfo[total_photos].m_Pl,proinfo->frameinfo.Photoinfo[total_photos].m_Kl);
+                        double o = proinfo->frameinfo.Photoinfo[total_photos].m_Wl;
+                        double p = proinfo->frameinfo.Photoinfo[total_photos].m_Pl;
+                        double k = proinfo->frameinfo.Photoinfo[total_photos].m_Kl;
+                        
+                        proinfo->frameinfo.Photoinfo[total_photos].m_Rm = MakeRotationMatrix(o, p, k);
+                        
+                        total_photos++;
+                    }
                 }
             }
+            fclose(fp);
         }
-        fclose(fp);
+        else
+        {
+            ret = false;
+        }
     }
     else
     {
-        ret = false;
+        if(args.check_fl && args.check_ccd)
+        {
+            proinfo->frameinfo.m_Camera.m_focalLength = args.focal_length;
+            proinfo->frameinfo.m_Camera.m_CCDSize = args.CCD_size;
+            proinfo->frameinfo.m_Camera.m_ppx = 0.0;
+            proinfo->frameinfo.m_Camera.m_ppy = 0.0;
+            
+            printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
+                   proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
+            
+            proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->number_of_images);
+            
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            {
+                sprintf(proinfo->frameinfo.Photoinfo[ti].path,"%s",proinfo->Imagefilename[ti]);
+                printf("%s\n",proinfo->Imagefilename[ti]);
+                printf("%s\n",proinfo->frameinfo.Photoinfo[ti].path);
+            }
+            
+            ret = true;
+        }
+        else
+        {
+            ret = false;
+            printf("Please input focal length and CCD size!!\n");
+        }
     }
-    
-    exit(1);
+
     
     return ret;
 }
@@ -19751,15 +19878,15 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
     bottom_left.m_X = 0.0;
     bottom_left.m_Y = m_Camera.m_ImageSize.height;
     
-    top_left = ImageToPhoto(top_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
-    top_right = ImageToPhoto(top_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
-    bottom_right = ImageToPhoto(bottom_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
-    bottom_left = ImageToPhoto(bottom_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    top_left = ImageToPhoto_single(top_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    top_right = ImageToPhoto_single(top_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    bottom_right = ImageToPhoto_single(bottom_right,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
+    bottom_left = ImageToPhoto_single(bottom_left,m_Camera.m_CCDSize,m_Camera.m_ImageSize);
     
-    top_left_3D     = GetObjectCoordinate(top_left,MSL,Photo, m_Camera, M);
-    top_right_3D    = GetObjectCoordinate(top_right,MSL,Photo, m_Camera, M);
-    bottom_right_3D = GetObjectCoordinate(bottom_right,MSL,Photo, m_Camera, M);
-    bottom_left_3D  = GetObjectCoordinate(bottom_left,MSL,Photo, m_Camera, M);
+    top_left_3D     = GetObjectCoordinate_single(top_left,MSL,Photo, m_Camera, M);
+    top_right_3D    = GetObjectCoordinate_single(top_right,MSL,Photo, m_Camera, M);
+    bottom_right_3D = GetObjectCoordinate_single(bottom_right,MSL,Photo, m_Camera, M);
+    bottom_left_3D  = GetObjectCoordinate_single(bottom_left,MSL,Photo, m_Camera, M);
     
     double minX = (top_left_3D.m_X < bottom_left_3D.m_X) ? top_left_3D.m_X : bottom_left_3D.m_X;
     double minY = (bottom_left_3D.m_Y < bottom_right_3D.m_Y) ? bottom_left_3D.m_Y : bottom_right_3D.m_Y;

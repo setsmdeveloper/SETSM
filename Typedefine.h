@@ -169,6 +169,47 @@ typedef struct BlunderIP{
 	bool height_check_flag;
 }BL;
 
+//Aerial frame Camera
+typedef struct tagCameraInfo
+{
+    double m_focalLength;
+    CSize m_ImageSize;
+    double m_CCDSize;
+    double m_ppx;
+    double m_ppy;
+} CAMERA_INFO;
+
+typedef struct tagRotationMatrix
+{
+    double m11, m12, m13, m21, m22, m23, m31, m32, m33;
+} RM;
+
+typedef struct tagEO
+{
+    int strip_ID;
+    int photo_ID;
+    char path[500];
+    double m_Xl;
+    double m_Yl;
+    double m_Zl;
+    double m_Wl;
+    double m_Pl;
+    double m_Kl;
+    RM m_Rm;
+} EO;
+
+
+typedef struct tagFrameInfo
+{
+    CAMERA_INFO m_Camera;
+    int NumberofStip;
+    int NumberofPhotos;
+    int start_stripID;
+    int end_stripID;
+    EO* Photoinfo;
+} FrameInfo;
+
+
 typedef struct ProjectInfo{
 	double resolution;
 	double DEM_resolution;
@@ -208,8 +249,10 @@ typedef struct ProjectInfo{
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
+    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_selected_image[MaxImages];
+    
+    FrameInfo frameinfo;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 } ProInfo;
@@ -224,7 +267,10 @@ typedef struct ArgumentInfo{
 	double Min_X, Max_X, Min_Y, Max_Y;
 	double image_resolution;
 	double overlap_length;
-	
+    double focal_length;
+    double CCD_size;
+    
+    
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
 	int start_row;
@@ -273,9 +319,10 @@ typedef struct ArgumentInfo{
     bool check_LSFDEMpath;
     bool check_LSF2;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
+    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_EO;
-
+    bool check_fl;
+    bool check_ccd;
     
 } ARGINFO;
 
@@ -328,44 +375,5 @@ typedef struct
     long double *data;
 } GMA_double;
 
-//Aerial frame Camera
-typedef struct tagCameraInfo
-{
-    double m_focalLength;
-    CSize m_ImageSize;
-    double m_CCDSize;
-    double m_ppx;
-    double m_ppy;
-} CAMERA_INFO;
-
-typedef struct tagRotationMatrix
-{
-    double m11, m12, m13, m21, m22, m23, m31, m32, m33;
-} RM;
-
-typedef struct tagEO
-{
-    int strip_ID;
-    int photo_ID;
-    char path[500];
-    double m_Xl;
-    double m_Yl;
-    double m_Zl;
-    double m_Wl;
-    double m_Pl;
-    double m_Kl;
-    RM m_Rm;
-} EO;
-
-
-typedef struct tagFrameInfo
-{
-    CAMERA_INFO m_Camera;
-    int NumberofStip;
-    int NumberofPhotos;
-    int start_stripID;
-    int end_stripID;
-    EO* Photoinfo;
-} FrameInfo;
 #endif
 
