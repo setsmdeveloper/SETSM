@@ -330,7 +330,7 @@ int main(int argc,char *argv[])
                     
                     sprintf(str_smooth_file, "%s_smooth.raw", tmp_chr);
                     sprintf(DEM_header, "%s_smooth.hdr", tmp_chr);
-                    sprintf(smooth_GEOTIFF_filename, "%s_dem_smooth.tif", tmp_chr);
+                    sprintf(smooth_GEOTIFF_filename, "%s_smooth.tif", tmp_chr);
                     
                     int full_size = strlen(tmp_chr);
                     t_name = (char*)malloc(sizeof(char)*(full_size-4));
@@ -355,13 +355,13 @@ int main(int argc,char *argv[])
                 char *Outputpath_name  = SetOutpathName(args.Outputpath);
                 
                 sprintf(str_DEMfile, "%s/%s_dem.tif", args.Outputpath,Outputpath_name);
-                sprintf(str_smooth_file,"%s/%s_smooth.raw",args.Outputpath,Outputpath_name);
-                sprintf(DEM_header, "%s/%s_smooth.hdr", args.Outputpath,Outputpath_name);
+                sprintf(str_smooth_file,"%s/%s_dem_smooth.raw",args.Outputpath,Outputpath_name);
+                sprintf(DEM_header, "%s/%s_dem_smooth.hdr", args.Outputpath,Outputpath_name);
                 sprintf(smooth_GEOTIFF_filename, "%s/%s_dem_smooth.tif", args.Outputpath, Outputpath_name);
                 sprintf(metafilename,"%s/%s_meta.txt",args.Outputpath,Outputpath_name);
                 sprintf(str_matchfile,"%s/%s_matchtag.raw",args.Outputpath,Outputpath_name);
                 sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",args.Outputpath,Outputpath_name);
-                sprintf(result_file,"%s/%s_smooth_result.txt",args.Outputpath,Outputpath_name);
+                sprintf(result_file,"%s/%s_dem_smooth_result.txt",args.Outputpath,Outputpath_name);
             }
             
             printf("dem file %s\n",str_DEMfile);
@@ -18784,8 +18784,8 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     char metafilename[500];
     
     sprintf(str_DEMfile, "%s/%s_dem.tif", savepath,outputpath);
-    sprintf(str_smooth_file,"%s/%s_smooth.raw",savepath,outputpath);
-    sprintf(DEM_header, "%s/%s_smooth.hdr", savepath,outputpath);
+    sprintf(str_smooth_file,"%s/%s_dem_smooth.raw",savepath,outputpath);
+    sprintf(DEM_header, "%s/%s_dem_smooth.hdr", savepath,outputpath);
     sprintf(DEM_GEOTIFF_filename, "%s/%s_dem_smooth.tif", savepath, outputpath);
     sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
     sprintf(str_matchfile,"%s/%s_matchtag.raw",savepath,outputpath);
