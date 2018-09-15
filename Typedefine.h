@@ -125,6 +125,8 @@ typedef struct tagNCCresult
 	double result2;
 	double result3;
 	double result4;
+    double max_WNCC;
+    int max_WNCC_pos;
 	
 	double INCC;
 	double GNCC;
@@ -152,7 +154,17 @@ typedef struct UpdateGrid{
 //	uint16 false_h_count;
 	uint8 Matched_flag;
 	uint8 anchor_flag;
+    int NumOfHeight;
 }UGRID;
+
+typedef struct tagVoxelinfo
+{
+    double WNCC;
+    double height;
+    int SSD;
+    bool flag_cal;
+    
+}VOXEL;
 
 typedef struct LSFinfo{
     float lsf_std;
