@@ -110,7 +110,7 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
 void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs, double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
 
-void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D,double Height_step, UGRID *GridPT3);
+void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D,double Height_step, UGRID *GridPT3, uint8 Pyramid_step,NCCresult *nccresult);
 
 double GetHeightStep(int Pyramid_step, double im_resolution);
 bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,

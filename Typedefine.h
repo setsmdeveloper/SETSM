@@ -128,9 +128,11 @@ typedef struct tagNCCresult
     double max_WNCC;
     int max_WNCC_pos;
 	
-	double INCC;
-	double GNCC;
-	
+//	double INCC;
+//	double GNCC;
+    double minHeight;
+    double maxHeight;
+    
 	int roh_count;
 	uint8 mag_tag;
 	
@@ -161,9 +163,9 @@ typedef struct tagVoxelinfo
 {
     double WNCC;
     double height;
-    int SSD;
+//    int SSD;
     bool flag_cal;
-    
+    double INCC;
 }VOXEL;
 
 typedef struct LSFinfo{
