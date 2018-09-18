@@ -132,6 +132,7 @@ typedef struct tagNCCresult
 //	double GNCC;
     double minHeight;
     double maxHeight;
+    int NumOfHeight;
     
 	int roh_count;
 	uint8 mag_tag;
@@ -156,7 +157,7 @@ typedef struct UpdateGrid{
 //	uint16 false_h_count;
 	uint8 Matched_flag;
 	uint8 anchor_flag;
-    int NumOfHeight;
+    
 }UGRID;
 
 typedef struct tagVoxelinfo
