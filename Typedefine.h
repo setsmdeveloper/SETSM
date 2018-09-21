@@ -133,7 +133,7 @@ typedef struct tagNCCresult
     double minHeight;
     double maxHeight;
     int NumOfHeight;
-    
+    bool check_height_change;
 	int roh_count;
 	uint8 mag_tag;
 	
