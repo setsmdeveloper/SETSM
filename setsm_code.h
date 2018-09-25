@@ -133,7 +133,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
                                uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
                                char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary,uint8 **ori_images, int blunder_selected_level, bool bblunder);
-double VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
+bool VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
                              uint16 **MagImages, uint16 **Images,
                              double DEM_resolution, double im_resolution, double ***RPCs,
                              CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
