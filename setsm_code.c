@@ -2905,9 +2905,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             bool update_flag = false;
                             bool check_ortho_cal = false;
                                 
-                            uint8 ortho_level = 3;
+                            uint8 ortho_level = 2;
                             if(proinfo->DEM_resolution >= 8)
-                                ortho_level = 3;
+                                ortho_level = 2;
                             
                             if(level >= ortho_level)
                             {
@@ -2983,7 +2983,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else
                             {
-                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step);
+                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,iteration,level);
                                 printf("Done AWNCC\n");
                             }
                             
@@ -3286,7 +3286,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_MPs;
                                         
-                                        if(iteration >= 6)
+                                        if(iteration >= 7)
                                             matching_change_rate = 0.001;
                                         
                                         if(level == 0)
@@ -3494,7 +3494,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level <= 2)
                                         {
-                                            if(iteration >= 5)
+                                            if(iteration >= 3)
                                                 matching_change_rate = 0.001;
                                         }
                                     
@@ -9923,7 +9923,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
 }
 
 
-void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height)
+void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 iteration,int Pyramid_step)
 {
     double P1 = 0.10;
     double P2 = 0.01;
@@ -10101,34 +10101,45 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                     if (direction > 0 && t_direction < 0)
                         check_peak = true;
                     
-                    //if( check_peak )
+                    if(Pyramid_step <= 2 && Pyramid_step >= 1 && iteration <= 2)
                     {
                         nccresult[grid_index].result4 += 1;
                         if(nccresult[grid_index].result0 < pre_rho)
                         {
-                            double temp_1, temp_2;
-                            temp_1 = nccresult[grid_index].result0;
                             nccresult[grid_index].result0 = pre_rho;
-                            
-                            temp_2 = nccresult[grid_index].result2;
                             nccresult[grid_index].result2 = pre_height;
-                            
                             nccresult[grid_index].result1 = -1.0;
                             nccresult[grid_index].result3 = -9999;
-                            
-                            /*if(nccresult[grid_index].result1 < temp_1)
-                            {
-                                nccresult[grid_index].result1 = temp_1;
-                                nccresult[grid_index].result3 = temp_2;
-                            }
                         }
-                        else
+                    }
+                    else
+                    {
+                        if( check_peak )
                         {
-                            if(nccresult[grid_index].result1 < pre_rho)
+                            nccresult[grid_index].result4 += 1;
+                            if(nccresult[grid_index].result0 < pre_rho)
                             {
-                                nccresult[grid_index].result1 = pre_rho;
-                                nccresult[grid_index].result3 = pre_height;
-                            }*/
+                                double temp_1, temp_2;
+                                temp_1 = nccresult[grid_index].result0;
+                                nccresult[grid_index].result0 = pre_rho;
+                                
+                                temp_2 = nccresult[grid_index].result2;
+                                nccresult[grid_index].result2 = pre_height;
+                                
+                                if(nccresult[grid_index].result1 < temp_1)
+                                {
+                                    nccresult[grid_index].result1 = temp_1;
+                                    nccresult[grid_index].result3 = temp_2;
+                                }
+                            }
+                            else
+                            {
+                                if(nccresult[grid_index].result1 < pre_rho)
+                                {
+                                    nccresult[grid_index].result1 = pre_rho;
+                                    nccresult[grid_index].result3 = pre_height;
+                                }
+                            }
                         }
                     }
                 }
@@ -13352,17 +13363,17 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         if(pyramid_step == 4 )
             ortho_ncc_th = 0.6 ;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.5 - (iteration - 1)*0.02;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.2 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
         else if(pyramid_step == 1)
-            ortho_ncc_th = 0.2 ;
+            ortho_ncc_th = 0.3 ;
         else
-            ortho_ncc_th = 0.2 ;
+            ortho_ncc_th = 0.3 ;
 
         
         if(pre_DEMtif && pyramid_step == 2 && seedDEMsigma <= 20)
-            ortho_ncc_th = 0.2 ;
+            ortho_ncc_th = 0.3 ;
         
         double ortho_ancc_th = 100.;
         double th_ref_ncc = 0.1 + (iteration-1)*0.05;
@@ -13716,24 +13727,30 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                         {
                             if(flag_blunder)
                             {
-                                double tmp_th = ortho_ncc[ref_index] < (0.5 - (4-pyramid_step)*0.1) - iteration*0.01;
-                                if(tmp_th < 0.3)
-                                    tmp_th = 0.3;
+                                double tmp_TH;
+                                if(iteration == 1)
+                                {
+                                    tmp_TH = 0.6 - (4 - pyramid_step)*0.1 - (iteration-1)*0.01;
+                                 }
+                                else
+                                {
+                                    tmp_TH = 0.5;
+                                    //tmp_TH = 0.6 - (4 - pyramid_step)*0.1 - (iteration-1)*0.01;
+                                }
+                                
+                                if(tmp_TH < 0.3)
+                                    tmp_TH = 0.3;
+                                
                                 if(pyramid_step >= 1)
                                 {
-                                    if(ortho_ncc[ref_index] < (0.5 - (4-pyramid_step)*0.1) - iteration*0.01)
+                                    if(ortho_ncc[ref_index] < tmp_TH)
                                         pts[index].flag = 1;
                                 }
-                                /*else if(pyramid_step == 1)
-                                {
-                                    if(ortho_ncc[ref_index] < 0.6)
-                                        pts[index].flag = 1;
-                                }*/
                                 else if(pyramid_step == 0)
                                 {
-                                    if(iteration <= 3)
+                                    if(iteration <= 1)
                                     {
-                                        if(ortho_ncc[ref_index] < 0.3)
+                                        if(ortho_ncc[ref_index] < 0.9)
                                             pts[index].flag = 1;
                                     }
                                     else if(iteration == 2 )
