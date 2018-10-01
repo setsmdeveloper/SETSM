@@ -2905,9 +2905,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             bool update_flag = false;
                             bool check_ortho_cal = false;
                                 
-                            uint8 ortho_level = 2;
+                            uint8 ortho_level = 3;
                             if(proinfo->DEM_resolution >= 8)
-                                ortho_level = 2;
+                                ortho_level = 3;
                             
                             if(level >= ortho_level)
                             {
@@ -3138,6 +3138,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
+                                            if(level == 4)
+                                            {
+                                                ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                            }
+                                            
                                             if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
                                             if(maxY_ptslists < ptslists[i].m_Y)
@@ -3146,6 +3151,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 minX_ptslists = ptslists[i].m_X;
                                             if(minY_ptslists > ptslists[i].m_Y)
                                                 minY_ptslists = ptslists[i].m_Y;
+                                            
                                             i++;
                                         }
                                         
@@ -3202,14 +3208,25 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             FILE *fid_all = fopen(filename_mps,"w");
                                             for(i=0;i<count_MPs;i++)
                                             {
-                                                int t_col, t_row,grid_index;
-                                                t_col         = (int)((ptslists[i].m_X - subBoundary[0])/grid_resolution + 0.5);
-                                                t_row         = (int)((ptslists[i].m_Y - subBoundary[1])/grid_resolution + 0.5);
-                                                grid_index     = Size_Grid2D.width*t_row + t_col;
-                                                
-                                                fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-                                                i++;
-                                                matched_pts++;
+                                                if(level == 4)
+                                                {
+                                                    if(ptslists[i].flag != 1)
+                                                    {
+                                                        /*int t_col, t_row,grid_index;
+                                                        t_col         = (int)((ptslists[i].m_X - subBoundary[0])/grid_resolution + 0.5);
+                                                        t_row         = (int)((ptslists[i].m_Y - subBoundary[1])/grid_resolution + 0.5);
+                                                        grid_index     = Size_Grid2D.width*t_row + t_col;
+                                                        */
+                                                        fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                                        //i++;
+                                                        matched_pts++;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                                    matched_pts++;
+                                                }
                                             }
                                             fclose(fid_all);
                                         }
@@ -3297,7 +3314,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 2)
+                                        if(level <= 1)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -3492,7 +3509,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 2)
+                                        if(level <= 1)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -3605,9 +3622,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",row,col,level,iteration);
                                 
                                 fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-                                        row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
+                                        row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-                                       row,col,level,iteration,count_results[0],minH_grid,maxH_grid);
+                                       row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
 
                                 if(proinfo->IsRA && level <= 3)
                                 {
@@ -8466,7 +8483,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
         h_divide = 2;
     }
     else if(Pyramid_step == 1)
-        h_divide = 2;
+        h_divide = 3;
     else {
         h_divide = 3;
     }
@@ -11325,6 +11342,14 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
     NumOfHeights = (int)((end_H -  start_H)/height_step) + 1;
     
     int th_count = 10;
+    int min_th_count = 2;
+    double min_th_sncc = 0.2;
+    if(Pyramid_step < 4)
+    {
+        min_th_count = 0;
+        min_th_sncc = 0.5;
+    }
+    
     double selected_count = 0;
     //printf("start height iter %f\t%f\n",start_H,end_H);
     
@@ -11668,7 +11693,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
             if(sum_count_N/count_NCC >= th_count)
             {
                 double sncc = sum_NCC/count_NCC;
-                if(sncc > 0.5)
+                if(sncc > min_th_sncc)
                 {
                     check_ncc = true;
                     if(F_NCC < sncc)
@@ -11680,10 +11705,10 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     }
                 }
             }
-            else if(sum_count_N/count_NCC > 0)
+            else if(sum_count_N/count_NCC > min_th_count)
             {
                 double sncc = sum_NCC/count_NCC;
-                if(sncc > 0.7)
+                if(sncc > min_th_sncc + 0.2)
                 {
                     check_ncc = true;
                     if(F_NCC < sncc)
@@ -11862,7 +11887,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
             roh_th      = roh_next;
 
             //ratio of 1st peak roh / 2nd peak roh
-            ROR         = 1.0;//(roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+            ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
             
             if(Pyramid_step <= 2)
             {
@@ -13349,17 +13374,17 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         if(pyramid_step == 4 )
             ortho_ncc_th = 0.6 ;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.5 ;// - (iteration - 1)*0.02;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.2 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.4 ;// - (iteration - 1)*0.02;
         else if(pyramid_step == 1)
-            ortho_ncc_th = 0.1 ;
+            ortho_ncc_th = 0.3 ;
         else
-            ortho_ncc_th = 0.1 ;
+            ortho_ncc_th = 0.3 ;
 
         
         if(pre_DEMtif && pyramid_step == 2 && seedDEMsigma <= 20)
-            ortho_ncc_th = 0.2 ;
+            ortho_ncc_th = 0.3 ;
         
         double ortho_ancc_th = 100.;
         double th_ref_ncc = 0.1 + (iteration-1)*0.05;
@@ -13713,9 +13738,16 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                         {
                             if(flag_blunder)
                             {
+                                double tmp_th = 0.6 ;//- (4 - pyramid_step)*0.1 - (iteration -1)*0.01;
+                                /*if(pyramid_step == 1)
+                                    tmp_th = 0.5;
+                                
+                                if(tmp_th < 0.3)
+                                    tmp_th = 0.3;
+                                */
                                 if(pyramid_step >= 1)
                                 {
-                                    if(ortho_ncc[ref_index] < 0.6)
+                                    if(ortho_ncc[ref_index] < tmp_th)
                                         pts[index].flag = 1;
                                 }
                                 else if(pyramid_step == 0)
@@ -14091,7 +14123,8 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                             
                             GridPT3[target_index].anchor_flag = 3;
                             pts[target_pt_index].m_Z = F_height;
-                     
+                            pts[target_pt_index].flag = 0;
+                            
                             check_stop_TIN = false;
                             check_ortho_cal = true;
                             tris_check[tcnt] = 1;
@@ -14105,11 +14138,20 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                     node3_F     =  GridPT3[node3_index].anchor_flag;
                     
                     if(node1_F == 1 || node1_F == 3)
+                    {
                         node_f_count++;
+                        pts[pdex0].flag = 0;
+                    }
                     if(node2_F == 1 || node2_F == 3)
+                    {
                         node_f_count++;
+                        pts[pdex1].flag = 0;
+                    }
                     if(node3_F == 1 || node3_F == 3)
+                    {
                         node_f_count++;
+                        pts[pdex2].flag = 0;
+                    }
                     
                     if(node_f_count == 3)
                         tris_check[tcnt] = 1;
