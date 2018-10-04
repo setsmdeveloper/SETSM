@@ -2983,7 +2983,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else
                             {
-                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step);
+                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
                                 printf("Done AWNCC\n");
                             }
                             
@@ -3314,7 +3314,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 1)
+                                        if(level <= 2)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -3509,7 +3509,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 1)
+                                        if(level <= 2)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -9940,7 +9940,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
 }
 
 
-void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height)
+void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration)
 {
     double P1 = 0.10;
     double P2 = 0.01;
@@ -10118,30 +10118,44 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                     if (direction > 0 && t_direction < 0)
                         check_peak = true;
                     
-                    if( check_peak )
+                    if((iteration <= 2 && Pyramid_step >= 3) || (iteration == 1 && Pyramid_step <= 2 && Pyramid_step >= 1)) //Max AWNCC
                     {
-                        nccresult[grid_index].result4 += 1;
-                        if(nccresult[grid_index].result0 < pre_rho)
+                        if(nccresult[grid_index].result0 < temp_rho)
                         {
-                            double temp_1, temp_2;
-                            temp_1 = nccresult[grid_index].result0;
-                            nccresult[grid_index].result0 = pre_rho;
-                            
-                            temp_2 = nccresult[grid_index].result2;
-                            nccresult[grid_index].result2 = pre_height;
-                            
-                            if(nccresult[grid_index].result1 < temp_1)
-                            {
-                                nccresult[grid_index].result1 = temp_1;
-                                nccresult[grid_index].result3 = temp_2;
-                            }
+                            nccresult[grid_index].result4 += 1;
+                            nccresult[grid_index].result0 = temp_rho;
+                            nccresult[grid_index].result2 = iter_height;
+                            nccresult[grid_index].result1 = -1.0;
+                            nccresult[grid_index].result3 = -9999;
                         }
-                        else
+                    }
+                    else
+                    {
+                        if( check_peak )
                         {
-                            if(nccresult[grid_index].result1 < pre_rho)
+                            nccresult[grid_index].result4 += 1;
+                            if(nccresult[grid_index].result0 < pre_rho)
                             {
-                                nccresult[grid_index].result1 = pre_rho;
-                                nccresult[grid_index].result3 = pre_height;
+                                double temp_1, temp_2;
+                                temp_1 = nccresult[grid_index].result0;
+                                nccresult[grid_index].result0 = pre_rho;
+                                
+                                temp_2 = nccresult[grid_index].result2;
+                                nccresult[grid_index].result2 = pre_height;
+                                
+                                if(nccresult[grid_index].result1 < temp_1)
+                                {
+                                    nccresult[grid_index].result1 = temp_1;
+                                    nccresult[grid_index].result3 = temp_2;
+                                }
+                            }
+                            else
+                            {
+                                if(nccresult[grid_index].result1 < pre_rho)
+                                {
+                                    nccresult[grid_index].result1 = pre_rho;
+                                    nccresult[grid_index].result3 = pre_height;
+                                }
                             }
                         }
                     }
@@ -11887,7 +11901,12 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
             roh_th      = roh_next;
 
             //ratio of 1st peak roh / 2nd peak roh
-            ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+            if((iteration <= 3 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step <= 2 && Pyramid_step >= 1))
+                ROR = 1.0;
+            else
+                ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+            
+            
             
             if(Pyramid_step <= 2)
             {
