@@ -2696,11 +2696,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         D2DPOINT *Grid_wgs;
                         D2DPOINT *GridPT;
                         
-                        if(level == 4)
+                        if(level >= 4)
                             blunder_selected_level = level;
+                        else if(level >= 2)
+                            blunder_selected_level = level + 1;
                         else
                             blunder_selected_level = level + 1;
-                            
+                        
                         printf("selected_bl %d\n",blunder_selected_level);
                         
                         SetThs(proinfo,level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start);
@@ -2961,7 +2963,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             //echoprint_Gridinfo(proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
                             
                             
-                            if(proinfo->IsRA)
+                            if(proinfo->IsRA || (level == 0 && proinfo->DEM_resolution < 2))
                             {
                             
                             }
@@ -2977,7 +2979,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("Done VerticalLineLocus\n");
                             
-                            if(proinfo->IsRA)
+                            if(proinfo->IsRA || (level == 0 && proinfo->DEM_resolution < 2))
                             {
                                 
                             }
@@ -3314,7 +3316,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 2)
+                                        if(level <= 1)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -3509,7 +3511,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 matching_change_rate = 0.001;
                                         }
                                         
-                                        if(level <= 2)
+                                        if(level <= 1)
                                         {
                                             if(iteration >= 5)
                                                 matching_change_rate = 0.001;
@@ -3745,7 +3747,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 
                             if(level == 0)
                             {
-                                Th_roh          = (double)(Th_roh - 0.10);
+                                if(proinfo->DEM_resolution >= 2)
+                                    Th_roh          = (double)(Th_roh - 0.10);
+                                else
+                                    Th_roh          = (double)(Th_roh - 0.50);
+                                
                                 if(iteration > 3)
                                     Th_roh          = (double)(Th_roh - 0.50);
                             }
@@ -8663,6 +8669,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     if(pre_DEMtif)
         check_ortho = true;
     
+    
     //orthoimage pixel information save
     F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
     int sub_imagesize_w, sub_imagesize_h;
@@ -8755,6 +8762,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             }
         }
     }
+    
     
     if(Pyramid_step >= 4)
     {
@@ -8882,7 +8890,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             int NumOfHeights;
             double start_H, end_H;
             int i,j;
-            double ortho_th = 0.8 - (4 - Pyramid_step)*0.15;
+            double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
             
             start_H     = GridPT3[pt_index].minHeight;
             end_H       = GridPT3[pt_index].maxHeight;
@@ -8899,7 +8907,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                 
                 NumOfHeights = (int)((end_H -  start_H)/height_step);
                 
-                if(IsRA)
+                if(IsRA || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                 {
                     nccresult[pt_index].check_height_change = true;
                     nccresult[pt_index].NumOfHeight = NumOfHeights;
@@ -8970,15 +8978,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                     {
                         double iter_height;
                         
-                        if(IsRA)
+                        if(IsRA || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                             iter_height = start_H + grid_voxel_hindex*height_step;
                         else
                             iter_height = grid_voxel[pt_index][grid_voxel_hindex].height;
-                        
-                        
+                       
                         
                         if(iter_height >= start_H && iter_height <= end_H)
                         {
+                            //bool check_ortho_com = false;
+                            //double temp_GNCC_roh = 0;
                             //grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                             //printf("no calculation %d\n",pt_index);
                         /*}
@@ -8997,7 +9006,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                 //printf("hindex %d\titer height %f\t",grid_voxel_hindex,iter_height);
                                 //iter_height     = start_H + count_height*height_step;
                                 
-                                /*
+                                
                                 if(count_height == 0)
                                 {
                                     nccresult[pt_index].result0 = -1.0;
@@ -9006,7 +9015,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     nccresult[pt_index].result3 = -1000;
                                     nccresult[pt_index].result4 = 0;
                                 }
-                                */
+                                
                                 double temp_LIA[2];
                                 
 
@@ -9226,7 +9235,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             double pos_col_right     = (Right_CC + temp_col);
                                                             
                                                             
-                                                            if(nccresult[pt_index].check_height_change)
+                                                            if(nccresult[pt_index].check_height_change || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                                                             {
                                                                 if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                                                     pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
@@ -9346,7 +9355,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             
                                                             //ortho_NCC
-                                                            if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                                                            
+                                                            if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)// && !check_ortho_com)
                                                             {
                                                                 double pos_row_left_ortho = -100;
                                                                 double pos_col_left_ortho = -100;
@@ -9394,7 +9404,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     pos_row_right_ortho= pos_row_right;
                                                                     pos_col_right_ortho= pos_col_right;
                                                                 }
-                                                                
+                                                             
                                                                 pos_row_left = pos_row_left_ortho;
                                                                 pos_col_left = pos_col_left_ortho;
                                                                 pos_row_right= pos_row_right_ortho;
@@ -9506,11 +9516,12 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     }
                                                                 }
                                                             }
+                                                            
                                                         }
                                                     }
                                                 }
 
-                                                if(nccresult[pt_index].check_height_change)
+                                                if(nccresult[pt_index].check_height_change || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                                                 {
                                                     N               = Count_N[0];
                                                     val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
@@ -9641,6 +9652,9 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                 //ortho_NCC
                                                 if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
                                                 {
+                                                    //temp_GNCC_roh = GridPT3[pt_index].ortho_ncc[ti];
+                                                    
+                                                    
                                                     N               = Count_N_ortho[0];
                                                     val1          = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
                                                     val2          = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
@@ -9759,6 +9773,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                     }
                                                     else
                                                         ncc_3_mag_ortho           = -1.0;
+                                                    
                                                 }
                                                 
                                                 
@@ -9772,20 +9787,21 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                     temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
                                                     sum_GNCC_multi += temp_GNCC_roh;
                                                     count_GNCC ++;
+                                                    //check_ortho_com = true;
                                                 }
-                                                if(!IsRA)
+                                                if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                                                     grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                             }
                                             else
                                             {
-                                                if(!IsRA)
+                                                if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                                                     grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                                             }
                                         }
                                     }
                                 }
                                 
-                                if(IsRA)
+                                if(IsRA || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                                 {
                                     //find peak position
                                     if(check_ortho && count_GNCC > 0)
@@ -9909,7 +9925,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                         }
                     }
                     
-                    if(!IsRA)
+                    if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                     {
                         nccresult[pt_index].max_WNCC = max_WNCC;
                         nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
@@ -10118,7 +10134,7 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                     if (direction > 0 && t_direction < 0)
                         check_peak = true;
                     
-                    if((iteration <= 2 && Pyramid_step >= 3) || (iteration == 1 && Pyramid_step <= 2 && Pyramid_step >= 1)) //Max AWNCC
+                    if((iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 2 && Pyramid_step == 2) || (iteration <= 1 && Pyramid_step == 1)) //Max AWNCC
                     {
                         if(nccresult[grid_index].result0 < temp_rho)
                         {
@@ -11806,10 +11822,10 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     printf("PPM of select MPs = %f\n",PPM);
     double roh_next;
 
-    double minimum_Th = 0.2;
+    double minimum_Th = 0.2*2;
     
     if(Pyramid_step == 0)
-        minimum_Th = 0.2;
+        minimum_Th = 0.2*2;
     
     printf("minimum TH %f\n",minimum_Th);
     bool check_iter_end = false;
@@ -11901,7 +11917,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
             roh_th      = roh_next;
 
             //ratio of 1st peak roh / 2nd peak roh
-            if((iteration <= 3 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step <= 2 && Pyramid_step >= 1))
+            if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step <= 2 && Pyramid_step >= 1))
                 ROR = 1.0;
             else
                 ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
@@ -13399,7 +13415,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         else if(pyramid_step == 1)
             ortho_ncc_th = 0.3 ;
         else
-            ortho_ncc_th = 0.3 ;
+            ortho_ncc_th = 0.2 ;
 
         
         if(pre_DEMtif && pyramid_step == 2 && seedDEMsigma <= 20)
@@ -13757,13 +13773,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                         {
                             if(flag_blunder)
                             {
-                                double tmp_th = 0.6 ;//- (4 - pyramid_step)*0.1 - (iteration -1)*0.01;
-                                /*if(pyramid_step == 1)
-                                    tmp_th = 0.5;
+                                double tmp_th = 0.6;// - (4 - pyramid_step)*0.1;
                                 
-                                if(tmp_th < 0.3)
-                                    tmp_th = 0.3;
-                                */
+                                if(pyramid_step == 1)
+                                    tmp_th = 0.6;
+                                
                                 if(pyramid_step >= 1)
                                 {
                                     if(ortho_ncc[ref_index] < tmp_th)
