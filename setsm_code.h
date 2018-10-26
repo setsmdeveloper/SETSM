@@ -110,14 +110,14 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
 void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs, double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle);
 
-void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, UGRID *GridPT3, NCCresult* nccresult, int iteration, uint8 pyramid_step, double DEM_resolution,ProInfo *proinfo,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize **Imagesizes);
+void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, UGRID *GridPT3, NCCresult* nccresult, int iteration, uint8 pyramid_step, double DEM_resolution,ProInfo *proinfo,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize **Imagesizes,double* minmaxHeight);
 
 double GetHeightStep(int Pyramid_step, double im_resolution);
 bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
 					   CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
 					   uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
 					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
-					   char* tmpdir, double mag_avg,double mag_var);
+					   char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next);
 void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration);
 
 void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
