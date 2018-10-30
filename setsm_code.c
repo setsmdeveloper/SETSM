@@ -1544,7 +1544,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     
                     if(proinfo->check_sensor_type == 1)
                     {
-                        if (proinfo->resolution < 0.75)
+                        if (proinfo->resolution < 1.0)
                         {
                             proinfo->resolution = 0.5;
                         }
@@ -2648,6 +2648,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     
                     printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
                     
+                    int Py_combined_level = 0;
                     while(lower_level_match && level >= DEM_level)
                     {
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
@@ -2705,7 +2706,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         uint16 **SubImages_next;
                         uint8  **SubOriImages_next;
                         uint16 **SubMagImages_next;
-                        if(level > 0)
+                        if(level > Py_combined_level)
                         {
                             Startpos_next = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
                             SubImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
@@ -2737,7 +2738,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("Startpos %f\t%f\t%f\t%f\t%f\t%f\n",Startpos_ori[ti].m_X,Startpos_ori[ti].m_Y,Startpos[ti].m_X,Startpos[ti].m_Y,BStartpos[ti].m_X,BStartpos[ti].m_Y);
                             
-                            if(level > 0)
+                            if(level > Py_combined_level)
                             {
                                 Startpos_next[ti].m_X       = (double)(Startpos_ori[ti].m_X/pow(2,level-1));
                                 Startpos_next[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pow(2,level-1));
@@ -2820,7 +2821,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
                                 SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
                                 
-                                if(level > 0)
+                                if(level > Py_combined_level)
                                 {
                                     SubImages_next[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
                                     SubOriImages_next[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
@@ -2947,10 +2948,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             if(level >= ortho_level)
                             {
                                 check_ortho_cal = true;
+                                
+                                if(level == 2 && iteration > 5)
+                                    check_ortho_cal = false;
                             }
                             else
+                            {
                                 check_ortho_cal = false;
-                                
+                            }
+                            
                             printf("ortho level = %d\n",ortho_level);
                             
                             pre_3sigma  = 0;    pre_mean    = 0;
@@ -3008,7 +3014,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             VerticalLineLocus(grid_voxel,proinfo,nccresult,SubMagImages,grid_resolution, Image_res[0],RPCs,Imagesizes,data_size_lr,SubImages,Template_size,Size_Grid2D,
                                               param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
-                                              row,col,subBoundary,v_temp_path,mag_avg,mag_var,Startpos_next,SubImages_next,SubOriImages_next,SubMagImages_next);
+                                              row,col,subBoundary,v_temp_path,mag_avg,mag_var,Startpos_next,SubImages_next,SubOriImages_next,SubMagImages_next,Py_combined_level);
                             
                             printf("Done VerticalLineLocus\n");
                             
@@ -3919,7 +3925,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 free(SubMagImages[ti]);
                                 free(SubMagImages_B[ti]);
                                 
-                                if(level > 0)
+                                if(level > Py_combined_level)
                                 {
                                     free(SubImages_next[ti]);
                                     free(SubOriImages_next[ti]);
@@ -3939,7 +3945,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         free(Startpos);
                         free(BStartpos);
                         
-                        if(level > 0)
+                        if(level > Py_combined_level)
                             free(Startpos_next);
                         
                         if(level > 0)
@@ -8578,7 +8584,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 {
                     if(iteration <= 2 && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                         check_blunder_cell = false;
-                    else if(iteration > 2 && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 200))
+                    else if(iteration > 2 && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                         check_blunder_cell = false;
                 }
                 
@@ -8611,7 +8617,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             if(!check_blunder_cell)
             {
             
-                if(pyramid_step >= 3 || iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
+                if((pyramid_step >= 3 /*&& iteration < 5*/) || iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
                 {
                     nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
                     nccresult[t_i].maxHeight = GridPT3[t_i].maxHeight;
@@ -8692,7 +8698,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                        CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
                        uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
                        double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
-                       char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next)
+                       char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next,int Py_combined_level)
 {
     bool check_matchtag = proinfo->check_Matchtag;
     char* save_filepath = proinfo->save_filepath;
@@ -8727,19 +8733,17 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     bool check_ortho = false;
     int Mag_th = 0;
     double ncc_alpha, ncc_beta;
-    int N_th;
-    
-    N_th = 110;
+    int TH_N = 10;
     if(Pyramid_step == 3)
     {
         Half_template_size = Half_template_size - 1;
-        N_th = 75;
+        TH_N = 6;
 
     }
-    else if(Pyramid_step < 3 && Pyramid_step > 0)
+    else if(Pyramid_step < 3)// && Pyramid_step == 0)
     {
         Half_template_size = Half_template_size - 2;
-        N_th = 45;
+        TH_N = 2;
     }
     
     subBoundary[0]    = Boundary[0];
@@ -8750,7 +8754,18 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     numofpts = Size_Grid2D.height*Size_Grid2D.width;
     
     double im_resolution_next;
-    if(Pyramid_step > 0)
+    bool check_combined_WNCC = false;
+    bool check_combined_WNCC_INCC = false;
+    
+    if(!IsRA && ((Pyramid_step > Py_combined_level)))// && iteration%2 == 0) || (Pyramid_step >= 1 && iteration  > 1)))
+        check_combined_WNCC = true;
+    
+    if(check_combined_WNCC && ( (Pyramid_step > 1 && iteration%2 == 0) || (Pyramid_step == 1 && iteration  > 1) ) )
+        check_combined_WNCC_INCC = true;
+    
+    printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
+    
+    if(check_combined_WNCC)
         im_resolution_next = im_resolution*pow(2,Pyramid_step-1);
     
     im_resolution = im_resolution*pow(2,Pyramid_step);
@@ -8768,7 +8783,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     //orthoimage pixel information save
     F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
     F2DPOINT **all_im_cd_next;
-    if(Pyramid_step > 0)
+    if(check_combined_WNCC)
     {
         all_im_cd_next = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
     }
@@ -8781,7 +8796,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
         sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
         sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
         
-        if(Pyramid_step > 0)
+        if(check_combined_WNCC)
         {
             sub_imagesize_w_next = (int)((subBoundary[2] - subBoundary[0])/im_resolution_next)+1;
             sub_imagesize_h_next = (int)((subBoundary[3] - subBoundary[1])/im_resolution_next)+1;
@@ -8791,7 +8806,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
 
         long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
         long int sub_imagesize_total_next;
-        if(Pyramid_step > 0)
+        if(check_combined_WNCC)
             sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
         
         printf("sub_imagesize_total %ld\n",sub_imagesize_total);
@@ -8807,7 +8822,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                     exit(1);
                 }
                 
-                if(Pyramid_step > 0)
+                if(check_combined_WNCC)
                 {
                     all_im_cd_next[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total_next);
                     if (all_im_cd_next[ti] == NULL)
@@ -8841,7 +8856,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             
             long int pt_index_im_next;
             
-            if(Pyramid_step > 0)
+            if(check_combined_WNCC)
             {
                 t_col_next   = (int)((t_X - subBoundary[0])/im_resolution_next);
                 t_row_next   = (int)((t_Y - subBoundary[1])/im_resolution_next);
@@ -8890,7 +8905,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
                             all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
                             
-                            if(Pyramid_step > 0)
+                            if(check_combined_WNCC)
                             {
                                 Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos_next[ti],Pyramid_step-1);
                                 if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
@@ -9003,7 +9018,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
 
     int sum_data2 = 0;
     int sum_data = 0;
-    int TH_N = 0;
+    
 #pragma omp parallel for schedule(guided) reduction(+:sum_data2, sum_data)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
     {
@@ -9224,7 +9239,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
                             RImagesize.height = Imagesizes[ti][Pyramid_step].height;
                             
-                            if(Pyramid_step > 0)
+                            if(check_combined_WNCC)
                             {
                                 LImagesize_next.width  = Imagesizes[reference_id][Pyramid_step-1].width;
                                 LImagesize_next.height = Imagesizes[reference_id][Pyramid_step-1].height;
@@ -9267,7 +9282,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
                                             pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
                                             
-                                            if(Pyramid_step > 0)
+                                            if(check_combined_WNCC)
                                             {
                                                 t_col_next   = (int)((t_X - subBoundary[0])/im_resolution_next);
                                                 t_row_next   = (int)((t_Y - subBoundary[1])/im_resolution_next);
@@ -9287,7 +9302,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                     pos_row_right_ortho = all_im_cd[ti][pt_index_temp].m_Y;
                                                     pos_col_right_ortho = all_im_cd[ti][pt_index_temp].m_X;
                                             
-                                                    if(Pyramid_step > 0)
+                                                    if(check_combined_WNCC)
                                                     {
                                                         if(pt_index_temp_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
                                                         {
@@ -9417,7 +9432,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                     }
                                                     
-                                                    if(Pyramid_step > 0)
+                                                    if(check_combined_WNCC)
                                                     {
                                                         double pos_row_left = pos_row_left_ortho_next;
                                                         double pos_col_left = pos_col_left_ortho_next;
@@ -9536,6 +9551,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                         }
                                                                     }
                                                                 }
+                                                                
                                                             }
                                                         }
                                                     }
@@ -9677,7 +9693,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     //check_ortho_com = true;
                                 }
                                 
-                                if(Pyramid_step > 0)
+                                if(check_combined_WNCC)
                                 {
                                     int N1 = Count_N_ortho_next[0];
                                     int N2 = Count_N_ortho_next[1];
@@ -9725,6 +9741,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_1_mag_ortho_next           = -1.0;
+                                        
                                         
                                         N                   = Count_N_ortho_next[1];
                                         val1                = (double)(Sum_L2_2_ortho_next) - (double)(Sum_L_2_ortho_next*Sum_L_2_ortho_next)/N;
@@ -9805,7 +9822,9 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         else
                                             ncc_3_mag_ortho_next           = -1.0;
                                         
+                                        
                                         temp_GNCC_roh = (double)(ncc_1_ortho_next + ncc_2_ortho_next + ncc_3_ortho_next + ncc_1_mag_ortho_next + ncc_2_mag_ortho_next + ncc_3_mag_ortho_next)/6.0;
+                                        //temp_GNCC_roh = (double)(ncc_1_ortho_next + ncc_1_mag_ortho_next)/2.0;
                                         sum_GNCC_multi += temp_GNCC_roh;
                                         count_GNCC ++;
                                         //check_ortho_com = true;
@@ -9896,7 +9915,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                 }
                                 Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos[reference_id],Pyramid_step);
                                 
-                                if(Pyramid_step > 0)
+                                if(check_combined_WNCC_INCC)
                                 {
                                     Ref_Imagecoord_py_next[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos_next[reference_id],Pyramid_step-1);
                                 }
@@ -9915,7 +9934,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
                                         RImagesize.height = Imagesizes[ti][Pyramid_step].height;
                                         
-                                        if(Pyramid_step > 0)
+                                        if(check_combined_WNCC_INCC)
                                         {
                                             LImagesize_next.width  = Imagesizes[reference_id][Pyramid_step-1].width;
                                             LImagesize_next.height = Imagesizes[reference_id][Pyramid_step-1].height;
@@ -9937,7 +9956,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             Tar_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
                                         }
                                         Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos[ti],Pyramid_step);
-                                        if(Pyramid_step > 0)
+                                        if(check_combined_WNCC_INCC)
                                             Tar_Imagecoord_py_next[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos_next[ti],Pyramid_step-1);
                                 
                                         int ori_diff,ori_diff_next;
@@ -9946,7 +9965,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         (int)Tar_Imagecoord_py[0].m_Y >= 0 && (int)Tar_Imagecoord_py[0].m_Y < RImagesize.height && (int)Tar_Imagecoord_py[0].m_X >= 0 && (int)Tar_Imagecoord_py[0].m_X < RImagesize.width;
                                         
                                         bool check_py_image_pt_next = true;
-                                        if(Pyramid_step > 0)
+                                        if(check_combined_WNCC_INCC)
                                             check_py_image_pt_next = (int)Ref_Imagecoord_py_next[0].m_Y >= 0 && (int)Ref_Imagecoord_py_next[0].m_Y < LImagesize_next.height && (int)Ref_Imagecoord_py_next[0].m_X >= 0 && (int)Ref_Imagecoord_py_next[0].m_X < LImagesize_next.width &&
                                         (int)Tar_Imagecoord_py_next[0].m_Y >= 0 && (int)Tar_Imagecoord_py_next[0].m_Y < RImagesize_next.height && (int)Tar_Imagecoord_py_next[0].m_X >= 0 && (int)Tar_Imagecoord_py_next[0].m_X < RImagesize_next.width;
                                         
@@ -9955,7 +9974,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             ori_diff = ori_images[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] -
                                             ori_images[ti][          (int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
                                             
-                                            if(Pyramid_step > 0)
+                                            if(check_combined_WNCC_INCC)
                                                 ori_diff_next = SubOriImages_next[reference_id][(int)Ref_Imagecoord_py_next[0].m_Y*LImagesize_next.width + (int)Ref_Imagecoord_py_next[0].m_X] -
                                                 SubOriImages_next[ti][          (int)Tar_Imagecoord_py_next[0].m_Y*RImagesize_next.width + (int)Tar_Imagecoord_py_next[0].m_X];
                                             else
@@ -9971,7 +9990,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             Right_CR    = Tar_Imagecoord_py[0].m_Y;
                                             Right_CC    = Tar_Imagecoord_py[0].m_X;
                                             
-                                            if(Pyramid_step > 0)
+                                            if(check_combined_WNCC_INCC)
                                             {
                                                 Left_CR_next     = Ref_Imagecoord_py_next[0].m_Y;
                                                 Left_CC_next     = Ref_Imagecoord_py_next[0].m_X;
@@ -9980,7 +9999,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             }
                                             
                                             diff_theta  = (double)(ori_diff);
-                                            if(Pyramid_step > 0)
+                                            if(check_combined_WNCC_INCC)
                                             {
                                                 diff_theta_next = (double)(ori_diff_next);
                                                 diff_theta = (diff_theta + diff_theta_next) / 2.0;
@@ -10240,7 +10259,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     }
                                                                 }
                                                                 
-                                                                if(Pyramid_step > 0)
+                                                                if(check_combined_WNCC_INCC)
                                                                 {
                                                                     double pos_row_left      = (Left_CR_next + row);
                                                                     double pos_col_left      = (Left_CC_next + col);
@@ -10319,6 +10338,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                             Sum_R_mag_next             = Sum_R_mag_next  + right_mag_patch;
                                                                             Sum_L2_mag_next            = Sum_L2_mag_next + L2_mag;
                                                                             Sum_R2_mag_next            = Sum_R2_mag_next + R2_mag;
+                                                                            
                                                                             
                                                                             int size_1, size_2;
                                                                             size_1        = (int)(Half_template_size/2);
@@ -10520,7 +10540,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                                     }
                                                     
-                                                    if(Pyramid_step > 0)
+                                                    if(check_combined_WNCC_INCC)
                                                     {
                                                         int N1 = Count_N_next[0];
                                                         int N2 = Count_N_next[1];
@@ -10652,6 +10672,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                 ncc_3_mag_next           = -1.0;
                                                             
                                                             temp_INCC_roh = (double)(ncc_1_next + ncc_2_next + ncc_3_next + ncc_1_mag_next + ncc_2_mag_next + ncc_3_mag_next)/6.0;
+                                                            //temp_INCC_roh = (double)(ncc_1_next + ncc_1_mag_next)/2.0;
                                                             sum_INCC_multi += temp_INCC_roh;
                                                             //Sum_intensity_diff += t_intensity_diff;
                                                             
@@ -10818,7 +10839,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                 if(all_im_cd[ti])
                     free(all_im_cd[ti]);
                 
-                if(Pyramid_step > 0)
+                if(check_combined_WNCC)
                 {
                     if(all_im_cd_next[ti])
                         free(all_im_cd_next[ti]);
@@ -10829,7 +10850,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
         if (all_im_cd)
             free(all_im_cd);
         
-        if(Pyramid_step > 0)
+        if(check_combined_WNCC)
         {
             if (all_im_cd_next)
                 free(all_im_cd_next);
@@ -13336,7 +13357,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
     if(count_MPs > 3)
     {
         double gridspace            = grid_resolution;
-        uint8 max_count         = 20;
+        uint8 max_count         = 30;
         if(IsRA)
             max_count = 30;
         
@@ -13369,14 +13390,14 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
         {
             if(Pyramid_step == 3)
             {
-                max_count  = 10;
+                max_count  = 20;
                 if(IsRA)
                     max_count = 20;
             }
             else if(Pyramid_step == 2)
             {
                 if(f_demsize < 8 )
-                    max_count = 10;
+                    max_count = 20;
                 else
                     max_count = 10;
             }
@@ -14306,19 +14327,19 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         double temp_TH = - 0.3;
         
         if(pyramid_step == 4 )
-            ortho_ncc_th = 0.5 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.1 ;// - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.4 ;// - (iteration - 1)*0.02;
         else if(pyramid_step == 1)
-            ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
+            ortho_ncc_th = 0.3 ;//- (iteration - 1)*0.02;
         else
             ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
 
         
         if(pre_DEMtif && pyramid_step == 2 && seedDEMsigma <= 20)
-            ortho_ncc_th = 0.2;
+            ortho_ncc_th = 0.4;
         
         double ortho_ancc_th = 100.;
         double th_ref_ncc = 0.1 + (iteration-1)*0.05;
@@ -14672,10 +14693,10 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                         {
                             if(flag_blunder)
                             {
-                                double tmp_th = 0.6;// - (4 - pyramid_step)*0.1;
+                                double tmp_th = 0.6 - (4-pyramid_step)*0.1;
                                 
                                 if(pyramid_step == 1)
-                                    tmp_th = 0.6;
+                                    tmp_th = 0.5;
                                 
                                 if(pyramid_step >= 1)
                                 {
