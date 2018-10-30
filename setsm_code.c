@@ -8760,7 +8760,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     if(!IsRA && ((Pyramid_step > Py_combined_level)))// && iteration%2 == 0) || (Pyramid_step >= 1 && iteration  > 1)))
         check_combined_WNCC = true;
     
-    if(check_combined_WNCC && ( (Pyramid_step > 1 && iteration%2 == 0) || (Pyramid_step == 1 && iteration  > 1) ) )
+    if(check_combined_WNCC && ( (Pyramid_step >= 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
         check_combined_WNCC_INCC = true;
     
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
@@ -13397,7 +13397,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             else if(Pyramid_step == 2)
             {
                 if(f_demsize < 8 )
-                    max_count = 20;
+                    max_count = 10;
                 else
                     max_count = 10;
             }
@@ -14327,13 +14327,13 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         double temp_TH = - 0.3;
         
         if(pyramid_step == 4 )
-            ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.5 ;// - (iteration - 1)*0.01;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.4 ;//- (iteration - 1)*0.01;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.4 ;// - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.3 ;// - (iteration - 1)*0.02;
         else if(pyramid_step == 1)
-            ortho_ncc_th = 0.3 ;//- (iteration - 1)*0.02;
+            ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
         else
             ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
 
@@ -14694,9 +14694,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                             if(flag_blunder)
                             {
                                 double tmp_th = 0.6 - (4-pyramid_step)*0.1;
+                                //if(tmp_th < 0.5)
+                                //    tmp_th = 0.5;
                                 
                                 if(pyramid_step == 1)
-                                    tmp_th = 0.5;
+                                    tmp_th = 0.6;
                                 
                                 if(pyramid_step >= 1)
                                 {
