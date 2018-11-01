@@ -1544,7 +1544,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                     
                     if(proinfo->check_sensor_type == 1)
                     {
-                        if (proinfo->resolution < 1.0)
+                        if (proinfo->resolution < 0.75)
                         {
                             proinfo->resolution = 0.5;
                         }
@@ -8760,7 +8760,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     if(!IsRA && ((Pyramid_step > Py_combined_level)))// && iteration%2 == 0) || (Pyramid_step >= 1 && iteration  > 1)))
         check_combined_WNCC = true;
     
-    if(check_combined_WNCC && ( (Pyramid_step >= 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
+    if(check_combined_WNCC && ( (Pyramid_step >= 2 && iteration%2 == 1) || (Pyramid_step == 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
         check_combined_WNCC_INCC = true;
     
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
