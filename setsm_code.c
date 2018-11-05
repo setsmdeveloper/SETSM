@@ -3848,7 +3848,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         if(flag_start)
                         {
                             double min_after, max_after;
-                            min_after   = (double)(minH_mps - pow(2, level)*2*MPP);     max_after   = (double)(maxH_mps + pow(2, level)*2*MPP);
+                            min_after   = (double)(minH_mps - pow(2, level)*10*MPP);     max_after   = (double)(maxH_mps + pow(2, level)*10*MPP);
                             printf("minmax MP %f\t%f\n",min_after, max_after);
                             if(level <= 2)
                             {
@@ -8760,7 +8760,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     if(!IsRA && ((Pyramid_step > Py_combined_level)))// && iteration%2 == 0) || (Pyramid_step >= 1 && iteration  > 1)))
         check_combined_WNCC = true;
     
-    if(check_combined_WNCC && ( (Pyramid_step >= 2 && iteration%2 == 1) || (Pyramid_step == 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
+    //if(check_combined_WNCC && ( (Pyramid_step >= 2 && iteration%2 == 1) || (Pyramid_step == 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
+    if(check_combined_WNCC && ( (Pyramid_step >= 1 && iteration%2 == 0) ) )
         check_combined_WNCC_INCC = true;
     
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
@@ -9082,7 +9083,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                     {
                         if(iteration <= 2 && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
                             check_blunder_cell = false;
-                        else if(iteration > 2 && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 200))
+                        else if(iteration > 2 && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
                             check_blunder_cell = false;
                         else
                             check_blunder_cell = true;
@@ -14327,13 +14328,13 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         double temp_TH = - 0.3;
         
         if(pyramid_step == 4 )
-            ortho_ncc_th = 0.5 ;// - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.4 ;//- (iteration - 1)*0.01;
+            ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.3 ;// - (iteration - 1)*0.02;
+            ortho_ncc_th = 0.4 - (iteration - 1)*0.01;
         else if(pyramid_step == 1)
-            ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
+            ortho_ncc_th = 0.3 ;//- (iteration - 1)*0.02;
         else
             ortho_ncc_th = 0.2 ;//- (iteration - 1)*0.02;
 
