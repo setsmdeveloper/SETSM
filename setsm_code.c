@@ -45,7 +45,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "3.3.2";
+const char setsm_version[] = "3.4.0";
 
 char *dirname(char *path);
 
@@ -1440,10 +1440,6 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
         printf("Completion of loading project file!!\n");
 
         printf("# of detected threads by openmp = %d\n",omp_get_max_threads());
-        
-        if (proinfo->threads_num != 0) {
-            omp_set_num_threads(proinfo->threads_num);
-        }
         
         printf("# of allocated threads = %d\n",omp_get_max_threads());
         
@@ -3364,6 +3360,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
                                         
+                                        if(proinfo->DEM_resolution >= 8)
+                                        {
+                                            matching_change_rate = 0.001;
+                                        }
+                                        
                                         if(proinfo->pre_DEMtif)
                                         {
                                             if(level >= 4)
@@ -3558,6 +3559,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
+                                        
+                                        if(proinfo->DEM_resolution >= 8)
+                                        {
+                                            matching_change_rate = 0.001;
+                                        }
                                         
                                         if(proinfo->pre_DEMtif)
                                         {
@@ -9588,7 +9594,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_1_ortho           = -1.0;
-                                    
+                                    if(ncc_1_ortho > 1.0)
+                                        ncc_1_ortho = 1.0;
                                     
                                     val1          = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
                                     val2          = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
@@ -9608,6 +9615,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_1_mag_ortho           = -1.0;
+                                    if(ncc_1_mag_ortho > 1.0)
+                                        ncc_1_mag_ortho = 1.0;
                                     
                                     N                   = Count_N_ortho[1];
                                     val1                = (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
@@ -9628,6 +9637,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_2_ortho           = -1.0;
+                                    if(ncc_2_ortho > 1.0)
+                                        ncc_2_ortho = 1.0;
                                     
                                     val1                = (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
                                     val2                = (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
@@ -9647,7 +9658,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_2_mag_ortho           = -1.0;
-                                    
+                                    if(ncc_2_mag_ortho > 1.0)
+                                        ncc_2_mag_ortho = 1.0;
                                     
                                     N                   = Count_N_ortho[2];
                                     val1                = (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
@@ -9668,6 +9680,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_3_ortho           = -1.0;
+                                    if(ncc_3_ortho > 1.0)
+                                        ncc_3_ortho = 1.0;
                                     
                                     val1                = (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
                                     val2                = (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
@@ -9687,6 +9701,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     }
                                     else
                                         ncc_3_mag_ortho           = -1.0;
+                                    if(ncc_3_mag_ortho > 1.0)
+                                        ncc_3_mag_ortho = 1.0;
                                     
                                     temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
                                     sum_GNCC_multi += temp_GNCC_roh;
@@ -9722,7 +9738,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_1_ortho_next           = -1.0;
-                                        
+                                        if(ncc_1_ortho_next > 1.0)
+                                            ncc_1_ortho_next = 1.0;
                                         
                                         val1          = (double)(Sum_L2_mag_ortho_next) - (double)(Sum_L_mag_ortho_next*Sum_L_mag_ortho_next)/N;
                                         val2          = (double)(Sum_R2_mag_ortho_next) - (double)(Sum_R_mag_ortho_next*Sum_R_mag_ortho_next)/N;
@@ -9742,7 +9759,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_1_mag_ortho_next           = -1.0;
-                                        
+                                        if(ncc_1_mag_ortho_next > 1.0)
+                                            ncc_1_mag_ortho_next = 1.0;
                                         
                                         N                   = Count_N_ortho_next[1];
                                         val1                = (double)(Sum_L2_2_ortho_next) - (double)(Sum_L_2_ortho_next*Sum_L_2_ortho_next)/N;
@@ -9763,6 +9781,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_2_ortho_next           = -1.0;
+                                        if(ncc_2_ortho_next > 1.0)
+                                            ncc_2_ortho_next = 1.0;
                                         
                                         val1                = (double)(Sum_L2_2_mag_ortho_next) - (double)(Sum_L_2_mag_ortho_next*Sum_L_2_mag_ortho_next)/N;
                                         val2                = (double)(Sum_R2_2_mag_ortho_next) - (double)(Sum_R_2_mag_ortho_next*Sum_R_2_mag_ortho_next)/N;
@@ -9782,7 +9802,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_2_mag_ortho_next           = -1.0;
-                                        
+                                        if(ncc_2_mag_ortho_next > 1.0)
+                                            ncc_2_mag_ortho_next = 1.0;
                                         
                                         N                   = Count_N_ortho_next[2];
                                         val1                = (double)(Sum_L2_3_ortho_next) - (double)(Sum_L_3_ortho_next*Sum_L_3_ortho_next)/N;
@@ -9803,6 +9824,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_3_ortho_next           = -1.0;
+                                        if(ncc_3_ortho_next > 1.0)
+                                            ncc_3_ortho_next = 1.0;
                                         
                                         val1                = (double)(Sum_L2_3_mag_ortho_next) - (double)(Sum_L_3_mag_ortho_next*Sum_L_3_mag_ortho_next)/N;
                                         val2                = (double)(Sum_R2_3_mag_ortho_next) - (double)(Sum_R_3_mag_ortho_next*Sum_R_3_mag_ortho_next)/N;
@@ -9822,7 +9845,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         }
                                         else
                                             ncc_3_mag_ortho_next           = -1.0;
-                                        
+                                        if(ncc_3_mag_ortho_next > 1.0)
+                                            ncc_3_mag_ortho_next = 1.0;
                                         
                                         temp_GNCC_roh = (double)(ncc_1_ortho_next + ncc_2_ortho_next + ncc_3_ortho_next + ncc_1_mag_ortho_next + ncc_2_mag_ortho_next + ncc_3_mag_ortho_next)/6.0;
                                         //temp_GNCC_roh = (double)(ncc_1_ortho_next + ncc_1_mag_ortho_next)/2.0;
@@ -10428,6 +10452,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_1           = -1.0;
+                                                        if(ncc_1 > 1.0)
+                                                            ncc_1 = 1.0;
                                                         
                                                         val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
                                                         val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
@@ -10447,6 +10473,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_1_mag           = -1.0;
+                                                        if(ncc_1_mag > 1.0)
+                                                            ncc_1_mag = 1.0;
                                                         
                                                         t_intensity_diff = sqrt(t_intensity_diff/N);
                                                         t_mag_diff = sqrt(t_mag_diff/N);
@@ -10471,6 +10499,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_2           = -1.0;
+                                                        if(ncc_2 > 1.0)
+                                                            ncc_2 = 1.0;
                                                         
                                                         val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
                                                         val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
@@ -10490,6 +10520,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_2_mag           = -1.0;
+                                                        if(ncc_2_mag > 1.0)
+                                                            ncc_2_mag = 1.0;
                                                         
                                                         
                                                         N                   = Count_N[2];
@@ -10511,6 +10543,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_3           = -1.0;
+                                                        if(ncc_3 > 1.0)
+                                                            ncc_3 = 1.0;
                                                         
                                                         val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
                                                         val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
@@ -10530,6 +10564,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         }
                                                         else
                                                             ncc_3_mag           = -1.0;
+                                                        if(ncc_3_mag > 1.0)
+                                                            ncc_3_mag = 1.0;
                                                         
                                                         temp_INCC_roh = (double)(ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
                                                         sum_INCC_multi += temp_INCC_roh;
@@ -10569,6 +10605,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_1_next           = -1.0;
+                                                            if(ncc_1_next > 1.0)
+                                                                ncc_1_next = 1.0;
                                                             
                                                             val1          = (double)(Sum_L2_mag_next) - (double)(Sum_L_mag_next*Sum_L_mag_next)/N;
                                                             val2          = (double)(Sum_R2_mag_next) - (double)(Sum_R_mag_next*Sum_R_mag_next)/N;
@@ -10588,6 +10626,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_1_mag_next           = -1.0;
+                                                            if(ncc_1_mag_next > 1.0)
+                                                                ncc_1_mag_next = 1.0;
                                                             
                                                             //t_intensity_diff = sqrt(t_intensity_diff/N);
                                                             //t_mag_diff = sqrt(t_mag_diff/N);
@@ -10612,6 +10652,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_2_next           = -1.0;
+                                                            if(ncc_2_next > 1.0)
+                                                                ncc_2_next = 1.0;
                                                             
                                                             val1                = (double)(Sum_L2_2_mag_next) - (double)(Sum_L_2_mag_next*Sum_L_2_mag_next)/N;
                                                             val2                = (double)(Sum_R2_2_mag_next) - (double)(Sum_R_2_mag_next*Sum_R_2_mag_next)/N;
@@ -10631,7 +10673,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_2_mag_next           = -1.0;
-                                                            
+                                                            if(ncc_2_mag_next > 1.0)
+                                                                ncc_2_mag_next = 1.0;
                                                             
                                                             N                   = Count_N_next[2];
                                                             val1                = (double)(Sum_L2_3_next) - (double)(Sum_L_3_next*Sum_L_3_next)/N;
@@ -10652,6 +10695,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_3_next           = -1.0;
+                                                            if(ncc_3_next > 1.0)
+                                                                ncc_3_next = 1.0;
                                                             
                                                             val1                = (double)(Sum_L2_3_mag_next) - (double)(Sum_L_3_mag_next*Sum_L_3_mag_next)/N;
                                                             val2                = (double)(Sum_R2_3_mag_next) - (double)(Sum_R_3_mag_next*Sum_R_3_mag_next)/N;
@@ -10671,6 +10716,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                             else
                                                                 ncc_3_mag_next           = -1.0;
+                                                            if(ncc_3_mag_next > 1.0)
+                                                                ncc_3_mag_next = 1.0;
                                                             
                                                             temp_INCC_roh = (double)(ncc_1_next + ncc_2_next + ncc_3_next + ncc_1_mag_next + ncc_2_mag_next + ncc_3_mag_next)/6.0;
                                                             //temp_INCC_roh = (double)(ncc_1_next + ncc_1_mag_next)/2.0;
@@ -10911,7 +10958,7 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                 {
                     WNCC_sum = grid_voxel[pt_index][height_step].WNCC;
                     
-                    //if(Pyramid_step > 2 || Pyramid_step == 0)
+                    if(Pyramid_step > 0)
                     {
                         for(int row = -kernel_size ; row <= kernel_size ; row++)
                         {
@@ -12104,6 +12151,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_1           = de2/de;
                         else
                             ncc_1           = -1.0;
+                        if(ncc_1 > 1.0)
+                            ncc_1 = 1.0;
                         
                         val1          = fabs((double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N);
                         val2          = fabs((double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N);
@@ -12121,7 +12170,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_1_mag           = de2/de;
                         else
                             ncc_1_mag           = -1.0;
-                        
+                        if(ncc_1_mag > 1.0)
+                            ncc_1_mag = 1.0;
                         
                         N                   = Count_N[1];
                         val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
@@ -12140,6 +12190,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_2         = de2/de;
                         else
                             ncc_2           = -1.0;
+                        if(ncc_2 > 1.0)
+                            ncc_2 = 1.0;
                         
                         val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
                         val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
@@ -12157,7 +12209,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_2_mag         = de2/de;
                         else
                             ncc_2_mag           = -1.0;
-                        
+                        if(ncc_2_mag > 1.0)
+                            ncc_2_mag = 1.0;
                         
                         N                   = Count_N[2];
                         val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
@@ -12176,6 +12229,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_3         = de2/de;
                         else
                             ncc_3           = -1.0;
+                        if(ncc_3 > 1.0)
+                            ncc_3 = 1.0;
                         
                         val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
                         val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
@@ -12193,6 +12248,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             ncc_3_mag         = de2/de;
                         else
                             ncc_3_mag           = -1.0;
+                        if(ncc_3_mag > 1.0)
+                            ncc_3_mag = 1.0;
                         
                         t_nccresult = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
                     }
@@ -12607,6 +12664,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                         ncc_1           = de2/de;
                     else
                         ncc_1           = -1.0;
+                    if(ncc_1 > 1.0)
+                        ncc_1 = 1.0;
                     
                     val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/Count_N;
                     val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/Count_N;
@@ -12616,6 +12675,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                         ncc_2           = de2/de;
                     else
                         ncc_2           = -1.0;
+                    if(ncc_2 > 1.0)
+                        ncc_2 = 1.0;
                     
                     ncc = (ncc_1 + ncc_2)/2.0;
                     
@@ -12735,7 +12796,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     double minimum_Th = 0.2*2;
     
     if(Pyramid_step == 0)
-        minimum_Th = 0.2*2;
+        minimum_Th = 0.2;
     
     printf("minimum TH %f\n",minimum_Th);
     bool check_iter_end = false;
