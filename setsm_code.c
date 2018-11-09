@@ -693,7 +693,7 @@ int main(int argc,char *argv[])
                     }
                 }
                 
-                if (strcmp("-Image",argv[i]) == 0)
+                if (strcmp("-image",argv[i]) == 0)
                 {
                     if (argc == i+1) {
                         printf("Please input image path\n");
@@ -702,7 +702,7 @@ int main(int argc,char *argv[])
                     else
                     {
                         sprintf(args.Image[image_count],"%s",argv[i+1]);
-                        printf("Image%d %s\n",image_count,args.Image[image_count]);
+                        printf("image%d %s\n",image_count,args.Image[image_count]);
                         
                         image_count++;
                     }
