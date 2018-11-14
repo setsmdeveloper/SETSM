@@ -16999,7 +16999,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     boundary[2] = -10000000.0;
     boundary[3] = -10000000.0;
 
-#pragma omp parallel for private(index_file) schedule(guided)
+//#pragma omp parallel for private(index_file) schedule(guided)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
         int row,col;
