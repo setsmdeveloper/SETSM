@@ -32,6 +32,9 @@
 #define PI 3.141592653589793
 #define DegToRad PI/180
 #define RadToDeg 180/PI
+#define UMToMM 0.001
+#define MMToUM 1000
+#define MaxImages 20
 
 #ifndef bool
 #define bool unsigned char
@@ -122,10 +125,15 @@ typedef struct tagNCCresult
 	double result2;
 	double result3;
 	double result4;
+    double max_WNCC;
+    int max_WNCC_pos;
 	
-	double INCC;
-	double GNCC;
-	
+//	double INCC;
+//	double GNCC;
+    double minHeight;
+    double maxHeight;
+    int NumOfHeight;
+    bool check_height_change;
 	int roh_count;
 	uint8 mag_tag;
 	
@@ -141,14 +149,25 @@ typedef struct UpdateGrid{
 	double Height; //after blunder detection
 	double roh;
 	double Matched_height;//before blunder detection
-	double ortho_ncc;
+	double ortho_ncc[MaxImages];
+    double Mean_ortho_ncc;
 	double angle;
 //	double *false_h;
 
 //	uint16 false_h_count;
 	uint8 Matched_flag;
 	uint8 anchor_flag;
+    
 }UGRID;
+
+typedef struct tagVoxelinfo
+{
+    double WNCC;
+    double height;
+//    int SSD;
+    bool flag_cal;
+    double INCC;
+}VOXEL;
 
 typedef struct LSFinfo{
     float lsf_std;
@@ -165,12 +184,53 @@ typedef struct BlunderIP{
 	bool height_check_flag;
 }BL;
 
+//Aerial frame Camera
+typedef struct tagCameraInfo
+{
+    double m_focalLength;
+    CSize m_ImageSize;
+    double m_CCDSize;
+    double m_ppx;
+    double m_ppy;
+} CAMERA_INFO;
+
+typedef struct tagRotationMatrix
+{
+    double m11, m12, m13, m21, m22, m23, m31, m32, m33;
+} RM;
+
+typedef struct tagEO
+{
+    int strip_ID;
+    int photo_ID;
+    char path[500];
+    double m_Xl;
+    double m_Yl;
+    double m_Zl;
+    double m_Wl;
+    double m_Pl;
+    double m_Kl;
+    RM m_Rm;
+} EO;
+
+
+typedef struct tagFrameInfo
+{
+    CAMERA_INFO m_Camera;
+    int NumberofStip;
+    int NumberofPhotos;
+    int start_stripID;
+    int end_stripID;
+    EO* Photoinfo;
+} FrameInfo;
+
+
 typedef struct ProjectInfo{
 	double resolution;
 	double DEM_resolution;
 	double preDEM_space;
 	double cal_boundary[4];
-	double RA_param[2];
+	double RA_param[MaxImages][2];
 	double seedDEMsigma;
 	
 	double minHeight;
@@ -181,11 +241,10 @@ typedef struct ProjectInfo{
 	int start_col;
 	int end_col;
 	int threads_num;
-	
-	char LeftImagefilename[500];
-	char RightImagefilename[500];
-	char LeftRPCfilename[500];
-	char RightRPCfilename[500];
+    int number_of_images;
+    
+	char Imagefilename[MaxImages][500];
+	char RPCfilename[MaxImages][500];
 	char save_filepath[500];
 	char Outputpath_name[500];
 	char tmpdir[500];
@@ -205,6 +264,10 @@ typedef struct ProjectInfo{
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
+    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
+    bool check_selected_image[MaxImages];
+    
+    FrameInfo frameinfo;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
 } ProInfo;
@@ -214,12 +277,15 @@ typedef struct ArgumentInfo{
 	double seedDEMsigma;
 	double minHeight;
 	double maxHeight;
-	double ra_line;
-	double ra_sample;
+	double ra_line[MaxImages];
+	double ra_sample[MaxImages];
 	double Min_X, Max_X, Min_Y, Max_Y;
 	double image_resolution;
 	double overlap_length;
-	
+    double focal_length;
+    double CCD_size;
+    
+    
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
 	int start_row;
@@ -234,13 +300,14 @@ typedef struct ArgumentInfo{
     int sensor_provider; //DG = 1, Pleiades = 2
     int ortho_count;
     int RA_only;
+    int number_of_images; // 2 is for stereo (default), n is for multi more than 3
 	
-    char Image1[500];
-	char Image2[500];
+    char Image[MaxImages][500];
 	char Outputpath[500];
 	char Outputpath_name[500];
 	char seedDEMfilename[500];
 	char metafilename[500];
+    char EO_Path[500];
 	
 	bool check_DEM_space;
 	bool check_Threads_num;
@@ -267,6 +334,10 @@ typedef struct ArgumentInfo{
     bool check_LSFDEMpath;
     bool check_LSF2;
     bool check_Matchtag;
+    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
+    bool check_EO;
+    bool check_fl;
+    bool check_ccd;
     
 } ARGINFO;
 
