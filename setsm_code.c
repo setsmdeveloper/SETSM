@@ -16999,7 +16999,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     boundary[2] = -10000000.0;
     boundary[3] = -10000000.0;
 
-#pragma omp parallel for private(index_file) schedule(guided)
+//#pragma omp parallel for private(index_file) schedule(guided)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
         int row,col;
@@ -17035,7 +17035,8 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                             double t_boundary[4];
                             fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
                                    &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
-                            if(iter == header_line-1)
+                            printf("%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,t_col_size,t_row_size);
+			    if(iter == header_line-1)
                             {
                                 grid_size = t_grid_size;
                                 t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
