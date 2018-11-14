@@ -3020,6 +3020,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else
                             {
+                                if(level == 0 && iteration > 1)
+                                    fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
+                                
                                 AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
                                 printf("Done AWNCC\n");
                             }
@@ -3760,7 +3763,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 //matching_rate = (double)count_results[0]/(double)total_matching_candidate_pts;
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
-                            }/*
+                            }
                             if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
@@ -3783,7 +3786,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     remove(filename_mps_anchor);
                                 }
                             }
-                            */
+                            
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -9004,17 +9007,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     printf("ncc_alpha ncc_beta %f %f\n",ncc_alpha,ncc_beta);
     
     if(Pyramid_step >= 3)
-        h_divide = 3;
+        h_divide = 2;
     else if(Pyramid_step == 2)
     {
-        h_divide = 3;
+        h_divide = 2;
     }
     else if(Pyramid_step == 1)
         h_divide = 3;
     else {
-        h_divide = 6;
+        h_divide = 3;
     }
-    
     
     height_step = (double)(im_resolution/h_divide);
     
