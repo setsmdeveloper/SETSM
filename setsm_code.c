@@ -2258,8 +2258,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             //fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
                         }
                         
-                        fprintf(pMetafile,"Stero_pair_convergence_angle=%f\n",image_info[0].convergence_angle);
-                        fprintf(pMetafile,"Setereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
+                        fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",image_info[0].convergence_angle);
+                        fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                         fclose(pMetafile);
                         
                         if(args.check_LSF2)
@@ -3813,6 +3813,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 flag_start          = true;
                                 iteration++;
                             }
+                            else if(level == 0)
+                                iteration++;
 
                             if(level == 0)
                             {
@@ -8618,10 +8620,17 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
-    if(left_mpp > right_mpp)
+    if(left_mpp > 5*im_resolution)
+        *MPP_simgle_image = right_mpp;
+    else if(right_mpp > 5*im_resolution)
         *MPP_simgle_image = left_mpp;
     else
-        *MPP_simgle_image = right_mpp;
+    {
+        if(left_mpp > right_mpp)
+            *MPP_simgle_image = left_mpp;
+        else
+            *MPP_simgle_image = right_mpp;
+    }
     
     printf("mpp = %f\n",*MPP_simgle_image);
     
@@ -17480,6 +17489,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     boundary[2] = -10000000.0;
     boundary[3] = -10000000.0;
 
+    int count_matched_files = 0;
 //#pragma omp parallel for private(index_file) schedule(guided)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
@@ -17496,6 +17506,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
             pfile   = fopen(t_str,"r");
             if(pfile)
             {
+                count_matched_files++;
                 printf("matched tiles %s\n",t_str);
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
@@ -17543,6 +17554,12 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                 fclose(pfile);
             }
         }
+    }
+    
+    if(count_matched_files < 1)
+    {
+        printf("No matched tiles. Please check overlapped area or image quality!!\n");
+        exit(1);
     }
 /*
     boundary[0] = (int)(boundary[0]/40.0)*40 - 40;
