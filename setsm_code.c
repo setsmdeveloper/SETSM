@@ -2255,8 +2255,8 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             //fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
                         }
                         
-                        fprintf(pMetafile,"Stero_pair_convergence_angle=%f\n",image_info[0].convergence_angle);
-                        fprintf(pMetafile,"Setereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
+                        fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",image_info[0].convergence_angle);
+                        fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                         fclose(pMetafile);
                         
                         if(args.check_LSF2)
@@ -2995,8 +2995,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("template size =%d\n",Template_size);
                             
-                            //echoprint_Gridinfo(proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
+                            //echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
                             
+                        
                             
                             if(proinfo->IsRA || (level == 0 && proinfo->DEM_resolution < 2))
                             {
@@ -3792,7 +3793,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 flag_start          = true;
                                 iteration++;
                             }
-
+                            else if(level == 0)
+                                iteration++;
+                            
                             if(level == 0)
                             {
                                 if(proinfo->DEM_resolution >= 2)
@@ -3849,7 +3852,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             if(level == 0)
                                 final_level_iteration = iteration;
                             
-                            printf("matching change rate %f\tTh_roh %f\t%f\n",matching_change_rate,Th_roh,Th_roh_min);
+                            printf("lower_level_match %d\tmatching change rate %f\tTh_roh %f\t%f\n",lower_level_match,matching_change_rate,Th_roh,Th_roh_min);
                         }
 
                         
@@ -8518,10 +8521,17 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
-    if(left_mpp > right_mpp)
+    if(left_mpp > 5*im_resolution)
+        *MPP_simgle_image = right_mpp;
+    else if(right_mpp > 5*im_resolution)
         *MPP_simgle_image = left_mpp;
     else
-        *MPP_simgle_image = right_mpp;
+    {
+        if(left_mpp > right_mpp)
+            *MPP_simgle_image = left_mpp;
+        else
+            *MPP_simgle_image = right_mpp;
+    }
     
     printf("mpp = %f\n",*MPP_simgle_image);
     
@@ -13418,7 +13428,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
         TIN_split_level = 4;
     }
     
-    if(count_MPs > 3)
+    if(count_MPs > 10)
     {
         double gridspace            = grid_resolution;
         uint8 max_count         = 30;
@@ -16147,7 +16157,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,char *save_path,int row,int col,int lev
     //sprintf(t_str,"%s/txt/tin_min_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     //outfile_min   = fopen(t_str,"w");
     //sprintf(t_str,"%s/txt/tin_max_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-    //outfile_max   = fopen(t_str,"w");
+   // outfile_max   = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     outfile_h   = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
@@ -16181,7 +16191,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,char *save_path,int row,int col,int lev
                 int matlab_index    = k*temp_S.width + j;
 
                 //fprintf(outfile_min,"%f\t",GridPT3[matlab_index].minHeight);
-                //fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight);
+                //fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight - GridPT3[matlab_index].minHeight);
                 //if(GridPT3[matlab_index].Matched_flag != 0)
                 fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
                 fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
@@ -16999,6 +17009,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     boundary[2] = -10000000.0;
     boundary[3] = -10000000.0;
 
+    int count_matched_files = 0;
 //#pragma omp parallel for private(index_file) schedule(guided)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
@@ -17015,6 +17026,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
             pfile   = fopen(t_str,"r");
             if(pfile)
             {
+                count_matched_files++;
                 printf("matched tiles %s\n",t_str);
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
@@ -17062,6 +17074,13 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
             }
         }
     }
+    
+    if(count_matched_files < 1)
+    {
+        printf("No matched tiles. Please check overlapped area or image quality!!\n");
+        exit(1);
+    }
+    
 /*
     boundary[0] = (int)(boundary[0]/40.0)*40 - 40;
     boundary[1] = (int)(boundary[1]/40.0)*40 - 40;
