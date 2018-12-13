@@ -3055,8 +3055,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                   iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle);
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
                             
-                            //if(level == 2 && iteration == 1)
-                                exit(1);
+                            //if(level == 4 && iteration == 2)
+                            //    exit(1);
                             
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
@@ -8370,12 +8370,12 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
             */
             GaussianFilter[i+half_filter_size][j+half_filter_size]=ttt;
             
-            //printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
+            printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
             sum += ttt;
         }
-        //printf("\n");
+        printf("\n");
     }
-    //printf("\n");
+    printf("\n");
 
 //#pragma omp parallel for schedule(guided)
     for(int i=-half_filter_size;i<half_filter_size+1;i++)
@@ -8388,11 +8388,11 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
             double ttt1 = ttt*10000.0;
             int ttt2 = (int)ttt1;*/
             GaussianFilter[i+half_filter_size][j+half_filter_size] = temp;//ttt2/10000.0;
-            //printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
+            printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
         }
-        //printf("\n");
+        printf("\n");
     }
-    //printf("\n");
+    printf("\n");
     
 #pragma omp parallel for private(temp) schedule(guided)
     for(long int r=0;r<result_size.height;r++)

@@ -12,8 +12,6 @@ GEOTIFFPATH=/home/noh.56/software/libgeotiff-1.4.2/libxtiff
 GEOTIFFINC=-I/home/noh.56/software/libgeotiff-1.4.2/include
 GEOTIFFLIB=-L/home/noh.56/software/libgeotiff-1.4.2/lib
 
-include Makefile.include
-
 CC=icc
 MPICC=mpicc
 CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise
