@@ -8594,6 +8594,9 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             int change_step_min = 0;
             int change_step_max = 0;
             bool check_blunder_cell = true;
+            double th_height = 1000;
+            if(DEM_resolution <= 4)
+                th_height = 100;
             
             if ( pyramid_step >= 2)
                 check_blunder_cell = false;
@@ -8611,11 +8614,11 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 {
                     if(iteration > 1)
                     {
-                        if((fabs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < 100) && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 100))
+                        if((fabs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height) && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                             check_blunder_cell = false;
                     }
                     else
-                        if((fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 100))
+                        if((fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                             check_blunder_cell = false;
 
                 }
@@ -9078,6 +9081,9 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             {
                 char t_temp_path[500];
                 bool check_blunder_cell = false;
+                double th_height = 1000;
+                if(proinfo->DEM_resolution <= 4)
+                    th_height = 100;
                 
                 if(GridPT3[pt_index].Matched_flag == 0)
                     h_divide = 2;
@@ -9106,7 +9112,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                         else
                             check_blunder_cell = true;
                     }
-                    else if((fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 100))
+                    else if((fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
                         check_blunder_cell = false;
                     else
                         check_blunder_cell = true;
