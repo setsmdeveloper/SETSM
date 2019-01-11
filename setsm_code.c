@@ -45,7 +45,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "3.4.0";
+const char setsm_version[] = "3.4.1";
 
 char *dirname(char *path);
 
@@ -83,11 +83,8 @@ int main(int argc,char *argv[])
     exit(1);
     */
     
-    /*double a = 15165156168.12569751668554;
-    double b = SignficantDigit(a);
     
-    exit(1);
-    */
+    
     setbuf(stdout, NULL);
     TIFFSetWarningHandler(NULL);
     char* projectfilename   = "default.txt";
@@ -122,7 +119,7 @@ int main(int argc,char *argv[])
     args.check_LSF   = false;
     args.check_LSF_DEM = false;
     args.check_LSFDEMpath = false;
-    args.check_LSF2  = false;
+    args.check_LSF2  = 0;
     args.check_Matchtag = false;
     args.check_EO = false;
     args.check_fl = false;
@@ -696,7 +693,7 @@ int main(int argc,char *argv[])
                     }
                 }
                 
-                if (strcmp("-image",argv[i]) == 0)
+                if (strcmp("-image",argv[i]) == 0 || strcmp("-Image",argv[i]) == 0)
                 {
                     if (argc == i+1) {
                         printf("Please input image path\n");
@@ -772,9 +769,9 @@ int main(int argc,char *argv[])
                     else
                     {
                         int input_number = atoi(argv[i+1]);
-                        if(input_number == 1)
+                        if(input_number == 1 || input_number == 2)
                         {
-                            args.check_LSF2 = true;
+                            args.check_LSF2 = input_number;
                             printf("LSF %d\n",args.check_LSF2);
                         }
                         else
@@ -1313,6 +1310,9 @@ int main(int argc,char *argv[])
                             orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2);
                         else if(args.ortho_count == 2)
                             orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2);
+                        
+                        if(args.check_LSF2 == 2)
+                            remove(DEMFilename);
                     }
                     else
                         printf("Please check input 1 and input 2. Both is same\n");
@@ -1579,7 +1579,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             {
                 fprintf(pMetafile,"Creation Date=%s",c_time_string);
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                    fprintf(pMetafile,"Image %d=%s\n",ti,proinfo->Imagefilename[ti]);
+                    fprintf(pMetafile,"Image %d=%s\n",ti+1,proinfo->Imagefilename[ti]);
                 fprintf(pMetafile,"Output Resolution=%f\n",proinfo->DEM_resolution);
             }
             
@@ -1649,7 +1649,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                 Boundary[2] = args.Max_X;
                 Boundary[3] = args.Max_Y;
             }
-            printf("boundary = %f\t%f\t%f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3],ori_minmaxHeight[0],ori_minmaxHeight[1]);
+            printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
             
             CSize Boundary_size;
             Boundary_size.width     = Boundary[2] - Boundary[0];
@@ -2254,7 +2254,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
             
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
-                            fprintf(pMetafile,"Image %d info\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\n",ti,ti,image_info[ti].SatID,ti,image_info[ti].imagetime,ti,Image_gsd_r[ti],ti,Image_gsd_c[ti],ti,Image_gsd[ti],ti,image_info[ti].Mean_sun_azimuth_angle,ti,image_info[ti].Mean_sun_elevation,ti,image_info[ti].Mean_sat_azimuth_angle,ti,image_info[ti].Mean_sat_elevation,ti,image_info[ti].Intrack_angle,ti,image_info[ti].Crosstrack_angle,ti,image_info[ti].Offnadir_angle,ti,(int)leftright_band[ti].tdi,ti,leftright_band[ti].effbw,ti,leftright_band[ti].abscalfactor);
+                            fprintf(pMetafile,"Image %d info\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\n",ti+1,ti+1,image_info[ti].SatID,ti+1,image_info[ti].imagetime,ti+1,Image_gsd_r[ti],ti+1,Image_gsd_c[ti],ti+1,Image_gsd[ti],ti+1,image_info[ti].Mean_sun_azimuth_angle,ti+1,image_info[ti].Mean_sun_elevation,ti+1,image_info[ti].Mean_sat_azimuth_angle,ti+1,image_info[ti].Mean_sat_elevation,ti+1,image_info[ti].Intrack_angle,ti+1,image_info[ti].Crosstrack_angle,ti+1,image_info[ti].Offnadir_angle,ti+1,(int)leftright_band[ti].tdi,ti+1,leftright_band[ti].effbw,ti+1,leftright_band[ti].abscalfactor);
                             //fprintf(pMetafile,"Image 2 info\nImage_2_satID=%s\nImage_2_Acquisition_time=%s\nImage_2_Mean_row_GSD=%f\nImage_2_Mean_col_GSD=%f\nImage_2_Mean_GSD=%f\nImage_2_Mean_sun_azimuth_angle=%f\nImage_2_Mean_sun_elevation=%f\nImage_2_Mean_sat_azimuth_angle=%f\nImage_2_Mean_sat_elevation=%f\nImage_2_Intrack_angle=%f\nImage_2_Crosstrack_angle=%f\nImage_2_Offnadir_angle=%f\nImage_2_tdi=%d\nImage_2_effbw=%f\nImage_2_abscalfact=%f\n",rightimage_info.SatID,rightimage_info.imagetime,Image2_gsd_r,Image2_gsd_c,Image2_gsd,rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle,(int)right_band.tdi,right_band.effbw,right_band.abscalfactor);
                         }
                         
@@ -2262,7 +2262,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                         fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                         fclose(pMetafile);
                         
-                        if(args.check_LSF2)
+                        if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
                             LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,seeddem_size);
                         
                     } // if (!RA_only)
@@ -2586,16 +2586,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     else
                         Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,Subsetsize,data_size_lr, fid);
                     
-                    
-                    
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
                     
                     PreST = time(0);
                     printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
-                    
-                    //ssexit(1);
                     
                     int blunder_selected_level;
                     int pre_blunder_selected_level;
@@ -2882,10 +2878,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         int pre_matched_pts=10;
                         double matching_change_rate = 100;
                         double rate_th = 0.00999999;
-                        int max_iteration = 10 - (4 - level)*2;
-                        if(max_iteration < 3)
-                            max_iteration = 3;
-                        
+                        int max_iteration = 9;
                         
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
@@ -2902,13 +2895,18 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         
                         if(proinfo->check_sensor_type == 1)
-                            CalMPP(Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                        {
+                            if(proinfo->DEM_resolution <= 4)
+                                CalMPP(level,Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                            else
+                                CalMPP_8(level,Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                        }
                         else
                         {
                             MPP_simgle_image = proinfo->resolution*1.5;
                             MPP_stereo_angle = MPP_simgle_image;
                         }
-                        
+                    
                         *stereo_angle_accuracy = MPP_stereo_angle;
                         
                         printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
@@ -3002,8 +3000,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("template size =%d\n",Template_size);
                             
-                            //echoprint_Gridinfo(proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
+                            //echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
                             
+                        
                             
                             if(proinfo->IsRA || (level == 0 && proinfo->DEM_resolution < 2))
                             {
@@ -3011,15 +3010,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else
                             {
-                                InitializeVoxel(grid_voxel,Size_Grid2D, height_step, GridPT3, nccresult,iteration,level,proinfo->DEM_resolution,proinfo,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,data_size_lr,minmaxHeight);
+                                InitializeVoxel(grid_voxel,Size_Grid2D, height_step, GridPT3, nccresult,iteration,level,proinfo->DEM_resolution,proinfo,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,Imagesizes,data_size_lr,minmaxHeight);
                                 printf("Done grid_voxel initialize\n");
                             }
                             
                             VerticalLineLocus(grid_voxel,proinfo,nccresult,SubMagImages,grid_resolution, Image_res[0],RPCs,Imagesizes,data_size_lr,SubImages,Template_size,Size_Grid2D,
                                               param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
                                               row,col,subBoundary,v_temp_path,mag_avg,mag_var,Startpos_next,SubImages_next,SubOriImages_next,SubMagImages_next,Py_combined_level);
-                            
-                            //exit(1);
                             
                             printf("Done VerticalLineLocus\n");
                             
@@ -3032,7 +3029,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(level == 0 && iteration > 1)
                                     fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
                                 
-                                AWNCC(proinfo,grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
+                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
                                 printf("Done AWNCC\n");
                             }
                             
@@ -3055,9 +3052,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                   iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle);
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
                             
-                            //if(level == 4 && iteration == 2)
-                            //    exit(1);
-                            
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
                                 //anchor points
@@ -3069,7 +3063,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                             NumOfIAparam, t_Imageparams, BStartpos,
                                                             row,col,SubOriImages,blunder_selected_level);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
-                                
+
                                 //blunder detection
                                 count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
@@ -3165,7 +3159,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     
                                     if(!proinfo->IsRA)
                                     {
-                                        echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
+                                        echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
                                     }
                                     free(ptslists);
                                     
@@ -3179,10 +3173,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         D3DPOINT *ptslists;
                                         
                                         FILE *pTri;
-                                        //double maxX_ptslists = -100000000;
-                                        //double maxY_ptslists = -100000000;
-                                        //double minX_ptslists =  100000000;
-                                        //double minY_ptslists =  100000000;
+                                        double maxX_ptslists = -100000000;
+                                        double maxY_ptslists = -100000000;
+                                        double minX_ptslists =  100000000;
+                                        double minY_ptslists =  100000000;
                                         int i;
                                         
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
@@ -3291,15 +3285,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         survey  = fopen(filename_mps,"r");
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
-                                        double sum_X = 0;
-                                        double sum_Y = 0;
-                                        double sum_Z = 0;
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                         {
-                                            sum_X += ptslists[i].m_X;
-                                            sum_Y += ptslists[i].m_Y;
-                                            sum_Z += ptslists[i].m_Z;
                                             /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
                                             if(maxY_ptslists < ptslists[i].m_Y)
@@ -3311,9 +3299,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             */
                                             i++;
                                         }
-                                        
-                                        printf("sum XYZ\t%f\t%f\t%f\n",sum_X,sum_Y,sum_Z);
-                                        
                                         fclose(survey);
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
@@ -3364,7 +3349,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_MPs;
                                         
-                                        if(iteration > 9)
+                                        if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
                                         
                                         if(level == 0)
@@ -3377,7 +3362,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level <= 1)
                                         {
-                                            if(iteration >= 5)
+                                            if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
                                         
@@ -3449,9 +3434,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 MPP = MPP_simgle_image;
                                             
                                             if(proinfo->DEM_resolution < 2)
-                                                Pre_GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif, minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             else
-                                                GridPT3         = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             
                                             printf("update GridPT3\n");
                                         }
@@ -3467,7 +3452,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             else
                                                 MPP = MPP_simgle_image;
                                             
-                                            Pre_GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             printf("update GridPT3\n");
                                         }
                                         else
@@ -3486,7 +3471,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 MPP = MPP_simgle_image;
                                             }
                                             
-                                            GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                         }
                                         
                                         free(trilists);
@@ -3500,10 +3485,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         D3DPOINT *ptslists;
                                         
                                         FILE *pTri;
-                                        //double maxX_ptslists = -100000000;
-                                        //double maxY_ptslists = -100000000;
-                                        //double minX_ptslists =  100000000;
-                                        //double minY_ptslists =  100000000;
+                                        double maxX_ptslists = -100000000;
+                                        double maxY_ptslists = -100000000;
+                                        double minX_ptslists =  100000000;
+                                        double minY_ptslists =  100000000;
                                         int i;
                                         
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
@@ -3564,7 +3549,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_results[0];
                                         
-                                        if(iteration > 9)
+                                        if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
                                         
                                         if(level == 0)
@@ -3577,7 +3562,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level <= 1)
                                         {
-                                            if(iteration >= 5)
+                                            if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
                                     
@@ -3646,9 +3631,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             else
                                                 MPP = MPP_simgle_image;
                                             if(proinfo->DEM_resolution < 2)
-                                                Pre_GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             else
-                                                GridPT3         = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             
                                             printf("update GridPT3\n");
                                         }
@@ -3664,7 +3649,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             else
                                                 MPP = MPP_simgle_image;
                                             
-                                            Pre_GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                             printf("update GridPT3\n");
                                         }
                                         else
@@ -3683,7 +3668,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 MPP = MPP_simgle_image;
                                             }
                                             
-                                            GridPT3     = SetHeightRange(proinfo,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
+                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma);
                                         }
                                         
                                         free(trilists);
@@ -3785,6 +3770,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
+                            
                             if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
@@ -3815,7 +3801,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else if(level == 0)
                                 iteration++;
-
+                            
                             if(level == 0)
                             {
                                 if(proinfo->DEM_resolution >= 2)
@@ -3872,9 +3858,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             if(level == 0)
                                 final_level_iteration = iteration;
                             
-                            printf("matching change rate %f\tTh_roh %f\t%f\n",matching_change_rate,Th_roh,Th_roh_min);
-                            
-                            //exit(1);
+                            printf("lower_level_match %d\tmatching change rate %f\tTh_roh %f\t%f\n",lower_level_match,matching_change_rate,Th_roh,Th_roh_min);
                         }
 
                         
@@ -3987,8 +3971,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         if(level == 0 && final_level_iteration == 4)
                             level = -1;
-                        
-                        //exit(1);
+
                     }
                     printf("relese data size\n");
 
@@ -4406,57 +4389,6 @@ int Maketmpfolders(ProInfo *info)
     }
     return check_folder;
 }
-
-double SignficantDigit(double val)
-{
-    double reval;
-    double tt2;
-    double tt1;
-    if(val >= 0)
-    {
-        tt1 = val*10000.0;
-        tt2 = floor(tt1 + 0.1);
-        //tt2 = (int)(tt1 + 0.1);
-    }
-    else
-    {
-        tt1 = fabs(val)*10000.0;
-        tt2 = -(floor(tt1 + 0.1));
-        //tt2 = -((int)(tt1 + 0.1));
-    }
-    
-    reval = tt2/10000.0;
-
-    //printf("%lf\t%lf\t%lf\n",tt1,tt2,reval);
-    
-    return reval;
-}
-
-double SignficantDigit_height(double val)
-{
-    double reval;
-    double tt2;
-    double tt1;
-    if(val >= 0)
-    {
-        tt1 = val*1.0;
-        tt2 = floor(tt1 + 0.001);
-        //tt2 = (int)(tt1 + 0.1);
-    }
-    else
-    {
-        tt1 = fabs(val)*1.0;
-        tt2 = -(floor(tt1 + 0.001));
-        //tt2 = -((int)(tt1 + 0.1));
-    }
-    
-    reval = tt2/1.0;
-    
-    //printf("%lf\t%lf\t%lf\n",tt1,tt2,reval);
-    
-    return reval;
-}
-
 
 bool SetupParam(ProInfo *info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *DEM_level,  bool *pre_DEMtif, bool *check_tile_array)
 {
@@ -5102,6 +5034,9 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
                 }
             }
         }
+        //full computation
+        //*py_resolution   = (double)(resolution*pow(2,level));
+        //*grid_resolution = *py_resolution;
         
         if(*py_resolution < DEM_resolution)
             *py_resolution = DEM_resolution;
@@ -5531,8 +5466,6 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
             data_size->width = end_col - start_col;
             data_size->height= end_row - start_row;
 
-            printf("cols rows\t%d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
-            
             long int data_length = (long int)data_size->height*(long int)data_size->width;
             printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
             
@@ -5544,8 +5477,6 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 
             count_L = (int)(data_size->height/tileL);
             count_W = (int)(data_size->width/tileW);
-            
-            printf("count_LW\t,%d\t%d\t%d\t%d\t%d\t%d\n",count_L,count_W,starttileL,starttileW,tileL,tileW);
             
             for (row = 0; row < count_L; row ++)
             {
@@ -8336,64 +8267,44 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
 
 uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma)
 {
-    //_filter_size = 9, sigma = 1.6
+    //_filter_size = 7, sigma = 1.6
     double sigma = _sigma;
     double temp,scale;
     double sum = 0;
     double** GaussianFilter;
     CSize result_size;
     uint16* result_img;
-    int half_filter_size = (int)(_filter_size/2.0);
-    
+
     GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
     for(int i=0;i<_filter_size;i++)
         GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
 
     
-    result_size.width = _img_size.width/2.0;
-    result_size.height = _img_size.height/2.0;
-    scale=SignficantDigit(sqrt(2*PI)*sigma);
+    result_size.width = _img_size.width/2;
+    result_size.height = _img_size.height/2;
+    scale=sqrt(2*PI)*sigma;
     
-    //printf("imagesize %d\t%d\t%d\t%d\n",result_size.width,result_size.height,_img_size.width,_img_size.height);
-    
-    result_img = (uint16*)calloc(sizeof(uint16),result_size.height*result_size.width);
+    result_img = (uint16*)malloc(sizeof(uint16)*result_size.height*result_size.width);
 
-    for(int i=-half_filter_size;i<half_filter_size+1;i++)
+    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
     {
-        for(int j=-half_filter_size;j<half_filter_size+1;j++)
+        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
         {
             temp = -1*(i*i+j*j)/(2*sigma*sigma);
-            double ttt = exp(temp)/scale;
-            /*double ttt1 = ttt*10000.0;
-            int ttt2 = (int)ttt1;
-            ttt = ttt2/10000.0;
-            */
-            GaussianFilter[i+half_filter_size][j+half_filter_size]=ttt;
-            
-            printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
-            sum += ttt;
+            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]=exp(temp)/scale;
+            sum += exp(temp)/scale;
         }
-        printf("\n");
     }
-    printf("\n");
 
-//#pragma omp parallel for schedule(guided)
-    for(int i=-half_filter_size;i<half_filter_size+1;i++)
+#pragma omp parallel for schedule(guided)
+    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
     {
-        for(int j=-half_filter_size;j<half_filter_size+1;j++)
+        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
         {
-            temp = GaussianFilter[i+half_filter_size][j+half_filter_size]/sum;
-            
-            /*double ttt = temp;
-            double ttt1 = ttt*10000.0;
-            int ttt2 = (int)ttt1;*/
-            GaussianFilter[i+half_filter_size][j+half_filter_size] = temp;//ttt2/10000.0;
-            printf("%f\t",GaussianFilter[i+half_filter_size][j+half_filter_size]);
+            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
         }
-        printf("\n");
     }
-    printf("\n");
-    
+
 #pragma omp parallel for private(temp) schedule(guided)
     for(long int r=0;r<result_size.height;r++)
     {
@@ -8406,12 +8317,11 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
                 for(int k=0;k<_filter_size;k++)
                 {
                     //r'->2r+m, c'->2c+n
-                    if( (2*r + l-half_filter_size) >= 0 && (2*c + k-half_filter_size) >= 0 &&
-                        (2*r + l-half_filter_size) < _img_size.height - 0 && (2*c + k-half_filter_size) < _img_size.width - 0)
+                    if( (2*r + l-(int)(_filter_size/2)) >= 0 && (2*c + k-(int)(_filter_size/2)) >= 0 && 
+                        (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
                     {
-                        double ttt = GaussianFilter[l][k]*(double)(_input[(2*r + l-half_filter_size)*_img_size.width +(2*c + k-half_filter_size)]);
+                        temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
                         
-                        temp += ttt;
                     }
                 }
             }
@@ -8482,7 +8392,7 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
                                     hy[1][0]*_src_image[    i*_img_size.width + (j-1)]+hy[1][1]*_src_image[    i*_img_size.width + j]+hy[1][2]*_src_image[    i*_img_size.width + (j+1)]+
                                     hy[2][0]*_src_image[(i+1)*_img_size.width + (j-1)]+hy[2][1]*_src_image[(i+1)*_img_size.width + j]+hy[2][2]*_src_image[(i+1)*_img_size.width + (j+1)]));
 
-                double temp_ptr=SignficantDigit(sqrt(temp_ptr_X*temp_ptr_X + temp_ptr_Y*temp_ptr_Y));
+                double temp_ptr=sqrt(temp_ptr_X*temp_ptr_X + temp_ptr_Y*temp_ptr_Y);
 
                 _gx = (int16)(temp_ptr_X + 0.5);
                 _gy = (int16)(temp_ptr_Y + 0.5);                            
@@ -8586,7 +8496,7 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
 }
 
 // temporary, 1st and 2nd image
-void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
 {
     D2DPOINT temp_p1, temp_p2;
     D3DPOINT temp_GrP;
@@ -8641,7 +8551,80 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
     
     printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
+    if(level > 2)
+        *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
+    else
+    {
+        *MPP_stereo_angle = sigmaZ;
+        *MPP_simgle_image = sigmaZ;
+    }
+        
+    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
     
+    //if(*MPP_simgle_image < im_resolution*2)
+    //    *MPP_simgle_image = im_resolution*2;
+    
+    if(*MPP_stereo_angle < im_resolution*1.5)
+        *MPP_stereo_angle = im_resolution*1.5;
+    
+    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
+}
+
+void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+{
+    D2DPOINT temp_p1, temp_p2;
+    D3DPOINT temp_GrP;
+    double temp_LIA[2] = {0.0};
+    temp_LIA[0] = ImageAdjust[0][0];
+    temp_LIA[1] = ImageAdjust[0][1];
+    
+    int numofpts;
+    
+    numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    
+    temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
+    temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
+    temp_GrP.m_Z = minmaxHeight[0];
+    temp_GrP.flag = 0;
+    temp_p1     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
+    
+    temp_GrP.m_Z = minmaxHeight[1];
+    temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
+    
+    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    temp_GrP.m_Z = minmaxHeight[0];
+    temp_GrP.flag = 0;
+    temp_p1     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
+    
+    temp_GrP.m_Z = minmaxHeight[1];
+    temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
+    
+    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    
+    printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
+    
+    if(left_mpp > 5*im_resolution)
+        *MPP_simgle_image = right_mpp;
+    else if(right_mpp > 5*im_resolution)
+        *MPP_simgle_image = left_mpp;
+    else
+    {
+        if(left_mpp > right_mpp)
+            *MPP_simgle_image = left_mpp;
+        else
+            *MPP_simgle_image = right_mpp;
+    }
+    
+    printf("mpp = %f\n",*MPP_simgle_image);
+    
+    double ccdsize = 0.00001;
+    double scale = ccdsize/0.5;
+    double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+    double BH_ratio = mean_product_res*2/convergence_mpp;
+    double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
+    
+    printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
     if(sigmaZ > 1)
         *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
     
@@ -8650,11 +8633,8 @@ void CalMPP(CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofI
     //if(*MPP_simgle_image < im_resolution*2)
     //    *MPP_simgle_image = im_resolution*2;
     
-    if(*MPP_stereo_angle < im_resolution*2)
-        *MPP_stereo_angle = im_resolution*2;
-    
-    *MPP_simgle_image = SignficantDigit(*MPP_simgle_image);
-    *MPP_stereo_angle = SignficantDigit(*MPP_stereo_angle);
+    if(*MPP_stereo_angle < im_resolution*2.0)
+        *MPP_stereo_angle = im_resolution*2.0;
     
     printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
 }
@@ -8680,7 +8660,10 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
     
     HS = (double)(im_resolution/h_divide);
     
-    HS = SignficantDigit(HS);
+    double tt1,tt2;
+    tt1 = HS*1000.0;
+    tt2 = floor(tt1 + 0.1);
+    HS = tt2/1000.0;
     
     if(HS > 3)
         HS = 3;
@@ -8688,52 +8671,70 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
     return HS;
 }
 
-void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, UGRID *GridPT3, NCCresult* nccresult, int iteration, uint8 pyramid_step, double DEM_resolution,ProInfo *proinfo,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize **Imagesizes, double* minmaxHeight)
+void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, UGRID *GridPT3, NCCresult* nccresult, int iteration, uint8 pyramid_step, double DEM_resolution,ProInfo *proinfo,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes, double* minmaxHeight)
 {
 #pragma omp parallel for schedule(guided)
     for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
     {
-        if(check_image_boundary(proinfo,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes,7,pyramid_step))
+        if(check_image_boundary(proinfo,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
         {
             int change_step_min = 0;
             int change_step_max = 0;
             bool check_blunder_cell = true;
+            double th_height = 1000;
+            if(DEM_resolution <= 4)
+                th_height = 1000;
             
             if ( pyramid_step >= 2)
                 check_blunder_cell = false;
             else if( GridPT3[t_i].Matched_flag != 0)
             {
-                if(pyramid_step == 1)
+                if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
                 {
-                    if(iteration <= 2 && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
-                        check_blunder_cell = false;
-                    else if(iteration > 2 && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
-                        check_blunder_cell = false;
-                }
-                
-                if(pyramid_step == 0)
-                {
-                    if(iteration > 1)
+                    if(pyramid_step <= 1)
                     {
-                        if((fabs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < 100) && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 100))
+                        if(iteration > 1)
+                        {
+                            if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
+                                check_blunder_cell = false;
+                        }
+                        else
+                        {
+                            if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
+                                check_blunder_cell = false;
+                        }
+                    }
+                    
+                    if(pyramid_step == 1)
+                    {
+                        if((fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                             check_blunder_cell = false;
                     }
-                    else
-                        if((fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 100))
-                            check_blunder_cell = false;
-
-                }
-                
-                if(pyramid_step <= 1)
-                {
-                    if(iteration > 1)
+                    
+                    if(pyramid_step == 0)
                     {
-                        if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
-                            check_blunder_cell = false;
+                        if(iteration > 1)
+                        {
+                            if((fabs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height) && (fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
+                                check_blunder_cell = false;
+                        }
+                        else
+                        {
+                            if((fabs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
+                                check_blunder_cell = false;
+                        }
                     }
-                    else
-                        if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
-                            check_blunder_cell = false;
+                }
+                else
+                {
+                    if(nccresult[t_i].NumOfHeight > 0)
+                    {
+                        if(grid_voxel[t_i])
+                            free(grid_voxel[t_i]);
+                    }
+                    
+                    nccresult[t_i].NumOfHeight = 0;
+                    check_blunder_cell = true;
                 }
             }
             
@@ -8748,18 +8749,29 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 }
                 else
                 {
-                    if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight || nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
+                    int NumberofHeightVoxel = (int)((nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
+                    
+                    if(nccresult[t_i].NumOfHeight == 0 && NumberofHeightVoxel > 0)
                     {
-                        if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight)
-                            change_step_min = (int)((nccresult[t_i].minHeight - GridPT3[t_i].minHeight)/height_step + 0.5);
-                        
-                        if(nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
-                            change_step_max = (int)((GridPT3[t_i].maxHeight - nccresult[t_i].maxHeight)/height_step + 0.5);
-                   
+                        change_step_min = 0;
+                        change_step_max = 0;
                         nccresult[t_i].check_height_change = true;
                     }
                     else
-                        nccresult[t_i].check_height_change = false;
+                    {
+                        if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight || nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
+                        {
+                            if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight)
+                                change_step_min = (int)((nccresult[t_i].minHeight - GridPT3[t_i].minHeight)/height_step + 0.5);
+                            
+                            if(nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
+                                change_step_max = (int)((GridPT3[t_i].maxHeight - nccresult[t_i].maxHeight)/height_step + 0.5);
+                       
+                            nccresult[t_i].check_height_change = true;
+                        }
+                        else
+                            nccresult[t_i].check_height_change = false;
+                    }
                 }
                 
                 if(nccresult[t_i].check_height_change)
@@ -8786,18 +8798,29 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             grid_voxel[t_i][h].WNCC = -1.0;
                             grid_voxel[t_i][h].flag_cal = true;
                             grid_voxel[t_i][h].height = nccresult[t_i].minHeight + h*height_step;
-                            
-                            //printf("grid voxelheight %f\t%f\t%f\n",grid_voxel[t_i][h].height,nccresult[t_i].minHeight,height_step);
                             //grid_voxel[t_i][h].SSD = 0;
                             grid_voxel[t_i][h].INCC = -1;
                         }
                     }
                     else
                     {
+                        if(nccresult[t_i].NumOfHeight > 0)
+                        {
+                            if(grid_voxel[t_i])
+                                free(grid_voxel[t_i]);
+                        }
+                        
                         nccresult[t_i].NumOfHeight = 0;
-                        printf("NumOfHeight %d\tmaxHeight %f\tminHeight %f\n",nccresult[t_i].NumOfHeight,nccresult[t_i].maxHeight,nccresult[t_i].minHeight);
+                        //printf("NumOfHeight %d\tmaxHeight %f\tminHeight %f\n",nccresult[t_i].NumOfHeight,nccresult[t_i].maxHeight,nccresult[t_i].minHeight);
                     }
                 }
+                /*
+                if(nccresult[t_i].NumOfHeight == 0)
+                {
+                    if(grid_voxel[t_i])
+                        free(grid_voxel[t_i]);
+                }
+                 */
             }
             else
             {
@@ -8812,6 +8835,12 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
         }
         else
         {
+            if(nccresult[t_i].NumOfHeight > 0)
+            {
+                if(grid_voxel[t_i])
+                    free(grid_voxel[t_i]);
+            }
+            
             nccresult[t_i].NumOfHeight = 0;
         }
         
@@ -8822,7 +8851,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
 bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                        CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
                        uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
-                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid_tt, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
+                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
                        char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next,int Py_combined_level)
 {
     bool check_matchtag = proinfo->check_Matchtag;
@@ -9028,16 +9057,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             }
                             Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
                             
-                            all_im_cd[ti][pt_index_im].m_X = SignficantDigit(Imagecoord_py.m_X);
-                            all_im_cd[ti][pt_index_im].m_Y = SignficantDigit(Imagecoord_py.m_Y);
+                            all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
+                            all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
                             
                             if(check_combined_WNCC)
                             {
                                 Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos_next[ti],Pyramid_step-1);
                                 if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
                                 {
-                                    all_im_cd_next[ti][pt_index_im_next].m_X = SignficantDigit(Imagecoord_py.m_X);
-                                    all_im_cd_next[ti][pt_index_im_next].m_Y = SignficantDigit(Imagecoord_py.m_Y);
+                                    all_im_cd_next[ti][pt_index_im_next].m_X = Imagecoord_py.m_X;
+                                    all_im_cd_next[ti][pt_index_im_next].m_Y = Imagecoord_py.m_Y;
                                 }
                             }
                         }
@@ -9136,8 +9165,6 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     
     height_step = (double)(im_resolution/h_divide);
     
-    height_step = SignficantDigit(height_step);
-    
     if(height_step > 3)
         height_step = 3;
     
@@ -9146,22 +9173,13 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
     int sum_data2 = 0;
     int sum_data = 0;
     
-    char save_file[500];
-    sprintf(save_file,"%s/txt/NCC_print.txt",proinfo->save_filepath);
-    FILE* fid         = fopen(save_file,"w");
-    sprintf(save_file,"%s/txt/NCC_height_print.txt",proinfo->save_filepath);
-    FILE* fid_h         = fopen(save_file,"w");
-    
-    double all_sum_SNCC = 0;
-    
-    
-#pragma omp parallel for schedule(guided) reduction(+:sum_data2, sum_data,all_sum_SNCC)
-    for(int iter_count = 0/*37067*/ ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+#pragma omp parallel for schedule(guided) reduction(+:sum_data2, sum_data)
+    for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
     {
         int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
         int pts_col = iter_count % Size_Grid2D.width;
         int pt_index = pts_row*Size_Grid2D.width + pts_col;
-        
+      
         if(nccresult[pt_index].check_height_change)
             sum_data2++;
         else
@@ -9189,12 +9207,15 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             
             start_H     = GridPT3[pt_index].minHeight;
             end_H       = GridPT3[pt_index].maxHeight;
+
             
-            
-            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes,Half_template_size,Pyramid_step))
+            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes_ori,Imagesizes,Half_template_size,Pyramid_step))
             {
                 char t_temp_path[500];
                 bool check_blunder_cell = false;
+                double th_height = 1000;
+                if(proinfo->DEM_resolution <= 4)
+                    th_height = 1000;
                 
                 if(GridPT3[pt_index].Matched_flag == 0)
                     h_divide = 2;
@@ -9210,27 +9231,28 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                 
                 if ( Pyramid_step >= 2)
                     check_blunder_cell = false;
-                else if(GridPT3[pt_index].Matched_flag == 0)
-                    check_blunder_cell = true;
-                else if( GridPT3[pt_index].Matched_flag != 0)
+                else
                 {
-                    if(Pyramid_step == 1)
+                    if(GridPT3[pt_index].Matched_flag == 0)
+                        check_blunder_cell = true;
+                    else if( GridPT3[pt_index].Matched_flag != 0)
                     {
-                        if(iteration <= 2 && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
-                            check_blunder_cell = false;
-                        else if(iteration > 2 && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
+                        if(Pyramid_step == 1)
+                        {
+                            if((fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
+                                check_blunder_cell = false;
+                             else
+                                check_blunder_cell = true;
+                        }
+                        else if((fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
                             check_blunder_cell = false;
                         else
                             check_blunder_cell = true;
                     }
-                    else if((fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 100))
-                        check_blunder_cell = false;
                     else
                         check_blunder_cell = true;
                 }
-                else
-                    check_blunder_cell = true;
-                
+                /*
                 if(!IsRA)
                 {
                     if(Pyramid_step == 1)
@@ -9246,7 +9268,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             check_blunder_cell = false;
                     }
                 }
-                
+                */
                 
                 if(Pyramid_step <= 1)
                 {
@@ -9326,7 +9348,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             double Sum_R_3_mag_ortho = 0;
                             double Sum_L2_3_mag_ortho = 0;
                             double Sum_R2_3_mag_ortho = 0;
-                            
+
                             double val1, val2, de, de2;
                             double ncc_1_ortho, ncc_2_ortho, ncc_3_ortho;
                             double ncc_1_mag_ortho, ncc_2_mag_ortho, ncc_3_mag_ortho;
@@ -9437,7 +9459,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                     pos_col_left_ortho  = all_im_cd[reference_id][pt_index_temp].m_X;
                                                     pos_row_right_ortho = all_im_cd[ti][pt_index_temp].m_Y;
                                                     pos_col_right_ortho = all_im_cd[ti][pt_index_temp].m_X;
-                                                    
+                                            
                                                     if(check_combined_WNCC)
                                                     {
                                                         if(pt_index_temp_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
@@ -9701,166 +9723,141 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                 int N2 = Count_N_ortho[1];
                                 int N3 = Count_N_ortho[2];
                                 int N;
-                                double tt1;
-                                int tt2;
                                 if(N1 > TH_N && N2 > TH_N && N3 > TH_N)
                                 {
                                     N               = Count_N_ortho[0];
                                     
                                     val1          = (double)(Sum_L2_ortho) - (double)(Sum_L_ortho*Sum_L_ortho)/N;
                                     val2          = (double)(Sum_R2_ortho) - (double)(Sum_R_ortho*Sum_R_ortho)/N;
-                                    de2             = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
-                                    
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de              = sqrt(val1*val2);
-                                            
-                                            ncc_1_ortho             = de2/de;
-                                        }
-                                        else
-                                            ncc_1_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de              = sqrt(val1*val2);
+                                        de2             = (double)(Sum_LR_ortho) - (double)(Sum_L_ortho*Sum_R_ortho)/N;
+                                        ncc_1_ortho             = de2/de;
                                     }
                                     else
-                                        ncc_1_ortho = 0;
-                                    
+                                        ncc_1_ortho           = -1.0;
                                     if(ncc_1_ortho > 1.0)
                                         ncc_1_ortho = 1.0;
                                     
                                     val1          = (double)(Sum_L2_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_L_mag_ortho)/N;
                                     val2          = (double)(Sum_R2_mag_ortho) - (double)(Sum_R_mag_ortho*Sum_R_mag_ortho)/N;
-                                    de2             = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de              = sqrt(val1*val2);
-                                            
-                                            ncc_1_mag_ortho             = de2/de;
-                                        }
-                                        else
-                                            ncc_1_mag_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de              = sqrt(val1*val2);
+                                        de2             = (double)(Sum_LR_mag_ortho) - (double)(Sum_L_mag_ortho*Sum_R_mag_ortho)/N;
+                                        ncc_1_mag_ortho             = de2/de;
                                     }
                                     else
-                                        ncc_1_mag_ortho = 0;
-                                    
+                                        ncc_1_mag_ortho           = -1.0;
                                     if(ncc_1_mag_ortho > 1.0)
                                         ncc_1_mag_ortho = 1.0;
                                     
                                     N                   = Count_N_ortho[1];
                                     val1                = (double)(Sum_L2_2_ortho) - (double)(Sum_L_2_ortho*Sum_L_2_ortho)/N;
                                     val2                = (double)(Sum_R2_2_ortho) - (double)(Sum_R_2_ortho*Sum_R_2_ortho)/N;
-                                    de2                   = (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de                    = sqrt(val1*val2);
-                                            
-                                            ncc_2_ortho           = de2/de;
-                                        }
-                                        else
-                                            ncc_2_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de                    = sqrt(val1*val2);
+                                        de2                   = (double)(Sum_LR_2_ortho) - (double)(Sum_L_2_ortho*Sum_R_2_ortho)/N;
+                                        ncc_2_ortho           = de2/de;
                                     }
                                     else
-                                        ncc_2_ortho - 0;
-                                    
+                                        ncc_2_ortho           = -1.0;
                                     if(ncc_2_ortho > 1.0)
                                         ncc_2_ortho = 1.0;
                                     
                                     val1                = (double)(Sum_L2_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_L_2_mag_ortho)/N;
                                     val2                = (double)(Sum_R2_2_mag_ortho) - (double)(Sum_R_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-                                    de2                   = (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de                    = sqrt(val1*val2);
-                                            
-                                            ncc_2_mag_ortho           = de2/de;
-                                        }
-                                        else
-                                            ncc_2_mag_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de                    = sqrt(val1*val2);
+                                        de2                   = (double)(Sum_LR_2_mag_ortho) - (double)(Sum_L_2_mag_ortho*Sum_R_2_mag_ortho)/N;
+                                        ncc_2_mag_ortho           = de2/de;
                                     }
                                     else
-                                        ncc_2_mag_ortho = 0;
-                                    
+                                        ncc_2_mag_ortho           = -1.0;
                                     if(ncc_2_mag_ortho > 1.0)
                                         ncc_2_mag_ortho = 1.0;
                                     
                                     N                   = Count_N_ortho[2];
                                     val1                = (double)(Sum_L2_3_ortho) - (double)(Sum_L_3_ortho*Sum_L_3_ortho)/N;
                                     val2                = (double)(Sum_R2_3_ortho) - (double)(Sum_R_3_ortho*Sum_R_3_ortho)/N;
-                                    de2                   = (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de                    = sqrt(val1*val2);
-                                            
-                                            ncc_3_ortho           = de2/de;
-                                        }
-                                        else
-                                            ncc_3_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de                    = sqrt(val1*val2);
+                                        de2                   = (double)(Sum_LR_3_ortho) - (double)(Sum_L_3_ortho*Sum_R_3_ortho)/N;
+                                        ncc_3_ortho           = de2/de;
                                     }
                                     else
-                                        ncc_3_ortho = 0;
-                                    
+                                        ncc_3_ortho           = -1.0;
                                     if(ncc_3_ortho > 1.0)
                                         ncc_3_ortho = 1.0;
                                     
                                     val1                = (double)(Sum_L2_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_L_3_mag_ortho)/N;
                                     val2                = (double)(Sum_R2_3_mag_ortho) - (double)(Sum_R_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-                                    de2                   = (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
-                                    val1 = SignficantDigit(val1);
-                                    val2 = SignficantDigit(val2);
-                                    de2 = SignficantDigit(de2);
-                                    
-                                    if(fabs(de2) > 0)
+                                    if(Pyramid_step <= 1)
                                     {
-                                        if( val1*val2 > 0)
-                                        {
-                                            de                    = sqrt(val1*val2);
-                                            
-                                            ncc_3_mag_ortho           = de2/de;
-                                        }
-                                        else
-                                            ncc_3_mag_ortho           = -1.0;
+                                        if(val1 == 0)
+                                            val1 = 0.00001;
+                                        if(val2 == 0)
+                                            val2 = 0.00001;
+                                    }
+                                    
+                                    if( val1*val2 > 0)
+                                    {
+                                        de                    = sqrt(val1*val2);
+                                        de2                   = (double)(Sum_LR_3_mag_ortho) - (double)(Sum_L_3_mag_ortho*Sum_R_3_mag_ortho)/N;
+                                        ncc_3_mag_ortho           = de2/de;
                                     }
                                     else
-                                        ncc_3_mag_ortho = 0;
-                                    
+                                        ncc_3_mag_ortho           = -1.0;
                                     if(ncc_3_mag_ortho > 1.0)
                                         ncc_3_mag_ortho = 1.0;
                                     
                                     temp_GNCC_roh = (double)(ncc_1_ortho + ncc_2_ortho + ncc_3_ortho + ncc_1_mag_ortho + ncc_2_mag_ortho + ncc_3_mag_ortho)/6.0;
                                     sum_GNCC_multi += temp_GNCC_roh;
                                     count_GNCC ++;
-                                    
-                                    fprintf(fid,"%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,iter_count,ncc_1_ortho,ncc_2_ortho,ncc_3_ortho
-                                            ,ncc_1_mag_ortho,ncc_2_mag_ortho,ncc_3_mag_ortho);
-                                    
                                     //check_ortho_com = true;
                                 }
                                 
@@ -9876,147 +9873,129 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         
                                         val1          = (double)(Sum_L2_ortho_next) - (double)(Sum_L_ortho_next*Sum_L_ortho_next)/N;
                                         val2          = (double)(Sum_R2_ortho_next) - (double)(Sum_R_ortho_next*Sum_R_ortho_next)/N;
-                                        de2             = (double)(Sum_LR_ortho_next) - (double)(Sum_L_ortho_next*Sum_R_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de              = sqrt(val1*val2);
-                                                
-                                                ncc_1_ortho_next             = de2/de;
-                                            }
-                                            else
-                                                ncc_1_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de              = sqrt(val1*val2);
+                                            de2             = (double)(Sum_LR_ortho_next) - (double)(Sum_L_ortho_next*Sum_R_ortho_next)/N;
+                                            ncc_1_ortho_next             = de2/de;
                                         }
                                         else
-                                            ncc_1_ortho_next = 0;
-                                        
+                                            ncc_1_ortho_next           = -1.0;
                                         if(ncc_1_ortho_next > 1.0)
                                             ncc_1_ortho_next = 1.0;
                                         
                                         val1          = (double)(Sum_L2_mag_ortho_next) - (double)(Sum_L_mag_ortho_next*Sum_L_mag_ortho_next)/N;
                                         val2          = (double)(Sum_R2_mag_ortho_next) - (double)(Sum_R_mag_ortho_next*Sum_R_mag_ortho_next)/N;
-                                        de2             = (double)(Sum_LR_mag_ortho_next) - (double)(Sum_L_mag_ortho_next*Sum_R_mag_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de              = sqrt(val1*val2);
-                                                
-                                                ncc_1_mag_ortho_next             = de2/de;
-                                            }
-                                            else
-                                                ncc_1_mag_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de              = sqrt(val1*val2);
+                                            de2             = (double)(Sum_LR_mag_ortho_next) - (double)(Sum_L_mag_ortho_next*Sum_R_mag_ortho_next)/N;
+                                            ncc_1_mag_ortho_next             = de2/de;
                                         }
                                         else
-                                            ncc_1_mag_ortho_next = 0;
-                                        
+                                            ncc_1_mag_ortho_next           = -1.0;
                                         if(ncc_1_mag_ortho_next > 1.0)
                                             ncc_1_mag_ortho_next = 1.0;
                                         
                                         N                   = Count_N_ortho_next[1];
                                         val1                = (double)(Sum_L2_2_ortho_next) - (double)(Sum_L_2_ortho_next*Sum_L_2_ortho_next)/N;
                                         val2                = (double)(Sum_R2_2_ortho_next) - (double)(Sum_R_2_ortho_next*Sum_R_2_ortho_next)/N;
-                                        de2                   = (double)(Sum_LR_2_ortho_next) - (double)(Sum_L_2_ortho_next*Sum_R_2_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de                    = sqrt(val1*val2);
-                                                
-                                                ncc_2_ortho_next           = de2/de;
-                                            }
-                                            else
-                                                ncc_2_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de                    = sqrt(val1*val2);
+                                            de2                   = (double)(Sum_LR_2_ortho_next) - (double)(Sum_L_2_ortho_next*Sum_R_2_ortho_next)/N;
+                                            ncc_2_ortho_next           = de2/de;
                                         }
                                         else
-                                            ncc_2_ortho_next = 0;
-                                        
+                                            ncc_2_ortho_next           = -1.0;
                                         if(ncc_2_ortho_next > 1.0)
                                             ncc_2_ortho_next = 1.0;
                                         
                                         val1                = (double)(Sum_L2_2_mag_ortho_next) - (double)(Sum_L_2_mag_ortho_next*Sum_L_2_mag_ortho_next)/N;
                                         val2                = (double)(Sum_R2_2_mag_ortho_next) - (double)(Sum_R_2_mag_ortho_next*Sum_R_2_mag_ortho_next)/N;
-                                        de2                   = (double)(Sum_LR_2_mag_ortho_next) - (double)(Sum_L_2_mag_ortho_next*Sum_R_2_mag_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de                    = sqrt(val1*val2);
-                                                
-                                                ncc_2_mag_ortho_next           = de2/de;
-                                            }
-                                            else
-                                                ncc_2_mag_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de                    = sqrt(val1*val2);
+                                            de2                   = (double)(Sum_LR_2_mag_ortho_next) - (double)(Sum_L_2_mag_ortho_next*Sum_R_2_mag_ortho_next)/N;
+                                            ncc_2_mag_ortho_next           = de2/de;
                                         }
                                         else
-                                            ncc_2_mag_ortho_next = 0;
-                                        
+                                            ncc_2_mag_ortho_next           = -1.0;
                                         if(ncc_2_mag_ortho_next > 1.0)
                                             ncc_2_mag_ortho_next = 1.0;
                                         
                                         N                   = Count_N_ortho_next[2];
                                         val1                = (double)(Sum_L2_3_ortho_next) - (double)(Sum_L_3_ortho_next*Sum_L_3_ortho_next)/N;
                                         val2                = (double)(Sum_R2_3_ortho_next) - (double)(Sum_R_3_ortho_next*Sum_R_3_ortho_next)/N;
-                                        de2                   = (double)(Sum_LR_3_ortho_next) - (double)(Sum_L_3_ortho_next*Sum_R_3_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de                    = sqrt(val1*val2);
-                                                
-                                                ncc_3_ortho_next           = de2/de;
-                                            }
-                                            else
-                                                ncc_3_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de                    = sqrt(val1*val2);
+                                            de2                   = (double)(Sum_LR_3_ortho_next) - (double)(Sum_L_3_ortho_next*Sum_R_3_ortho_next)/N;
+                                            ncc_3_ortho_next           = de2/de;
                                         }
                                         else
-                                            ncc_3_ortho_next = 0;
-                                        
+                                            ncc_3_ortho_next           = -1.0;
                                         if(ncc_3_ortho_next > 1.0)
                                             ncc_3_ortho_next = 1.0;
                                         
                                         val1                = (double)(Sum_L2_3_mag_ortho_next) - (double)(Sum_L_3_mag_ortho_next*Sum_L_3_mag_ortho_next)/N;
                                         val2                = (double)(Sum_R2_3_mag_ortho_next) - (double)(Sum_R_3_mag_ortho_next*Sum_R_3_mag_ortho_next)/N;
-                                        de2                   = (double)(Sum_LR_3_mag_ortho_next) - (double)(Sum_L_3_mag_ortho_next*Sum_R_3_mag_ortho_next)/N;
-                                        val1 = SignficantDigit(val1);
-                                        val2 = SignficantDigit(val2);
-                                        de2 = SignficantDigit(de2);
-                                        
-                                        if(fabs(de2) > 0)
+                                        if(Pyramid_step <= 1)
                                         {
-                                            if( val1*val2 > 0)
-                                            {
-                                                de                    = sqrt(val1*val2);
-                                                
-                                                ncc_3_mag_ortho_next           = de2/de;
-                                            }
-                                            else
-                                                ncc_3_mag_ortho_next           = -1.0;
+                                            if(val1 == 0)
+                                                val1 = 0.00001;
+                                            if(val2 == 0)
+                                                val2 = 0.00001;
+                                        }
+                                        
+                                        if( val1*val2 > 0)
+                                        {
+                                            de                    = sqrt(val1*val2);
+                                            de2                   = (double)(Sum_LR_3_mag_ortho_next) - (double)(Sum_L_3_mag_ortho_next*Sum_R_3_mag_ortho_next)/N;
+                                            ncc_3_mag_ortho_next           = de2/de;
                                         }
                                         else
-                                            ncc_3_mag_ortho_next = 0;
-                                        
+                                            ncc_3_mag_ortho_next           = -1.0;
                                         if(ncc_3_mag_ortho_next > 1.0)
                                             ncc_3_mag_ortho_next = 1.0;
                                         
@@ -10031,9 +10010,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                         }
                     }
                     
-                    double sum_INCC_voxel = 0;
                     //printf("pt_index %d\tGridPT3[pt_index].NumOfHeight %d\n",pt_index,GridPT3[pt_index].NumOfHeight);
-                    for(int grid_voxel_hindex = 0/*1342*/ ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
+                    for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                     {
                         double iter_height;
                         
@@ -10041,16 +10019,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                             iter_height = start_H + grid_voxel_hindex*height_step;
                         else
                             iter_height = grid_voxel[pt_index][grid_voxel_hindex].height;
-                        
+                       
                         
                         if(iter_height >= start_H && iter_height <= end_H)
                         {
                             //grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                             //printf("no calculation %d\n",pt_index);
-                            /*}
-                             else
-                             for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
-                             {*/
+                        /*}
+                        else
+                        for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
+                        {*/
                             //if(count_height < GridPT3[pt_index].NumOfHeight)
                             {
                                 //int grid_voxel_hindex = count_height;
@@ -10073,7 +10051,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                 
                                 double temp_LIA[2];
                                 
-                                
+
                                 D3DPOINT temp_GP[1];
                                 D2DPOINT Ref_Imagecoord[1];
                                 D2DPOINT Ref_Imagecoord_py[1];
@@ -10084,13 +10062,13 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                 
                                 double Sum_intensity_diff = 0;
                                 double Sum_mag_diff = 0;
-                                
+
                                 //WNCC peak variables
                                 double temp_rho;
                                 int grid_index;
                                 double diff_rho;
                                 int t_direction;
-                                
+
                                 
                                 temp_GP[0].m_Z = iter_height;
                                 
@@ -10112,8 +10090,6 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                     Ref_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
                                 }
                                 Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos[reference_id],Pyramid_step);
-                                
-                                //fprintf(fid_h,"%f\t%f\n",Startpos[reference_id].m_X,Startpos[reference_id].m_Y);
                                 
                                 if(check_combined_WNCC_INCC)
                                 {
@@ -10158,16 +10134,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos[ti],Pyramid_step);
                                         if(check_combined_WNCC_INCC)
                                             Tar_Imagecoord_py_next[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos_next[ti],Pyramid_step-1);
-                                        
+                                
                                         int ori_diff,ori_diff_next;
-                                        
+                                
                                         bool check_py_image_pt = (int)Ref_Imagecoord_py[0].m_Y >= 0 && (int)Ref_Imagecoord_py[0].m_Y < LImagesize.height && (int)Ref_Imagecoord_py[0].m_X >= 0 && (int)Ref_Imagecoord_py[0].m_X < LImagesize.width &&
                                         (int)Tar_Imagecoord_py[0].m_Y >= 0 && (int)Tar_Imagecoord_py[0].m_Y < RImagesize.height && (int)Tar_Imagecoord_py[0].m_X >= 0 && (int)Tar_Imagecoord_py[0].m_X < RImagesize.width;
                                         
                                         bool check_py_image_pt_next = true;
                                         if(check_combined_WNCC_INCC)
                                             check_py_image_pt_next = (int)Ref_Imagecoord_py_next[0].m_Y >= 0 && (int)Ref_Imagecoord_py_next[0].m_Y < LImagesize_next.height && (int)Ref_Imagecoord_py_next[0].m_X >= 0 && (int)Ref_Imagecoord_py_next[0].m_X < LImagesize_next.width &&
-                                            (int)Tar_Imagecoord_py_next[0].m_Y >= 0 && (int)Tar_Imagecoord_py_next[0].m_Y < RImagesize_next.height && (int)Tar_Imagecoord_py_next[0].m_X >= 0 && (int)Tar_Imagecoord_py_next[0].m_X < RImagesize_next.width;
+                                        (int)Tar_Imagecoord_py_next[0].m_Y >= 0 && (int)Tar_Imagecoord_py_next[0].m_Y < RImagesize_next.height && (int)Tar_Imagecoord_py_next[0].m_X >= 0 && (int)Tar_Imagecoord_py_next[0].m_X < RImagesize_next.width;
                                         
                                         if(check_py_image_pt && check_py_image_pt_next)
                                         {
@@ -10185,17 +10161,17 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                             bool check_orientation = false;
                                             
                                             
-                                            Left_CR     = SignficantDigit(Ref_Imagecoord_py[0].m_Y);
-                                            Left_CC     = SignficantDigit(Ref_Imagecoord_py[0].m_X);
-                                            Right_CR    = SignficantDigit(Tar_Imagecoord_py[0].m_Y);
-                                            Right_CC    = SignficantDigit(Tar_Imagecoord_py[0].m_X);
+                                            Left_CR     = Ref_Imagecoord_py[0].m_Y;
+                                            Left_CC     = Ref_Imagecoord_py[0].m_X;
+                                            Right_CR    = Tar_Imagecoord_py[0].m_Y;
+                                            Right_CC    = Tar_Imagecoord_py[0].m_X;
                                             
                                             if(check_combined_WNCC_INCC)
                                             {
-                                                Left_CR_next     = SignficantDigit(Ref_Imagecoord_py_next[0].m_Y);
-                                                Left_CC_next     = SignficantDigit(Ref_Imagecoord_py_next[0].m_X);
-                                                Right_CR_next    = SignficantDigit(Tar_Imagecoord_py_next[0].m_Y);
-                                                Right_CC_next    = SignficantDigit(Tar_Imagecoord_py_next[0].m_X);
+                                                Left_CR_next     = Ref_Imagecoord_py_next[0].m_Y;
+                                                Left_CC_next     = Ref_Imagecoord_py_next[0].m_X;
+                                                Right_CR_next    = Tar_Imagecoord_py_next[0].m_Y;
+                                                Right_CC_next    = Tar_Imagecoord_py_next[0].m_X;
                                             }
                                             
                                             diff_theta  = (double)(ori_diff);
@@ -10293,7 +10269,7 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                 
                                                 double t_intensity_diff = 0;
                                                 double t_mag_diff = 0;
-                                                
+
                                                 int row, col;
                                                 int N;
                                                 
@@ -10305,12 +10281,12 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                 
                                                 double temp_INCC_roh = 0;
                                                 //double temp_GNCC_roh = 0;
-                                                
-                                                
+                                     
+                                                                                    
                                                 uint16 mag_center_l, mag_center_r;
                                                 
                                                 if(flag.rotate_flag)
-                                                    rot_theta = SignficantDigit((double)(diff_theta*bin_angle*PI/180.0));
+                                                    rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
                                                 
                                                 double cos0 = cos(-rot_theta);
                                                 double sin0 = sin(-rot_theta);
@@ -10328,13 +10304,13 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                 double pos_row_left      = (Left_CR + row);
                                                                 double pos_col_left      = (Left_CC + col);
                                                                 
-                                                                double temp_col        = SignficantDigit(cos0*col - sin0*row);
-                                                                double temp_row        = SignficantDigit(sin0*col + cos0*row);
+                                                                double temp_col        = (cos0*col - sin0*row);
+                                                                double temp_row        = (sin0*col + cos0*row);
                                                                 double pos_row_right     = (Right_CR + temp_row);
                                                                 double pos_col_right     = (Right_CC + temp_col);
                                                                 
                                                                 if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                                   pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                                                    pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                                                 {
                                                                     //interpolate left_patch
                                                                     double dx          =  pos_col_left - (int)(pos_col_left);
@@ -10347,17 +10323,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
                                                                     
                                                                     left_patch =        (double) (Images[reference_id][position])                          * (1 - dx - dy + dxdy) +
-                                                                    (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
-                                                                    (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
-                                                                    (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
+                                                                                        (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
+                                                                                        (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
+                                                                                        (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
                                                                     
                                                                     left_mag_patch =    (double) (MagImages[reference_id][position])                       * (1 - dx - dy + dxdy) +
-                                                                    (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
-                                                                    (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
-                                                                    (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
-                                                                    
-                                                                    //fprintf(fid_h,"%f\t%f\t%d\t%f\t%f\t%f\t%f\t",dx,dy,position,(double) (Images[reference_id][position]),(double) (Images[reference_id][position + 1]),(double) (Images[reference_id][position + LImagesize.width]),(double) (Images[reference_id][position + 1 + LImagesize.width]));
-                                                                    
+                                                                                        (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
+                                                                                        (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
+                                                                                        (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
+
+                                                                     
                                                                     //interpolate right_patch
                                                                     dx          =  pos_col_right - (int)(pos_col_right);
                                                                     dy          =  pos_row_right - (int)(pos_row_right);
@@ -10365,23 +10340,21 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
                                                                     
                                                                     right_patch =       (double) (Images[ti][position])                         * (1 - dx - dy + dxdy) +
-                                                                    (double) (Images[ti][position + 1])                     * (dx - dxdy) +
-                                                                    (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
-                                                                    (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
+                                                                                        (double) (Images[ti][position + 1])                     * (dx - dxdy) +
+                                                                                        (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
+                                                                                        (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
                                                                     
                                                                     right_mag_patch =   (double) (MagImages[ti][position])                      * (1 - dx - dy + dxdy) +
-                                                                    (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
-                                                                    (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
-                                                                    (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
+                                                                                        (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
+                                                                                        (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
+                                                                                        (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
                                                                     
-                                                                    //fprintf(fid_h,"%f\t%f\t%d\t%f\t%f\t%f\t%f\n",dx,dy,position,(double) (Images[ti][position]),(double) (Images[ti][position + 1]),(double) (Images[ti][position + RImagesize.width]),(double) (Images[ti][position + 1 + RImagesize.width]));
-                                                                    //fprintf(fid_h,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",pos_col_left,pos_row_left,pos_col_right,pos_row_right,left_patch,left_mag_patch,right_patch,right_mag_patch);
                                                                     //end
                                                                     
                                                                     if(left_patch > 0 && right_patch > 0)
                                                                     {
                                                                         Count_N[0]++;
-                                                                        
+
                                                                         //*************
                                                                         //Precomputing LR, L2 and R2 etc as they are used in different reductions. (Perhaps compiler handles that by itself)
                                                                         double LR = left_patch * right_patch;
@@ -10467,8 +10440,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     double pos_row_left      = (Left_CR_next + row);
                                                                     double pos_col_left      = (Left_CC_next + col);
                                                                     
-                                                                    double temp_col        = SignficantDigit(cos0*col - sin0*row);
-                                                                    double temp_row        = SignficantDigit(sin0*col + cos0*row);
+                                                                    double temp_col        = (cos0*col - sin0*row);
+                                                                    double temp_row        = (sin0*col + cos0*row);
                                                                     double pos_row_right     = (Right_CR_next + temp_row);
                                                                     double pos_col_right     = (Right_CC_next + temp_col);
                                                                     
@@ -10602,116 +10575,102 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             }
                                                         }
                                                     }
-                                                    
-                                                    
+
+                                                
                                                     int N1 = Count_N[0];
                                                     int N2 = Count_N[1];
                                                     int N3 = Count_N[2];
-                                                    double tt1;
-                                                    int tt2;
+                                                    
                                                     if(N1 > TH_N && N2 > TH_N && N3 > TH_N)
                                                     {
                                                         N               = Count_N[0];
                                                         val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
                                                         val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
-                                                        de2             = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de              = sqrt(val1*val2);
-                                                                
-                                                                ncc_1         = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_1           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de              = sqrt(val1*val2);
+                                                          de2             = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
+                                                          ncc_1         = de2/de;
                                                         }
                                                         else
-                                                            ncc_1 = 0;
-                                                        
+                                                            ncc_1           = -1.0;
                                                         if(ncc_1 > 1.0)
                                                             ncc_1 = 1.0;
                                                         
-                                                        //fprintf(fid_h,"%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n",grid_voxel_hindex,N,val1,val2,val1*val2,de,de2,ncc_1);
-                                                        
                                                         val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
                                                         val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
-                                                        de2             = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de              = sqrt(val1*val2);
-                                                                
-                                                                ncc_1_mag         = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_1_mag           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de              = sqrt(val1*val2);
+                                                          de2             = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
+                                                          ncc_1_mag         = de2/de;
                                                         }
                                                         else
-                                                            ncc_1_mag = 0;
-                                                        
+                                                            ncc_1_mag           = -1.0;
                                                         if(ncc_1_mag > 1.0)
                                                             ncc_1_mag = 1.0;
                                                         
                                                         t_intensity_diff = sqrt(t_intensity_diff/N);
                                                         t_mag_diff = sqrt(t_mag_diff/N);
                                                         
-                                                        
+                                               
                                                         N                   = Count_N[1];
                                                         val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
                                                         val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                                                        de2                   = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de                    = sqrt(val1*val2);
-                                                                
-                                                                ncc_2       = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_2           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de                    = sqrt(val1*val2);
+                                                          de2                   = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                                                          ncc_2       = de2/de;
                                                         }
                                                         else
-                                                            ncc_2 = 0;
-                                                        
+                                                            ncc_2           = -1.0;
                                                         if(ncc_2 > 1.0)
                                                             ncc_2 = 1.0;
                                                         
                                                         val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
                                                         val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
-                                                        de2                   = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de                    = sqrt(val1*val2);
-                                                                
-                                                                ncc_2_mag       = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_2_mag           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de                    = sqrt(val1*val2);
+                                                          de2                   = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                                                          ncc_2_mag       = de2/de;
                                                         }
                                                         else
-                                                            ncc_2_mag = 0;
-                                                        
+                                                            ncc_2_mag           = -1.0;
                                                         if(ncc_2_mag > 1.0)
                                                             ncc_2_mag = 1.0;
                                                         
@@ -10719,52 +10678,43 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         N                   = Count_N[2];
                                                         val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
                                                         val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                                                        de2                   = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de                    = sqrt(val1*val2);
-                                                                
-                                                                ncc_3       = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_3           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de                    = sqrt(val1*val2);
+                                                          de2                   = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                                                          ncc_3       = de2/de;
                                                         }
                                                         else
-                                                            ncc_3 = 0;
-                                                        
+                                                            ncc_3           = -1.0;
                                                         if(ncc_3 > 1.0)
                                                             ncc_3 = 1.0;
                                                         
-                                                        //fprintf(fid_h,"%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n",grid_voxel_hindex,N,val1,val2,val1*val2,de,de2,ncc_3);
-                                                        
-                                                        
                                                         val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
                                                         val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
-                                                        de2                   = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
-                                                        val1 = SignficantDigit(val1);
-                                                        val2 = SignficantDigit(val2);
-                                                        de2 = SignficantDigit(de2);
-                                                        
-                                                        if(fabs(de2) > 0)
+                                                        if(Pyramid_step <= 1)
                                                         {
-                                                            if( val1*val2 > 0)
-                                                            {
-                                                                de                    = sqrt(val1*val2);
-                                                                
-                                                                ncc_3_mag       = de2/de;
-                                                            }
-                                                            else
-                                                                ncc_3_mag           = -1.0;
+                                                            if(val1 == 0)
+                                                                val1 = 0.00001;
+                                                            if(val2 == 0)
+                                                                val2 = 0.00001;
+                                                        }
+                                                        
+                                                        if( val1*val2 > 0)
+                                                        {
+                                                          de                    = sqrt(val1*val2);
+                                                          de2                   = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                                                          ncc_3_mag       = de2/de;
                                                         }
                                                         else
-                                                            ncc_3_mag = 0;
-                                                        
+                                                            ncc_3_mag           = -1.0;
                                                         if(ncc_3_mag > 1.0)
                                                             ncc_3_mag = 1.0;
                                                         
@@ -10773,10 +10723,6 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         Sum_intensity_diff += t_intensity_diff;
                                                         
                                                         count_INCC ++;
-                                                        
-                                                        sum_INCC_voxel += temp_INCC_roh;
-                                                        all_sum_SNCC += temp_INCC_roh;
-                                                        //fprintf(fid,"%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,grid_voxel_hindex,ncc_1,ncc_2,ncc_3,ncc_1_mag,ncc_2_mag,ncc_3_mag);
                                                         
                                                         if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                                                             grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
@@ -10793,49 +10739,44 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             N               = Count_N_next[0];
                                                             val1          = (double)(Sum_L2_next) - (double)(Sum_L_next*Sum_L_next)/N;
                                                             val2          = (double)(Sum_R2_next) - (double)(Sum_R_next*Sum_R_next)/N;
-                                                            de2             = (double)(Sum_LR_next) - (double)(Sum_L_next*Sum_R_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de              = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_1_next         = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_1_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de              = sqrt(val1*val2);
+                                                                de2             = (double)(Sum_LR_next) - (double)(Sum_L_next*Sum_R_next)/N;
+                                                                ncc_1_next         = de2/de;
                                                             }
                                                             else
-                                                                ncc_1_next = 0;
-                                                            
+                                                                ncc_1_next           = -1.0;
                                                             if(ncc_1_next > 1.0)
                                                                 ncc_1_next = 1.0;
                                                             
                                                             val1          = (double)(Sum_L2_mag_next) - (double)(Sum_L_mag_next*Sum_L_mag_next)/N;
                                                             val2          = (double)(Sum_R2_mag_next) - (double)(Sum_R_mag_next*Sum_R_mag_next)/N;
-                                                            de2             = (double)(Sum_LR_mag_next) - (double)(Sum_L_mag_next*Sum_R_mag_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de              = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_1_mag_next         = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_1_mag_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de              = sqrt(val1*val2);
+                                                                de2             = (double)(Sum_LR_mag_next) - (double)(Sum_L_mag_next*Sum_R_mag_next)/N;
+                                                                ncc_1_mag_next         = de2/de;
                                                             }
                                                             else
-                                                                ncc_1_mag_next = 0;
-                                                            
+                                                                ncc_1_mag_next           = -1.0;
                                                             if(ncc_1_mag_next > 1.0)
                                                                 ncc_1_mag_next = 1.0;
                                                             
@@ -10846,98 +10787,86 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                             N                   = Count_N_next[1];
                                                             val1                = (double)(Sum_L2_2_next) - (double)(Sum_L_2_next*Sum_L_2_next)/N;
                                                             val2                = (double)(Sum_R2_2_next) - (double)(Sum_R_2_next*Sum_R_2_next)/N;
-                                                            de2                   = (double)(Sum_LR_2_next) - (double)(Sum_L_2_next*Sum_R_2_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de                    = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_2_next       = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_2_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de                    = sqrt(val1*val2);
+                                                                de2                   = (double)(Sum_LR_2_next) - (double)(Sum_L_2_next*Sum_R_2_next)/N;
+                                                                ncc_2_next       = de2/de;
                                                             }
                                                             else
-                                                                ncc_2_next = 0;
-                                                            
+                                                                ncc_2_next           = -1.0;
                                                             if(ncc_2_next > 1.0)
                                                                 ncc_2_next = 1.0;
                                                             
                                                             val1                = (double)(Sum_L2_2_mag_next) - (double)(Sum_L_2_mag_next*Sum_L_2_mag_next)/N;
                                                             val2                = (double)(Sum_R2_2_mag_next) - (double)(Sum_R_2_mag_next*Sum_R_2_mag_next)/N;
-                                                            de2                   = (double)(Sum_LR_2_mag_next) - (double)(Sum_L_2_mag_next*Sum_R_2_mag_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de                    = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_2_mag_next       = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_2_mag_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de                    = sqrt(val1*val2);
+                                                                de2                   = (double)(Sum_LR_2_mag_next) - (double)(Sum_L_2_mag_next*Sum_R_2_mag_next)/N;
+                                                                ncc_2_mag_next       = de2/de;
                                                             }
                                                             else
-                                                                ncc_2_mag_next = 0;
-                                                            
+                                                                ncc_2_mag_next           = -1.0;
                                                             if(ncc_2_mag_next > 1.0)
                                                                 ncc_2_mag_next = 1.0;
                                                             
                                                             N                   = Count_N_next[2];
                                                             val1                = (double)(Sum_L2_3_next) - (double)(Sum_L_3_next*Sum_L_3_next)/N;
                                                             val2                = (double)(Sum_R2_3_next) - (double)(Sum_R_3_next*Sum_R_3_next)/N;
-                                                            de2                   = (double)(Sum_LR_3_next) - (double)(Sum_L_3_next*Sum_R_3_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de                    = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_3_next       = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_3_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de                    = sqrt(val1*val2);
+                                                                de2                   = (double)(Sum_LR_3_next) - (double)(Sum_L_3_next*Sum_R_3_next)/N;
+                                                                ncc_3_next       = de2/de;
                                                             }
                                                             else
-                                                                ncc_3_next = 0;
-                                                            
+                                                                ncc_3_next           = -1.0;
                                                             if(ncc_3_next > 1.0)
                                                                 ncc_3_next = 1.0;
                                                             
                                                             val1                = (double)(Sum_L2_3_mag_next) - (double)(Sum_L_3_mag_next*Sum_L_3_mag_next)/N;
                                                             val2                = (double)(Sum_R2_3_mag_next) - (double)(Sum_R_3_mag_next*Sum_R_3_mag_next)/N;
-                                                            de2                   = (double)(Sum_LR_3_mag_next) - (double)(Sum_L_3_mag_next*Sum_R_3_mag_next)/N;
-                                                            val1 = SignficantDigit(val1);
-                                                            val2 = SignficantDigit(val2);
-                                                            de2 = SignficantDigit(de2);
-                                                            
-                                                            if(fabs(de2) > 0)
+                                                            if(Pyramid_step <= 1)
                                                             {
-                                                                if( val1*val2 > 0)
-                                                                {
-                                                                    de                    = sqrt(val1*val2);
-                                                                    
-                                                                    ncc_3_mag_next       = de2/de;
-                                                                }
-                                                                else
-                                                                    ncc_3_mag_next           = -1.0;
+                                                                if(val1 == 0)
+                                                                    val1 = 0.00001;
+                                                                if(val2 == 0)
+                                                                    val2 = 0.00001;
+                                                            }
+                                                            
+                                                            if( val1*val2 > 0)
+                                                            {
+                                                                de                    = sqrt(val1*val2);
+                                                                de2                   = (double)(Sum_LR_3_mag_next) - (double)(Sum_L_3_mag_next*Sum_R_3_mag_next)/N;
+                                                                ncc_3_mag_next       = de2/de;
                                                             }
                                                             else
-                                                                ncc_3_mag_next = 0;
-                                                            
+                                                                ncc_3_mag_next           = -1.0;
                                                             if(ncc_3_mag_next > 1.0)
                                                                 ncc_3_mag_next = 1.0;
                                                             
@@ -10970,92 +10899,92 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
                                     else
                                         temp_rho = sum_INCC_multi/count_INCC;
+
                                     
-                                    
-                                    grid_index           = pt_index;
-                                    
-                                    
-                                    if(temp_rho >= 0 && pre_rho >= 0)
-                                        diff_rho = temp_rho - pre_rho;
-                                    else if(temp_rho < 0 && pre_rho < 0)
-                                        diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
-                                    else if(temp_rho >= 0 && pre_rho < 0)
-                                        diff_rho = 1;
-                                    else
-                                        diff_rho = -1;
-                                    
-                                    if(diff_rho > 0)
-                                        t_direction = 1;
-                                    else if(diff_rho < 0)
-                                        t_direction = -1;
-                                    else
-                                        t_direction = 0;
-                                    
-                                    if(!check_rho)
-                                    {
-                                        check_rho   = true;
-                                        t_direction = -1;
-                                    }
-                                    else if(pre_rho != -1)
-                                    {
-                                        bool check_peak = false;
-                                        
-                                        if (Pyramid_step == 0 && iteration == 3)
-                                        {
-                                            if(direction > 0 && t_direction < 0 )
-                                                check_peak = true;
-                                        }
-                                        else if(Pyramid_step == 4 && iteration < 3)
-                                        {
-                                            if (direction > 0 && t_direction < 0)
-                                                check_peak = true;
-                                        }
-                                        else
-                                        {
-                                            if (direction > 0 && t_direction < 0)
-                                                check_peak = true;
-                                        }
-                                        
-                                        if( check_peak )
-                                        {
-                                            nccresult[grid_index].result4 += 1;
-                                            if(nccresult[grid_index].result0 < pre_rho)
-                                            {
-                                                double temp_1, temp_2;
-                                                temp_1 = nccresult[grid_index].result0;
-                                                nccresult[grid_index].result0 = pre_rho;
-                                                
-                                                temp_2 = nccresult[grid_index].result2;
-                                                nccresult[grid_index].result2 = pre_height;
-                                                
-                                                //nccresult[grid_index].INCC = pre_INCC_roh;
-                                                //nccresult[grid_index].GNCC = pre_GNCC_roh;
-                                                
-                                                if(nccresult[grid_index].result1 < temp_1)
-                                                {
-                                                    nccresult[grid_index].result1 = temp_1;
-                                                    nccresult[grid_index].result3 = temp_2;
-                                                }
-                                            }
-                                            else
-                                            {
-                                                if(nccresult[grid_index].result1 < pre_rho)
-                                                {
-                                                    nccresult[grid_index].result1 = pre_rho;
-                                                    nccresult[grid_index].result3 = pre_height;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    pre_rho                = temp_rho;
-                                    
-                                    pre_height             = iter_height;
-                                    direction              = t_direction;
-                                    
-                                    pre_INCC_roh           = sum_INCC_multi/count_INCC;
-                                    pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
-                                    nccresult[grid_index].roh_count ++;
+                                     grid_index           = pt_index;
+                                     
+                                     
+                                     if(temp_rho >= 0 && pre_rho >= 0)
+                                         diff_rho = temp_rho - pre_rho;
+                                     else if(temp_rho < 0 && pre_rho < 0)
+                                         diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
+                                     else if(temp_rho >= 0 && pre_rho < 0)
+                                         diff_rho = 1;
+                                     else
+                                         diff_rho = -1;
+                                     
+                                     if(diff_rho > 0)
+                                         t_direction = 1;
+                                     else if(diff_rho < 0)
+                                         t_direction = -1;
+                                     else
+                                         t_direction = 0;
+                                     
+                                     if(!check_rho)
+                                     {
+                                         check_rho   = true;
+                                         t_direction = -1;
+                                     }
+                                     else if(pre_rho != -1)
+                                     {
+                                         bool check_peak = false;
+                                         
+                                         if (Pyramid_step == 0 && iteration == 3)
+                                         {
+                                             if(direction > 0 && t_direction < 0 )
+                                                 check_peak = true;
+                                         }
+                                         else if(Pyramid_step == 4 && iteration < 3)
+                                         {
+                                             if (direction > 0 && t_direction < 0)
+                                                 check_peak = true;
+                                         }
+                                         else
+                                         {
+                                             if (direction > 0 && t_direction < 0)
+                                                 check_peak = true;
+                                         }
+                                     
+                                         if( check_peak )
+                                         {
+                                             nccresult[grid_index].result4 += 1;
+                                             if(nccresult[grid_index].result0 < pre_rho)
+                                             {
+                                                 double temp_1, temp_2;
+                                                 temp_1 = nccresult[grid_index].result0;
+                                                 nccresult[grid_index].result0 = pre_rho;
+                                             
+                                                 temp_2 = nccresult[grid_index].result2;
+                                                 nccresult[grid_index].result2 = pre_height;
+                                             
+                                                 //nccresult[grid_index].INCC = pre_INCC_roh;
+                                                 //nccresult[grid_index].GNCC = pre_GNCC_roh;
+                                             
+                                                 if(nccresult[grid_index].result1 < temp_1)
+                                                 {
+                                                     nccresult[grid_index].result1 = temp_1;
+                                                     nccresult[grid_index].result3 = temp_2;
+                                                 }
+                                             }
+                                             else
+                                             {
+                                                 if(nccresult[grid_index].result1 < pre_rho)
+                                                 {
+                                                     nccresult[grid_index].result1 = pre_rho;
+                                                     nccresult[grid_index].result3 = pre_height;
+                                                 }
+                                             }
+                                         }
+                                     }
+                                     
+                                     pre_rho                = temp_rho;
+                                     
+                                     pre_height             = iter_height;
+                                     direction              = t_direction;
+                                     
+                                     pre_INCC_roh           = sum_INCC_multi/count_INCC;
+                                     pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
+                                     nccresult[grid_index].roh_count ++;
                                 }
                                 else
                                 {
@@ -11066,16 +10995,16 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                         temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC*ncc_alpha + (sum_GNCC_multi/count_GNCC)*ncc_beta;
                                     else
                                         temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC;
-                                    
-                                    
+
+                            
                                     if(grid_voxel[pt_index][grid_voxel_hindex].flag_cal)
                                     {
                                         grid_voxel[pt_index][grid_voxel_hindex].WNCC = temp_rho;
                                         //grid_voxel[pt_index][grid_voxel_hindex].SSD = (int)(Sum_intensity_diff/count_INCC);
-                                        
+                                    
                                         //if(grid_voxel[pt_index][grid_voxel_hindex].SSD < 1)
                                         //    grid_voxel[pt_index][grid_voxel_hindex].SSD = 1;
-                                        
+                                    
                                         if(max_WNCC < temp_rho)
                                         {
                                             max_WNCC = temp_rho;
@@ -11087,10 +11016,6 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                         }
                     }
                     
-                    //fprintf(fid,"%d\t%d\t%d\t%f\n",pt_index,pts_row,pts_col,sum_INCC_voxel);
-                    
-                    //printf("%d\t%d\t%d\t%f\n",pt_index,pts_row,pts_col,sum_INCC_voxel);
-                    
                     if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                     {
                         nccresult[pt_index].max_WNCC = max_WNCC;
@@ -11100,14 +11025,9 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
             }
         }
     }
-
-    fclose(fid);
-    fclose(fid_h);
     
     printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
-    printf("sum %f\n",all_sum_SNCC);
     
-    //exit(1);
     
     if(check_ortho)
     {
@@ -11141,18 +11061,13 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
 }
 
 
-void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration)
+void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration)
 {
     double P1 = 0.10;
     double P2 = 0.01;
     int P_HS_step = 2;
     int kernel_size = 1;
     
-    char save_file[500];
-    sprintf(save_file,"%s/txt/AWNCC_print.txt",proinfo->save_filepath);
-    FILE* fid         = fopen(save_file,"w");
-    sprintf(save_file,"%s/txt/AWNCC_all_print.txt",proinfo->save_filepath);
-    FILE* fid_all         = fopen(save_file,"w");
 #pragma omp parallel for schedule(guided)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
     {
@@ -11165,8 +11080,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         double pre_height= 0.0;
         int direction   = 0;
         bool check_rho  = false;
-        int selected_Hp;
-        double sum_WNCCs = 0;
+        
         
         for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
@@ -11193,8 +11107,6 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             {
                 if(grid_voxel[pt_index][height_step].flag_cal)
                 {
-                    sum_WNCCs += grid_voxel[pt_index][height_step].WNCC;
-                    
                     WNCC_sum = grid_voxel[pt_index][height_step].WNCC;
                     
                     if(Pyramid_step > 0)
@@ -11339,8 +11251,6 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                             nccresult[grid_index].result2 = iter_height;
                             nccresult[grid_index].result1 = -1.0;
                             nccresult[grid_index].result3 = -9999;
-                            
-                            selected_Hp = height_step;
                         }
                     }
                     else
@@ -11381,12 +11291,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 direction              = t_direction;
             }
         }
-        
-        fprintf(fid_all,"%d\t%d\t%f\n",iter_count,nccresult[pt_index].NumOfHeight,sum_WNCCs);
-        fprintf(fid,"%d\t%d\t%d\t%f\t%f\t%f\t%f\t%d\n",iter_count,pts_row,pts_col,nccresult[pt_index].result0,nccresult[pt_index].result1,nccresult[pt_index].result2,nccresult[pt_index].result3,selected_Hp);
     }
-    fclose(fid);
-    fclose(fid_all);
 }
 
 
@@ -12062,7 +11967,6 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         }
     }
     
-    
 #pragma omp parallel for schedule(guided)
     for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
     {
@@ -12145,9 +12049,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
         ncc_alpha = 0.1;
     
     printf("VerticalLineLocus_blunder : ortho_ncc\n");
-    double sum_NCC = 0;
-    double sum_Mean_ortho_ncc = 0;
-#pragma omp parallel for schedule(guided) reduction(+:sum_NCC,sum_Mean_ortho_ncc)
+#pragma omp parallel for schedule(guided)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
     {
         int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
@@ -12381,161 +12283,126 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                         }
                     }
                     
-                    double tt1;
-                    int tt2;
                     if(Count_N[0] > 0)
                     {
                         N               = Count_N[0];
                         val1          = fabs((double)(Sum_L2) - (double)(Sum_L*Sum_L)/N);
                         val2          = fabs((double)(Sum_R2) - (double)(Sum_R*Sum_R)/N);
-                        de2           = ((double)(Sum_LR) - (double)(Sum_L*Sum_R)/N);
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de            = sqrt(val1*val2);
-                                
-                                ncc_1           = de2/de;
-                            }
-                            else
-                                ncc_1           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de            = sqrt(val1*val2);
+                        de2           = ((double)(Sum_LR) - (double)(Sum_L*Sum_R)/N);
+                        if( val1*val2 > 0)
+                            ncc_1           = de2/de;
                         else
-                            ncc_1 = 0;
-                        
+                            ncc_1           = -1.0;
                         if(ncc_1 > 1.0)
                             ncc_1 = 1.0;
                         
                         val1          = fabs((double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N);
                         val2          = fabs((double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N);
-                        de2           = ((double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N);
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de            = sqrt(val1*val2);
-                                
-                                ncc_1_mag           = de2/de;
-                            }
-                            else
-                                ncc_1_mag           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de            = sqrt(val1*val2);
+                        de2           = ((double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N);
+                        if( val1*val2 > 0)
+                            ncc_1_mag           = de2/de;
                         else
-                            ncc_1_mag = 0;
-                        
+                            ncc_1_mag           = -1.0;
                         if(ncc_1_mag > 1.0)
                             ncc_1_mag = 1.0;
                         
                         N                   = Count_N[1];
                         val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
                         val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de                  = sqrt(val1*val2);
-                                
-                                ncc_2         = de2/de;
-                            }
-                            else
-                                ncc_2           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                        if( val1*val2 > 0)
+                            ncc_2         = de2/de;
                         else
-                            ncc_2 = 0;
-                        
+                            ncc_2           = -1.0;
                         if(ncc_2 > 1.0)
                             ncc_2 = 1.0;
                         
                         val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
                         val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
-                        de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de                  = sqrt(val1*val2);
-                                
-                                ncc_2_mag         = de2/de;
-                            }
-                            else
-                                ncc_2_mag           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_2_mag         = de2/de;
                         else
-                            ncc_2_mag = 0;
-                        
+                            ncc_2_mag           = -1.0;
                         if(ncc_2_mag > 1.0)
                             ncc_2_mag = 1.0;
                         
                         N                   = Count_N[2];
                         val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
                         val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de                  = sqrt(val1*val2);
-                                
-                                ncc_3         = de2/de;
-                            }
-                            else
-                                ncc_3           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                        if( val1*val2 > 0)
+                            ncc_3         = de2/de;
                         else
-                            ncc_3 = 0;
-                        
+                            ncc_3           = -1.0;
                         if(ncc_3 > 1.0)
                             ncc_3 = 1.0;
                         
                         val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
                         val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
-                        de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
-                        val1 = SignficantDigit(val1);
-                        val2 = SignficantDigit(val2);
-                        de2 = SignficantDigit(de2);
-                        
-                        if(fabs(de2) > 0)
+                        if(Pyramid_step <= 1)
                         {
-                            if( val1*val2 > 0)
-                            {
-                                de                  = sqrt(val1*val2);
-                                
-                                ncc_3_mag         = de2/de;
-                            }
-                            else
-                                ncc_3_mag           = -1.0;
+                            if(val1 == 0)
+                                val1 = 0.00001;
+                            if(val2 == 0)
+                                val2 = 0.00001;
                         }
+
+                        de                  = sqrt(val1*val2);
+                        de2                 = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                        if( val1*val2 > 0)
+                            ncc_3_mag         = de2/de;
                         else
-                            ncc_3_mag = 0;
-                        
+                            ncc_3_mag           = -1.0;
                         if(ncc_3_mag > 1.0)
                             ncc_3_mag = 1.0;
                         
                         t_nccresult = (ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
-                        t_nccresult = (t_nccresult);
-                        
-                        sum_NCC += t_nccresult;
                     }
                     else 
                     {
@@ -12559,13 +12426,11 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             {
                 GridPT3[pt_index].Mean_ortho_ncc = max_ncc;
                 nccresult[pt_index] = GridPT3[pt_index].Mean_ortho_ncc;
-                
-                sum_Mean_ortho_ncc += GridPT3[pt_index].Mean_ortho_ncc;
             }
         }
     }
 
-    printf("VerticalLineLocus_blunder %f\t%f: release memory\n",sum_NCC,sum_Mean_ortho_ncc);
+    printf("VerticalLineLocus_blunder : release memory\n");
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
@@ -12940,55 +12805,27 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     }
                 }
         
-                double tt1;
-                int tt2;
                 if(Count_N >= 1)
                 {
                     val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/Count_N;
                     val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/Count_N;
+                    de            = sqrt(val1*val2);
                     de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/Count_N;
-                    val1 = SignficantDigit(val1);
-                    val2 = SignficantDigit(val2);
-                    de2 = SignficantDigit(de2);
-                    
-                    if(fabs(de2) > 0)
-                    {
-                        if( val1*val2 > 0)
-                        {
-                            de            = sqrt(val1*val2);
-                            
-                            ncc_1           = de2/de;
-                        }
-                        else
-                            ncc_1           = -1.0;
-                    }
+                    if( val1*val2 > 0)
+                        ncc_1           = de2/de;
                     else
-                        ncc_1 = 0;
-                    
+                        ncc_1           = -1.0;
                     if(ncc_1 > 1.0)
                         ncc_1 = 1.0;
                     
                     val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/Count_N;
                     val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/Count_N;
+                    de            = sqrt(val1*val2);
                     de2           = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/Count_N;
-                    val1 = SignficantDigit(val1);
-                    val2 = SignficantDigit(val2);
-                    de2 = SignficantDigit(de2);
-                    
-                    if(fabs(de2) > 0)
-                    {
-                        if( val1*val2 > 0)
-                        {
-                            de            = sqrt(val1*val2);
-                            
-                            ncc_2           = de2/de;
-                        }
-                        else
-                            ncc_2           = -1.0;
-                    }
+                    if( val1*val2 > 0)
+                        ncc_2           = de2/de;
                     else
-                        ncc_2 = 0;
-                    
+                        ncc_2           = -1.0;
                     if(ncc_2 > 1.0)
                         ncc_2 = 1.0;
                     
@@ -13107,10 +12944,10 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     printf("PPM of select MPs = %f\n",PPM);
     double roh_next;
 
-    double minimum_Th = 0.3999;
+    double minimum_Th = 0.2*2;
     
     if(Pyramid_step == 0)
-        minimum_Th = 0.1999;
+        minimum_Th = 0.2;
     
     printf("minimum TH %f\n",minimum_Th);
     bool check_iter_end = false;
@@ -13134,7 +12971,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     if(Pyramid_step >= 5)
         roh_next    = 0;
     else
-        roh_next    = (double)(0.04999);
+        roh_next    = (double)(0.05);
     
     if(Pyramid_step == 0)
     {
@@ -13173,24 +13010,22 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 
     im_resolution = im_resolution*pow(2,Pyramid_step);
     
-    double sum_X = 0;
-    double sum_Y = 0;
-    double sum_Z = 0;
     //#pragma omp parallel for shared(Size_Grid2D,GridPT3,GridPts_XY,Th_roh,roh_height,Pyramid_step,peak_level,PPM,temp_fid,check_iter_end,roh_next,Th_roh_start,Th_roh_next,total_pyramid,iteration) private(row,col) reduction(+:count_MPs)
     for(int iter_index = 0 ; iter_index < Size_Grid2D.height*Size_Grid2D.width ; iter_index++)
     {
         int row,col;
         row     = (int)(floor(iter_index/Size_Grid2D.width));
         col     = iter_index % Size_Grid2D.width;
+        int grid_index = row*Size_Grid2D.width + col;
         
-        if(row >= 0 && row < Size_Grid2D.height && col >= 0 && col < Size_Grid2D.width)
+        if(row >= 0 && row < Size_Grid2D.height && col >= 0 && col < Size_Grid2D.width && roh_height[grid_index].NumOfHeight > 2)
         {
             bool index,index_1,index_2,index_3, roh_index;
             double temp, ROR, temp_h;
             double roh_th;
             D3DPOINT temp_mp;
 
-            int grid_index = row*Size_Grid2D.width + col;
+            
 
             if(Pyramid_step == 4 && iteration == 1)
                 GridPT3[grid_index].Height          = -1000.0;
@@ -13418,10 +13253,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                             
                             fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
-                            sum_X += temp_mp.m_X;
-                            sum_Y += temp_mp.m_Y;
-                            sum_Z += temp_mp.m_Z;
-                            
                             // update max_roh value
                             GridPT3[grid_index].roh     = roh_height[grid_index].result0;
                             if(GridPT3[grid_index].roh < minimum_Th)
@@ -13444,10 +13275,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
                         
                         fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
-                        sum_X += temp_mp.m_X;
-                        sum_Y += temp_mp.m_Y;
-                        sum_Z += temp_mp.m_Z;
-                        
                         // update max_roh value
                         GridPT3[grid_index].roh     = roh_height[grid_index].result0;
                         if(GridPT3[grid_index].roh < minimum_Th)
@@ -13468,10 +13295,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     }
     fclose(temp_fid);
 
-    printf("sum XYZ %f\t%f\t%f\n",sum_X,sum_Y,sum_Z);
-    
-    //exit(1);
-    
     return count_MPs;
 }
 
@@ -13648,9 +13471,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
             D3DPOINT *selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs_nums);
             
             uint32 *temp_array = (uint32*)malloc(sizeof(uint32)*count_MPs_nums);
-            double sum_X = 0;
-            double sum_Y = 0;
-            double sum_Z = 0;
+            
             for(t_i=0;t_i<count_MPs_nums;t_i++)
             {
                 double temp_X, temp_Y, temp_Z,temp_f,temp_id;
@@ -13658,13 +13479,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
                 selected_ptslists[t_i].m_X = temp_selected_ptslists[t_i].m_X;
                 selected_ptslists[t_i].m_Y = temp_selected_ptslists[t_i].m_Y;
                 temp_array[t_i]            = temp_selected_ptslists[t_i].m_Z;
-                
-                sum_X += selected_ptslists[t_i].m_X;
-                sum_Y += selected_ptslists[t_i].m_Y;
-                sum_Z += temp_array[t_i];
             }
-            
-            printf("XYZ %f\t%f\t%f\n",sum_X,sum_Y,sum_Z);
             
             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
             
@@ -13753,7 +13568,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
         TIN_split_level = 4;
     }
     
-    if(count_MPs > 3)
+    if(count_MPs > 10)
     {
         double gridspace            = grid_resolution;
         uint8 max_count         = 30;
@@ -13865,12 +13680,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 if(minY_ptslists > ptslists[i].m_Y)
                     minY_ptslists = ptslists[i].m_Y;
                 */
-                //printf("XYZ %f\t%f\t%f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
                 i++;
             }
-            
-            //printf("load pre done!!");
-            
             double min_max[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
             if( !(Pyramid_step == 0 && iteration == 3) )
             {
@@ -13903,7 +13714,6 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 }
                 // TIN generation end
                 
-                //printf("Tin done!!");
                 
                 while(flag == true && count < max_count && count_tri > 20)
                 {
@@ -13926,7 +13736,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                                   NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                                                   save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,true);
                     }
-                    blunder_detection_TIN(proinfo,pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, count_MPs,
+                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, count_MPs,
                                           trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight,IsRA,seedDEMsigma);
                     
                     free(ortho_ncc);
@@ -13934,7 +13744,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     free(trilists);
                     
                     printf("blunder detection end\tblunder_dh = %f\n",blunder_dh);
-                    
+
                     if(count > 0)
                         count_blunders = abs(blunder_count[1] - pre_count_blunder);
                     else
@@ -13966,9 +13776,6 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                         uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
                         FILE *pTri;
-                        double sum_X = 0;
-                        double sum_Y = 0;
-                        double sum_Z = 0;
                         
                         int t_tri_counts = 0;
                         for(i=0;i<count_MPs;i++)
@@ -13981,9 +13788,6 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                     input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
                                     check_id[t_tri_counts]          = i;
                                     
-                                    sum_X += input_tri_pts[t_tri_counts].m_X;
-                                    sum_Y += input_tri_pts[t_tri_counts].m_Y;
-                                    
                                     t_tri_counts++;
                                 }
                             }
@@ -13995,15 +13799,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                     input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
                                     check_id[t_tri_counts]          = i;
                                     
-                                    sum_X += input_tri_pts[t_tri_counts].m_X;
-                                    sum_Y += input_tri_pts[t_tri_counts].m_Y;
-                                    
                                     t_tri_counts++;
                                 }
                             }
-                            
+
                         }
-                        printf("XYZ %f\t%f\n",sum_X,sum_Y);
                         
                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
                         
@@ -14264,22 +14064,22 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
 
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri)
 {
-double minX_ptslists = min_max[0];
-double minY_ptslists = min_max[1];
-double maxX_ptslists = min_max[2];
-double maxY_ptslists = min_max[3];
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
 #ifdef VLIBRARY
     double distX_ptslists, distY_ptslists;
     double Scale_ptslists = 1000;
     Site *(*next)();
     
     *count_tri = 0;
-
-    initializeVoronoi();    
+    
+    initializeVoronoi();
     D3DPOINT *scaled_ptslists;
-
+    
     scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
-
+    
     //distX_ptslists = maxX_ptslists - minX_ptslists;
     //distY_ptslists = maxY_ptslists - minY_ptslists;
     for(int i=0;i<numofpts;i++)
@@ -14292,7 +14092,7 @@ double maxY_ptslists = min_max[3];
         
         //printf("scaled_ptslists %f\t%f\n",scaled_ptslists[i].m_X,scaled_ptslists[i].m_Y);
     }
-
+    
     readsites(scaled_ptslists,numofpts);
     next = nextone;
     geominit();
@@ -14305,7 +14105,7 @@ double maxY_ptslists = min_max[3];
     //exit(1);
 #elif TRILIBRARY
     //clock_t start = clock(), mid1, mid2, mid3, end;
-
+    
     struct triangulateio in, out;
     int x;
     double v12[2], v13[2], Normal;
@@ -14317,37 +14117,37 @@ double maxY_ptslists = min_max[3];
     }
     
     /*D3DPOINT *shifted_ptslists;
-    shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
-    
-    double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
-    double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
-    for(int i=0;i<numofpts;i++)
-    {
-        shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
-        shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
-    }
+     shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
+     
+     double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
+     double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
+     for(int i=0;i<numofpts;i++)
+     {
+     shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
+     shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
+     }
      */
     /* Define input points. */
-
+    
     in.numberofpoints = numofpts;
     in.numberofpointattributes = 0;
     in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-
-    #pragma omp parallel for private(x) schedule(guided)
+    
+#pragma omp parallel for private(x) schedule(guided)
     for (x = 0; x < numofpts; x++){
         in.pointlist[2*x] = scaled_ptslists[x].m_X;
         in.pointlist[2*x+1] = scaled_ptslists[x].m_Y;
     }
-
+    
     in.pointattributelist = (REAL *) malloc(in.numberofpoints *
-                                          in.numberofpointattributes *
-                                          sizeof(REAL));
+                                            in.numberofpointattributes *
+                                            sizeof(REAL));
     in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
     in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));
-
+    
     /* Make necessary initializations so that Triangle can return a */
     /*   triangulation in `out'.  */
-
+    
     out.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
     /* Not needed if -N switch used or number of point attributes is zero: */
     out.pointattributelist = (REAL *) NULL;
@@ -14366,33 +14166,33 @@ double maxY_ptslists = min_max[3];
     triangulate("zQ", &in, &out, (struct triangulateio *) NULL);
     //mid2 = clock();
     /* Transfer output to trilists */
-    #pragma omp parallel for private(x) schedule(guided)
+#pragma omp parallel for private(x) schedule(guided)
     for (x = 0; x < out.numberoftriangles; x++) {
         trilists[x].m_X = (uint32)out.trianglelist[x * 3 + 0];
         trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
         trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-/*
-        pt1 = ptslists[trilists[x].m_X];
-        pt2 = ptslists[trilists[x].m_Y];
-        pt3 = ptslists[trilists[x].m_Z];
-
-        v12[0]  = pt2.m_X-pt1.m_X;
-        v12[1]  = pt2.m_Y-pt1.m_Y;
-
-        v13[0]  = pt3.m_X-pt1.m_X;
-        v13[1]  = pt3.m_Y-pt1.m_Y;
-
-        Normal = v12[0]*v13[1] - v12[1]*v13[0];
-        if (Normal > 0) {
-            trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
-            trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-        }*/
+        /*
+         pt1 = ptslists[trilists[x].m_X];
+         pt2 = ptslists[trilists[x].m_Y];
+         pt3 = ptslists[trilists[x].m_Z];
+         
+         v12[0]  = pt2.m_X-pt1.m_X;
+         v12[1]  = pt2.m_Y-pt1.m_Y;
+         
+         v13[0]  = pt3.m_X-pt1.m_X;
+         v13[1]  = pt3.m_Y-pt1.m_Y;
+         
+         Normal = v12[0]*v13[1] - v12[1]*v13[0];
+         if (Normal > 0) {
+         trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
+         trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
+         }*/
     }
     
     *count_tri = out.numberoftriangles;
     //mid3 = clock();
     /* Free all allocated arrays, including those allocated by Triangle. */
-
+    
     free(in.pointlist);
     free(in.pointattributelist);
     free(in.pointmarkerlist);
@@ -14408,24 +14208,24 @@ double maxY_ptslists = min_max[3];
     free(out.edgelist);
     free(out.edgemarkerlist);
     free(shifted_ptslists);
-
+    
     //end = clock();
-/*
-    int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (end - start) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
-*/
+    /*
+     int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (end - start) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
+     */
 #endif
 }
 
-bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
+bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
                            D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
                            double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma)
 {
@@ -14534,10 +14334,6 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
         double sum2_oncc = 0;
         int total_oncc_count = 0;
  
-        //char temp_str[500];
-        //sprintf(temp_str,"%s/txt/tin_nodes.txt",proinfo->save_filepath);
-        //FILE* fid = fopen(temp_str,"w");
-        
         //#pragma omp parallel for shared(count_bl,pts,tris,savenode,nodecount,num_triangles,height_th,num_points,hdiffbin) private(tcnt) reduction(+:sum_data2, sum_data,dh_count)
         for(tcnt=0;tcnt<num_triangles;tcnt++)
         {
@@ -14549,9 +14345,7 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
             node1   = tris[tcnt].m_X;
             node2   = tris[tcnt].m_Y;
             node3   = tris[tcnt].m_Z;
-            
-            //fprintf(fid,"%d\t%d\t%d\t%d\n",tcnt,node1,node2,node3);
-            
+
             if(node1 < num_points)
             {
                 if(nodecount[node1] < max_nodes)
@@ -14662,19 +14456,10 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
             }
         }
         
-        //fclose(fid);
-        
         double oncc_mean    =  sum_oncc/total_oncc_count;
-        double tt1 = oncc_mean*100.0;
-        int tt2 = (int)tt1;
-        oncc_mean = tt2/100.0;
-        
         double oncc_std =   sqrt(fabs(sum2_oncc - (sum_oncc)*(sum_oncc)/total_oncc_count)/total_oncc_count);
-        tt1 = oncc_std*100.0;
-        tt2 = (int)tt1;
-        oncc_std = tt2/100.0;
         
-        printf("oncc mean %f\tstd%f\t%f\t%f\t%d\n",oncc_mean,oncc_std,sum_data,sum_data2,dh_count);
+        printf("oncc mean %f\tstd%f\n",oncc_mean,oncc_std);
         
         int blunder_pyramid_step;
         blunder_pyramid_step = 3;
@@ -14799,8 +14584,7 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
                 int iter = 0;
                 int max_iter;
                 int t_col,t_row;
-                double d_tt;
-                int i_tt;
+                  
                 bool check_neigh = false;
                 D3DPOINT ref_index_pt;
                 int ref_index;
@@ -14847,7 +14631,7 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
                     uint32 temp_tri[3];
                       
                     //if(savenode[index][iter] < num_triangles && savenode[index][iter] > 0)
-                    if(savenode[(long)index*(long)max_nodes+(long)iter] < num_triangles && savenode[(long)index*(long)max_nodes+(long)iter] >= 0)
+                    if(savenode[(long)index*(long)max_nodes+(long)iter] < num_triangles && savenode[(long)index*(long)max_nodes+(long)iter] > 0)
                     {
                         /*
                         temp_tri[0] = tris[savenode[index][iter]].m_X;
@@ -14905,35 +14689,27 @@ bool blunder_detection_TIN(ProInfo *proinfo,int pre_DEMtif,double* ortho_ncc, do
                             N[2]        =   U[0]*V[1] - V[0]*U[1];
 
                             norm = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
-                            d_tt = norm*100.0;
-                            i_tt = (int)d_tt;
-                            norm = i_tt/100.0;
-                            
                             if (norm != 0)
                             {
-                                angle = acos(fabs(N[2])/norm)*RadToDeg;
-                                
-                                d_tt = angle*100.0;
-                                i_tt = (int)d_tt;
-                                angle = i_tt/100.0;
-                                
-                                if(angle <= 0 && angle >= -90)
-                                    angle = fabs(angle);
-                                else if(angle <= -270 && angle >= -360)
-                                    angle = 360 + angle;
-                                else if(angle >= 270 && angle <= 360)
-                                    angle = 360 - angle;
-                                
-                                if(fabs(dh1) > fabs(dh2))
-                                    dh_max = fabs(dh1);
-                                else
-                                    dh_max = fabs(dh2);
-                                
-                                if(dh1 >= 0 && dh2 >= 0 && angle > 30)
-                                    count_th_positive ++;
-                                if(dh1 <  0 && dh2 < 0  && angle > 30)
-                                    count_th_negative ++;
+                                angle =acos(fabs(N[2])/norm)*RadToDeg;
                             }
+                                  
+                            if(angle <= 0 && angle >= -90)
+                                angle = fabs(angle);
+                            else if(angle <= -270 && angle >= -360)
+                                angle = 360 + angle;
+                            else if(angle >= 270 && angle <= 360)
+                                angle = 360 - angle;
+                                  
+                            if(fabs(dh1) > fabs(dh2))
+                                dh_max = fabs(dh1);
+                            else
+                                dh_max = fabs(dh2);
+
+                            if(dh1 >= 0 && dh2 >= 0 && angle > 30)
+                                count_th_positive ++;
+                            if(dh1 <  0 && dh2 < 0  && angle > 30)
+                                count_th_negative ++;
                               
                             bool check_match;
 
@@ -15320,9 +15096,8 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
         double *FNCC = (double*)calloc(sizeof(double),num_triangles);
         int *selected_target_index = (int*)malloc(sizeof(int)*num_triangles);
         
-        double sum_ncc = 0;
         //printf("ortho bluncer iteration %d\n",while_count);
-#pragma omp parallel for schedule(guided) //reduction(+:sum_ncc)
+#pragma omp parallel for schedule(guided)
         for(int tcnt=0;tcnt<(int)(num_triangles);tcnt++)
         {
             if(tris_check[tcnt] == 0)
@@ -15520,7 +15295,6 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                             com_count[target_pt_index] = selected_count[tcnt];
                             com_FNCC[target_pt_index] = FNCC[tcnt];
                             
-                            sum_ncc+=com_FNCC[target_pt_index];
                             
                             int target_index = selected_target_index[tcnt];
                             double F_height = updated_height[tcnt];
@@ -15563,7 +15337,6 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
             }
         }
 
-        printf("while %d\t%f\n",while_count,sum_ncc);
         /*for(int tcnt=0;tcnt<numOfPts;tcnt++)
         {
             if(count_target[tcnt] > 2)
@@ -15594,7 +15367,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
     return numOfPts;
 }
 
-UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
+UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
                       double *minH_grid, double *maxH_grid, BL BL_param,D3DPOINT *pts, UI3DPOINT *tris,int IsRA, double MPP, char* save_path, uint8 row, uint8 col,bool check_level_end,double seedDEMsigma)
 {
     UGRID *result;
@@ -15649,37 +15422,56 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
         if (BufferOfHeight < 0.5)
             BufferOfHeight = 0.5;
     }
-
-    BufferOfHeight = SignficantDigit(BufferOfHeight);
+    
+    BufferOfHeight = ceil(BufferOfHeight);
     
     printf("BufferOfHeight = %f\n",BufferOfHeight);
     
     if(BufferOfHeight > 100)
         BufferOfHeight = 100;
     
+    double th_HG = 100000;
     
-    printf("BufferOfHeight = %f\t%d\n",BufferOfHeight,num_triangles);
+    if(proinfo->DEM_resolution >= 4)
+    {
+        if(pyramid_step <= 1)
+            th_HG = 1000;
+    }
+    else
+    {
+        if(pyramid_step == 2 && iteration >= 5)
+        {
+            th_HG = 1000;// - 50*iteration;
+            if(th_HG < 500)
+                th_HG = 500;
+        }
+        else if(pyramid_step == 1)
+        {
+            th_HG = 500;// - 100*iteration;
+            if(th_HG < 100)
+                th_HG = 100;
+        }
+        else if(pyramid_step == 0)
+        {
+            th_HG = 100;// - 100*iteration;
+            if(th_HG < 100)
+                th_HG = 100;
+        }
+    }
+    
+    printf("BufferOfHeight = %f\tth_HG = %f\n",BufferOfHeight,th_HG);
     
     m_bHeight       = (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
     
-    double sum_MinH = 0;
-    double sum_MaxH = 0;
-    double sum_H = 0;
-    double sum_angle = 0;
-    int count_4 = 0;
-    int count_2 = 0;
-    int count_1 = 0;
-    double sum_tmp_minZ = 0;
-    double sum_tmp_maxZ = 0;
+    double *NewHeight = (double*)malloc(sizeof(double)*TIN_Grid_Size_X*TIN_Grid_Size_Y);
     
-    char save_file[500];
-    sprintf(save_file,"%s/txt/height_print.txt",save_path);
-    FILE* fid         = fopen(save_file,"w");
+#pragma omp parallel for schedule(guided)
+    for (int counter = 0; counter < TIN_Grid_Size_X*TIN_Grid_Size_Y; counter++)
+        NewHeight[counter]          = -1000.0;
     
 //  #pragma omp parallel shared(GridPT3,pts,tris,num_triangles,m_bHeight,pyramid_step,iteration,gridspace,boundary,gridsize,TIN_Grid_Size_X,TIN_Grid_Size_Y,DEM_error) private(tcnt)
     {
 //      #pragma omp for
-        //for(tcnt=1481;tcnt<1482/*(int)(num_triangles)*/;tcnt++)
         for(tcnt=0;tcnt<(int)(num_triangles);tcnt++)
         {
             UI3DPOINT t_tri;
@@ -15738,7 +15530,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                 
                 norm  = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
                 angle = acos(fabs(N[2])/norm)*180/3.141592;
-                angle = (int)(angle);
                 
                 if(angle <= 0 && angle >= -90)
                     angle = fabs(angle);
@@ -15746,8 +15537,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                     angle = 360 + angle;
                 else if(angle >= 270 && angle <= 360)
                     angle = 360 - angle;
-                
-                sum_angle += angle;
                 
                 double angle_weight;
                 /*if(angle <= 5)
@@ -15760,9 +15549,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                 temp_MinZ = min(min(TriP1[2],TriP2[2]),TriP3[2]);
                 temp_MaxZ = max(max(TriP1[2],TriP2[2]),TriP3[2]);
                 
-                sum_tmp_minZ += temp_MinZ;
-                sum_tmp_maxZ += temp_MaxZ;
-                
                 if(temp_MinZ < Total_Min_Z)
                     Total_Min_Z = temp_MinZ;
                 if(temp_MaxZ > Total_Max_Z)
@@ -15773,12 +15559,10 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                 double BF;
 
                 if(pyramid_step >= 3)
-                    BF = BufferOfHeight*angle_weight;
+                    BF = ceil(BufferOfHeight*angle_weight);
                 else
-                    BF = BufferOfHeight;
+                    BF = ceil(BufferOfHeight);
                 
-                BF = SignficantDigit(BF);
-                //printf("BF %f\n",BF);
                 // calculation on BoundingBox(MinMax XY) of triangle
                 TriMinXY[0] = min(min(TriP1[0],TriP2[0]),TriP3[0]);
                 TriMinXY[1] = min(min(TriP1[1],TriP2[1]),TriP3[1]);
@@ -15818,19 +15602,19 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                             int t_col_count = 0;
                             int t_row_count = 0;
                             
-                            CurGPXY[0]  = (Col)*gridspace + boundary[0]- boundary[0];
-                            CurGPXY[1]  = (Row)*gridspace + boundary[1]- boundary[1];
+                            CurGPXY[0]  = (Col)*gridspace + boundary[0];
+                            CurGPXY[1]  = (Row)*gridspace + boundary[1];
                             
-                            _p1[0]      = TriP1[0] - boundary[0];
-                            _p1[1]      = TriP1[1] - boundary[1];
+                            _p1[0]      = TriP1[0];
+                            _p1[1]      = TriP1[1];
                             _p1[2]      = TriP1[2];
                             
-                            _p2[0]      = TriP2[0] - boundary[0];
-                            _p2[1]      = TriP2[1] - boundary[1];
+                            _p2[0]      = TriP2[0];
+                            _p2[1]      = TriP2[1];
                             _p2[2]      = TriP2[2];
                             
-                            _p3[0]      = TriP3[0] - boundary[0];
-                            _p3[1]      = TriP3[1] - boundary[1];
+                            _p3[0]      = TriP3[0];
+                            _p3[1]      = TriP3[1];
                             _p3[2]      = TriP3[2];
                             
                             v12[0]      = _p2[0]-_p1[0];
@@ -15886,15 +15670,11 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                                     A = Normal[0];
                                     B = Normal[1];
                                     C = Normal[2];
-                                    //C = SignficantDigit(C);
-                                    
                                     D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
                                     
                                     if(C != 0)
                                     {
                                         Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
-                                        //Z = SignficantDigit(Z);
-                                        
                                         rtn = true;
                                     }
                                     else
@@ -15936,61 +15716,47 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                                 }
                                 
                                 m_bHeight[Index] = 1;
-                                GridPT3[Index].Height = Z; 
-                                sum_H += GridPT3[Index].Height;
+                                GridPT3[Index].Height = Z;
+                                NewHeight[Index] = GridPT3[Index].Height;
                                 
                                 double ortho_ncc_th;
                                 if(pyramid_step == 4 )
-                                    ortho_ncc_th = 0.69999;
+                                    ortho_ncc_th = 0.7;
                                 else if(pyramid_step == 3)
-                                    ortho_ncc_th = 0.59999 - (iteration - 1)*0.02;
+                                    ortho_ncc_th = 0.6 - (iteration - 1)*0.02;
                                 else if(pyramid_step == 2)
-                                    ortho_ncc_th = 0.49999 - (iteration - 1)*0.02;
+                                    ortho_ncc_th = 0.5 - (iteration - 1)*0.02;
                                 else if(pyramid_step == 1)
-                                    ortho_ncc_th = 0.39999;
+                                    ortho_ncc_th = 0.4;
                                 else
-                                    ortho_ncc_th = 0.29999;
+                                    ortho_ncc_th = 0.3;
                                 
-                                if(ortho_ncc_th < 0.29999)
-                                    ortho_ncc_th = 0.29999;
+                                if(ortho_ncc_th < 0.3)
+                                    ortho_ncc_th = 0.3;
 
                                 //min, max height setting
-                                t1       = (min(temp_MinZ, Z));
+                                t1       = min(temp_MinZ, Z);
                                 if(GridPT3[Index].Matched_flag == 4) //extension minHeight
                                 {
-                                    count_4++;
                                     if(t1 - BF <= GridPT3[Index].minHeight)
-                                    {
                                         GridPT3[Index].minHeight   = t1 - BF;
-                                        //GridPT3[Index].minHeight   = (int)GridPT3[Index].minHeight;
-                                    }
                                 }
                                 else
                                 {
-                                    count_1++;
                                     //reduce minHeight
                                     GridPT3[Index].minHeight   = t1 - BF;
-                                    //GridPT3[Index].minHeight   = (int)GridPT3[Index].minHeight;
                                 }
-                                //printf("t1\t%d\t%f\t%f\t%f\n",Index,t1,GridPT3[Index].minHeight,BF);
                                 
-                                t2       = (max(temp_MaxZ, Z));
+                                t2       = max(temp_MaxZ, Z);
                                 if(GridPT3[Index].Matched_flag == 4)
                                 {
-                                    count_4++;
                                     if(t2 + BF >= GridPT3[Index].maxHeight)
-                                    {
                                         GridPT3[Index].maxHeight   = t2 + BF;
-                                        //GridPT3[Index].maxHeight   = (int)GridPT3[Index].maxHeight;
-                                    }
                                 }
                                 else
                                 {
-                                    count_1++;
                                     GridPT3[Index].maxHeight   = t2 + BF;
-                                    //GridPT3[Index].maxHeight   = (int)GridPT3[Index].maxHeight;
                                 }
-                                //printf("t2\t%d\t%f\t%f\t%f\n",Index,t2,GridPT3[Index].maxHeight,BF);
                                 
                                 if(GridPT3[Index].minHeight > GridPT3[Index].maxHeight)
                                 {
@@ -15998,45 +15764,37 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                                     GridPT3[Index].minHeight = GridPT3[Index].maxHeight;
                                     GridPT3[Index].maxHeight = temp_H;
                                 }
-                                //printf("%d\t%d\t%f\t%f\t%f\n",Index,GridPT3[Index].Matched_flag,GridPT3[Index].Mean_ortho_ncc,GridPT3[Index].minHeight,GridPT3[Index].maxHeight);
                                 
                                 if(GridPT3[Index].Matched_flag == 2)
                                 {
-                                    count_2++;
                                     double mintemp, maxtemp;
                                     mintemp = Z - BF;
                                     maxtemp = Z + BF;
                                     
                                     GridPT3[Index].minHeight = mintemp;
                                     GridPT3[Index].maxHeight = maxtemp;
-                                    
-                                    //printf("%d\t%f\t%f\n",Index,GridPT3[Index].minHeight,GridPT3[Index].maxHeight);
-                                    
-                                    //GridPT3[Index].minHeight   = (int)GridPT3[Index].minHeight;
-                                    //GridPT3[Index].maxHeight   = (int)GridPT3[Index].maxHeight;
                                 }
                                 else
                                 {
-                                    count_1++;
                                     GridPT3[Index].Matched_flag = 1;
                                     if(GridPT3[Index].Mean_ortho_ncc > ortho_ncc_th)
                                     {
                                         
                                         GridPT3[Index].minHeight = Z - BF;
                                         GridPT3[Index].maxHeight = Z + BF;
-                                        
-                                        //printf("%d\t%f\t%f\n",Index,GridPT3[Index].minHeight,GridPT3[Index].maxHeight);
-                                        
-                                        //GridPT3[Index].minHeight   = (int)GridPT3[Index].minHeight;
-                                        //GridPT3[Index].maxHeight   = (int)GridPT3[Index].maxHeight;
                                     }
                                 }
                                 
-                                GridPT3[Index].minHeight = SignficantDigit_height(GridPT3[Index].minHeight);
-                                GridPT3[Index].maxHeight = SignficantDigit_height(GridPT3[Index].maxHeight);
-                                fprintf(fid,"%d\t%d\t%f\t%f\t%f\n",tcnt,Index,GridPT3[Index].minHeight,GridPT3[Index].maxHeight,GridPT3[Index].Height);
-                                sum_MinH += GridPT3[Index].minHeight;
-                                sum_MaxH += GridPT3[Index].maxHeight;
+                                GridPT3[Index].minHeight = floor(GridPT3[Index].minHeight);
+                                GridPT3[Index].maxHeight = ceil(GridPT3[Index].maxHeight);
+                                
+                                double HeightGap = ((GridPT3[Index].maxHeight - GridPT3[Index].minHeight));
+                                if(HeightGap > th_HG)
+                                {
+                                    GridPT3[Index].minHeight = -100.0;
+                                    GridPT3[Index].maxHeight = -100.0;
+                                    //GridPT3[Index].maxHeight = GridPT3[Index].minHeight;
+                                }
                             }
                         }
                     }
@@ -16044,12 +15802,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
             }
         }
     }
-    fclose(fid);
-    printf("SetHeight1 minmaxDH %f\t%f\t%f\t%f\t%d\t%d\t%d\t%f\t%f\n",sum_MinH,sum_MaxH,sum_H,sum_angle,count_4,count_2,count_1,sum_tmp_minZ,sum_tmp_maxZ);
-    
-    sum_MinH = 0;
-    sum_MaxH = 0;
-    
+
     *minH_grid  = 100000.0;
     *maxH_grid  = -100000.0;
     
@@ -16057,14 +15810,19 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
     double maxH_temp = *maxH_grid;
 
     UGRID *GridPT3_temp = (UGRID*)malloc(sizeof(UGRID)*TIN_Grid_Size_X*TIN_Grid_Size_Y);
+#pragma omp parallel for schedule(guided)
     for (int counter = 0; counter < TIN_Grid_Size_X*TIN_Grid_Size_Y; counter++)
     {
-      GridPT3_temp[counter] = GridPT3[counter];
+        GridPT3[counter].Height = NewHeight[counter];
+        GridPT3_temp[counter] = GridPT3[counter];
+        
     }
     
+    free(NewHeight);
+    
     // minmaxheight setup for no matched grids
-#pragma omp parallel for private(Col_C,Row_R) reduction(max:maxH_temp) reduction(min:minH_temp) reduction(+:sum_MinH,sum_MaxH)
-    for (Row_R=0; Row_R < (int)(TIN_Grid_Size_Y); Row_R++)
+#pragma omp parallel for shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,m_bHeight,Total_Min_Z,Total_Max_Z,minH_grid,maxH_grid) private(Col_C,Row_R) reduction(max:maxH_temp) reduction(min:minH_temp)
+        for (Row_R=0; Row_R < (int)(TIN_Grid_Size_Y); Row_R++)
     {
         for (Col_C=0; Col_C < (int)(TIN_Grid_Size_X); Col_C++)
         {
@@ -16137,23 +15895,19 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
                     maxH_temp   = GridPT3[Index].maxHeight;
             }
             
-            GridPT3[Index].minHeight = SignficantDigit_height(GridPT3[Index].minHeight);
-            GridPT3[Index].maxHeight = SignficantDigit_height(GridPT3[Index].maxHeight);
+            GridPT3[Index].minHeight = floor(GridPT3[Index].minHeight);
+            GridPT3[Index].maxHeight = ceil(GridPT3[Index].maxHeight);
             
-            sum_MinH += GridPT3[Index].minHeight;
-            sum_MaxH += GridPT3[Index].maxHeight;
+            double HeightGap = ((GridPT3[Index].maxHeight - GridPT3[Index].minHeight));
+            if(HeightGap > th_HG)
+            {
+                GridPT3[Index].minHeight = -100.0;
+                GridPT3[Index].maxHeight = -100.0;
+                //GridPT3[Index].maxHeight = GridPT3[Index].minHeight;
+            }
         }
     }
 
-    printf("SetHeight2 minmaxDH %f\t%f\n",sum_MinH,sum_MaxH);
-    
-    double sum_roh = 0;
-    double sum_Matched_flag = 0;
-    double sum_Height = 0;
-    double sum_Mean_ortho_ncc = 0;
-    double sum_minHeight = 0;
-    double sum_maxHeight = 0;
-    
     *minH_grid = minH_temp;
     *maxH_grid = maxH_temp;
 
@@ -16165,7 +15919,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
     
     result                  = (UGRID*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(UGRID));
     
-#pragma omp parallel for private(k,j) reduction(+:sum_roh,sum_Matched_flag,sum_Height,sum_Mean_ortho_ncc,sum_minHeight,sum_maxHeight)
+#pragma omp parallel for shared(TIN_Grid_Size_X,TIN_Grid_Size_Y,GridPT3,result,m_bHeight,Total_Min_Z,Total_Max_Z) private(k,j)
     for(k=0;k<(int)(TIN_Grid_Size_Y);k++)
     {
         for(j=0;j<(int)(TIN_Grid_Size_X);j++)
@@ -16209,14 +15963,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
             
 //          result[matlab_index].false_h_count  = 0;
             
-            
-            sum_roh += result[matlab_index].roh;
-            sum_Matched_flag += result[matlab_index].Matched_flag;
-            sum_Height += result[matlab_index].Height;
-            sum_Mean_ortho_ncc += result[matlab_index].Mean_ortho_ncc;
-            sum_minHeight += result[matlab_index].minHeight;
-            sum_maxHeight += result[matlab_index].maxHeight;
-            
             if(pyramid_step >= 2)
             {
                 if(!check_level_end)
@@ -16255,7 +16001,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, bool pre_DEMtif, double* minmaxHeight,in
     if(m_bHeight)
         free(m_bHeight);
     
-    printf("end updating grid set height!!\t%f\t%f\t%f\t%f\t%f\t%f\n",sum_roh,sum_Matched_flag,sum_Height,sum_Mean_ortho_ncc,sum_minHeight,sum_maxHeight);
+    printf("end updating grid set height!!\n");
     
     free(GridPT3);
     
@@ -16399,6 +16145,8 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
     uint8* m_bHeight;
     double Total_Min_Z      =  100000;
     double Total_Max_Z      = -100000;
+    double meters_per_pixel= 2.0;
+    double DEM_error        = meters_per_pixel*2;
     int Col_C, Row_R;
     
     num_triangles=numOfTri;
@@ -16413,7 +16161,6 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
     
     m_bHeight       = (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
     
-    double sum_IH = 0;
     //#pragma omp parallel shared(Total_Min_Z,Total_Max_Z,GridPT3,pts,tris,num_triangles,m_bHeight,pyramid_step,gridspace,boundary,TIN_Grid_Size_X,TIN_Grid_Size_Y,DEM_error) private(tcnt)
     {
         //#pragma omp for
@@ -16506,24 +16253,20 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
                             int t_col_count = 0;
                             int t_row_count = 0;
                             
-                            CurGPXY[0]  = (Col)*gridspace + boundary[0] - boundary[0];
-                            CurGPXY[1]  = (Row)*gridspace + boundary[1] - boundary[1];
+                            CurGPXY[0]  = (Col)*gridspace + boundary[0];
+                            CurGPXY[1]  = (Row)*gridspace + boundary[1];
                             
-                            _p1[0]      = TriP1[0] - boundary[0];
-                            _p1[1]      = TriP1[1] - boundary[1];
+                            _p1[0]      = TriP1[0];
+                            _p1[1]      = TriP1[1];
                             _p1[2]      = TriP1[2];
                             
-                            _p2[0]      = TriP2[0] - boundary[0];
-                            _p2[1]      = TriP2[1] - boundary[1];
+                            _p2[0]      = TriP2[0];
+                            _p2[1]      = TriP2[1];
                             _p2[2]      = TriP2[2];
                             
-                            _p3[0]      = TriP3[0] - boundary[0];
-                            _p3[1]      = TriP3[1] - boundary[1];
+                            _p3[0]      = TriP3[0];
+                            _p3[1]      = TriP3[1];
                             _p3[2]      = TriP3[2];
-                            
-                            //printf("tin %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",CurGPXY[0],CurGPXY[1],_p1[0],_p1[1],_p1[2],_p2[0],_p2[1],_p2[2],_p3[0],_p3[1],_p3[2]);
-
-                            //exit(1);
                             
                             v12[0]      = _p2[0]-_p1[0];
                             v12[1]      = _p2[1]-_p1[1];
@@ -16578,18 +16321,11 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
                                     A = Normal[0];
                                     B = Normal[1];
                                     C = Normal[2];
-                                    /*
-                                    A = SignficantDigit(A);
-                                    B = SignficantDigit(B);
-                                    C = SignficantDigit(C);
-                                    */
                                     D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
-                                    //D = SignficantDigit(D);
                                     
                                     if(C != 0)
                                     {
                                         Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
-                                        Z = SignficantDigit(Z);
                                         rtn = true;
                                     }
                                     else
@@ -16602,8 +16338,6 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
                                 double t1,t2;
                                 m_bHeight[Index] = 1;
                                 GridPT3[Index].Height = Z;
-                                //printf("Z %f\t%f\n",GridPT3[Index].Height,Z);
-                                sum_IH += GridPT3[Index].Height;
                                 
                                 //GridPT3[Index].t_minHeight = temp_MinZ;
                                 //GridPT3[Index].t_maxHeight = temp_MaxZ;
@@ -16620,12 +16354,11 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
     mt_minmaxheight[0] = Total_Min_Z;
     mt_minmaxheight[1] = Total_Max_Z;
     
-    printf("setheight %f\t%f\t%f\n",sum_IH,mt_minmaxheight[0],mt_minmaxheight[1]);
     
     return true;
 }
 
-void echoprint_Gridinfo(ProInfo *proinfo,char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str)
+void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str)
 {
     FILE *outfile_h,*outfile_min, *outfile_max,   *outfile_flag, *outMean_ortho;
     CSize temp_S;
@@ -16671,14 +16404,26 @@ void echoprint_Gridinfo(ProInfo *proinfo,char *save_path,int row,int col,int lev
                 int matlab_index    = k*temp_S.width + j;
 
                 //fprintf(outfile_min,"%f\t",GridPT3[matlab_index].minHeight);
-                //fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight);
+                //fprintf(outfile_max,"%f\t",GridPT3[matlab_index].maxHeight - GridPT3[matlab_index].minHeight);
                 //if(GridPT3[matlab_index].Matched_flag != 0)
-                fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
+                //if(roh_height[matlab_index].NumOfHeight > 0)
+                {
+                    fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
+                    fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
                 
-                for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
-                    fprintf(outfile_roh[ti],"%f\t",GridPT3[matlab_index].ortho_ncc[ti]);
-                /*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
+                    for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+                        fprintf(outfile_roh[ti],"%f\t",GridPT3[matlab_index].ortho_ncc[ti]);
+                    /*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
+                }/*
+                else
+                {
+                    fprintf(outfile_h,"-1000.0\t");
+                    fprintf(outMean_ortho,"-1.0\t");
+                    
+                    for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
+                        fprintf(outfile_roh[ti],"-1.0\t");
+                }
+                  */
             }
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
@@ -17050,7 +16795,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
             int grid_index;
 
             if(rotate_flag == 1)
-                rot_theta = SignficantDigit((double)(diff_theta*bin_angle*PI/180.0));
+                rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
             
             
             for(row = -Half_template_size; row <= Half_template_size ; row++)
@@ -17316,7 +17061,7 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
 }
 
 bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, double **imageparam, D2DPOINT *Startpos,
-                          D2DPOINT pos_xy_m, D2DPOINT pos_xy, double minH, double maxH, CSize **sizes, int H_template_size, int pyramid_step)
+                          D2DPOINT pos_xy_m, D2DPOINT pos_xy, double minH, double maxH, CSize *Imagesizes_ori, CSize **sizes, int H_template_size, int pyramid_step)
 {
     bool check = true;
 
@@ -17327,6 +17072,7 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
     D2DPOINT temp;
     double Imageparam_ref[2] = {0.0};
 
+    //int buff_pixel = 1*pow(2,pyramid_step);
     int buff_pixel = 1;
     bool check_reference = true;
     
@@ -17353,11 +17099,18 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
             temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
             
             if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
-               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height - H_template_size -buff_pixel)
+               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height- H_template_size -buff_pixel)
                 bleft_s     = true;
             else
                 bleft_s     = false;
-            
+
+            /*
+            if(temp.m_X > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_X < Imagesizes_ori[ti].width - H_template_size*pow(2,pyramid_step) -buff_pixel &&
+               temp.m_Y > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_Y < Imagesizes_ori[ti].height - H_template_size*pow(2,pyramid_step) -buff_pixel)
+                bleft_s     = true;
+            else
+                bleft_s     = false;
+            */
             
             //max height
             temp_gp.m_Z = maxH;
@@ -17378,11 +17131,17 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
             temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
             
             if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
-               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height - H_template_size -buff_pixel)
+               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height- H_template_size -buff_pixel)
+                bleft_e     = true;
+            else
+                bleft_e     = false;
+            /*
+            if(temp.m_X > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_X < Imagesizes_ori[ti].width - H_template_size*pow(2,pyramid_step) -buff_pixel &&
+               temp.m_Y > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_Y < Imagesizes_ori[ti].height - H_template_size*pow(2,pyramid_step) -buff_pixel)
                 bleft_e     = true;
             else 
                 bleft_e     = false;
-            
+            */
             if( bleft_s && bleft_e)
                 selected_images++;
             else if(ti == 0)
@@ -17527,8 +17286,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                             double t_boundary[4];
                             fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
                                    &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
-                            printf("%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,t_col_size,t_row_size);
-			    if(iter == header_line-1)
+                            if(iter == header_line-1)
                             {
                                 grid_size = t_grid_size;
                                 t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
@@ -17561,6 +17319,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
         printf("No matched tiles. Please check overlapped area or image quality!!\n");
         exit(1);
     }
+    
 /*
     boundary[0] = (int)(boundary[0]/40.0)*40 - 40;
     boundary[1] = (int)(boundary[1]/40.0)*40 - 40;
@@ -17682,7 +17441,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                                        iter_row > buffer && iter_row < row_size - buffer &&
                                        iter_col > buffer && iter_col < col_size - buffer)
                                     {
-                                        if(DEM_value > -1000 && DEM_value != 0)
+                                        if(DEM_value > -1000)// && DEM_value != 0)
                                             DEM[index] = DEM_value;
                                         
                                         DEM_ortho[index] = ortho_value;
@@ -18157,7 +17916,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             }
         }
     }
-     
+    //IDW Interpolation
     if(total_search_count > 0 && !check_Matchtag)
     {
 #pragma omp parallel for schedule(guided)
@@ -18367,6 +18126,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                 double sum_ortho;
                 
                 int count_low_cell = 0;
+                int count_island_points = 0;
                 
                 row = (int)(floor(index/col_count));
                 col = index%col_count;
@@ -18386,7 +18146,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                             
                             if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
                             {
-                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
+                                if(value_pt[t_index] == 0)
                                 {
                                     sum_ortho += value_orthoncc[t_index];
                                     count_cell++;
@@ -18396,6 +18156,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                         count_low_cell++;
                                     }
                                 }
+                                /*
+                                //DEM island points removeal
+                                if(value_pt[t_index] == 0 && value[t_index] <= -1000)
+                                    count_island_points++;
+                                 */
                             }
                         }
                     }
@@ -18408,6 +18173,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                         
                         count_null_cell ++;
                     }
+                    /*
+                    //DEM island points removeal
+                    if (count_island_points >= total_size*0.5)
+                        value[(long)row*(long)col_count + (long)col] = -9999;
+                     */
                 }
             }
             
@@ -18452,6 +18222,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                     
                     long count_cell;
                     long count_all_cell = 0;
+                    int count_island_points = 0;
                     int t_i, t_j;
                     double sum_h;
                     double sum_ortho;
@@ -18481,14 +18252,16 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                 
                                 if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
                                 {
-                                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
+                                    if(value_pt[t_index] == 1 && value_orthoncc[t_index] > 0.0)
                                     {
-                                
-                                        
                                         sum_ortho += value_orthoncc[t_index];
-                                        
                                         count_cell++;
                                     }
+                                    /*
+                                    //DEM island points removeal
+                                    if(value_pt[t_index] == 0 && value[t_index] <= -1000)
+                                        count_island_points++;
+                                     */
                                 }
                             }
                         }
@@ -18501,6 +18274,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                             
                             count_null_cell ++;
                         }
+                        /*
+                        //DEM island points removeal
+                        if (count_island_points >= total_size*0.5)
+                            value[(long)row*(long)col_count + (long)col] = -9999;
+                         */
                     }
                 }
                 memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
@@ -18514,11 +18292,81 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     
     printf("end last iteration\n");
     
-    free(t_value);
+    
     free(t_value_orthoncc);
     free(t_value_pt);
     
     printf("end null\n");
+    
+    /*
+    //DEM boundary filter
+    printf("DEM boundary filter\n");
+    
+    iter_check = 0;
+    check_size = 30;
+    max_total_iteration = 100;
+    
+    //for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+    {
+        check_while = 0;
+
+        int total_size = (2*check_size+1)*(2*check_size+1);
+        while(check_while == 0 && iter_check < max_total_iteration)
+        {
+            iter_check ++;
+            
+            int count_cell = 0;
+            
+#pragma omp parallel for schedule(guided) reduction(+:count_cell)
+            for (long index = 0; index < col_count*row_count; index++)
+            {
+                int row, col;
+                int t_i, t_j;
+                int count_island_points = 0;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+                
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -1000)
+                {
+                    for (t_i = -check_size; t_i <= check_size;t_i++ )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j++)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
+                            {
+                                 //DEM island points removeal
+                                 if(value_pt[t_index] == 0 && value_orthoncc[t_index] < 0 )
+                                     count_island_points++;
+                            }
+                        }
+                    }
+                    
+                     //DEM island points removeal
+                     if (count_island_points >= total_size*0.5)
+                     {
+                         t_value[(long)row*(long)col_count + (long)col] = -9999;
+                         count_cell++;
+                     }
+                }
+            }
+            
+            printf("DEM boundary filter %d\t%d\t%d\n",check_size,iter_check,count_cell);
+            
+            if(count_cell == 0)
+                check_while = 1;
+            
+            memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+        }
+    }
+*/
+    free(t_value);
+    
     
     //smoothing
     float *value_sm = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
