@@ -1,3 +1,6 @@
+#ifndef SETSM_CODE_H
+#define SETSM_CODE_H
+
 /*
  * Copyright 2017 Myoung-Jong Noh
  *
@@ -24,7 +27,7 @@
  * Algorithmica 2, 153-174.
  */
 
-#include "Typedefine.h"
+#include "Typedefine.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -280,3 +283,4 @@ D2DPOINT ImageToPhoto_single(D2DPOINT _image, float _CCDSize, CSize _imgsize);
 bool OpenDMCproject(char* project_path,ProInfo *proinfo, ARGINFO args);
 void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundary, double* _minmaxheight, double* _Hinterval);
 bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double gridspace, CSize DEM_size, double minX, double maxY, double Ortho_resolution, EO Photo, CAMERA_INFO m_Camera, RM M);
+#endif // SETSM_CODE_H

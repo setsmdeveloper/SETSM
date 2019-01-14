@@ -7,7 +7,7 @@ Algorithmica 2, 153-174. */
 
 /*** VORONOI.C ***/
 
-#include "voronoi_setsm.h"
+#include "voronoi_setsm.hpp"
 #include "math.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +30,6 @@ int PQmin, PQcount, PQhashsize ;
 Halfedge * PQhash ;
 
 //memory
-int siteidx ;
 char** memory_map;
 int nallocs = 0;
 
@@ -188,12 +187,12 @@ HEcreate(Edge * e, int pm)
 }
 
 void
-ELinsert(Halfedge * lb, Halfedge * new)
+ELinsert(Halfedge * lb, Halfedge * newedge)
 {
-	new->ELleft = lb ;
-	new->ELright = lb->ELright ;
-	(lb->ELright)->ELleft = new ;
-	lb->ELright = new ;
+	newedge->ELleft = lb ;
+	newedge->ELright = lb->ELright ;
+	(lb->ELright)->ELleft = newedge ;
+	lb->ELright = newedge ;
 }
 
 /* Get entry from hash table, pruning any deleted nodes */

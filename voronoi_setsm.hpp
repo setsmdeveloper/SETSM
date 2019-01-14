@@ -8,7 +8,7 @@ Algorithmica 2, 153-174. */
 #ifndef __VORONOI_H
 #define __VORONOI_H
 
-#include "Typedefine.h"
+#include "Typedefine.hpp"
 #include "tiff.h"
 #ifndef NULL
 #define NULL 0
@@ -67,6 +67,10 @@ typedef struct tagHalfedge
     double ystar ;
     struct tagHalfedge * PQnext ;
     } Halfedge ;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* edgelist.c */
 void ELinitialize(void) ;
@@ -129,6 +133,10 @@ void clip_line(Edge *) ;
 
 /* voronoi.c */
 void voronoi(Site *(*)(void),UI3DPOINT*, int*) ;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  
 

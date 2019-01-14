@@ -1,4 +1,4 @@
-#include "setsmgeo.h"
+#include "setsmgeo.hpp"
 #include <stdint.h>
 
 #define FLOAT 4
@@ -8,7 +8,7 @@
 #define N(a) (sizeof(a) / sizeof(a[0]))
 #define GDAL_NODATA 42113
 static const TIFFFieldInfo xtiffFieldInfo[] = {
-    { GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, "GDAL_NODATA" }
+    { GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDAL_NODATA" }
 };
 
 #define STRIP_SIZE_DEFAULT 8192

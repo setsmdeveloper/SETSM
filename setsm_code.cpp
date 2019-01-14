@@ -24,14 +24,14 @@
  * Algorithmica 2, 153-174.
  */
 
-#include "setsm_code.h"
+#include "setsm_code.hpp"
 
 #ifdef TRILIBRARY
 #define REAL double
 #include "triangle.h"
 #else
 #define VLIBRARY
-#include "voronoi_setsm.h"
+#include "voronoi_setsm.hpp"
 #endif
 
 #include "math.h"
@@ -40,7 +40,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
-#include "setsmgeo.h"
+#include "setsmgeo.hpp"
 #ifdef BUILDMPI
 #include "mpi.h"
 #endif
@@ -87,7 +87,7 @@ int main(int argc,char *argv[])
     
     setbuf(stdout, NULL);
     TIFFSetWarningHandler(NULL);
-    char* projectfilename   = "default.txt";
+    char* projectfilename   = (char*)"default.txt";
     int i=0;
     char* image1_name = NULL;
     char* image2_name = NULL;
@@ -916,7 +916,7 @@ int main(int argc,char *argv[])
                             Metafile[full_size-8] = '\0';
                             
                             printf("%s\n",Metafile);
-                            char *str = "meta.txt";
+                            char *str = (char*)"meta.txt";
                             
                             sprintf(args.metafilename,"%s_%s",Metafile,str);
                             printf("Meta file %s\n",args.metafilename);
@@ -1807,7 +1807,7 @@ void SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, 
                             char str_rafile_1[500];
                             char *fullseeddir   = NULL;
                             char *lastSlash = NULL;
-                            lastSlash   = malloc(strlen(args.seedDEMfilename) + 1);
+                            lastSlash   = (char*)malloc(strlen(args.seedDEMfilename) + 1);
                             strcpy(lastSlash, args.seedDEMfilename);
                             fullseeddir = dirname(lastSlash);
                             
@@ -3159,7 +3159,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     
                                     if(!proinfo->IsRA)
                                     {
-                                        echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
+                                        echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"final");
                                     }
                                     free(ptslists);
                                     
@@ -5133,7 +5133,7 @@ char* remove_ext(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');
@@ -13746,7 +13746,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     printf("blunder detection end\tblunder_dh = %f\n",blunder_dh);
 
                     if(count > 0)
-                        count_blunders = abs(blunder_count[1] - pre_count_blunder);
+                        count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
                     else
                         count_blunders = blunder_count[1];
                         
@@ -14271,7 +14271,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         num_points  = numOfPts;
         //savenode      = (uint32**)calloc(num_points,sizeof(uint32*));
         //make savenode a giant array with row size max_nodes
-        savenode = malloc((long)sizeof(uint32)*(long)max_nodes*(long)num_points);
+        savenode = (uint32*)malloc((long)sizeof(uint32)*(long)max_nodes*(long)num_points);
         nodecount       = (uint32*)calloc(num_points,sizeof(uint32));
         hdiffbin      = (uint32*)calloc(hdiffcount+1,sizeof(uint32));
         i = 0;
@@ -20213,7 +20213,7 @@ char* remove_ext_ortho(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');

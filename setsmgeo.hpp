@@ -3,7 +3,7 @@
 
 #include "geotiffio.h"
 #include "xtiffio.h"
-#include "Typedefine.h"
+#include "Typedefine.hpp"
 
 int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, double minX, double maxY, int data_type);
 int SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere);
