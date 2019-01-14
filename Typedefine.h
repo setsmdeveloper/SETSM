@@ -332,7 +332,7 @@ typedef struct ArgumentInfo{
     bool check_LSF;
     bool check_LSF_DEM;
     bool check_LSFDEMpath;
-    bool check_LSF2;
+    int check_LSF2;
     bool check_Matchtag;
     bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_EO;
