@@ -2878,10 +2878,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         int pre_matched_pts=10;
                         double matching_change_rate = 100;
                         double rate_th = 0.00999999;
-                        int max_iteration = 10 - (4 - level)*2;
-                        if(max_iteration < 3)
-                            max_iteration = 3;
-                        
+                        int max_iteration = 9;
                         
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
@@ -3192,7 +3189,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
                                             }
                                             
-                                            if(maxX_ptslists < ptslists[i].m_X)
+                                            /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
                                             if(maxY_ptslists < ptslists[i].m_Y)
                                                 maxY_ptslists = ptslists[i].m_Y;
@@ -3200,12 +3197,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 minX_ptslists = ptslists[i].m_X;
                                             if(minY_ptslists > ptslists[i].m_Y)
                                                 minY_ptslists = ptslists[i].m_Y;
-                                            
+                                            */
                                             i++;
                                         }
                                         
                                         fclose(survey);
-                                        double min_max[4] = {minX_ptslists, minY_ptslists, maxX_ptslists, maxY_ptslists};
+                                        double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
@@ -3291,7 +3288,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                         {
-                                            if(maxX_ptslists < ptslists[i].m_X)
+                                            /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
                                             if(maxY_ptslists < ptslists[i].m_Y)
                                                 maxY_ptslists = ptslists[i].m_Y;
@@ -3299,11 +3296,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 minX_ptslists = ptslists[i].m_X;
                                             if(minY_ptslists > ptslists[i].m_Y)
                                                 minY_ptslists = ptslists[i].m_Y;
-                                            
+                                            */
                                             i++;
                                         }
                                         fclose(survey);
-                                        double min_max2[4] = {minX_ptslists,minY_ptslists,maxX_ptslists,maxY_ptslists};
+                                        double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
                                         {
@@ -3352,7 +3349,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_MPs;
                                         
-                                        if(iteration > 9)
+                                        if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
                                         
                                         if(level == 0)
@@ -3365,7 +3362,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level <= 1)
                                         {
-                                            if(iteration >= 5)
+                                            if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
                                         
@@ -3499,7 +3496,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
-                                            if(maxX_ptslists < ptslists[i].m_X)
+                                            /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
                                             if(maxY_ptslists < ptslists[i].m_Y)
                                                 maxY_ptslists = ptslists[i].m_Y;
@@ -3507,14 +3504,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 minX_ptslists = ptslists[i].m_X;
                                             if(minY_ptslists > ptslists[i].m_Y)
                                                 minY_ptslists = ptslists[i].m_Y;
-                                            
+                                            */
                                             i++;
                                         }
                                         fclose(survey);
                                         
                                         UI3DPOINT *trilists;
                                         
-                                        double min_max[4] = {minX_ptslists, minY_ptslists, maxX_ptslists, maxY_ptslists};
+                                        double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
                                         {
@@ -3552,7 +3549,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_results[0];
                                         
-                                        if(iteration > 9)
+                                        if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
                                         
                                         if(level == 0)
@@ -3565,7 +3562,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level <= 1)
                                         {
-                                            if(iteration >= 5)
+                                            if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
                                     
@@ -5037,6 +5034,9 @@ D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_
                 }
             }
         }
+        //full computation
+        //*py_resolution   = (double)(resolution*pow(2,level));
+        //*grid_resolution = *py_resolution;
         
         if(*py_resolution < DEM_resolution)
             *py_resolution = DEM_resolution;
@@ -5078,8 +5078,8 @@ UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool 
             GridPT3[i].angle            = 0;
 //          GridPT3[i].false_h_count    = 0;
 
-            GridPT3[i].minHeight        = (double)(minmaxHeight[0] - 0.5);
-            GridPT3[i].maxHeight        = (double)(minmaxHeight[1] + 0.5);
+            GridPT3[i].minHeight        = (int)(minmaxHeight[0] - 0.5);
+            GridPT3[i].maxHeight        = (int)(minmaxHeight[1] + 0.5);
             GridPT3[i].Height           = -1000.0;
         }
         if(proinfo->pre_DEMtif)
@@ -13664,14 +13664,14 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             D3DPOINT *ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
             
             
-            double maxX_ptslists = -100000000;
-            double maxY_ptslists = -100000000;
-            double minX_ptslists =  100000000;
-            double minY_ptslists =  100000000;
+            //double maxX_ptslists = -100000000;
+            //double maxY_ptslists = -100000000;
+            //double minX_ptslists =  100000000;
+            //double minY_ptslists =  100000000;
             
             while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
             {
-                if(maxX_ptslists < ptslists[i].m_X)
+                /*if(maxX_ptslists < ptslists[i].m_X)
                     maxX_ptslists = ptslists[i].m_X;
                 if(maxY_ptslists < ptslists[i].m_Y)
                     maxY_ptslists = ptslists[i].m_Y;
@@ -13679,10 +13679,10 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     minX_ptslists = ptslists[i].m_X;
                 if(minY_ptslists > ptslists[i].m_Y)
                     minY_ptslists = ptslists[i].m_Y;
-                
+                */
                 i++;
             }
-            double min_max[4] = {minX_ptslists, minY_ptslists, maxX_ptslists, maxY_ptslists};
+            double min_max[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
             if( !(Pyramid_step == 0 && iteration == 3) )
             {
                 UI3DPOINT *trilists;
@@ -14064,40 +14064,48 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
 
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri)
 {
-double minX_ptslists = min_max[0];
-double minY_ptslists = min_max[1];
-double maxX_ptslists = min_max[2];
-double maxY_ptslists = min_max[3];
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
 #ifdef VLIBRARY
     double distX_ptslists, distY_ptslists;
     double Scale_ptslists = 1000;
     Site *(*next)();
     
     *count_tri = 0;
-
-    initializeVoronoi();    
+    
+    initializeVoronoi();
     D3DPOINT *scaled_ptslists;
-
+    
     scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
-
-    distX_ptslists = maxX_ptslists - minX_ptslists;
-    distY_ptslists = maxY_ptslists - minY_ptslists;
+    
+    //distX_ptslists = maxX_ptslists - minX_ptslists;
+    //distY_ptslists = maxY_ptslists - minY_ptslists;
     for(int i=0;i<numofpts;i++)
     {
-        scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-        scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+        //scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+        //scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+        
+        scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists);
+        scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists);
+        
+        //printf("scaled_ptslists %f\t%f\n",scaled_ptslists[i].m_X,scaled_ptslists[i].m_Y);
     }
-
+    
     readsites(scaled_ptslists,numofpts);
     next = nextone;
     geominit();
     voronoi(next,trilists,&(*count_tri));
+    //printf("count tri %d\n",*count_tri);
     free(scaled_ptslists);
+    //printf("remove scaled\n");
     free_all();
-
+    //printf("remove all\n");
+    //exit(1);
 #elif TRILIBRARY
     //clock_t start = clock(), mid1, mid2, mid3, end;
-
+    
     struct triangulateio in, out;
     int x;
     double v12[2], v13[2], Normal;
@@ -14107,38 +14115,39 @@ double maxY_ptslists = min_max[3];
         *count_tri = 0;
         return;
     }
-    D3DPOINT *shifted_ptslists;
-    shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
     
-    double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
-    double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
-    for(int i=0;i<numofpts;i++)
-    {
-        shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
-        shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
-    }
-
+    /*D3DPOINT *shifted_ptslists;
+     shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
+     
+     double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
+     double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
+     for(int i=0;i<numofpts;i++)
+     {
+     shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
+     shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
+     }
+     */
     /* Define input points. */
-
+    
     in.numberofpoints = numofpts;
     in.numberofpointattributes = 0;
     in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-
-    #pragma omp parallel for private(x) schedule(guided)
+    
+#pragma omp parallel for private(x) schedule(guided)
     for (x = 0; x < numofpts; x++){
-        in.pointlist[2*x] = shifted_ptslists[x].m_X;
-        in.pointlist[2*x+1] = shifted_ptslists[x].m_Y;
+        in.pointlist[2*x] = scaled_ptslists[x].m_X;
+        in.pointlist[2*x+1] = scaled_ptslists[x].m_Y;
     }
-
+    
     in.pointattributelist = (REAL *) malloc(in.numberofpoints *
-                                          in.numberofpointattributes *
-                                          sizeof(REAL));
+                                            in.numberofpointattributes *
+                                            sizeof(REAL));
     in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
     in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));
-
+    
     /* Make necessary initializations so that Triangle can return a */
     /*   triangulation in `out'.  */
-
+    
     out.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
     /* Not needed if -N switch used or number of point attributes is zero: */
     out.pointattributelist = (REAL *) NULL;
@@ -14157,33 +14166,33 @@ double maxY_ptslists = min_max[3];
     triangulate("zQ", &in, &out, (struct triangulateio *) NULL);
     //mid2 = clock();
     /* Transfer output to trilists */
-    #pragma omp parallel for private(x) schedule(guided)
+#pragma omp parallel for private(x) schedule(guided)
     for (x = 0; x < out.numberoftriangles; x++) {
         trilists[x].m_X = (uint32)out.trianglelist[x * 3 + 0];
         trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
         trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-/*
-        pt1 = ptslists[trilists[x].m_X];
-        pt2 = ptslists[trilists[x].m_Y];
-        pt3 = ptslists[trilists[x].m_Z];
-
-        v12[0]  = pt2.m_X-pt1.m_X;
-        v12[1]  = pt2.m_Y-pt1.m_Y;
-
-        v13[0]  = pt3.m_X-pt1.m_X;
-        v13[1]  = pt3.m_Y-pt1.m_Y;
-
-        Normal = v12[0]*v13[1] - v12[1]*v13[0];
-        if (Normal > 0) {
-            trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
-            trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-        }*/
+        /*
+         pt1 = ptslists[trilists[x].m_X];
+         pt2 = ptslists[trilists[x].m_Y];
+         pt3 = ptslists[trilists[x].m_Z];
+         
+         v12[0]  = pt2.m_X-pt1.m_X;
+         v12[1]  = pt2.m_Y-pt1.m_Y;
+         
+         v13[0]  = pt3.m_X-pt1.m_X;
+         v13[1]  = pt3.m_Y-pt1.m_Y;
+         
+         Normal = v12[0]*v13[1] - v12[1]*v13[0];
+         if (Normal > 0) {
+         trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
+         trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
+         }*/
     }
     
     *count_tri = out.numberoftriangles;
     //mid3 = clock();
     /* Free all allocated arrays, including those allocated by Triangle. */
-
+    
     free(in.pointlist);
     free(in.pointattributelist);
     free(in.pointmarkerlist);
@@ -14199,20 +14208,20 @@ double maxY_ptslists = min_max[3];
     free(out.edgelist);
     free(out.edgemarkerlist);
     free(shifted_ptslists);
-
+    
     //end = clock();
-/*
-    int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
-    msec = (end - start) * 1000 / CLOCKS_PER_SEC;
-    printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
-*/
+    /*
+     int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
+     msec = (end - start) * 1000 / CLOCKS_PER_SEC;
+     printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
+     */
 #endif
 }
 
@@ -15413,7 +15422,9 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
         if (BufferOfHeight < 0.5)
             BufferOfHeight = 0.5;
     }
-
+    
+    BufferOfHeight = ceil(BufferOfHeight);
+    
     printf("BufferOfHeight = %f\n",BufferOfHeight);
     
     if(BufferOfHeight > 100)
@@ -15548,9 +15559,9 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                 double BF;
 
                 if(pyramid_step >= 3)
-                    BF = BufferOfHeight*angle_weight;
+                    BF = ceil(BufferOfHeight*angle_weight);
                 else
-                    BF = BufferOfHeight;
+                    BF = ceil(BufferOfHeight);
                 
                 // calculation on BoundingBox(MinMax XY) of triangle
                 TriMinXY[0] = min(min(TriP1[0],TriP2[0]),TriP3[0]);
