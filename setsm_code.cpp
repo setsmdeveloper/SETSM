@@ -4066,6 +4066,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     info->tile_info[0]      = '\0';
     info->priori_DEM_tif[0] = '\0';
     info->metafilename[0]   = '\0';
+    info->seedDEMsigma      = 0;
+    info->check_Matchtag    = false;
     
     FILE *limage;
     bopened = true;
@@ -8249,6 +8251,7 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
             count++;
         }
     }
+    *avg          = sum/count;
     
     for(int i=0;i<data_size.height;i++)
     {
@@ -8257,9 +8260,7 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
             residual += (out[i*data_size.width + j] - *avg)*(out[i*data_size.width + j] - *avg);
         }
     }
-    
     *val          = sqrt((double)residual/count);
-    *avg          = sum/count;
     
     return out;
 }
@@ -9217,8 +9218,8 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                 if(proinfo->DEM_resolution <= 4)
                     th_height = 1000;
                 
-                if(GridPT3[pt_index].Matched_flag == 0)
-                    h_divide = 2;
+                //if(GridPT3[pt_index].Matched_flag == 0)
+                //    h_divide = 2;
                 
                 
                 NumOfHeights = (int)((end_H -  start_H)/height_step);
