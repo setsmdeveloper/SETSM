@@ -4068,6 +4068,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     info->metafilename[0]   = '\0';
     info->seedDEMsigma      = 0;
     info->check_Matchtag    = false;
+    info->threads_num   = 0;
     
     FILE *limage;
     bopened = true;

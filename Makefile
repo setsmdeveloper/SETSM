@@ -28,7 +28,7 @@ ifeq ($(COMPILER), intel)
   CXX=icpc
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -O3 -qopenmp -xHost -fp-model precise
+  CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise
   CXXFLAGS=-O3 -qopenmp -xHost -fp-model precise
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
@@ -42,7 +42,7 @@ else
   CXX=g++
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -O3 -fopenmp -march=native -ffast-math
+  CFLAGS=-std=c99 -O3 -fopenmp -ffast-math -fno-associative-math
   CXXFLAGS=-O3 -fopenmp -march=native -ffast-math
 endif
 
