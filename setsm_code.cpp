@@ -26,13 +26,7 @@
 
 #include "setsm_code.hpp"
 
-#ifdef TRILIBRARY
-#define REAL double
-#include "triangle.h"
-#else
-#define VLIBRARY
-#include "voronoi_setsm.hpp"
-#endif
+#include"grid_triangulation.hpp"
 
 #include "math.h"
 #include <omp.h>
@@ -3205,7 +3199,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
+                                        if(true)//level >= TIN_split_level || count_MPs < 10000)
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
@@ -3302,7 +3296,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         fclose(survey);
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
+                                        if(true)//level >= TIN_split_level || count_MPs < 10000)
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
@@ -3513,7 +3507,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
+                                        if(true)//level >= TIN_split_level || count_MPs < 10000)
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
@@ -13306,6 +13300,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
                          double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
                          int *re_total_tri_counts)
 {
+    printf("Starting TINgeneration\n");
     double interval_X, interval_Y;
     double interval_buffer;
     double X_distance, Y_distance;
@@ -13528,6 +13523,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
     
     free(trilists);
     
+    printf("Ending TINgeneration\n");
     return trilists_f;
 }
 
@@ -13690,7 +13686,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 UI3DPOINT *trilists;
                 
                 
-                if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
+                if(true)//Pyramid_step >= TIN_split_level || count_MPs < 10000)
                 {
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                     
@@ -13773,7 +13769,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         flag = false;
                     
                     printf("start TIN\n");
-                    if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
+                    if(true)//Pyramid_step >= TIN_split_level || count_MPs < 10000)
                     {
                         D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                         uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
@@ -13878,7 +13874,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         
                         
                         printf("2 start TIN\n");
-                        if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
+                        if(true)//Pyramid_step >= TIN_split_level || count_MPs < 10000)
                         {
                             D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),non_blunder_count);
                             uint32 *check_id        = (uint32*)calloc(sizeof(uint32),non_blunder_count);
@@ -14070,161 +14066,57 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
     double minY_ptslists = min_max[1];
     double maxX_ptslists = min_max[2];
     double maxY_ptslists = min_max[3];
-#ifdef VLIBRARY
-    double distX_ptslists, distY_ptslists;
-    double Scale_ptslists = 1000;
-    Site *(*next)();
-    
-    *count_tri = 0;
-    
-    initializeVoronoi();
-    D3DPOINT *scaled_ptslists;
-    
-    scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
-    
-    //distX_ptslists = maxX_ptslists - minX_ptslists;
-    //distY_ptslists = maxY_ptslists - minY_ptslists;
-    for(int i=0;i<numofpts;i++)
+
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / 8;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / 8;
+    printf("\tTINCreate: PTS = %d, width = %d, height = %d\n", numofpts, width, height);
+
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    GridPoint *grid_points = new GridPoint[numofpts];
+
+    for (std::size_t t = 0; t < numofpts; ++t)
     {
-        //scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
-        //scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+        grid_points[t].col = (ptslists[t].m_X - minX_ptslists) / 8;
+        grid_points[t].row = (ptslists[t].m_Y - minY_ptslists) / 8;
+        index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
+    }
+
+    GridPoint **points_ptrs = new GridPoint*[numofpts];
+    #pragma omp parallel
+    {
+        #pragma omp for
+        for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
+    }
+
+    FullTriangulation *triangulation = new FullTriangulation(width, height);
+    triangulation->Triangulate(points_ptrs, numofpts);
+
+    std::size_t max_num_tris = 2 * numofpts;
+    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    *count_tri = (int)(triangulation->GetAllTris(tris));
+
+    for (std::size_t t = 0; t < *count_tri; t++)
+    {
+        int row, col;
+
+        row = tris[t][0].row;
+        col = tris[t][0].col;
+        trilists[t].m_X = index_in_ptslists[row * width + col];
+
+        row = tris[t][1].row;
+        col = tris[t][1].col;
+        trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        scaled_ptslists[i].m_X = (ptslists[i].m_X - minX_ptslists);
-        scaled_ptslists[i].m_Y = (ptslists[i].m_Y - minY_ptslists);
-        
-        //printf("scaled_ptslists %f\t%f\n",scaled_ptslists[i].m_X,scaled_ptslists[i].m_Y);
+        row = tris[t][2].row;
+        col = tris[t][2].col;
+        trilists[t].m_Z = index_in_ptslists[row * width + col];
     }
-    
-    readsites(scaled_ptslists,numofpts);
-    next = nextone;
-    geominit();
-    voronoi(next,trilists,&(*count_tri));
-    //printf("count tri %d\n",*count_tri);
-    free(scaled_ptslists);
-    //printf("remove scaled\n");
-    free_all();
-    //printf("remove all\n");
-    //exit(1);
-#elif TRILIBRARY
-    //clock_t start = clock(), mid1, mid2, mid3, end;
-    
-    struct triangulateio in, out;
-    int x;
-    double v12[2], v13[2], Normal;
-    D3DPOINT pt1, pt2, pt3;
-    
-    if(numofpts < 3){
-        *count_tri = 0;
-        return;
-    }
-    
-    /*D3DPOINT *shifted_ptslists;
-     shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
-     
-     double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
-     double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
-     for(int i=0;i<numofpts;i++)
-     {
-     shifted_ptslists[i].m_X = ptslists[i].m_X - midX_ptslists;
-     shifted_ptslists[i].m_Y = ptslists[i].m_Y - midY_ptslists;
-     }
-     */
-    /* Define input points. */
-    
-    in.numberofpoints = numofpts;
-    in.numberofpointattributes = 0;
-    in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-    
-#pragma omp parallel for private(x) schedule(guided)
-    for (x = 0; x < numofpts; x++){
-        in.pointlist[2*x] = scaled_ptslists[x].m_X;
-        in.pointlist[2*x+1] = scaled_ptslists[x].m_Y;
-    }
-    
-    in.pointattributelist = (REAL *) malloc(in.numberofpoints *
-                                            in.numberofpointattributes *
-                                            sizeof(REAL));
-    in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
-    in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));
-    
-    /* Make necessary initializations so that Triangle can return a */
-    /*   triangulation in `out'.  */
-    
-    out.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
-    /* Not needed if -N switch used or number of point attributes is zero: */
-    out.pointattributelist = (REAL *) NULL;
-    out.pointmarkerlist = (int *) NULL; /* Not needed if -N or -B switch used. */
-    out.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
-    /* Not needed if -E switch used or number of triangle attributes is zero: */
-    out.triangleattributelist = (REAL *) NULL;
-    out.neighborlist = (int *) NULL;         /* Needed only if -n switch used. */
-    /* Needed only if segments are output (-p or -c) and -P not used: */
-    out.segmentlist = (int *) NULL;
-    /* Needed only if segments are output (-p or -c) and -P and -B not used: */
-    out.segmentmarkerlist = (int *) NULL;
-    out.edgelist = (int *) NULL;             /* Needed only if -e switch used. */
-    out.edgemarkerlist = (int *) NULL;   /* Needed if -e used and -B not used. */
-    //mid1 = clock();
-    triangulate("zQ", &in, &out, (struct triangulateio *) NULL);
-    //mid2 = clock();
-    /* Transfer output to trilists */
-#pragma omp parallel for private(x) schedule(guided)
-    for (x = 0; x < out.numberoftriangles; x++) {
-        trilists[x].m_X = (uint32)out.trianglelist[x * 3 + 0];
-        trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
-        trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-        /*
-         pt1 = ptslists[trilists[x].m_X];
-         pt2 = ptslists[trilists[x].m_Y];
-         pt3 = ptslists[trilists[x].m_Z];
-         
-         v12[0]  = pt2.m_X-pt1.m_X;
-         v12[1]  = pt2.m_Y-pt1.m_Y;
-         
-         v13[0]  = pt3.m_X-pt1.m_X;
-         v13[1]  = pt3.m_Y-pt1.m_Y;
-         
-         Normal = v12[0]*v13[1] - v12[1]*v13[0];
-         if (Normal > 0) {
-         trilists[x].m_Z = (uint32)out.trianglelist[x * 3 + 1];
-         trilists[x].m_Y = (uint32)out.trianglelist[x * 3 + 2];
-         }*/
-    }
-    
-    *count_tri = out.numberoftriangles;
-    //mid3 = clock();
-    /* Free all allocated arrays, including those allocated by Triangle. */
-    
-    free(in.pointlist);
-    free(in.pointattributelist);
-    free(in.pointmarkerlist);
-    free(in.regionlist);
-    free(out.pointlist);
-    free(out.pointattributelist);
-    free(out.pointmarkerlist);
-    free(out.trianglelist);
-    free(out.triangleattributelist);
-    free(out.neighborlist);
-    free(out.segmentlist);
-    free(out.segmentmarkerlist);
-    free(out.edgelist);
-    free(out.edgemarkerlist);
-    free(shifted_ptslists);
-    
-    //end = clock();
-    /*
-     int msec = (mid1 - start) * 1000 / CLOCKS_PER_SEC;
-     printf("Time taken to initalize %d seconds %d milliseconds", msec/1000, msec%1000);
-     msec = (mid2 - mid1) * 1000 / CLOCKS_PER_SEC;
-     printf("Time taken to triangulate %d seconds %d milliseconds", msec/1000, msec%1000);
-     msec = (mid3 - mid2) * 1000 / CLOCKS_PER_SEC;
-     printf("Time taken to transfer out %d seconds %d milliseconds", msec/1000, msec%1000);
-     msec = (end - mid3) * 1000 / CLOCKS_PER_SEC;
-     printf("Time taken to free alloc %d seconds %d milliseconds", msec/1000, msec%1000);
-     msec = (end - start) * 1000 / CLOCKS_PER_SEC;
-     printf("Time taken total %d seconds %d milliseconds", msec/1000, msec%1000);
-     */
-#endif
+
+    delete [] tris;
+    delete triangulation;
+    delete [] points_ptrs;
+    delete [] grid_points;
 }
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,

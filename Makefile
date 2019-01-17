@@ -10,17 +10,17 @@
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-#GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
-#GEOTIFFINC=-I$(GEOTIFFPATH)/include
-#GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
+GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
+GEOTIFFINC=-I$(GEOTIFFPATH)/include
+GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
 
 MPIFLAGS = -DBUILDMPI
 
 INCS = $(TIFFINC) $(GEOTIFFINC)
 LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB)
 
-OBJS = setsmgeo.o voronoi_setsm.o
-HDRS = Typedefine.hpp setsm_code.hpp setsmgeo.hpp voronoi_setsm.hpp
+OBJS = setsmgeo.o grid.o grid_triangulation.o edge_list.o
+HDRS = Typedefine.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp
 
 
 ifeq ($(COMPILER), intel)
@@ -29,7 +29,7 @@ ifeq ($(COMPILER), intel)
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise
-  CXXFLAGS=-O3 -qopenmp -fp-model precise
+  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
   CXX=pgc++
