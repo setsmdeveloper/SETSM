@@ -14062,13 +14062,18 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
 
 void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri)
 {
+    if (numofpts <= 2) {
+        *count_tri = 0;
+        return;
+    }
+
     double minX_ptslists = min_max[0];
     double minY_ptslists = min_max[1];
     double maxX_ptslists = min_max[2];
     double maxY_ptslists = min_max[3];
 
-    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / 8;
-    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / 8;
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists);
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists);
     printf("\tTINCreate: PTS = %d, width = %d, height = %d\n", numofpts, width, height);
 
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
@@ -14077,8 +14082,8 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
 
     for (std::size_t t = 0; t < numofpts; ++t)
     {
-        grid_points[t].col = (ptslists[t].m_X - minX_ptslists) / 8;
-        grid_points[t].row = (ptslists[t].m_Y - minY_ptslists) / 8;
+        grid_points[t].col = (ptslists[t].m_X - minX_ptslists);
+        grid_points[t].row = (ptslists[t].m_Y - minY_ptslists);
         index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
     }
 
@@ -14089,7 +14094,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
         for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
     }
 
-    FullTriangulation *triangulation = new FullTriangulation(width, height);
+    SparseTriangulation *triangulation = new SparseTriangulation(width, height);
     triangulation->Triangulate(points_ptrs, numofpts);
 
     std::size_t max_num_tris = 2 * numofpts;

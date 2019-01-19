@@ -10,9 +10,9 @@
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
-GEOTIFFINC=-I$(GEOTIFFPATH)/include
-GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
+#GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
+#GEOTIFFINC=-I$(GEOTIFFPATH)/include
+#GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
 
 MPIFLAGS = -DBUILDMPI
 
