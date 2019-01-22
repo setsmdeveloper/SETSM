@@ -9480,42 +9480,23 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                     if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                                     {
+                                                        double dx;
+                                                        double dy;
+                                                        long int position;
+
                                                         //interpolate left_patch
-                                                        double dx          =  pos_col_left - (int)(pos_col_left);
-                                                        double dy          =  pos_row_left - (int)(pos_row_left);
-                                                        double dxdy = dx * dy;
-                                                        double left_patch;
-                                                        double right_patch;
-                                                        double left_mag_patch;
-                                                        double right_mag_patch;
-                                                        
-                                                        long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                                                        
-                                                        left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
-                                                        (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
-                                                        (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
-                                                        (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
-                                                        
-                                                        left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
-                                                        (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
-                                                        (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
-                                                        (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
+                                                        dx          =  pos_col_left - (int)(pos_col_left);
+                                                        dy          =  pos_row_left - (int)(pos_row_left);
+														position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
+														double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                                        double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                                         
                                                         //interpolate right_patch
                                                         dx          =  pos_col_right - (int)(pos_col_right);
                                                         dy          =  pos_row_right - (int)(pos_row_right);
-                                                        dxdy = dx * dy;
-                                                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                                        
-                                                        right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
-                                                        (double) (Images[ti][position + 1])                         * (dx - dxdy) +
-                                                        (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
-                                                        (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
-                                                        
-                                                        right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
-                                                        (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
-                                                        (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
-                                                        (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                                                        position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
+														double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                                        double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                                         
                                                         //end
                                                         
@@ -9602,43 +9583,24 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                         if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
                                                            pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
                                                         {
+                                                        	double dx;
+                                                        	double dy;
+                                                        	long int position;
+
                                                             //interpolate left_patch
-                                                            double dx          =  pos_col_left - (int)(pos_col_left);
-                                                            double dy          =  pos_row_left - (int)(pos_row_left);
-                                                            double dxdy = dx * dy;
-                                                            double left_patch;
-                                                            double right_patch;
-                                                            double left_mag_patch;
-                                                            double right_mag_patch;
-                                                            
-                                                            long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize_next.width;
-                                                            
-                                                            left_patch =        (double) (SubImages_next[reference_id][position])                           * (1 - dx - dy + dxdy) +
-                                                            (double) (SubImages_next[reference_id][position + 1])                       * (dx - dxdy) +
-                                                            (double) (SubImages_next[reference_id][position + LImagesize_next.width])        * (dy - dxdy) +
-                                                            (double) (SubImages_next[reference_id][position + 1 + LImagesize_next.width])    * (dxdy);
-                                                            
-                                                            left_mag_patch =    (double) (SubMagImages_next[reference_id][position])                        * (1 - dx - dy + dxdy) +
-                                                            (double) (SubMagImages_next[reference_id][position + 1])                    * (dx - dxdy) +
-                                                            (double) (SubMagImages_next[reference_id][position + LImagesize_next.width])     * (dy - dxdy) +
-                                                            (double) (SubMagImages_next[reference_id][position + 1 + LImagesize_next.width]) * (dxdy);
-                                                            
-                                                            //interpolate right_patch
-                                                            dx          =  pos_col_right - (int)(pos_col_right);
-                                                            dy          =  pos_row_right - (int)(pos_row_right);
-                                                            dxdy = dx * dy;
-                                                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize_next.width;
-                                                            
-                                                            right_patch =       (double) (SubImages_next[ti][position])                             * (1 - dx - dy + dxdy) +
-                                                            (double) (SubImages_next[ti][position + 1])                         * (dx - dxdy) +
-                                                            (double) (SubImages_next[ti][position + RImagesize_next.width])          * (dy - dxdy) +
-                                                            (double) (SubImages_next[ti][position + 1 + RImagesize_next.width])      * (dxdy);
-                                                            
-                                                            right_mag_patch =   (double) (SubMagImages_next[ti][position])                          * (1 - dx - dy + dxdy) +
-                                                            (double) (SubMagImages_next[ti][position + 1])                      * (dx - dxdy) +
-                                                            (double) (SubMagImages_next[ti][position + RImagesize_next.width])       * (dy - dxdy) +
-                                                            (double) (SubMagImages_next[ti][position + 1 + RImagesize_next.width])   * (dxdy);
-                                                            
+                                                            dx          =  pos_col_left - (int)(pos_col_left);
+                                                            dy          =  pos_row_left - (int)(pos_row_left);
+                                                            position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
+															double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                        	double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                        
+                                                        	//interpolate right_patch
+                                                        	dx          =  pos_col_right - (int)(pos_col_right);
+                                                        	dy          =  pos_row_right - (int)(pos_row_right);
+                                                            position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
+															double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
+                                                        	double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
+                                                        
                                                             //end
                                                             
                                                             if(left_patch > 0 && right_patch > 0)
@@ -10314,42 +10276,23 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                 if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                                                     pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                                                 {
-                                                                    //interpolate left_patch
-                                                                    double dx          =  pos_col_left - (int)(pos_col_left);
-                                                                    double dy          =  pos_row_left - (int)(pos_row_left);
-                                                                    double dxdy = dx * dy;
-                                                                    double left_patch;
-                                                                    double right_patch;
-                                                                    double left_mag_patch;
-                                                                    double right_mag_patch;
-                                                                    long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
-                                                                    
-                                                                    left_patch =        (double) (Images[reference_id][position])                          * (1 - dx - dy + dxdy) +
-                                                                                        (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
-                                                                                        (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
-                                                                                        (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
-                                                                    
-                                                                    left_mag_patch =    (double) (MagImages[reference_id][position])                       * (1 - dx - dy + dxdy) +
-                                                                                        (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
-                                                                                        (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
-                                                                                        (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
+                                                        			double dx;
+                                                        			double dy;
+                                                        			long int position;
 
+                                                                    //interpolate left_patch
+                                                                    dx          =  pos_col_left - (int)(pos_col_left);
+                                                                    dy          =  pos_row_left - (int)(pos_row_left);
+                                                                    position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
+																	double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                                        			double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                                                      
                                                                     //interpolate right_patch
                                                                     dx          =  pos_col_right - (int)(pos_col_right);
                                                                     dy          =  pos_row_right - (int)(pos_row_right);
-                                                                    dxdy = dx * dy;
-                                                                    position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                                                    
-                                                                    right_patch =       (double) (Images[ti][position])                         * (1 - dx - dy + dxdy) +
-                                                                                        (double) (Images[ti][position + 1])                     * (dx - dxdy) +
-                                                                                        (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
-                                                                                        (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
-                                                                    
-                                                                    right_mag_patch =   (double) (MagImages[ti][position])                      * (1 - dx - dy + dxdy) +
-                                                                                        (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
-                                                                                        (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
-                                                                                        (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
+                                                                    position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
+																	double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                                        			double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                                                     
                                                                     //end
                                                                     
@@ -10450,42 +10393,24 @@ bool VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresul
                                                                     if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
                                                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
                                                                     {
+                                                        				double dx;
+                                                        				double dy;
+                                                        				long int position;
+
                                                                         //interpolate left_patch
-                                                                        double dx          =  pos_col_left - (int)(pos_col_left);
-                                                                        double dy          =  pos_row_left - (int)(pos_row_left);
-                                                                        double dxdy = dx * dy;
-                                                                        double left_patch;
-                                                                        double right_patch;
-                                                                        double left_mag_patch;
-                                                                        double right_mag_patch;
-                                                                        long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize_next.width;
-                                                                        
-                                                                        left_patch =        (double) (SubImages_next[reference_id][position])                          * (1 - dx - dy + dxdy) +
-                                                                        (double) (SubImages_next[reference_id][position + 1])                      * (dx - dxdy) +
-                                                                        (double) (SubImages_next[reference_id][position + LImagesize_next.width])       * (dy - dxdy) +
-                                                                        (double) (SubImages_next[reference_id][position + 1 + LImagesize_next.width])   * (dxdy);
-                                                                        
-                                                                        left_mag_patch =    (double) (SubMagImages_next[reference_id][position])                       * (1 - dx - dy + dxdy) +
-                                                                        (double) (SubMagImages_next[reference_id][position + 1])                   * (dx - dxdy) +
-                                                                        (double) (SubMagImages_next[reference_id][position + LImagesize_next.width])    * (dy - dxdy) +
-                                                                        (double) (SubMagImages_next[reference_id][position + 1 + LImagesize_next.width])* (dxdy);
+                                                                        dx          =  pos_col_left - (int)(pos_col_left);
+                                                                        dy          =  pos_row_left - (int)(pos_row_left);
+                                                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
+																		double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                        				double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
                                                                         
                                                                         
                                                                         //interpolate right_patch
                                                                         dx          =  pos_col_right - (int)(pos_col_right);
                                                                         dy          =  pos_row_right - (int)(pos_row_right);
-                                                                        dxdy = dx * dy;
-                                                                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize_next.width;
-                                                                        
-                                                                        right_patch =       (double) (SubImages_next[ti][position])                         * (1 - dx - dy + dxdy) +
-                                                                        (double) (SubImages_next[ti][position + 1])                     * (dx - dxdy) +
-                                                                        (double) (SubImages_next[ti][position + RImagesize_next.width])      * (dy - dxdy) +
-                                                                        (double) (SubImages_next[ti][position + 1 + RImagesize_next.width])  * (dxdy);
-                                                                        
-                                                                        right_mag_patch =   (double) (SubMagImages_next[ti][position])                      * (1 - dx - dy + dxdy) +
-                                                                        (double) (SubMagImages_next[ti][position + 1])                  * (dx - dxdy) +
-                                                                        (double) (SubMagImages_next[ti][position + RImagesize_next.width])   * (dy - dxdy) +
-                                                                        (double) (SubMagImages_next[ti][position + 1 + RImagesize_next.width])* (dxdy);
+                                                                        position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
+																		double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
+                                                        				double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
                                                                         
                                                                         //end
                                                                         
@@ -11595,45 +11520,26 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                                     if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                         pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                     {
+                           				double dx;
+                          				double dy;
+                          				long int position;
+
                                         //interpolate left_patch
-                                        double dx = pos_col_left - (int) (pos_col_left);
-                                        double dy = pos_row_left - (int) (pos_row_left);
-                                        double dxdy = dx * dy;
-                                        long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
-                                        
-                                        double left_patch;
-                                        double right_patch;
-                                        double left_mag_patch;
-                                        double right_mag_patch;
-                                        
-                                        left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
-                                                            (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
-                                                            (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
-                                                            (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
-                                        
-                                        left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
-                                                            (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
-                                                            (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
-                                                            (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
-                                        
+                                        dx = pos_col_left - (int) (pos_col_left);
+                                        dy = pos_row_left - (int) (pos_row_left);
+                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
+										double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                        double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                         
                                         //interpolate right_patch
                                         dx = pos_col_right - (int) (pos_col_right);
                                         dy = pos_row_right - (int) (pos_row_right);
-                                        dxdy = dx * dy;
-                                        position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                        
-                                        right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
-                                                            (double) (Images[ti][position + 1])                         * (dx - dxdy) +
-                                                            (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
-                                                            (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
-                                        
-                                        right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
-                                                            (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
-                                                            (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
-                                                            (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                                        position = (long int) (pos_col_right) + (long int) pos_row_right * RImagesize.width;
+										double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                        double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                         
                                         //end
+
                                         Count_N[0]++;
                                         
                                         double LR = left_patch * right_patch;
@@ -12170,43 +12076,23 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                                         if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                             pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                         {
-                                            //interpolate left_patch
-                                            double dx          =  pos_col_left - (int)(pos_col_left);
-                                            double dy          =  pos_row_left - (int)(pos_row_left);
-                                            double left_patch;
-                                            double right_patch;
-                                            double left_mag_patch;
-                                            double right_mag_patch;
-                                            double dxdy = dx * dy;
-                                            long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                                            
-                                            left_patch =        (double) (Images[reference_id][position])                           * (1 - dx - dy + dxdy) +
-                                                                (double) (Images[reference_id][position + 1])                       * (dx - dxdy) +
-                                                                (double) (Images[reference_id][position + LImagesize.width])        * (dy - dxdy) +
-                                                                (double) (Images[reference_id][position + 1 + LImagesize.width])    * (dxdy);
-                                            
-                                            left_mag_patch =    (double) (MagImages[reference_id][position])                        * (1 - dx - dy + dxdy) +
-                                                                (double) (MagImages[reference_id][position + 1])                    * (dx - dxdy) +
-                                                                (double) (MagImages[reference_id][position + LImagesize.width])     * (dy - dxdy) +
-                                                                (double) (MagImages[reference_id][position + 1 + LImagesize.width]) * (dxdy);
+                           					double dx;
+                          					double dy;
+                          					long int position;
 
-                                            
+                                            //interpolate left_patch
+                                            dx          =  pos_col_left - (int)(pos_col_left);
+                                            dy          =  pos_row_left - (int)(pos_row_left);
+                                            position = (long int) (pos_col_left) + (long int) pos_row_left * LImagesize.width;
+											double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                        	double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                             
                                             //interpolate right_patch
                                             dx          =  pos_col_right - (int)(pos_col_right);
                                             dy          =  pos_row_right - (int)(pos_row_right);
-                                            dxdy = dx * dy;
-                                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                            
-                                            right_patch =       (double) (Images[ti][position])                             * (1 - dx - dy + dxdy) +
-                                                                (double) (Images[ti][position + 1])                         * (dx - dxdy) +
-                                                                (double) (Images[ti][position + RImagesize.width])          * (dy - dxdy) +
-                                                                (double) (Images[ti][position + 1 + RImagesize.width])      * (dxdy);
-                                            
-                                            right_mag_patch =   (double) (MagImages[ti][position])                          * (1 - dx - dy + dxdy) +
-                                                                (double) (MagImages[ti][position + 1])                      * (dx - dxdy) +
-                                                                (double) (MagImages[ti][position + RImagesize.width])       * (dy - dxdy) +
-                                                                (double) (MagImages[ti][position + 1 + RImagesize.width])   * (dxdy);
+                                            position = (long int) (pos_col_right) + (long int) pos_row_right * RImagesize.width;
+											double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                        	double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                 
                                             //end
                                             Count_N[0]++;
@@ -12752,41 +12638,23 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                             if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                 pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                             {
+             					double dx;
+            					double dy;
+            					long int position;
+
                                 //interpolate left_patch
-                                double dx = pos_col_left - (int) (pos_col_left);
-                                double dy = pos_row_left - (int) (pos_row_left);
-                                double left_patch;
-                                double right_patch;
-                                double left_mag_patch;
-                                double right_mag_patch;
-                                double dxdy = dx * dy;
-                                long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-                                
-                                left_patch =        (double) (Images[reference_id][position])                          * (1 - dx - dy + dxdy) +
-                                                    (double) (Images[reference_id][position + 1])                      * (dx - dxdy) +
-                                                    (double) (Images[reference_id][position + LImagesize.width])       * (dy - dxdy) +
-                                                    (double) (Images[reference_id][position + 1 + LImagesize.width])   * (dxdy);
-                                
-                                left_mag_patch =    (double) (MagImages[reference_id][position])                       * (1 - dx - dy + dxdy) +
-                                                    (double) (MagImages[reference_id][position + 1])                   * (dx - dxdy) +
-                                                    (double) (MagImages[reference_id][position + LImagesize.width])    * (dy - dxdy) +
-                                                    (double) (MagImages[reference_id][position + 1 + LImagesize.width])* (dxdy);
+                                dx = pos_col_left - (int) (pos_col_left);
+                                dy = pos_row_left - (int) (pos_row_left);
+                                position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
+								double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                 
                                 //interpolate right_patch
                                 dx = pos_col_right - (int) (pos_col_right);
                                 dy = pos_row_right - (int) (pos_row_right);
-                                dxdy = dx * dy;
                                 position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-                                
-                                right_patch =       (double) (Images[ti][position])                         * (1 - dx - dy + dxdy) +
-                                                    (double) (Images[ti][position + 1])                     * (dx - dxdy) +
-                                                    (double) (Images[ti][position + RImagesize.width])      * (dy - dxdy) +
-                                                    (double) (Images[ti][position + 1 + RImagesize.width])  * (dxdy);
-                                
-                                right_mag_patch =   (double) (MagImages[ti][position])                      * (1 - dx - dy + dxdy) +
-                                                    (double) (MagImages[ti][position + 1])                  * (dx - dxdy) +
-                                                    (double) (MagImages[ti][position + RImagesize.width])   * (dy - dxdy) +
-                                                    (double) (MagImages[ti][position + 1 + RImagesize.width])* (dxdy);
+								double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                 
                                 //end
                                 Count_N++;
@@ -16804,8 +16672,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
             {
                 for(col = -Half_template_size; col <= Half_template_size ; col++)
                 {
-                    double radius  = sqrt((double)(row*row + col*col));
-                    if(radius <= Half_template_size-1)
+                    double radius2  = (double)(row*row + col*col);
+                    if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                     {
                         double pos_row_left      = (Left_CR + row);
                         double pos_col_left      = (Left_CC + col);
@@ -16818,31 +16686,32 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                         if(pos_row_right-3 >= 0 && pos_row_right+3 < R_rowsize && pos_col_right-3 >= 0 && pos_col_right+3 < R_colsize &&
                            pos_row_left-3 >= 0 && pos_row_left+3 < L_rowsize && pos_col_left-3 >= 0 && pos_col_left+3 < L_colsize)
                         {
+             				double dx;
+            				double dy;
+            				long int position;
+							double left_patch;
+							double right_patch;
+
                             //interpolate left_patch
-                            double dx = pos_col_left - (int) (pos_col_left);
-                            double dy = pos_row_left - (int) (pos_row_left);
-                            double left_patch;
-                            double right_patch;
-                            double dxdy = dx * dy;
-                            long int position = (long int) (pos_col_left) + (long int) (pos_row_left) * L_colsize;
+                            dx = pos_col_left - (int) (pos_col_left);
+                            dy = pos_row_left - (int) (pos_row_left);
+                            position = (long int) (pos_col_left) + (long int) (pos_row_left) * L_colsize;
                             
                             // Appears inter_flag is always == 1
                             if (inter_flag == 1) {
-                                left_patch = (double) (_leftimage[position]) * (1 - dx - dy + dxdy) + (double) (_leftimage[position + 1]) * (dx - dxdy) +
-                                    (double) (_leftimage[position + L_colsize]) * (dy - dxdy) + (double) (_leftimage[position + 1 + L_colsize]) * (dxdy);
+								left_patch = InterpolatePatch(_leftimage, position, leftsize, dx, dy);
                             } else {
                                 left_patch = (double) (_leftimage[position]);
                             }
+
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
                             dy = pos_row_right - (int) (pos_row_right);
-                            dxdy = dx * dy;
                             position = (long int) (pos_col_right) + (long int) (pos_row_right) * R_colsize;
                             
                             // Appears inter_flag is always == 1
                             if (inter_flag == 1) {
-                                right_patch = (double) (_rightimage[position]) * (1 - dx - dy + dxdy) + (double) (_rightimage[position + 1]) * (dx - dxdy) +
-                                    (double) (_rightimage[position + R_colsize]) * (dy - dxdy) + (double) (_rightimage[position + 1 + R_colsize]) * (dxdy);
+								right_patch = InterpolatePatch(_rightimage, position, rightsize, dx, dy);
                             } else {
                                 right_patch = (double) (_rightimage[position]);
                             }
@@ -21822,3 +21691,60 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
     _boundary[2] =  ceil(maxX);
     _boundary[3] =  ceil(maxY);
 }
+
+
+// Support routines for VerticalLineLocus*
+
+// Compute the correlation between two arrays using a numerically stable formulation
+// Return the correlation coefficient or NaN if undefined
+double Correlate(double *L, double *R, int N)
+{
+	double Lmean = 0;
+	double Rmean = 0;
+
+	for (int i=0; i<N; i++)
+	{
+		Lmean += L[i];
+		Rmean += R[i];
+	}
+	Lmean = Lmean / N;
+	Rmean = Rmean / N;
+
+	double SumLR = 0;
+	double SumL2 = 0;
+	double SumR2 = 0;
+
+	for (int i=0; i<N; i++)
+	{
+		SumLR += (L[i]-Lmean)*(R[i]-Rmean);
+		SumL2 += (L[i]-Lmean)*(L[i]-Lmean);
+		SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
+	}
+
+	double rho;
+	if (SumL2 > 0  &&  SumR2 > 0)
+	{
+		rho = SumLR / (sqrt(SumL2*SumR2));
+	}
+	else
+	{
+		rho = (double) NAN;
+	}
+
+	return rho;
+}
+
+// Find the interpolated value of a patch given the nominal position and the X and Y offsets 
+// along with the image itself
+double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, double dx, double dy)
+{
+	double patch =
+		(double) (Image[position]) * (1 - dx) * (1 - dy) + 
+		(double) (Image[position + 1]) * dx * (1 - dy) +
+		(double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
+		(double) (Image[position + 1 + Imagesize.width]) * dx * dy;
+
+	return patch;
+}
+
+
