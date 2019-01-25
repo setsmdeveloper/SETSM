@@ -36,7 +36,7 @@ else ifeq ($(COMPILER), pgi)
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-c99 -O3 -mp=allcores -fast
-  CXXFLAGS=-O3 -mp=allcores -fast
+  CXXFLAGS=-std=c++11 -O3 -mp=allcores -fast
 else
   CC=gcc
   CXX=g++
