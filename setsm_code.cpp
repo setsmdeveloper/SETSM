@@ -13089,7 +13089,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
         for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
     }
 
-    SparseTriangulation *triangulation = new SparseTriangulation(width, height);
+    FullTriangulation *triangulation = new FullTriangulation(width, height);
     triangulation->Triangulate(points_ptrs, numofpts);
 
     std::size_t max_num_tris = 2 * numofpts;
