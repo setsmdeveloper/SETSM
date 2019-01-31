@@ -211,12 +211,11 @@ bool check_image_boundary(ProInfo *proinfo, double ***rpc, uint8 numofparam, dou
 void RemoveFiles(ProInfo *proinfo,char *save_path, char **filename, int py_level, bool flag);
 
 CSize BR_MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, float *DEM_ortho);
+
 double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, float *DEM_ortho);
-double MergeTiles_final(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, TransParam _param, int Hemisphere, bool check_Matchtag, int divide);
 
 double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 
-void NNA_M_tile(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, int row_start, int col_start, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide);
 void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration,int divide, float* DEM_values,float* Ortho_values);
 
 void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type);

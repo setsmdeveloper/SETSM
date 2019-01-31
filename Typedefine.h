@@ -128,34 +128,23 @@ typedef struct tagNCCresult
     double max_WNCC;
     int max_WNCC_pos;
 	
-//	double INCC;
-//	double GNCC;
     int minHeight;
     int maxHeight;
     int NumOfHeight;
     bool check_height_change;
 	int roh_count;
-	//uint8 mag_tag;
-	
 } NCCresult;
 
 typedef struct UpdateGrid{
 	int minHeight;
 	int maxHeight;
 	
-	//double t_minHeight;
-	//double t_maxHeight;
-	
 	float Height; //after blunder detection
 	double roh;
-	//double Matched_height;//before blunder detection
 	double ortho_ncc[MaxImages];
     double Mean_ortho_ncc;
-	//double angle;
-//	double *false_h;
 
-//	uint16 false_h_count;
-	uint8 Matched_flag;
+    uint8 Matched_flag;
 	uint8 anchor_flag;
     
 }UGRID;
@@ -164,7 +153,6 @@ typedef struct tagVoxelinfo
 {
     float WNCC;
     float height;
-//    int SSD;
     bool flag_cal;
     float INCC;
 }VOXEL;
