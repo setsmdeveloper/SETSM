@@ -34,7 +34,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 20
+#define MaxImages 3
 
 #ifndef bool
 #define bool unsigned char
@@ -120,38 +120,38 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-	double result0;
-	double result1;
-	double result2;
-	double result3;
-	double result4;
+	double result0; //first peak roh
+	double result1; //second peak roh
+	float result2; //first peak height
+	float result3; //second peak height
+	int result4; //peak count
     double max_WNCC;
     int max_WNCC_pos;
 	
 //	double INCC;
 //	double GNCC;
-    double minHeight;
-    double maxHeight;
+    int minHeight;
+    int maxHeight;
     int NumOfHeight;
     bool check_height_change;
 	int roh_count;
-	uint8 mag_tag;
+	//uint8 mag_tag;
 	
 } NCCresult;
 
 typedef struct UpdateGrid{
-	double minHeight;
-	double maxHeight;
+	int minHeight;
+	int maxHeight;
 	
-	double t_minHeight;
-	double t_maxHeight;
+	//double t_minHeight;
+	//double t_maxHeight;
 	
-	double Height; //after blunder detection
+	float Height; //after blunder detection
 	double roh;
-	double Matched_height;//before blunder detection
+	//double Matched_height;//before blunder detection
 	double ortho_ncc[MaxImages];
     double Mean_ortho_ncc;
-	double angle;
+	//double angle;
 //	double *false_h;
 
 //	uint16 false_h_count;
@@ -162,11 +162,11 @@ typedef struct UpdateGrid{
 
 typedef struct tagVoxelinfo
 {
-    double WNCC;
-    double height;
+    float WNCC;
+    float height;
 //    int SSD;
     bool flag_cal;
-    double INCC;
+    float INCC;
 }VOXEL;
 
 typedef struct LSFinfo{
@@ -235,7 +235,8 @@ typedef struct ProjectInfo{
 	
 	double minHeight;
 	double maxHeight;
-	
+	double System_memory;
+    
 	int start_row;
 	int end_row;
 	int start_col;
@@ -284,7 +285,7 @@ typedef struct ArgumentInfo{
 	double overlap_length;
     double focal_length;
     double CCD_size;
-    
+    double System_memory;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
