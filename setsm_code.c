@@ -15986,7 +15986,34 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                             
                             if (rtn)
                             {
-                                double t1, t2;
+                                double diff1, diff2, diff3, t1, t2;
+                                
+                                if(pyramid_step < 2)
+                                {
+                                    CurGPXY[0]  = (Col)*gridspace + boundary[0];
+                                    CurGPXY[1]  = (Row)*gridspace + boundary[1];
+                                    
+                                    //// IDW
+                                    diff1 = sqrt((CurGPXY[0] - TriP1[0])*(CurGPXY[0] - TriP1[0]) + (CurGPXY[1] - TriP1[1])*(CurGPXY[1] - TriP1[1]));
+                                    diff2 = sqrt((CurGPXY[0] - TriP2[0])*(CurGPXY[0] - TriP2[0]) + (CurGPXY[1] - TriP2[1])*(CurGPXY[1] - TriP2[1]));
+                                    diff3 = sqrt((CurGPXY[0] - TriP3[0])*(CurGPXY[0] - TriP3[0]) + (CurGPXY[1] - TriP3[1])*(CurGPXY[1] - TriP3[1]));
+                                    
+                                    if(diff1 == 0)
+                                    {
+                                        Z   = TriP1[2];
+                                        GridPT3[Index].Matched_flag = 2;
+                                    }
+                                    else if(diff2 == 0)
+                                    {
+                                        Z   = TriP2[2];
+                                        GridPT3[Index].Matched_flag = 2;
+                                    }
+                                    else if(diff3 == 0)
+                                    {
+                                        Z   = TriP3[2];
+                                        GridPT3[Index].Matched_flag = 2;
+                                    }
+                                }
                                 
                                 m_bHeight[Index] = 1;
                                 GridPT3[Index].Height = (float)Z;
@@ -16056,7 +16083,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                         GridPT3[Index].minHeight = floor(Z - BF);
                                         GridPT3[Index].maxHeight = ceil(Z + BF);
                                     }
-                                    else //if(pyramid_step >= 2)
+                                    else if(pyramid_step >= 2)
                                     {
                                         GridPT3[Index].minHeight = floor(t1 - BF);
                                         GridPT3[Index].maxHeight = ceil(t2 + BF);
