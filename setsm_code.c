@@ -2092,6 +2092,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         SetTiles(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area, 
                              &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);   
 
+                        long int* count_matched_pts = (long int*)calloc(sizeof(long int),(iter_row_end - iter_row_start + 1)*(t_col_end - t_col_start + 1));
+                        
                         total_count         = 0;
 
                         if (args.check_tiles_SR)
@@ -2141,7 +2143,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                         
-                       if(!args.check_gridonly)
+                        if(!args.check_gridonly)
                         {
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
@@ -2228,7 +2230,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         }
                         
                         char str_DEMfile[500];
-                        double tilememory_2m = 0.10;
+                        double tilememory_2m = 0.15;
                         double tilememory = tilememory_2m*(2.0/proinfo->DEM_resolution)*(2.0/proinfo->DEM_resolution);
                         double total_tile = (iter_row_end-1)*(t_col_end-1);
                         printf("total tile memory %f\n",total_tile*tilememory);
@@ -2387,6 +2389,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                         fclose(pMetafile);
                         
+                        free(count_matched_pts);
                     } // if (!RA_only)
                     
                 }
@@ -2521,7 +2524,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
         FILE *fid = NULL;
         FILE *fid_header = NULL;
         FILE *fid_RAinfo = NULL;
-
+        
         double minmaxHeight[2];
         double subBoundary[4];
         double **t_Imageparams;
@@ -2590,6 +2593,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 
                     sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
+                    
                 }
             }
 
@@ -3017,7 +3021,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
-                            printf("Systme memory is not enough to run SETSM. Please reduce tilesize or assign more physical memory!!\n");
+                            printf("System memory is not enough to run SETSM. Please reduce tilesize or assign more physical memory!!\n");
                             exit(1);
                         }
                         
@@ -3271,17 +3275,49 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 if(level == 0 && iteration == 3)
                                 {
-                                    D3DPOINT *ptslists;
-                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                    F3DPOINT *ptslists;
+                                    ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    
+                                    double minmaxBR[6];
+                                    minmaxBR[0] = 10000000;
+                                    minmaxBR[1] = 10000000;
+                                    minmaxBR[2] = -10000000;
+                                    minmaxBR[3] = -10000000;
+                                    minmaxBR[4] = 100000;
+                                    minmaxBR[5] = -100000;
                                     
                                     i = 0;
-                                    while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                    //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                     {
+                                        if(minmaxBR[0] > ptslists[i].m_X)
+                                            minmaxBR[0]     = ptslists[i].m_X;
+                                        if(minmaxBR[1] > ptslists[i].m_Y)
+                                            minmaxBR[1]     = ptslists[i].m_Y;
+                                        
+                                        if(minmaxBR[2] < ptslists[i].m_X)
+                                            minmaxBR[2]     = ptslists[i].m_X;
+                                        if(minmaxBR[3] < ptslists[i].m_Y)
+                                            minmaxBR[3]     = ptslists[i].m_Y;
+                                        if(minmaxBR[4] > ptslists[i].m_Z)
+                                            minmaxBR[4] = ptslists[i].m_Z;
+                                        if(minmaxBR[5] < ptslists[i].m_Z)
+                                            minmaxBR[5] = ptslists[i].m_Z;
+                                        /*
+                                        temp_pts[i].m_X = ptslists[i].m_X;
+                                        temp_pts[i].m_Y = ptslists[i].m_Y;
+                                        temp_pts[i].m_Z = ptslists[i].m_Z;
+                                        temp_pts[i].flag = ptslists[i].flag;
+                                        */
                                         i++;
+                                        
                                     }
                                     fclose(survey);
                                     
-                                    FILE *pFile = fopen(filename_mps,"w");
+                                    FILE *pFile = fopen(filename_mps,"wb");
+                                    fwrite(ptslists,sizeof(F3DPOINT),count_MPs,pFile);
+                                    
+                                    /*
                                     for(i=0;i<count_MPs;i++)
                                     {
                                         if(ptslists[i].flag != 1)
@@ -3289,12 +3325,28 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
                                                 fprintf(pFile,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
                                         }
-                                        //i++;
-                                    }
+                                    }*/
+                                    
+                                    
                                     fclose(pFile);
                                     
                                     if(!proinfo->IsRA)
                                     {
+                                        FILE *fid_BR;
+                                        FILE *fid_count;
+                                        
+                                        char save_file[500];
+                                        sprintf(save_file,"%s/txt/matched_BR_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
+                                        fid_BR  = fopen(save_file,"w");
+                                        fprintf(fid_BR,"%f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
+                                        fclose(fid_BR);
+                                        
+                                        sprintf(save_file,"%s/txt/count_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
+                                        fid_count  = fopen(save_file,"w");
+                                        
+                                        fprintf(fid_count,"%d\n",count_MPs);
+                                        fclose(fid_count);
+                                        
                                         echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
                                     }
                                     free(ptslists);
@@ -4147,7 +4199,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             }
             fclose(fid);
             fclose(fid_header);
-
+            
             RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,0,0);
             
             if(proinfo->IsRA)
@@ -16690,9 +16742,9 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
     //sprintf(t_str,"%s/txt/tin_max_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     //outfile_max   = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-    outfile_h   = fopen(t_str,"w");
+    outfile_h   = fopen(t_str,"wb");
     sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-    outMean_ortho = fopen(t_str,"w");
+    outMean_ortho = fopen(t_str,"wb");
     
     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
     {
@@ -16714,7 +16766,10 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
             temp_S.height   = Size_Grid2D->height;
             temp_S.width    = Size_Grid2D->width;
         }
-            
+        
+        float* temp_height = (float*)malloc(sizeof(float)*temp_S.height*temp_S.width);
+        float* temp_ncc = (float*)malloc(sizeof(float)*temp_S.height*temp_S.width);
+        
         for(k=0;k<temp_S.height;k++)
         {
             for(j=0;j<temp_S.width;j++)
@@ -16726,9 +16781,11 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
                 //if(GridPT3[matlab_index].Matched_flag != 0)
                 //if(roh_height[matlab_index].NumOfHeight > 0)
                 {
-                    fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                    fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
+                    //fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
+                    //fprintf(outMean_ortho,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
                 
+                    temp_height[matlab_index] = GridPT3[matlab_index].Height;
+                    temp_ncc[matlab_index] = GridPT3[matlab_index].Mean_ortho_ncc;
                     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                         fprintf(outfile_roh[ti],"%f\t",GridPT3[matlab_index].ortho_ncc[ti]);*/
                     /*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
@@ -16745,13 +16802,17 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
             }
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
-            fprintf(outfile_h,"\n");
-            fprintf(outMean_ortho,"\n");
+            //fprintf(outfile_h,"\n");
+            //fprintf(outMean_ortho,"\n");
             /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                 fprintf(outfile_roh[ti],"\n");*/
             /*fprintf(outfile_flag,"\n");*/
         }
 
+        fwrite(temp_height,sizeof(float),temp_S.height*temp_S.width,outfile_h);
+        fwrite(temp_ncc,sizeof(float),temp_S.height*temp_S.width,outMean_ortho);
+        free(temp_height);
+        free(temp_ncc);
         //fclose(outfile_min);
         //fclose(outfile_max);
         fclose(outfile_h);
@@ -17831,11 +17892,17 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                         
                         sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,find_iter);
                         
-                        p_hvfile    = fopen(hv_t_str,"r");
-                        p_orthofile = fopen(ortho_str,"r");
+                        p_hvfile    = fopen(hv_t_str,"rb");
+                        p_orthofile = fopen(ortho_str,"rb");
                         
                         if(p_hvfile)
                         {
+                            float* temp_height = (float*)malloc(sizeof(float)*col_size*row_size);
+                            float* temp_ncc = (float*)malloc(sizeof(float)*col_size*row_size);
+                            
+                            fread(temp_height,sizeof(float),col_size*row_size,p_hvfile);
+                            fread(temp_ncc,sizeof(float),col_size*row_size,p_orthofile);
+                            
                             long index_total;
                             for(int iter_row = 0 ; iter_row < row_size ; iter_row ++)
                             {
@@ -17845,11 +17912,13 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                                     double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
                                     long index = (long)(t_row*DEM_size.width + t_col + 0.01);
                                     
-                                    double DEM_value;
-                                    fscanf(p_hvfile,"%lf\t",&DEM_value);
+                                    float DEM_value;
+                                    DEM_value = temp_height[(long)(iter_row*col_size + iter_col)];
+                                    //fscanf(p_hvfile,"%lf\t",&DEM_value);
                                     
-                                    double ortho_value;
-                                    fscanf(p_orthofile,"%lf\t",&ortho_value);
+                                    float ortho_value;
+                                    ortho_value = temp_ncc[(long)(iter_row*col_size + iter_col)];
+                                    //fscanf(p_orthofile,"%lf\t",&ortho_value);
                                     
                                     if(index >= 0 && index < (long)DEM_size.width*(long)DEM_size.height &&
                                        iter_row > buffer && iter_row < row_size - buffer &&
@@ -17861,10 +17930,12 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
                                         DEM_ortho[index] = ortho_value;
                                     }
                                 }
-                                fscanf(p_hvfile,"\n");
-                                fscanf(p_orthofile,"\n");
+                                //fscanf(p_hvfile,"\n");
+                                //fscanf(p_orthofile,"\n");
                             }
                             
+                            free(temp_height);
+                            free(temp_ncc);
                             fclose(p_hvfile);
                             fclose(p_orthofile);
                         }
@@ -17955,7 +18026,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     mt_grid  = mt_grid_resolution;
     
     printf("DEM grid = %lf\t mt grid = %lf\n",grid,mt_grid);
-    
+    /*
     ndata = 0;
 //#pragma omp parallel for shared(row_end,col_end,save_path) private(index_file) reduction(+:ndata)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
@@ -18011,7 +18082,45 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     }
     
     printf("end loading matched pts\n");
+    */
     
+    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
+    {
+        int row,col;
+        FILE *pfile;
+        char t_str[500];
+        
+        row = (int)(floor(index_file/col_end)) + 1;
+        col = index_file%col_end+1;
+        
+        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
+        {
+            double minmaxBR[6];
+            sprintf(t_str,"%s/txt/matched_BR_row_%d_col_%d.txt",save_path,row,col);
+            pfile = fopen(t_str,"r");
+            if(pfile)
+            {
+                fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
+                //printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
+                if(minX > minmaxBR[0])
+                    minX     = minmaxBR[0];
+                if(minY > minmaxBR[1])
+                    minY     = minmaxBR[1];
+                
+                if(maxX < minmaxBR[2])
+                    maxX     = minmaxBR[2];
+                if(maxY < minmaxBR[3])
+                    maxY     = minmaxBR[3];
+                if(minHeight > minmaxBR[4])
+                    minHeight = minmaxBR[4];
+                if(maxHeight < minmaxBR[5])
+                    maxHeight = minmaxBR[5];
+                fclose(pfile);
+            }
+        }
+    }
+    
+    printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minX,minY,maxX,maxY,minHeight,maxHeight);
     minX -= 10*grid;
     maxX += 10*grid;
     minY -= 10*grid;
@@ -18130,7 +18239,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
         {
             
             sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
-            pfile   = fopen(t_str,"r");
+            pfile   = fopen(t_str,"rb");
             if(pfile)
             {
                 //printf("matched row %d\tcol %d\n",row,col);
@@ -18142,13 +18251,19 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                 if(size > 0)
                 {
                     double pos_row, pos_col, clip_pos_row,clip_pos_col;
-                    double t_x, t_y, t_z;
+                    float t_x, t_y, t_z;
                     char h_t_str[500];
+                    char c_t_str[500];
                     
                     FILE* p_hfile;
+                    FILE* c_hfile;
                     
                     sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",save_path,row,col);
                     p_hfile     = fopen(h_t_str,"r");
+                    
+                    sprintf(c_t_str,"%s/txt/count_row_%d_col_%d.txt",save_path,row,col);
+                    c_hfile     = fopen(c_t_str,"r");
+                    
                     if(p_hfile)
                     {
                         //printf("header row %d\tcol %d\n",row,col);
@@ -18166,28 +18281,43 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                             
                             //printf("%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
                         }   
+                        int count_MPs;
+                        fscanf(c_hfile,"%d\n",&count_MPs);
+                        printf("count Mp = %d\n",count_MPs);
+                        F3DPOINT *temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                        fread(temp_pts,sizeof(F3DPOINT),count_MPs,pfile);
                         
-                        while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
+                        for(int t_i = 0 ; t_i < count_MPs ; t_i++)
                         {
-                            pos_col = (t_x - minX)/grid;
-                            pos_row = (maxY - t_y)/grid;
-                            
-                            clip_pos_col = (t_x - t_boundary[0])/mt_grid;
-                            clip_pos_row = (t_y - t_boundary[1])/mt_grid;
-                            
-                            
-                            if(pos_row >= 0 && pos_row < row_count && pos_col >= 0 && pos_col < col_count && 
-                               clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip && 
-                               clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
+                            if(temp_pts[t_i].flag != 1)
+                            //while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
                             {
-                                long t_index = (long)((pos_row)*col_count + pos_col + 0.01);
-                                value[t_index] = t_z;
-                                value_pt[t_index] = 1;
-                                pt_save[t_index].X = t_x;
-                                pt_save[t_index].Y = t_y;
-                                pt_save[t_index].Z = t_z;
+                                t_x = temp_pts[t_i].m_X;
+                                t_y = temp_pts[t_i].m_Y;
+                                t_z = temp_pts[t_i].m_Z;
+                                //printf("pts %f\t%f\t%f\n",t_x,t_y,t_z);
+                                
+                                pos_col = (t_x - minX)/grid;
+                                pos_row = (maxY - t_y)/grid;
+                                
+                                clip_pos_col = (t_x - t_boundary[0])/mt_grid;
+                                clip_pos_row = (t_y - t_boundary[1])/mt_grid;
+                                
+                                
+                                if(pos_row >= 0 && pos_row < row_count && pos_col >= 0 && pos_col < col_count &&
+                                   clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip &&
+                                   clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
+                                {
+                                    long t_index = (long)((pos_row)*col_count + pos_col + 0.01);
+                                    value[t_index] = t_z;
+                                    value_pt[t_index] = 1;
+                                    pt_save[t_index].X = t_x;
+                                    pt_save[t_index].Y = t_y;
+                                    pt_save[t_index].Z = t_z;
+                                }
                             }
                         }
+                        free(temp_pts);
                         fclose(p_hfile);
                     }
                     else
