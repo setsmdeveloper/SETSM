@@ -2230,7 +2230,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         }
                         
                         char str_DEMfile[500];
-                        double tilememory_2m = 0.15;
+                        double tilememory_2m = 0.10;
                         double tilememory = tilememory_2m*(2.0/proinfo->DEM_resolution)*(2.0/proinfo->DEM_resolution);
                         double total_tile = (iter_row_end-1)*(t_col_end-1);
                         printf("total tile memory %f\n",total_tile*tilememory);
