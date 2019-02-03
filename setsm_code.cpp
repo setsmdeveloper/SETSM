@@ -3199,7 +3199,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
@@ -3216,15 +3215,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             }
                                             
                                             free(t_trilists);
-                                        
-                                        }
-                                        else
-                                        {
-                                            int iter_row,iter_col;
-                                            
-                                            trilists = TINgeneration(true,proinfo->save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-                                                                     min_max,
-                                                                     subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
                                         }
                                         
                                     
@@ -3296,7 +3286,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         fclose(survey);
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
@@ -3313,15 +3302,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             }
                                             
                                             free(t_trilists);
-                                                
-                                        }
-                                        else
-                                        {
-                                            int iter_row,iter_col;
-                                            
-                                            trilists = TINgeneration(true,proinfo->save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-                                                                     min_max2,
-                                                                     subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
                                         }
                                         
                                         
@@ -3507,33 +3487,21 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        if(level >= TIN_split_level || count_MPs < 10000)
+                                        UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                        
+                                        sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                                        
+                                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                        i = 0;
+                                        for(i=0;i<count_tri;i++)
                                         {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                            
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
-                                            
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                            i = 0;
-                                            for(i=0;i<count_tri;i++)
-                                            {
-                                                trilists[i].m_X = t_trilists[i].m_X;
-                                                trilists[i].m_Y = t_trilists[i].m_Y;
-                                                trilists[i].m_Z = t_trilists[i].m_Z;
-                                            }
-                                            
-                                            free(t_trilists);
+                                            trilists[i].m_X = t_trilists[i].m_X;
+                                            trilists[i].m_Y = t_trilists[i].m_Y;
+                                            trilists[i].m_Z = t_trilists[i].m_Z;
                                         }
-                                        else
-                                        {
-                                            int iter_row,iter_col;
-                                            
-                                            trilists = TINgeneration(true,proinfo->save_filepath, level, Size_Grid2D, Image_res[0], grid_resolution,
-                                                                     min_max,
-                                                                     subBoundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
-                                        }
-                                            
+                                        
+                                        free(t_trilists);
                                            
                                         if(pre_matched_pts == 0)
                                              matching_change_rate = 0;
@@ -12289,239 +12257,6 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     return count_MPs;
 }
 
-
-UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
-                         double min_max[],
-                         double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
-                         int *re_total_tri_counts)
-{
-    printf("Starting TINgeneration\n");
-    double interval_X, interval_Y;
-    double interval_buffer;
-    double X_distance, Y_distance;
-    int interval_col, interval_row;
-    
-    
-    int iter_count;
-    int total_tri_counts = 0;
-    int total_mps_counts = 0;
-    int total_ptslist_count = 0;
-    int count_tri;
-    
-    int i = 0;
-    
-    X_distance  = Size_Grid2D.width*grid_resolution;
-    Y_distance  = Size_Grid2D.height*grid_resolution;
-    
-    interval_X  = X_distance;
-    interval_Y  = Y_distance;
-    
-    interval_buffer = 0;
-    
-    interval_col = 1;
-    interval_row = 1;
-    
-    if(level <= 3 )
-    {
-        if(grid_resolution <= pow(2,level)*img_resolution)
-        {
-            if (level == 3)
-            {
-                interval_X = 2000;
-                interval_Y = 2000;
-            }
-            else if(level == 2)
-            {
-                interval_X = 1000;
-                interval_Y = 1000;
-            }
-            else
-            {
-                interval_X = 500;
-                interval_Y = 500;
-            }
-        }
-        else
-        {
-            if (level == 3)
-            {
-            }
-            else if(level == 2)
-            {
-                interval_X = 2000;
-                interval_Y = 2000;
-                
-            }
-            else
-            {
-                interval_X = 1000;
-                interval_Y = 1000;
-            }
-        }
-        
-        interval_buffer = 4*(level+1)*grid_resolution;
-        interval_col = (int)(X_distance/interval_X) + 1;
-        interval_row = (int)(Y_distance/interval_Y) + 1;
-    }
-    
-    if(grid_resolution > 10) //RA calculation
-    {
-        interval_X = 3000;
-        interval_Y = 3000;
-    }
-    
-    interval_buffer = 4*(level+1)*grid_resolution;
-    interval_col = (int)(X_distance/interval_X) + 1;
-    interval_row = (int)(Y_distance/interval_Y) + 1;
-    
-    printf("interval %f\t%f\t%d\t%d\n",interval_X,interval_Y,interval_col,interval_row);
-    *iter_row = interval_row;
-    *iter_col = interval_col;
-    
-    
-    
-    UI3DPOINT *trilists = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*total_point_count*4);
-    int tri_counts = 0;
-    //#pragma omp parallel shared(interval_col,interval_row,savepath,subBoundary,interval_X,interval_Y,interval_buffer,grid_resolution,ptslists) private(iter_count) reduction(+:total_mps_counts,total_tri_counts)
-    {
-        //#pragma omp for ordered
-        for(iter_count = 0; iter_count < interval_row*interval_col ; iter_count++)
-        {
-            int count_MPs_nums;
-            int count_ptslist_num;
-            
-            int t_x, t_y;
-            double pt_boundary[4];
-            
-            int count_MPs = 0;
-            int count_re_tri = 0;
-            CSize t_Size_Grid2D;
-            
-            
-            char temp_pts_file[500];
-            FILE *p_tempfile;
-            
-            int t_i;
-            
-            
-            char bufstr[500];
-            
-            t_y     = (int)(floor(iter_count/interval_col));
-            t_x     = iter_count % interval_col;
-            sprintf(temp_pts_file,"%s/txt/temp_pts_%d_%d_.txt",savepath,t_x,t_y);
-            
-            pt_boundary[0] = subBoundary[0] + t_x*interval_X - interval_buffer;
-            pt_boundary[1] = subBoundary[1] + t_y*interval_Y - interval_buffer;
-            
-            t_Size_Grid2D.width     = (int)((interval_X + 2*interval_buffer)/grid_resolution);
-            t_Size_Grid2D.height    = (int)((interval_Y + 2*interval_buffer)/grid_resolution);
-            
-            pt_boundary[2] = pt_boundary[0] + t_Size_Grid2D.width*grid_resolution;
-            pt_boundary[3] = pt_boundary[1] + t_Size_Grid2D.height*grid_resolution;
-            
-            D3DPOINT* temp_selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*total_point_count);
-            
-            count_MPs_nums = 0;
-            if(!last_flag)
-            {
-                for(t_i = 0 ; t_i < total_point_count ; t_i++)
-                {
-                    if(ptslists[t_i].m_X >= pt_boundary[0] && ptslists[t_i].m_X <= pt_boundary[2] &&
-                       ptslists[t_i].m_Y >= pt_boundary[1] && ptslists[t_i].m_Y <= pt_boundary[3])
-                    {
-                        if(ptslists[t_i].flag != 1 && ptslists[t_i].flag != 2)
-                        {
-                            temp_selected_ptslists[count_MPs_nums].m_X = ptslists[t_i].m_X;
-                            temp_selected_ptslists[count_MPs_nums].m_Y = ptslists[t_i].m_Y;
-                            temp_selected_ptslists[count_MPs_nums].m_Z = t_i;
-                            
-                            count_MPs_nums++;
-                        }
-                    }
-                }
-            }
-            else {
-                for(t_i = 0 ; t_i < total_point_count ; t_i++)
-                {
-                    if(ptslists[t_i].m_X >= pt_boundary[0] && ptslists[t_i].m_X <= pt_boundary[2] &&
-                       ptslists[t_i].m_Y >= pt_boundary[1] && ptslists[t_i].m_Y <= pt_boundary[3])
-                    {
-                        if(ptslists[t_i].flag != 1)
-                        {
-                            temp_selected_ptslists[count_MPs_nums].m_X = ptslists[t_i].m_X;
-                            temp_selected_ptslists[count_MPs_nums].m_Y = ptslists[t_i].m_Y;
-                            temp_selected_ptslists[count_MPs_nums].m_Z = t_i;
-                            
-                            count_MPs_nums++;
-                        }
-                    }
-                }
-            }
-            
-            //printf("count mps %d\n",count_MPs_nums);
- 
-            D3DPOINT *selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs_nums);
-            
-            uint32 *temp_array = (uint32*)malloc(sizeof(uint32)*count_MPs_nums);
-            
-            for(t_i=0;t_i<count_MPs_nums;t_i++)
-            {
-                double temp_X, temp_Y, temp_Z,temp_f,temp_id;
-                
-                selected_ptslists[t_i].m_X = temp_selected_ptslists[t_i].m_X;
-                selected_ptslists[t_i].m_Y = temp_selected_ptslists[t_i].m_Y;
-                temp_array[t_i]            = temp_selected_ptslists[t_i].m_Z;
-            }
-            
-            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
-            
-            sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
-            TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists,min_max,&count_tri, grid_resolution);
-            
-            i = 0;
-            for(i=0;i<count_tri;i++)
-            {
-                trilists[tri_counts].m_X = temp_array[t_trilists[i].m_X];
-                trilists[tri_counts].m_Y = temp_array[t_trilists[i].m_Y];
-                trilists[tri_counts].m_Z = temp_array[t_trilists[i].m_Z];
-                tri_counts++;
-            }
-            
-            free(t_trilists);
-            
-            total_tri_counts            += count_tri;
-            
-            count_tri = 0;
-            
-            free(temp_array);
-            
-            free(selected_ptslists);
-            
-            free(temp_selected_ptslists);
-        }
-    }
-    
-    
-    *re_total_tri_counts = total_tri_counts;
-    
-    
-    UI3DPOINT *trilists_f   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*total_tri_counts);
-    
-    printf("total_tri_counts %d\n",total_tri_counts);
-    
-    for(i=0;i<total_tri_counts;i++)
-    {
-        trilists_f[i].m_X = trilists[i].m_X;
-        trilists_f[i].m_Y = trilists[i].m_Y;
-        trilists_f[i].m_Z = trilists[i].m_Z;
-    }
-    
-    free(trilists);
-    
-    printf("Ending TINgeneration\n");
-    return trilists_f;
-}
-
 int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
                 uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, double Hinterval,
                 bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
@@ -12680,31 +12415,21 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             {
                 UI3DPOINT *trilists;
                 
+                UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
-                if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
+                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
+                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                
+                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                i = 0;
+                for(i=0;i<count_tri;i++)
                 {
-                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                    
-                    sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-                    TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
-                    
-                    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                    i = 0;
-                    for(i=0;i<count_tri;i++)
-                    {
-                        trilists[i].m_X = t_trilists[i].m_X;
-                        trilists[i].m_Y = t_trilists[i].m_Y;
-                        trilists[i].m_Z = t_trilists[i].m_Z;
-                    }
-                    
-                    free(t_trilists);
+                    trilists[i].m_X = t_trilists[i].m_X;
+                    trilists[i].m_Y = t_trilists[i].m_Y;
+                    trilists[i].m_Z = t_trilists[i].m_Z;
                 }
-                else
-                {
-                    trilists = TINgeneration(false,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-                                             min_max,
-                                             Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
-                }
+                
+                free(t_trilists);
                 // TIN generation end
                 
                 
@@ -12764,65 +12489,58 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         flag = false;
                     
                     printf("start TIN\n");
-                    if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
-                    {
-                        D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
-                        uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
-                        FILE *pTri;
-                        
-                        int t_tri_counts = 0;
-                        for(i=0;i<count_MPs;i++)
-                        {
-                            if(flag)
-                            {
-                                if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
-                                {
-                                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                    check_id[t_tri_counts]          = i;
-                                    
-                                    t_tri_counts++;
-                                }
-                            }
-                            else
-                            {
-                                if(ptslists[i].flag != 1)
-                                {
-                                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                    check_id[t_tri_counts]          = i;
-                                    
-                                    t_tri_counts++;
-                                }
-                            }
 
-                        }
-                        
-                        UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
-                        
-                        sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                        TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
-                        
-                        free(input_tri_pts);
-                        
-                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                        i = 0;
-                        for(i=0;i<count_tri;i++)
-                        {
-                            trilists[i].m_X = check_id[t_trilists[i].m_X];
-                            trilists[i].m_Y = check_id[t_trilists[i].m_Y];
-                            trilists[i].m_Z = check_id[t_trilists[i].m_Z];
-                        }
-                        
-                        free(t_trilists);
-                        free(check_id);
-                    }
-                    else
+                    D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
+                    uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
+                    FILE *pTri;
+                    
+                    int t_tri_counts = 0;
+                    for(i=0;i<count_MPs;i++)
                     {
-                        trilists = TINgeneration(!flag,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-                                                 min_max,
-                                                 Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+                        if(flag)
+                        {
+                            if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
+                            {
+                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                                input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                                check_id[t_tri_counts]          = i;
+                                
+                                t_tri_counts++;
+                            }
+                        }
+                        else
+                        {
+                            if(ptslists[i].flag != 1)
+                            {
+                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                                input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                                check_id[t_tri_counts]          = i;
+                                
+                                t_tri_counts++;
+                            }
+                        }
+
                     }
+                    
+                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
+                    
+                    sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
+                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                    
+                    free(input_tri_pts);
+                    
+                    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                    i = 0;
+                    for(i=0;i<count_tri;i++)
+                    {
+                        trilists[i].m_X = check_id[t_trilists[i].m_X];
+                        trilists[i].m_Y = check_id[t_trilists[i].m_Y];
+                        trilists[i].m_Z = check_id[t_trilists[i].m_Z];
+                    }
+                    
+                    free(t_trilists);
+                    free(check_id);
+
                     printf("end TIN\n");
                     
                     count_Results[0]    = count_MPs;
@@ -12869,64 +12587,57 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         
                         
                         printf("2 start TIN\n");
-                        if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
+
+                        D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),non_blunder_count);
+                        uint32 *check_id        = (uint32*)calloc(sizeof(uint32),non_blunder_count);
+                        FILE *pTri;
+                        
+                        int t_tri_counts = 0;
+                        for(i=0;i<count_MPs;i++)
                         {
-                            D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),non_blunder_count);
-                            uint32 *check_id        = (uint32*)calloc(sizeof(uint32),non_blunder_count);
-                            FILE *pTri;
-                            
-                            int t_tri_counts = 0;
-                            for(i=0;i<count_MPs;i++)
+                            if(flag)
                             {
-                                if(flag)
+                                if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
                                 {
-                                    if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
-                                    {
-                                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                        check_id[t_tri_counts]          = i;
-                                        
-                                        t_tri_counts++;
-                                    }
-                                }
-                                else
-                                {
-                                    if(ptslists[i].flag != 1)
-                                    {
-                                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                        check_id[t_tri_counts]          = i;
-                                        
-                                        t_tri_counts++;
-                                    }
+                                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                                    check_id[t_tri_counts]          = i;
+                                    
+                                    t_tri_counts++;
                                 }
                             }
-                            
-                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
-                            
-                            sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                            TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
-                            
-                            free(input_tri_pts);
- 
-                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                            i = 0;
-                            for(i=0;i<count_tri;i++)
+                            else
                             {
-                                trilists[i].m_X = check_id[t_trilists[i].m_X];
-                                trilists[i].m_Y = check_id[t_trilists[i].m_Y];
-                                trilists[i].m_Z = check_id[t_trilists[i].m_Z];
+                                if(ptslists[i].flag != 1)
+                                {
+                                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                                    check_id[t_tri_counts]          = i;
+                                    
+                                    t_tri_counts++;
+                                }
                             }
-                            
-                            free(t_trilists);
-                            free(check_id);
                         }
-                        else
+                        
+                        UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
+                        
+                        sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
+                        TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                        
+                        free(input_tri_pts);
+
+                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                        i = 0;
+                        for(i=0;i<count_tri;i++)
                         {
-                            trilists = TINgeneration(!flag,save_filepath, Pyramid_step, Size_Grid2D, im_resolution, DEM_resolution,
-                                                     min_max,
-                                                     Boundary, count_MPs, ptslists, &iter_row, &iter_col, &count_tri);
+                            trilists[i].m_X = check_id[t_trilists[i].m_X];
+                            trilists[i].m_Y = check_id[t_trilists[i].m_Y];
+                            trilists[i].m_Z = check_id[t_trilists[i].m_Z];
                         }
+                        
+                        free(t_trilists);
+                        free(check_id);
+
                         printf("2 end TIN\n");
                         
                         count_Results[0]    = count_MPs;
