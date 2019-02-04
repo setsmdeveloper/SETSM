@@ -14,16 +14,6 @@
  * limitations under the License.
  */
 
-/*
- * Includes code derived from the voronoi algorithm by Steven Fortune
- * (http://ect.bell-labs.com/who/sjf/)
- * as modified by Derek Bradley
- * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
- *
- * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
- * Algorithmica 2, 153-174.
- */
-
 #include "setsm_code.hpp"
 
 #include"grid_triangulation.hpp"

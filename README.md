@@ -13,13 +13,15 @@ the Ohio State University, www.osu.edu.
 Software engineering team:  Judy Gardiner and Karen Tomko, 
 the Ohio Supercomputer Center, www.osc.edu
 
-This software includes code derived from the voronoi algorithm by 
-Steven Fortune (http://ect.bell-labs.com/who/sjf/) 
-as modified by Derek Bradley 
-(http://zurich.disneyresearch.com/derekbradley/voronoi.html)
-
-Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
-Algorithmica 2, 153-174.
+The triangulation algorithm in the code was adapted from the methods in these 
+two papers:
+[1] Wenzhou Wu, Yikang Rui, Fenzhen Su, Liang Cheng & Jiechen Wang (2014) 
+Novel parallel algorithm for constructing Delaunay triangulation based on a
+twofold-divide-and-conquer scheme, GIScience & Remote Sensing, 51:5, 537-554, DOI:
+10.1080/15481603.2014.946666
+[2] Leonidas Guibas & Jorge Stolfi (1985) Primitives for the Manipulation of 
+General Subdivisions and the Computation of Voronoi Diagrams, ACM Transactions on 
+Graphics, 51:2, 74-123.
 
 ## Installation instructions
 
@@ -121,17 +123,6 @@ make install
 ```
 
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
-
-### Building SETSM with an alternative triangulation library
-
-By default, SETSM uses Steve Fortune's voronoi code for Delaunay triangulation.  
-It also supports Jonathan Shewchuk's Triangle library, available at 
-https://www.cs.cmu.edu/~quake/triangle.html.  To use Triangle in place of the 
-default triangulation code, download the code and place the files triangle.c 
-and triangle.h in the directory with the SETSM code.  Use Makefile.Triangle as 
-a model for building SETSM with Triangle.  Note that Triangle has restrictions 
-related to commercial distribution.  The user is responsible for complying with 
-all license terms.
 
 ## License
 
