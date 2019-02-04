@@ -8233,7 +8233,6 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
     fclose(pFile);
     
     
-    double sum2 = 0;
     double sum = 0;
     int count = 0;
     double residual = 0;
@@ -8242,7 +8241,6 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
         for(int j=0;j<data_size.width;j++)
         {
             sum += out[i*data_size.width + j];
-            sum2 += out[i*data_size.width + j]*out[i*data_size.width + j];
             count++;
         }
     }
