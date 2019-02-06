@@ -17767,7 +17767,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
             {
                 count_matched_files++;
                 
-                printf("matched tiles %s\n",t_str);
+                //printf("matched tiles %s\n",t_str);
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
                 if(size > 0)
@@ -17862,7 +17862,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
             pfile   = fopen(t_str,"r");
             if(pfile)
             {
-                printf("matched tiles %s\n",t_str);
+                //printf("matched tiles %s\n",t_str);
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
                 fseek(pfile,0L,SEEK_SET);
@@ -18160,7 +18160,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     printf("memory allocation %d\t%d\n",row_count,col_count);
     //if ((fheader = fopen(iterfile,"r")) != NULL)
     {
-        #pragma omp parallel for schedule(guided)
+        //#pragma omp parallel for schedule(guided)
         for(long ix=0;ix<(long)DEM_cols*(long)DEM_rows;ix++)
         {
             int row,col;
@@ -18243,7 +18243,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             if(pfile)
             {
                 //printf("matched row %d\tcol %d\n",row,col);
-                printf("matched tiles %s\n",t_str);
+                //printf("matched tiles %s\n",t_str);
                 long int size;
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
@@ -18283,7 +18283,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                         }   
                         int count_MPs;
                         fscanf(c_hfile,"%d\n",&count_MPs);
-                        printf("count Mp = %d\n",count_MPs);
+                        //printf("count Mp = %d\n",count_MPs);
                         F3DPOINT *temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
                         fread(temp_pts,sizeof(F3DPOINT),count_MPs,pfile);
                         
