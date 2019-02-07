@@ -18225,7 +18225,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     }
     printf("Done initialize pt_save\n");
     
-    #pragma omp parallel for schedule(guided) private(index_file)
+    //#pragma omp parallel for schedule(guided) private(index_file)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
         int row,col;
