@@ -2919,6 +2919,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 
                         double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
                         double left_mag_var_B, left_mag_avg_B, right_mag_var_B, right_mag_avg_B;
+						right_mag_var = 0;
+						right_mag_avg = 0;
                         
                         printf("load subimages\n");
                         

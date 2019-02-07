@@ -15,11 +15,11 @@
 
 // TODO
 typedef int64_t INT64;
-#ifdef __SIZEOF_INT128__ // __int128_t is a compiler extension
-	typedef __int128_t INT128; 
-#else // Need to implement own 128-bit int type (or live with 64-bit?)
+//#ifdef __SIZEOF_INT128__ // __int128_t is a compiler extension
+//	typedef __int128_t INT128; 
+//#else // Need to implement own 128-bit int type (or live with 64-bit?)
 	typedef int64_t INT128;
-#endif
+//#endif
 typedef int INDEX;
 typedef struct GridPoint GridPoint;
 typedef struct Edge Edge;
