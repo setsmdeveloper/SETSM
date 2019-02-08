@@ -4197,12 +4197,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             }
         }
     }
-    free(RA_count);
 #ifdef BUILDMPI
     MPI_Bcast(Imageparams, 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-        printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count,Imageparams[ti][0],Imageparams[ti][1]);
+        printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count[ti],Imageparams[ti][0],Imageparams[ti][1]);
+    free(RA_count);
     
     return final_iteration;
 }
