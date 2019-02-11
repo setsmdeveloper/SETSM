@@ -3262,7 +3262,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(level == 0 && iteration == 3)
                                 {
                                     F3DPOINT *ptslists;
-                                    ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    ptslists = (F3DPOINT*)calloc(count_MPs,sizeof(F3DPOINT));
                                     
                                     double minmaxBR[6];
                                     minmaxBR[0] = 10000000;
@@ -16849,7 +16849,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                         int count_MPs;
                         fscanf(c_hfile,"%d\n",&count_MPs);
                         //printf("count Mp = %d\n",count_MPs);
-                        F3DPOINT *temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                        F3DPOINT *temp_pts = (F3DPOINT*)calloc(count_MPs,sizeof(F3DPOINT));
                         fread(temp_pts,sizeof(F3DPOINT),count_MPs,pfile);
                         
                         for(int t_i = 0 ; t_i < count_MPs ; t_i++)
