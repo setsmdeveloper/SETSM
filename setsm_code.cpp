@@ -16410,7 +16410,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     }
     
     //setting DEM value
-#pragma omp parallel for private(index_file) schedule(guided)
+//#pragma omp parallel for private(index_file) schedule(guided)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
         int row,col;
@@ -17476,7 +17476,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     free(value);
     free(value_pt);
     free(value_orthoncc);
-}
+}  //end NNA_M
 
 void Envihdr_writer(TransParam _param, char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type)
 {
