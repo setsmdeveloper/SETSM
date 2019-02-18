@@ -16591,8 +16591,9 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     mt_grid  = mt_grid_resolution;
     
     printf("DEM grid = %lf\t mt grid = %lf\n",grid,mt_grid);
-    /*
+
     ndata = 0;
+    /*
 //#pragma omp parallel for shared(row_end,col_end,save_path) private(index_file) reduction(+:ndata)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
     {
