@@ -223,7 +223,7 @@ CSize Envihdr_reader(char *filename);
 CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir);
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration);
+double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level);
 
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide);
