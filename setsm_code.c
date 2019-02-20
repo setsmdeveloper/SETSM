@@ -534,7 +534,7 @@ int main(int argc,char *argv[])
                 
                 
                 
-                Grid_info = (LSFINFO*)malloc(sizeof(LSFINFO)*data_length);
+                Grid_info = (LSFINFO*)calloc(data_length, sizeof(LSFINFO));
                 if(Grid_info == NULL)
                 {
                     printf("Insufficient memory available\n");
@@ -1419,7 +1419,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     total_ST = time(0);
     
     
-    ProInfo *proinfo = (ProInfo*)malloc(sizeof(ProInfo));
+    ProInfo *proinfo = (ProInfo*)calloc(1, sizeof(ProInfo));
     proinfo->number_of_images = args.number_of_images;
     proinfo->check_sensor_type = args.check_sensor_type;
     proinfo->System_memory = args.System_memory;
@@ -1438,7 +1438,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         double MPP_stereo_angle = 1;
         
         double ***RPCs, minLat, minLon;
-        ImageInfo *image_info = (ImageInfo*)malloc(sizeof(ImageInfo)*proinfo->number_of_images);
+        ImageInfo *image_info = (ImageInfo*)calloc(proinfo->number_of_images, sizeof(ImageInfo));
         //ImageInfo rightimage_info;
         
         uint8 pre_DEM_level = 0;
@@ -1452,12 +1452,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         bool* tile_array = NULL;
 
         CSize *Limagesize;//original imagesize
-        Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images);
-        Imageparams = (double**)malloc(sizeof(double*)*(proinfo->number_of_images));
+        Limagesize = (CSize*)calloc(proinfo->number_of_images, sizeof(CSize));
+        Imageparams = (double**)calloc((proinfo->number_of_images), sizeof(double*));
         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             Imageparams[ti] = (double*)calloc(sizeof(double),2);
         
-        RPCs = (double***)malloc(sizeof(double**)*proinfo->number_of_images);
+        RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
         
         TransParam param;
         
@@ -2533,10 +2533,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
         CSize *Subsetsize;
         double total_memory = 0.0;
         
-        Subsetfilename = (char**)malloc(sizeof(char*)*proinfo->number_of_images);
-        t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
-        Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
-        Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
+        Subsetfilename = (char**)calloc(proinfo->number_of_images, sizeof(char*));
+        t_Imageparams = (double**)calloc(proinfo->number_of_images, sizeof(double*));
+        Startpos_ori = (D2DPOINT*)calloc(proinfo->number_of_images, sizeof(D2DPOINT));
+        Subsetsize = (CSize*)calloc(proinfo->number_of_images, sizeof(CSize));
         
         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
         {
@@ -2658,7 +2658,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     {
                         if(proinfo->check_selected_image[ti])
-                            data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
+                            data_size_lr = (CSize**)calloc(proinfo->number_of_images, sizeof(CSize*));
                     }
                     
                     UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
@@ -2683,7 +2683,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         {
                             if(proinfo->check_selected_image[ti])
                             {
-                                data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+1));
+                                data_size_lr[ti] = (CSize*)calloc(level+1, sizeof(CSize));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level);
                                 
                                 for (int ttt = 0 ; ttt < level+1 ;ttt++)
@@ -2697,7 +2697,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         {
                             if(proinfo->check_selected_image[ti])
                             {
-                                data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+2));
+                                data_size_lr[ti] = (CSize*)calloc(level+2, sizeof(CSize));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level+1);
                                 for (int ttt = 0 ; ttt < level+2 ;ttt++)
                                     printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
@@ -2821,14 +2821,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         uint8 iteration;
 
-                        D2DPOINT *Startpos = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-                        D2DPOINT *BStartpos= (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
+                        D2DPOINT *Startpos = (D2DPOINT*)calloc(proinfo->number_of_images, sizeof(D2DPOINT));
+                        D2DPOINT *BStartpos= (D2DPOINT*)calloc(proinfo->number_of_images, sizeof(D2DPOINT));
                         
-                        uint16 **SubImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint8  **SubOriImages = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
-                        uint16 **SubMagImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint16 **SubImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint16 **SubMagImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                        uint16 **SubImages = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
+                        uint8  **SubOriImages = (uint8**)calloc(proinfo->number_of_images, sizeof(uint8*));
+                        uint16 **SubMagImages = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
+                        uint16 **SubImages_B = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
+                        uint16 **SubMagImages_B = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
                         
                         
                         D2DPOINT *Startpos_next;
@@ -2837,10 +2837,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         uint16 **SubMagImages_next;
                         if(level > Py_combined_level)
                         {
-                            Startpos_next = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-                            SubImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                            SubOriImages_next = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
-                            SubMagImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                            Startpos_next = (D2DPOINT*)calloc(proinfo->number_of_images, sizeof(D2DPOINT));
+                            SubImages_next = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
+                            SubOriImages_next = (uint8**)calloc(proinfo->number_of_images, sizeof(uint8*));
+                            SubMagImages_next = (uint16**)calloc(proinfo->number_of_images, sizeof(uint16*));
                         }
                         
                         D2DPOINT *Grid_wgs;
@@ -3276,7 +3276,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(level == 0 && iteration == 3)
                                 {
                                     F3DPOINT *ptslists;
-                                    ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    ptslists = (F3DPOINT*)calloc(count_MPs, sizeof(F3DPOINT));
                                     
                                     double minmaxBR[6];
                                     minmaxBR[0] = 10000000;
@@ -3367,7 +3367,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         double minY_ptslists =  100000000;
                                         int i;
                                         
-                                        ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                        ptslists = (D3DPOINT*)calloc(count_MPs, sizeof(D3DPOINT));
                                         
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
@@ -3395,12 +3395,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
                                         {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(count_MPs*4, sizeof(UI3DPOINT));
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
                                             
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            trilists    = (UI3DPOINT*)calloc(count_tri, sizeof(UI3DPOINT));
                                             i = 0;
                                             for(i=0;i<count_tri;i++)
                                             {
@@ -3471,7 +3471,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         count_MPs = matched_pts;
                                         
                                         survey  = fopen(filename_mps,"r");
-                                        ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                        ptslists = (D3DPOINT*)calloc(count_MPs, sizeof(D3DPOINT));
                                         
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
@@ -3492,12 +3492,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
                                         {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(count_MPs*4, sizeof(UI3DPOINT));
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri);
                                             
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            trilists    = (UI3DPOINT*)calloc(count_tri, sizeof(UI3DPOINT));
                                             i = 0;
                                             for(i=0;i<count_tri;i++)
                                             {
@@ -3686,7 +3686,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         double minY_ptslists =  100000000;
                                         int i;
                                         
-                                        ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                        ptslists = (D3DPOINT*)calloc(count_MPs, sizeof(D3DPOINT));
                                         
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
@@ -3710,12 +3710,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level >= TIN_split_level || count_MPs < 10000)
                                         {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(count_MPs*4, sizeof(UI3DPOINT));
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
                                             
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            trilists    = (UI3DPOINT*)calloc(count_tri, sizeof(UI3DPOINT));
                                             i = 0;
                                             for(i=0;i<count_tri;i++)
                                             {
@@ -5761,7 +5761,7 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
             long int data_length = (long int)data_size->height*(long int)data_size->width;
             printf("memory allocation %d\t%d\t%li\n",data_size->height,data_size->width,data_length);
             
-            out             = (uint16*)malloc(sizeof(uint16)*data_length);
+            out             = (uint16*)calloc(data_length, sizeof(uint16));
 
             printf("memory allocation end %d\t%d\n",data_size->height,data_size->width);
             
@@ -6423,7 +6423,7 @@ D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size
         Size_2D->height = (int)(ceil((double)(Boundary[3] - Boundary[1])/Grid_y));
     }
     
-    GridPT  = (D2DPOINT*)malloc(sizeof(D2DPOINT)*Size_2D->height*Size_2D->width);
+    GridPT  = (D2DPOINT*)calloc(Size_2D->height*Size_2D->width, sizeof(D2DPOINT));
 #pragma omp parallel for schedule(guided)
     for(int row = 0 ; row < Size_2D->height ; row++)
         for(int col = 0; col < Size_2D->width ; col++)
@@ -6658,7 +6658,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
             int rows[2];
             CSize data_size;
 
-            CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
+            CSize *LImagesize = (CSize*)calloc(1, sizeof(CSize));
             LImagesize->width = seeddem_size.width;
             LImagesize->height = seeddem_size.height;
             
@@ -6775,10 +6775,10 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
     {
         if(proinfo->check_sensor_type == 1) //RPCs info
         {
-            out = (double**)malloc(sizeof(double*)*7);
-            out[0] = (double*)malloc(sizeof(double)*5);
-            out[1] = (double*)malloc(sizeof(double)*5);
-            out[6] = (double*)malloc(sizeof(double)*2);
+            out = (double**)calloc(7, sizeof(double*));
+            out[0] = (double*)calloc(5, sizeof(double*));
+            out[1] = (double*)calloc(5, sizeof(double*));
+            out[6] = (double*)calloc(2, sizeof(double*));
             
             while(!feof(pFile))
             {
@@ -7088,7 +7088,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
     pFile           = fopen(_filename,"r");
     if(pFile)
     {
-        out = (double**)malloc(sizeof(double*)*7);
+        out = (double**)calloc(7, sizeof(double*));
         while(!feof(pFile))
         {
             fscanf(pFile,"%s",temp_str);
@@ -7440,7 +7440,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
         _minmaxheight[0] = -100;
     }
     
-    D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+    D2DPOINT *lonlat = (D2DPOINT *) calloc(4, sizeof(D2DPOINT));
     lonlat[0].m_X = minLon;
     lonlat[0].m_Y = minLat;
     lonlat[1].m_X = minLon;
@@ -7547,7 +7547,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
         D2DPOINT *m_sPS;
         
         if (m_NumOfPts > 0) {
-            m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
+            m_sPS = (D2DPOINT *) calloc(m_NumOfPts, sizeof(D2DPOINT));
         } else {
             return false;
         }
@@ -7578,7 +7578,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
         
         D2DPOINT *m_sPS;
         if (m_NumOfPts > 0) {
-            m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
+            m_sPS = (D2DPOINT *) calloc(m_NumOfPts, sizeof(D2DPOINT));
         } else {
             return false;
         }
@@ -7718,7 +7718,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
         D3DPOINT *m_sPS;
         
         if (m_NumOfPts > 0) {
-            m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+            m_sPS = (D3DPOINT *) calloc(m_NumOfPts, sizeof(D3DPOINT));
         } else {
             return false;
         }
@@ -7751,7 +7751,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
         D3DPOINT *m_sPS;
         
         if (m_NumOfPts > 0) {
-            m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+            m_sPS = (D3DPOINT *) calloc(m_NumOfPts, sizeof(D3DPOINT));
         } else {
             return false;
         }
@@ -7816,7 +7816,7 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
         D2DPOINT *m_sWGS;
         
         if (m_NumOfPts > 0) {
-            m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
+            m_sWGS = (D2DPOINT *) calloc(m_NumOfPts, sizeof(D2DPOINT));
         } else {
             return false;
         }
@@ -7866,7 +7866,7 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
         D2DPOINT *m_sWGS;
         
         if (m_NumOfPts > 0) {
-            m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
+            m_sWGS = (D2DPOINT *) calloc(m_NumOfPts, sizeof(D2DPOINT));
         } else {
             return false;
         }
@@ -8036,7 +8036,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
         D3DPOINT *m_sWGS;
         
         if (m_NumOfPts > 0) {
-            m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+            m_sWGS = (D3DPOINT *) calloc(m_NumOfPts, sizeof(D3DPOINT));
         } else {
             return false;
         }
@@ -8086,7 +8086,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
         D3DPOINT *m_sWGS;
         
         if (m_NumOfPts > 0) {
-            m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+            m_sWGS = (D3DPOINT *) calloc(m_NumOfPts, sizeof(D3DPOINT));
         } else {
             return false;
         }
@@ -8142,7 +8142,7 @@ D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imagepa
 {
     D2DPOINT *IP;
     
-    IP      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    IP      = (D2DPOINT*)calloc(_numofpts, sizeof(D2DPOINT));
     
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
@@ -8370,11 +8370,11 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
             uint8  **oriimg;
             CSize *data_size;
             
-            pyimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
-            magimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
-            dirimg = (int16**)malloc(sizeof(int16*)*(py_level+1));
-            oriimg = (uint8**)malloc(sizeof(uint8*)*(py_level+1));
-            data_size = (CSize*)malloc(sizeof(CSize)*(py_level+1));
+            pyimg = (uint16**)calloc((py_level+1), sizeof(uint16*));
+            magimg = (uint16**)calloc((py_level+1), sizeof(uint16*));
+            dirimg = (int16**)calloc((py_level+1), sizeof(int16*));
+            oriimg = (uint8**)calloc((py_level+1), sizeof(uint8*));
+            data_size = (CSize*)calloc((py_level+1), sizeof(CSize));
 
             fprintf(fid,"image %d\tlevel = 0\t width = %d\theight = %d\n",count,data_size_lr[count][0].width,data_size_lr[count][0].height);
             for(i=0;i<py_level+1;i++)
@@ -9245,11 +9245,11 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     
     
     //orthoimage pixel information save
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+    F2DPOINT **all_im_cd = (F2DPOINT**)calloc(proinfo->number_of_images, sizeof(F2DPOINT*));
     F2DPOINT **all_im_cd_next;
     if(check_combined_WNCC)
     {
-        all_im_cd_next = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+        all_im_cd_next = (F2DPOINT**)calloc(proinfo->number_of_images, sizeof(F2DPOINT*));
     }
     
     int sub_imagesize_w, sub_imagesize_h;
@@ -11690,7 +11690,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     double temp_LIA[2] = {0,0};
     
     int numofpts;
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+    F2DPOINT **all_im_cd = (F2DPOINT**)calloc(proinfo->number_of_images, sizeof(F2DPOINT*));
     
     int sub_imagesize_w, sub_imagesize_h;
     int pixel_buffer = 1000;
@@ -12238,7 +12238,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
     double temp_LIA[2] = {0,0};
     
     int numofpts;
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+    F2DPOINT **all_im_cd = (F2DPOINT**)calloc(proinfo->number_of_images, sizeof(F2DPOINT*));
     
     int sub_imagesize_w, sub_imagesize_h;
     int pixel_buffer = 1000;
@@ -13199,7 +13199,7 @@ D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
     int i;
     D2DPOINT* out;
 
-    out = (D2DPOINT*)malloc(sizeof(D2DPOINT)*numofpts);
+    out = (D2DPOINT*)calloc(numofpts, sizeof(D2DPOINT));
     for(i=0;i<numofpts;i++)
     {
         out[i].m_X      = (InCoord[i].m_X/pow(2,Pyramid_step)) - Startpos.m_X;
@@ -13225,7 +13225,7 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
 {
     int i;
     D2DPOINT* out;
-    out = (D2DPOINT*)malloc(sizeof(D2DPOINT)*numofpts);
+    out = (D2DPOINT*)calloc(numofpts, sizeof(D2DPOINT));
 
     if(Pyramid_step > 0)
     {
@@ -13705,7 +13705,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
     
     
     
-    UI3DPOINT *trilists = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*total_point_count*4);
+    UI3DPOINT *trilists = (UI3DPOINT*)calloc(total_point_count*4, sizeof(UI3DPOINT));
     int tri_counts = 0;
     //#pragma omp parallel shared(interval_col,interval_row,savepath,subBoundary,interval_X,interval_Y,interval_buffer,grid_resolution,ptslists) private(iter_count) reduction(+:total_mps_counts,total_tri_counts)
     {
@@ -13755,7 +13755,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
             pt_boundary_final[2] = pt_boundary_final[0] + t_Size_Grid2D_final.width*grid_resolution;
             pt_boundary_final[3] = pt_boundary_final[1] + t_Size_Grid2D_final.height*grid_resolution;
             
-            D3DPOINT* temp_selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*total_point_count);
+            D3DPOINT* temp_selected_ptslists = (D3DPOINT*)calloc(total_point_count, sizeof(D3DPOINT));
             
             count_MPs_nums = 0;
             if(!last_flag)
@@ -13796,7 +13796,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
             
             //printf("count mps %d\n",count_MPs_nums);
  
-            D3DPOINT *selected_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs_nums);
+            D3DPOINT *selected_ptslists = (D3DPOINT*)calloc(count_MPs_nums, sizeof(D3DPOINT));
             
             uint32 *temp_array = (uint32*)malloc(sizeof(uint32)*count_MPs_nums);
             
@@ -13809,7 +13809,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
                 temp_array[t_i]            = temp_selected_ptslists[t_i].m_Z;
             }
             
-            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs_nums*4);
+            UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(count_MPs_nums*4, sizeof(UI3DPOINT));
             
             sprintf(bufstr,"%s/txt/tri_%d_%d.txt",savepath,t_x,t_y);
             TINCreate(selected_ptslists,bufstr,count_MPs_nums,t_trilists,min_max,&count_tri);
@@ -13857,7 +13857,7 @@ UI3DPOINT *TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
     *re_total_tri_counts = total_tri_counts;
     
     
-    UI3DPOINT *trilists_f   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*total_tri_counts);
+    UI3DPOINT *trilists_f   = (UI3DPOINT*)calloc(total_tri_counts, sizeof(UI3DPOINT));
     
     printf("total_tri_counts %d\n",total_tri_counts);
     
@@ -14005,7 +14005,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             }
             
             //TIN generation start
-            D3DPOINT *ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+            D3DPOINT *ptslists = (D3DPOINT*)calloc(count_MPs, sizeof(D3DPOINT));
             
             
             //double maxX_ptslists = -100000000;
@@ -14034,12 +14034,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 
                 if(Pyramid_step >= TIN_split_level || count_MPs < 10000)
                 {
-                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                    UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(count_MPs*4, sizeof(UI3DPOINT));
                     
                     sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                     TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri);
                     
-                    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                    trilists    = (UI3DPOINT*)calloc(count_tri, sizeof(UI3DPOINT));
                     i = 0;
                     for(i=0;i<count_tri;i++)
                     {
@@ -14149,14 +14149,14 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 
                         }
                         
-                        UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
+                        UI3DPOINT* t_trilists   = (UI3DPOINT*)calloc(t_tri_counts*4, sizeof(UI3DPOINT));
                         
                         sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                         TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri);
                         
                         free(input_tri_pts);
                         
-                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                        trilists    = (UI3DPOINT*)calloc(count_tri, sizeof(UI3DPOINT));
                         i = 0;
                         for(i=0;i<count_tri;i++)
                         {
@@ -14422,7 +14422,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
     initializeVoronoi();
     D3DPOINT *scaled_ptslists;
     
-    scaled_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
+    scaled_ptslists = (D3DPOINT*)calloc(numofpts, sizeof(D3DPOINT));
     
     //distX_ptslists = maxX_ptslists - minX_ptslists;
     //distY_ptslists = maxY_ptslists - minY_ptslists;
@@ -14461,7 +14461,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
     }
     
     /*D3DPOINT *shifted_ptslists;
-     shifted_ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*numofpts);
+     shifted_ptslists = (D3DPOINT*)calloc(numofpts, sizeof(D3DPOINT));
      
      double midX_ptslists = (maxX_ptslists + minX_ptslists) / 2.0;
      double midY_ptslists = (maxY_ptslists + minY_ptslists) / 2.0;
@@ -15433,12 +15433,12 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
       
         check_stop_TIN = true;
       
-        double *updated_height = (double*)malloc(sizeof(double)*num_triangles);
-        int *selected_index = (int*)malloc(sizeof(int)*num_triangles);
-        bool *updated_check = (bool*)calloc(sizeof(bool),num_triangles);
-        double *selected_count = (double*)calloc(sizeof(double),num_triangles);
-        double *FNCC = (double*)calloc(sizeof(double),num_triangles);
-        int *selected_target_index = (int*)malloc(sizeof(int)*num_triangles);
+        double *updated_height = (double*)calloc(num_triangles, sizeof(double));
+        int *selected_index = (int*)calloc(num_triangles, sizeof(int));
+        bool *updated_check = (bool*)calloc(num_triangles, sizeof(bool));
+        double *selected_count = (double*)calloc(num_triangles, sizeof(double));
+        double *FNCC = (double*)calloc(num_triangles, sizeof(double));
+        int *selected_target_index = (int*)calloc(num_triangles, sizeof(int));
         
         //printf("ortho bluncer iteration %d\n",while_count);
 #pragma omp parallel for schedule(guided)
@@ -16166,7 +16166,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
     double minH_temp = *minH_grid;
     double maxH_temp = *maxH_grid;
 
-    UGRID *GridPT3_temp = (UGRID*)malloc(sizeof(UGRID)*TIN_Grid_Size_X*TIN_Grid_Size_Y);
+    UGRID *GridPT3_temp = (UGRID*)calloc(TIN_Grid_Size_X*TIN_Grid_Size_Y, sizeof(UGRID));
 #pragma omp parallel for schedule(guided)
     for (int counter = 0; counter < TIN_Grid_Size_X*TIN_Grid_Size_Y; counter++)
     {
@@ -16961,7 +16961,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
 
     fid_pts     = fopen(file_pts,"r");
-    MPs = (D3DPOINT*)malloc(sizeof(D3DPOINT)*NumofPts);
+    MPs = (D3DPOINT*)calloc(NumofPts, sizeof(D3DPOINT));
     
     for(i=0;i<NumofPts;i++)
     {
@@ -18135,9 +18135,9 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     col_count_mt = (int)((maxX - minX)/mt_grid) + 1;            
     row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
     
-    value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    value_pt = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
+    value_orthoncc = (float*)calloc((long)row_count*(long)col_count, sizeof(float));
+    value = (float*)calloc((long)row_count*(long)col_count, sizeof(float));
+    value_pt = (unsigned char*)calloc((long)row_count*(long)col_count, sizeof(unsigned char));
     
     t_ndata = ndata;
     
@@ -18213,7 +18213,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     
     buffer_clip  = (int)(floor(buffer_clip/mt_grid));
     
-    pt_save  = (NNXY*)malloc(sizeof(NNXY)*(long)row_count*(long)col_count);
+    pt_save  = (NNXY*)calloc((long)row_count*(long)col_count, sizeof(NNXY));
     for(i=0;i<row_count;i++)
     {
         for(j=0;j<col_count;j++)
@@ -18284,7 +18284,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                         int count_MPs;
                         fscanf(c_hfile,"%d\n",&count_MPs);
                         //printf("count Mp = %d\n",count_MPs);
-                        F3DPOINT *temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                        F3DPOINT *temp_pts = (F3DPOINT*)calloc(count_MPs, sizeof(F3DPOINT));
                         fread(temp_pts,sizeof(F3DPOINT),count_MPs,pfile);
                         
                         for(int t_i = 0 ; t_i < count_MPs ; t_i++)
@@ -19262,7 +19262,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         m_frameinfo.m_Camera.m_ppx = 0;
         m_frameinfo.m_Camera.m_ppy = 0;
         
-        m_frameinfo.Photoinfo = (EO*)malloc(sizeof(EO));
+        m_frameinfo.Photoinfo = (EO*)calloc(1, sizeof(EO));
         sprintf(m_frameinfo.Photoinfo[0].path,"%s",ImageFilename);
     }
     
@@ -19773,7 +19773,7 @@ uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_si
     CSize result_size;
     uint16* result_img;
     
-    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
+    GaussianFilter = (double**)calloc(_filter_size, sizeof(double*));
     for(int i=0;i<_filter_size;i++)
         GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
     
@@ -20042,7 +20042,7 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
 {
     D2DPOINT *IP;
     
-    IP      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    IP      = (D2DPOINT*)calloc(_numofpts, sizeof(D2DPOINT));
 
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
@@ -20360,8 +20360,8 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
     maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
     
-    D2DPOINT *XY    = (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
-    D2DPOINT *LonLat= (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
+    D2DPOINT *XY    = (D2DPOINT*)calloc(4, sizeof(D2DPOINT));
+    D2DPOINT *LonLat= (D2DPOINT*)calloc(4, sizeof(D2DPOINT));
     double t_minX, t_maxX, t_minY, t_maxY;
     
     LonLat[0].m_X = minLon;
@@ -20881,7 +20881,7 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         int rows[2];
         CSize data_size;
         
-        CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
+        CSize *LImagesize = (CSize*)calloc(1, sizeof(CSize));
         LImagesize->width = seeddem_size.width;
         LImagesize->height = seeddem_size.height;
         
@@ -20938,7 +20938,7 @@ unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size)
         int rows[2];
         CSize data_size;
         
-        CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
+        CSize *LImagesize = (CSize*)calloc(1, sizeof(CSize));
         LImagesize->width = seeddem_size.width;
         LImagesize->height = seeddem_size.height;
         
@@ -21290,7 +21290,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             GMA_double *V_matrix = GMA_double_create(*numpts,1);
             
             int count = 0;
-            D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(*numpts));
+            D3DPOINT *XY_save = (D3DPOINT*)calloc(*numpts, sizeof(D3DPOINT));
             
             //plane fitting
             for(row = -final_interval;row <= final_interval;row+=mask_interval)
@@ -21782,7 +21782,7 @@ GMA_double* GMA_double_create(uint32 size_row, uint32 size_col)
 {
     long int cnt;
     GMA_double *out;
-    out=(GMA_double*)malloc(sizeof(GMA_double));
+    out=(GMA_double*)calloc(1, sizeof(GMA_double));
     out->nrows=size_row;
     out->ncols=size_col;
     out->val=(long double**)calloc(sizeof(long double*),size_row);
@@ -21993,7 +21993,7 @@ D2DPOINT *GetPhotoCoordinate(D3DPOINT *A, EO Photo, int _numofpts, CAMERA_INFO C
 {
     D2DPOINT *IP;
     
-    IP      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    IP      = (D2DPOINT*)calloc(_numofpts, sizeof(D2DPOINT));
     
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
@@ -22012,7 +22012,7 @@ D2DPOINT *GetPhotoCoordinate(D3DPOINT *A, EO Photo, int _numofpts, CAMERA_INFO C
 D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAMERA_INFO Camera, RM M)
 {
     D3DPOINT *A;
-    A      = (D3DPOINT*)malloc(sizeof(D3DPOINT)*_numofpts);
+    A      = (D3DPOINT*)calloc(_numofpts, sizeof(D3DPOINT));
     
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
@@ -22030,7 +22030,7 @@ D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAM
 D2DPOINT *PhotoToImage(D2DPOINT *_photo, int _numofpts, float _CCDSize, CSize _imgsize)
 {
     D2DPOINT *m_ImageCoord;
-    m_ImageCoord      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    m_ImageCoord      = (D2DPOINT*)calloc(_numofpts, sizeof(D2DPOINT));
     
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
@@ -22045,7 +22045,7 @@ D2DPOINT *PhotoToImage(D2DPOINT *_photo, int _numofpts, float _CCDSize, CSize _i
 D2DPOINT *ImageToPhoto(D2DPOINT *_image, int _numofpts, float _CCDSize, CSize _imgsize)
 {
     D2DPOINT *m_PhotoCoord;
-    m_PhotoCoord      = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    m_PhotoCoord      = (D2DPOINT*)calloc(_numofpts, sizeof(D2DPOINT));
     
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
