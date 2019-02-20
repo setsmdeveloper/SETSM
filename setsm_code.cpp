@@ -2604,10 +2604,30 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 
             printf("subsetimage\n");
             
-            
+            double RA_memory = 0;
             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
             {
                 printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
+                
+                CSize t_Imagesize;
+                double tmp_mem = 0;
+                GetImageSize(proinfo->Imagefilename[ti],&t_Imagesize);
+                long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
+                tmp_mem += (sizeof(uint16)*data_length);
+                tmp_mem += (sizeof(uint16)*data_length);
+                tmp_mem += (sizeof(int16)*data_length);
+                tmp_mem += (sizeof(uint8)*data_length);
+                if(tmp_mem > RA_memory)
+                    RA_memory = tmp_mem;
+            }
+            
+            RA_memory = RA_memory/1024.0/1024.0/1024.0;
+            
+            printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
+            if(RA_memory > proinfo->System_memory - 2)
+            {
+                printf("System memory is not enough to run a relative RPC bias computation module of SETSM. Please reduce RA tilesize or assign more physical memory!!\n");
+                exit(1);
             }
             
             if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,
@@ -3003,7 +3023,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
-                        total_memory = CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration);
+                        total_memory = CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level);
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
@@ -4207,7 +4227,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     return final_iteration;
 }
 
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration)
+double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level)
 {
     double Memory = 0;
     
@@ -4217,13 +4237,23 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     
     for(int ti = 0 ; ti < info->number_of_images ; ti++)
     {
-        image += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) * 3);
-        oriimage += (double)((sizeof(uint8)*data_size[ti][level].height*data_size[ti][level].width) * 2);
-        magimage += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) * 3);
+        image += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
+        oriimage += (double)((sizeof(uint8)*data_size[ti][level].height*data_size[ti][level].width) );
+        magimage += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
+        
+        image += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
+        magimage += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
+    
+        if(level > Py_combined_level)
+        {
+            image += (double)((sizeof(uint16)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
+            oriimage += (double)((sizeof(uint8)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
+            magimage += (double)((sizeof(uint16)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
+        }
     }
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += (image + oriimage + magimage);
-    //printf("memory 1 %f\t%f\t%f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage,all_im_cd,all_im_cd_next);
+    //printf("memory 1 %f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage);
     long int GridPT  = (double)(sizeof(D2DPOINT)*Size_Grid2D.height*Size_Grid2D.width);
     Memory += (GridPT);
     //printf("memory 2 %f\n",Memory);
