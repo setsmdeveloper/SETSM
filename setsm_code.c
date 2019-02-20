@@ -1524,7 +1524,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 proinfo->frameinfo.m_Camera.m_ImageSize.height = Limagesize[ti].height;
             }
            
-            if(args.sensor_provider != 1)
+            if(args.sensor_provider != 1 && proinfo->frameinfo.Photoinfo != NULL)
             {
                 for(int j=0;j<proinfo->number_of_images ;j++)
                 {
