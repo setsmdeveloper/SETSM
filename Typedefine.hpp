@@ -32,6 +32,9 @@
 #define false 0x0
 #endif
 
+enum SensorType {SB, AB};
+enum SensorProvider {DG, PL};
+
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
@@ -221,6 +224,7 @@ typedef struct ProjectInfo{
 	int end_col;
 	int threads_num;
     int number_of_images;
+    SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -243,7 +247,6 @@ typedef struct ProjectInfo{
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_selected_image[MaxImages];
     
     FrameInfo frameinfo;
@@ -276,7 +279,8 @@ typedef struct ArgumentInfo{
 	int tilesize;
 	int projection; //PS = 1, UTM = 2
     int utm_zone;
-    int sensor_provider; //DG = 1, Pleiades = 2
+    SensorType sensor_type; // SB is for RFM (default), AB is for Collinear Equation (Frame)
+    SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
     int ortho_count;
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
@@ -313,7 +317,6 @@ typedef struct ArgumentInfo{
     bool check_LSFDEMpath;
     int check_LSF2;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_EO;
     bool check_fl;
     bool check_ccd;
