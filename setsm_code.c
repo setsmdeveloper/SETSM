@@ -6776,9 +6776,9 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
         if(proinfo->check_sensor_type == 1) //RPCs info
         {
             out = (double**)calloc(7, sizeof(double*));
-            out[0] = (double*)calloc(5, sizeof(double*));
-            out[1] = (double*)calloc(5, sizeof(double*));
-            out[6] = (double*)calloc(2, sizeof(double*));
+            out[0] = (double*)calloc(5, sizeof(double));
+            out[1] = (double*)calloc(5, sizeof(double));
+            out[6] = (double*)calloc(2, sizeof(double));
             
             while(!feof(pFile))
             {
