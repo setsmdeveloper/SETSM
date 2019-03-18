@@ -42,6 +42,9 @@
 #define false 0x0
 #endif
 
+enum SensorType {SB , AB};
+enum SensorProvider {DG, PL};
+
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
@@ -124,6 +127,7 @@ typedef struct tagNCCresult
 	double result1; //second peak roh
 	float result2; //first peak height
 	float result3; //second peak height
+    float GNCC;
 	int result4; //peak count
     double max_WNCC;
     int max_WNCC_pos;
@@ -132,7 +136,7 @@ typedef struct tagNCCresult
     int maxHeight;
     int NumOfHeight;
     bool check_height_change;
-	int roh_count;
+	//int roh_count;
 } NCCresult;
 
 typedef struct UpdateGrid{
@@ -151,7 +155,7 @@ typedef struct UpdateGrid{
 
 typedef struct tagVoxelinfo
 {
-    float WNCC;
+    //float GNCC;
     float height;
     bool flag_cal;
     float INCC;
@@ -159,7 +163,7 @@ typedef struct tagVoxelinfo
 
 typedef struct LSFinfo{
     float lsf_std;
-    int lsf_kernel;
+    unsigned char lsf_kernel;
 }LSFINFO;
 
 typedef struct BlunderIP{
@@ -231,6 +235,7 @@ typedef struct ProjectInfo{
 	int end_col;
 	int threads_num;
     int number_of_images;
+    enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -253,7 +258,6 @@ typedef struct ProjectInfo{
     bool check_ortho;
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_selected_image[MaxImages];
     
     FrameInfo frameinfo;
@@ -286,7 +290,8 @@ typedef struct ArgumentInfo{
 	int tilesize;
 	int projection; //PS = 1, UTM = 2
     int utm_zone;
-    int sensor_provider; //DG = 1, Pleiades = 2
+    enum SensorType sensor_type; // SB is for RFM (default), AB is for Collinear Equation (Frame)
+    enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
     int ortho_count;
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
@@ -323,7 +328,6 @@ typedef struct ArgumentInfo{
     bool check_LSFDEMpath;
     int check_LSF2;
     bool check_Matchtag;
-    bool check_sensor_type; // 1 is for RFM (default), 0 is for Collinear Equation (Frame)
     bool check_EO;
     bool check_fl;
     bool check_ccd;
