@@ -9,16 +9,6 @@
 #include "grid_iterators.hpp"
 #include "grid_types.hpp"
 
-// Just to get serial tests to compile
-#ifndef _OPENMP
-inline double omp_get_wtime() {
-	return 0;
-}
-inline int omp_get_max_threads() {
-	return -1;
-}
-#endif
-
 template <typename GridType, typename IterType>
 class GridTriangulation
 {

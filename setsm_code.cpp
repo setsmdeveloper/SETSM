@@ -29,7 +29,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "3.4.2";
+const char setsm_version[] = "3.4.3";
 
 char *dirname(char *path);
 
@@ -114,6 +114,14 @@ int main(int argc,char *argv[])
     
     int DEM_divide = 0;
     
+    
+    /*CSize DEM_size;
+    DEM_size.width = 40000;
+    DEM_size.height = 80000;
+    
+    double mem = CalMemorySize_Post(DEM_size);
+    exit(1);
+    */
     if(argc == 1)
     {
         char save_filepath[500];
@@ -434,7 +442,7 @@ int main(int argc,char *argv[])
                 double MPP_stereo_angle = 1;
                 LSFINFO *Grid_info = NULL;
                 float* seeddem = NULL;
-                unsigned char* matchtag = NULL;
+                //unsigned char* matchtag = NULL;
                 double grid_size = args.DEM_space;
                 bool Hemisphere = 1;
                 double minX, maxY;
@@ -483,7 +491,7 @@ int main(int argc,char *argv[])
                 printf("data_length %ld\n",data_length);
                 printf("projection %d\tHemisphere %d\n",param.projection,Hemisphere);
                 
-                matchtag = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
+                /*matchtag = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
                 for(long int i = 0; i< (long int)DEM_size.height*DEM_size.width ; i++)
                 {
                     if(seeddem[i] > -100)
@@ -570,7 +578,7 @@ int main(int argc,char *argv[])
                         }
                     }
                     
-                    DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,matchtag,smooth_DEM);
+                    DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,smooth_DEM);
                     
                     if(sigma_avg > max_std)
                     {
@@ -605,7 +613,7 @@ int main(int argc,char *argv[])
                 
                 printf("%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
                 
-                free(matchtag);
+                //free(matchtag);
                 free(seeddem);
                 free(smooth_DEM);
                 
@@ -624,7 +632,7 @@ int main(int argc,char *argv[])
             
             for (i=0; i<argc; i++)
             {
-                if (strcmp("-Sensor",argv[i]) == 0)
+                if (strcmp("-Sensor",argv[i]) == 0 || strcmp("-sensor",argv[i]) == 0)
                 {
                     if (argc == i+1) {
                         printf("Please input '1' for RFM(default) or '0' for Collinear Equation(Frame)\n");
@@ -635,11 +643,17 @@ int main(int argc,char *argv[])
                         int temp;
                         temp = atoi(argv[i+1]);
                         if(temp == 1)
+                        {
                             args.sensor_type = SB;
+                            printf("Spaceborne RFM Sensor %d\n",args.sensor_type);
+                        }
                         else
+                        {
                             args.sensor_type = AB;
+                            printf("Airborne frame Sensor %d\n",args.sensor_type);
+                        }
                         
-                        printf("Sensor %d\n",args.sensor_type);
+                        
                     }
                 }
                 
@@ -1567,7 +1581,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                 }
             }
-        
+
             if(!args.check_imageresolution)
             {
                 if(proinfo->sensor_type == AB)
@@ -2155,10 +2169,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         if(!args.check_gridonly)
                         {
+                            
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
                                                              RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                              Limagesize,param,total_count,ori_minmaxHeight,Boundary,1,1,(double)convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                            
                         }
 #ifdef BUILDMPI
                         MPI_Barrier(MPI_COMM_WORLD);
@@ -2240,26 +2256,55 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         }
                         
                         char str_DEMfile[500];
-                        double tilememory_2m = 0.10;
-                        double tilememory = tilememory_2m*(2.0/proinfo->DEM_resolution)*(2.0/proinfo->DEM_resolution);
-                        double total_tile = (iter_row_end-1)*(t_col_end-1);
-                        printf("total tile memory %f\n",total_tile*tilememory);
-                        
                         float *DEM_values = NULL;
                         float *Ortho_values = NULL;
+                        float *H_value = NULL;
+                        unsigned char* MT_value = NULL;
                         
-                        if(total_tile*tilememory > proinfo->System_memory - 5)
+                        int buffer_tile = 420;
+                        final_iteration = 3;
+                        
+                        double FinalDEM_boundary[4] = {0.};
+                        CSize Final_DEMsize =
+                        DEM_final_Size(proinfo->save_filepath, iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,FinalDEM_boundary);
+                        
+                        double total_memory = CalMemorySize_Post(Final_DEMsize,Final_DEMsize);
+                        
+                        if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                            total_memory = CalMemorySize_Post_LSF(Final_DEMsize,Final_DEMsize);
+                        
+                        printf("total tile memory %f\t%f\t%d\t%d\n",proinfo->System_memory,total_memory,Final_DEMsize.width,Final_DEMsize.height);
+                        
+                        if(total_memory > proinfo->System_memory - 5)
                         {
+                            FILE* p_sefile = NULL;
+                            char outsefile[500];
                             bool check_tile = true;
                             double define_row = 2.0;
                             double row_tilememory;
                             int tile_row_step;
+                            int tile_row_start;
                             int iteration_t = 1;
+                            int tile_row_half = ceil(iter_row_end/2.0);
+                            
+                            sprintf(outsefile, "%s/DEM_splited.txt", proinfo->save_filepath);
+                            p_sefile = fopen(outsefile,"w");
+                            
                             while(check_tile && define_row < 10.0)
                             {
                                 tile_row_step = ceil((iter_row_end-1)/define_row);
-                                row_tilememory = (t_col_end-1)*tile_row_step*tilememory;
+                                int tile_row_step_half = floor(tile_row_step/2.0);
+                                tile_row_start = tile_row_half - tile_row_step_half;
+                                int tile_row_end = tile_row_start + tile_row_step - 1;
+                                printf("%d\t%d\t%d\t%d\t%d\n",tile_row_half,tile_row_step,tile_row_step_half,tile_row_start,tile_row_end);
+                                CSize tile_Final_DEMsize =
+                                DEM_final_Size(proinfo->save_filepath, tile_row_start,t_col_start, tile_row_end,t_col_end,proinfo->DEM_resolution,FinalDEM_boundary);
                                 
+                                row_tilememory = CalMemorySize_Post(tile_Final_DEMsize,tile_Final_DEMsize);
+                                if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                                    row_tilememory = CalMemorySize_Post_LSF(tile_Final_DEMsize,tile_Final_DEMsize);
+                                
+                                printf("tile_Final_DEMsize %d\t%d\t%d\t%d\t%d\t%d\n",tile_Final_DEMsize.width,tile_Final_DEMsize.height,tile_row_start,t_col_start, tile_row_end,t_col_end);
                                 printf("while iter %d\ttile_row_step %d\tdivide %f\tmemory %f\n",iteration_t,tile_row_step,define_row,row_tilememory);
                                 
                                 if(row_tilememory < proinfo->System_memory - 5)
@@ -2271,8 +2316,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 iteration_t++;
                             }
-                            printf("define_row tile_row_step %f\t%d\t%f\t%f\n",define_row,tile_row_step,total_tile*tilememory,row_tilememory);
+                            printf("define_row tile_row_step %f\t%d\t%f\n",define_row,tile_row_step,row_tilememory);
                             DEM_divide = define_row;
+                            fprintf(p_sefile,"total_splited_DEMs %d\n",(int)define_row);
                             
                             for(int tile_row = 1 ; tile_row <= define_row ; tile_row++)
                             {
@@ -2292,47 +2338,115 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 {
                                     ST = time(0);
                                     printf("Tile merging start final iteration %d!!\n",final_iteration);
-                                    int buffer_tile = 420;
-                                    CSize Tile_BR;
                                     
-                                    Tile_BR = BR_MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Ortho_values);
-                                    printf("Tile_BR %d\t%d\n",Tile_BR.width,Tile_BR.height);
-                                    DEM_values = (float*)malloc(sizeof(float)*Tile_BR.width*Tile_BR.height);
-                                    Ortho_values = (float*)malloc(sizeof(float)*Tile_BR.width*Tile_BR.height);
-                                    mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Ortho_values);
+                                    CSize tile_Final_DEMsize =
+                                    DEM_final_Size(proinfo->save_filepath, iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,FinalDEM_boundary);
+                                    
+                                    printf("DEM_size %d\t%d\t%d\t%d\t%d\t%d\n",tile_Final_DEMsize.width,tile_Final_DEMsize.height,iter_row_start,iter_row_end,t_col_start,t_col_end);
+                                    
+                                    if(tile_row == 1)
+                                    {
+                                        FinalDEM_boundary[3] += 200;
+                                        iter_row_end += 1;
+                                    }
+                                    else if(tile_row == define_row)
+                                    {
+                                        FinalDEM_boundary[1] -= 200;
+                                    }
+                                    else
+                                    {
+                                        FinalDEM_boundary[1] -= 200;
+                                        FinalDEM_boundary[3] += 200;
+                                        iter_row_end += 1;
+                                        iter_row_start -= 1;
+                                    }
+                                    printf("re boundary %f\t%f\t%f\t%f\n",FinalDEM_boundary[0],FinalDEM_boundary[1],FinalDEM_boundary[2],FinalDEM_boundary[3]);
+                                    tile_Final_DEMsize.width = (int)((FinalDEM_boundary[2] - FinalDEM_boundary[0])/proinfo->DEM_resolution) + 1;
+                                    tile_Final_DEMsize.height = (int)((FinalDEM_boundary[3] - FinalDEM_boundary[1])/proinfo->DEM_resolution) + 1;
+                                    printf("re DEM_size %d\t%d\t%d\t%d\t%d\t%d\n",tile_Final_DEMsize.width,tile_Final_DEMsize.height,iter_row_start,iter_row_end,t_col_start,t_col_end);
+                                    
+                                    
+                                    fprintf(p_sefile,"DEM %d\n",tile_row);
+                                    fprintf(p_sefile,"Output dimensions=%d\t%d\n",tile_Final_DEMsize.width,tile_Final_DEMsize.height);
+                                    fprintf(p_sefile,"Upper left coordinates=%f\t%f\n",FinalDEM_boundary[0],FinalDEM_boundary[3]);
+                                    
+                                    DEM_values = (float*)malloc(sizeof(float)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
+                                    mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,tile_Final_DEMsize,FinalDEM_boundary);
                                     
                                     mt_grid_size = proinfo->DEM_resolution;
-                                    
-                                    ET = time(0);
-                                    gap = difftime(ET,ST);
-                                    printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
-                                    
-                                    ST = time(0);
+                            
                                     printf("Interpolation start!!\n");
                                     sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo->save_filepath,proinfo->Outputpath_name);
                                     sprintf(temp_ortho, "%s/%s_dem_ortho.txt", proinfo->save_filepath,proinfo->Outputpath_name);
                                     printf("%f %f\n",proinfo->DEM_resolution,mt_grid_size);
                                     
-                                    NNA_M(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,tile_row,DEM_values,Ortho_values);
+                                    H_value = (float*)malloc(sizeof(float)*(long)tile_Final_DEMsize.width*(long)tile_Final_DEMsize.height);
+                                    MT_value = (unsigned char*)calloc(sizeof(unsigned char),(long)tile_Final_DEMsize.width*(long)tile_Final_DEMsize.height);
+                                    NNA_M(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,tile_row,tile_Final_DEMsize,DEM_values,H_value,MT_value,FinalDEM_boundary);
+                                    
                                     ET = time(0);
                                     gap = difftime(ET,ST);
-                                    printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                    printf("DEM finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                    
+                                    double MT_memory = CalMemorySize_Post_MT(tile_Final_DEMsize,tile_Final_DEMsize);
+                                    if(MT_memory > proinfo->System_memory - 5)
+                                    {
+                                        ST = time(0);
+                                        
+                                        printf("not enough memory for matchtag filtering[%f]!!\nMake original matchtag file!!\n",MT_memory);
+                                        char GEOTIFF_matchtag_filename[500];
+                                        sprintf(GEOTIFF_matchtag_filename, "%s/%s_%d_matchtag.tif", proinfo->save_filepath, proinfo->Outputpath_name,tile_row);
+                                        
+                                        WriteGeotiff(GEOTIFF_matchtag_filename, MT_value, tile_Final_DEMsize.width, tile_Final_DEMsize.height, proinfo->DEM_resolution, FinalDEM_boundary[0], FinalDEM_boundary[3], param.projection, param.zone, Hemisphere, 1);
+                                        
+                                        free(H_value);
+                                        free(MT_value);
+                                        
+                                        ET = time(0);
+                                        gap = difftime(ET,ST);
+                                        printf("Matched PT finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                        
+                                        //if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                                        //    printf("not enough memory for LSF processing[%f]!!\n",MT_memory);
+                                    }
+                                    else
+                                    {
+                                        ST = time(0);
+                                        
+                                        Ortho_values = (float*)malloc(sizeof(float)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
+                                        MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
+                                    
+                                        NNA_M_MT(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,tile_row,Ortho_values,H_value,MT_value,tile_Final_DEMsize,FinalDEM_boundary);
+                                        
+                                        ET = time(0);
+                                        gap = difftime(ET,ST);
+                                        printf("Matched PT finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                    }
+                                    
+                                    if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                                    {
+                                        ST = time(0);
+                                        
+                                        LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,tile_row);
+                                        
+                                        ET = time(0);
+                                        gap = difftime(ET,ST);
+                                        printf("LSF finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                    }
+                                    
+                                    CSize seeddem_size;
+                                    double tminX, tmaxY;
+                                    
+                                    char tiff_path[500];
+                                    sprintf(tiff_path, "%s/%s_%d_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name,tile_row);
+                                    seeddem_size = ReadGeotiff_info(tiff_path, &tminX, &tmaxY, NULL);
+                                    
+                                    fprintf(pMetafile,"DEM %d\n",tile_row);
+                                    fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
+                                    fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                                 }
-                                CSize seeddem_size;
-                                double tminX, tmaxY;
-                                
-                                char tiff_path[500];
-                                sprintf(tiff_path, "%s/%s_%d_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name,tile_row);
-                                seeddem_size = ReadGeotiff_info(tiff_path, &tminX, &tmaxY, NULL);
-                                
-                                if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
-                                    LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,seeddem_size);
-                                
-                                fprintf(pMetafile,"DEM %d\n",tile_row);
-                                fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
-                                fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
-                                
                             }
+                            fclose(p_sefile);
                         }
                         else
                         {
@@ -2343,51 +2457,87 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             pFile_DEM = fopen(str_DEMfile,"r");
                             printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
                             final_iteration = 3;
+                            
                             //if(!pFile_DEM)
                             {
+                                
                                 ST = time(0);
                                 printf("Tile merging start final iteration %d!!\n",final_iteration);
-                                int buffer_tile = 420;
-                                CSize Tile_BR;
                                 
-                                Tile_BR = BR_MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Ortho_values);
-                                printf("Tile_BR %d\t%d\n",Tile_BR.width,Tile_BR.height);
-                                
-                                DEM_values = (float*)malloc(sizeof(float)*Tile_BR.width*Tile_BR.height);
-                                Ortho_values = (float*)malloc(sizeof(float)*Tile_BR.width*Tile_BR.height);
-                                
-                                mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Ortho_values);
-                                printf("%f\t%f\t",DEM_values[10],Ortho_values[10]);
+                                DEM_values = (float*)malloc(sizeof(float)*Final_DEMsize.width*Final_DEMsize.height);
+                                mt_grid_size = MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Final_DEMsize,FinalDEM_boundary);
+                                printf("%f\t",DEM_values[10]);
                                 mt_grid_size = proinfo->DEM_resolution;
                                 
-                                ET = time(0);
-                                gap = difftime(ET,ST);
-                                printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
-                                
-                                ST = time(0);
                                 printf("Interpolation start!!\n");
                                 sprintf(temp_c, "%s/%s_dem_tin.txt", proinfo->save_filepath,proinfo->Outputpath_name);
                                 sprintf(temp_ortho, "%s/%s_dem_ortho.txt", proinfo->save_filepath,proinfo->Outputpath_name);
                                 printf("%f %f\n",proinfo->DEM_resolution,mt_grid_size);
                                 
-                                NNA_M(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,0,DEM_values,Ortho_values);
+                                H_value = (float*)malloc(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+                                MT_value = (unsigned char*)calloc(sizeof(unsigned char),(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+                                NNA_M(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,0,Final_DEMsize,DEM_values,H_value,MT_value,FinalDEM_boundary);
+                                
                                 ET = time(0);
                                 gap = difftime(ET,ST);
-                                printf("Interpolation finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                printf("DEM finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                
+                                double MT_memory = CalMemorySize_Post_MT(Final_DEMsize,Final_DEMsize);
+                                //MT_memory = 100;
+                                if(MT_memory > proinfo->System_memory - 5)
+                                {
+                                    ST = time(0);
+                                    
+                                    printf("not enough memory for matchtag filtering[%f]!!\nMake original matchtag file!!\n",MT_memory);
+                                    char GEOTIFF_matchtag_filename[500];
+                                    sprintf(GEOTIFF_matchtag_filename, "%s/%s_matchtag.tif", proinfo->save_filepath, proinfo->Outputpath_name);
+                                    
+                                    WriteGeotiff(GEOTIFF_matchtag_filename, MT_value, Final_DEMsize.width, Final_DEMsize.height, proinfo->DEM_resolution, FinalDEM_boundary[0], FinalDEM_boundary[3], param.projection, param.zone, Hemisphere, 1);
+                        
+                                    free(H_value);
+                                    free(MT_value);
+                                    
+                                    ET = time(0);
+                                    gap = difftime(ET,ST);
+                                    printf("Matched PT finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                    
+                                    //if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                                    //    printf("not enough memory for LSF processing[%f]!!\n",MT_memory);
+                                }
+                                else
+                                {
+                                    ST = time(0);
+                                    
+                                    Ortho_values = (float*)malloc(sizeof(float)*Final_DEMsize.width*Final_DEMsize.height);
+                                    MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,Final_DEMsize,FinalDEM_boundary);
+                                    
+                                    NNA_M_MT(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,0,Ortho_values,H_value,MT_value,Final_DEMsize,FinalDEM_boundary);
+                                    
+                                    ET = time(0);
+                                    gap = difftime(ET,ST);
+                                    printf("Matched PT finish(time[m] = %5.2f)!!\n",gap/60.0);
+                                }
                             }
-                       
+                            
                             CSize seeddem_size;
                             double tminX, tmaxY;
-                        
+                            
                             char tiff_path[500];
                             sprintf(tiff_path, "%s/%s_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name);
                             seeddem_size = ReadGeotiff_info(tiff_path, &tminX, &tmaxY, NULL);
-                        
-                            if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
-                                LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,seeddem_size);
-                            
                             fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                             fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
+                            
+                            if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
+                            {
+                                ST = time(0);
+                                
+                                LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,0);
+                                
+                                ET = time(0);
+                                gap = difftime(ET,ST);
+                                printf("LSF finish(time[m] = %5.2f)!!\n",gap/60.0);
+                            }
                         }
                         
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -2645,6 +2795,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 tmp_mem += (sizeof(uint8)*data_length);
                 if(tmp_mem > RA_memory)
                     RA_memory = tmp_mem;
+                
+                proinfo->check_selected_image[ti] = true;
             }
             
             RA_memory = RA_memory/1024.0/1024.0/1024.0;
@@ -3201,7 +3353,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(level == 0 && iteration > 1)
                                     fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
                                 
-                                AWNCC(grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
+                                AWNCC(proinfo,grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration);
                                 printf("Done AWNCC\n");
                             }
                             
@@ -3308,7 +3460,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(level == 0 && iteration == 3)
                                 {
                                     F3DPOINT *ptslists;
-                                    ptslists = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    ptslists = (F3DPOINT*)calloc(count_MPs,sizeof(F3DPOINT));
                                     
                                     double minmaxBR[6];
                                     minmaxBR[0] = 10000000;
@@ -4261,15 +4413,17 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     double oriimage = 0;
     double magimage = 0;
     
+    //printf("%d\t%d\n",Py_combined_level,blunder_selected_level);
     for(int ti = 0 ; ti < info->number_of_images ; ti++)
     {
+        //printf("data size %d\t%d\t%d\t%d\t%d\t%d\n",data_size[ti][level].height,data_size[ti][level].width,data_size[ti][blunder_selected_level].height,data_size[ti][blunder_selected_level].width,data_size[ti][level-1].height,data_size[ti][level-1].width);
         image += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
         oriimage += (double)((sizeof(uint8)*data_size[ti][level].height*data_size[ti][level].width) );
         magimage += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
         
         image += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
         magimage += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
-        
+    
         if(level > Py_combined_level)
         {
             image += (double)((sizeof(uint16)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
@@ -5908,8 +6062,8 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
             // scanline read
             data_size->width    = cols[1] - cols[0];
             data_size->height   = rows[1] - rows[0];
-            
-            out             = (float*)malloc(sizeof(float)*data_size->height*data_size->width);
+            long int data_length = (long)data_size->height*(long)data_size->width;
+            out             = (float*)malloc(sizeof(float)*data_length);
             
             scanline        = TIFFScanlineSize(tif);
             
@@ -5929,7 +6083,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
 #pragma omp parallel for private(a) schedule(guided)
                     for(a = cols[0];a<cols[1];a++)
                     {
-                        out[(row-rows[0])*data_size->width + (a-cols[0])] = t_data[a];
+                        out[(long)(row-rows[0])*(long)data_size->width + (long)(a-cols[0])] = t_data[a];
                     }
                 }
             }
@@ -9078,16 +9232,18 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             if(!check_blunder_cell)
             {
             
-                if((pyramid_step >= 3 /*&& iteration < 5*/) || iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
+                //if((pyramid_step >= 3 ) || iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
+                if(iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
                 {
                     nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
                     nccresult[t_i].maxHeight = GridPT3[t_i].maxHeight;
+                    nccresult[t_i].GNCC = -1.0;
                     nccresult[t_i].check_height_change = true;
                 }
                 else
                 {
                     int NumberofHeightVoxel = (int)((nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
-                    
+                    //new search height
                     if(nccresult[t_i].NumOfHeight == 0 && NumberofHeightVoxel > 0)
                     {
                         change_step_min = 0;
@@ -9096,6 +9252,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     }
                     else
                     {
+                        //extension search height than GridPT3 (compare before and after search height)
                         if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight || nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
                         {
                             if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight)
@@ -9132,7 +9289,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         
                         for(int h = 0 ; h < NumberofHeightVoxel ; h++)
                         {
-                            grid_voxel[t_i][h].WNCC = -1.0;
+                            //grid_voxel[t_i][h].WNCC = -1.0;
                             grid_voxel[t_i][h].flag_cal = true;
                             grid_voxel[t_i][h].height = (float)(nccresult[t_i].minHeight + h*height_step);
                             //grid_voxel[t_i][h].SSD = 0;
@@ -9513,41 +9670,40 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     
 #pragma omp parallel
 	{
-// Make patch vectors thread private rather than private to each loop iteration
-	double *left_patch_vecs[3];
-	double *right_patch_vecs[3];
-	double *left_mag_patch_vecs[3];
-	double *right_mag_patch_vecs[3];
-	double *left_patch_next_vecs[3];
-	double *right_patch_next_vecs[3];
-	double *left_mag_patch_next_vecs[3];
-	double *right_mag_patch_next_vecs[3];
-	int max_half_template = max(Half_template_size,Template_size/2);
-	int patch_size = (2*max_half_template+1) * (2*max_half_template+1);
-	for (int k=0; k<3; k++)
-	{
-		left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		left_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-	}
+		// Make patch vectors thread private rather than private to each loop iteration
+		double *left_patch_vecs[3];
+		double *right_patch_vecs[3];
+		double *left_mag_patch_vecs[3];
+		double *right_mag_patch_vecs[3];
+		double *left_patch_next_vecs[3];
+		double *right_patch_next_vecs[3];
+		double *left_mag_patch_next_vecs[3];
+		double *right_mag_patch_next_vecs[3];
+		int max_half_template = max(Half_template_size,Template_size/2);
+		int patch_size = (2*max_half_template+1) * (2*max_half_template+1);
+		for (int k=0; k<3; k++)
+		{
+			left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			left_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			right_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+			right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+		}
 
 #pragma omp for schedule(guided) reduction(+:sum_data2, sum_data,Accessable_grid)
-    for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
-    {
-        int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-        int pts_col = iter_count % Size_Grid2D.width;
-        int pt_index = pts_row*Size_Grid2D.width + pts_col;
+    	for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+    	{
+        	int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
+        	int pts_col = iter_count % Size_Grid2D.width;
+        	int pt_index = pts_row*Size_Grid2D.width + pts_col;
       
-        if(nccresult[pt_index].check_height_change)
-            sum_data2++;
-        else
-            sum_data++;
-        {
+        	if(nccresult[pt_index].check_height_change)
+            	sum_data2++;
+        	else
+            	sum_data++;
             
             double pre_rho  = -1.0;
             double pre_INCC_roh = -1.0;
@@ -9641,13 +9797,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     }
                 }
                 
-                
-                if((nccresult[pt_index].result2 != 0) && (nccresult[pt_index].result2 >= GridPT3[pt_index].minHeight && nccresult[pt_index].result2 <= GridPT3[pt_index].maxHeight) /*&&
-                   (GridPT3[pt_index].minHeight >= GridPT3[pt_index].t_minHeight && GridPT3[pt_index].maxHeight <= GridPT3[pt_index].t_maxHeight)*/ )
-                {
-                    check_blunder_cell = true;
-                }
-                
                 if(check_matchtag && iteration  <= 2)
                 {
                     check_blunder_cell = false;
@@ -9673,6 +9822,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     
                     Accessable_grid ++;
                     
+					//GNCC computation
                     for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
                     {
                         if(proinfo->check_selected_image[ti])
@@ -10010,9 +10160,14 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             						}
                                 }  // if(check_combined_WNCC)
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+							if(count_GNCC > 0)
+								nccresult[pt_index].GNCC = sum_GNCC_multi/count_GNCC;
+							else
+								nccresult[pt_index].GNCC = -1.0;
                         }
                     }  // end ti loop
                     
+					//INCC computation
                     //printf("pt_index %d\tGridPT3[pt_index].NumOfHeight %d\n",pt_index,GridPT3[pt_index].NumOfHeight);
                     for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                     {
@@ -10522,10 +10677,16 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                             //    grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                                         }
                                                     }
-                                                }  // if(nccresult[pt_index].check_height_change ...
-                                            }  // if(check_orientation)
-                                            else
-                                            {
+                                                	if(IsRA || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
+                                                	{
+                                                    
+                                                	}
+                                                	else
+                                                    	grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
+                                            	}
+                                        	}
+                                        	else
+                                        	{
                                                 if(!check_matching_rate)
                                                 {
                                                     if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
@@ -10629,22 +10790,27 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                      
                                      pre_INCC_roh           = sum_INCC_multi/count_INCC;
                                      pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
-                                     nccresult[grid_index].roh_count ++;
+                                     //nccresult[grid_index].roh_count ++;
                                 }
                                 else
                                 {
-                                    if(nccresult[pt_index].check_height_change)
-                                        grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
+                                    //grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
                                     
                                     if(check_ortho && count_GNCC > 0)
+										temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
+									else
+										temp_rho = sum_INCC_multi/count_INCC;
+                                	/*
+                                	if(check_ortho && count_GNCC > 0)
                                         temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC*ncc_alpha + (sum_GNCC_multi/count_GNCC)*ncc_beta;
                                     else
                                         temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC;
-
+									*/
                             
                                     if(grid_voxel[pt_index][grid_voxel_hindex].flag_cal)
                                     {
-                                        grid_voxel[pt_index][grid_voxel_hindex].WNCC = temp_rho;
+                                        //grid_voxel[pt_index][grid_voxel_hindex].WNCC = temp_rho;
+
                                         //grid_voxel[pt_index][grid_voxel_hindex].SSD = (int)(Sum_intensity_diff/count_INCC);
                                     
                                         //if(grid_voxel[pt_index][grid_voxel_hindex].SSD < 1)
@@ -10668,19 +10834,18 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     }
                 }
             }
-        }
-    } // end omp for
-	for (int k=0; k<3; k++)
-	{
-		free(left_patch_vecs[k]);
-		free(right_patch_vecs[k]);
-		free(left_mag_patch_vecs[k]);
-		free(right_mag_patch_vecs[k]);
-		free(left_patch_next_vecs[k]);
-		free(right_patch_next_vecs[k]);
-		free(left_mag_patch_next_vecs[k]);
-		free(right_mag_patch_next_vecs[k]);
-	}
+    	} // end omp for
+		for (int k=0; k<3; k++)
+		{
+			free(left_patch_vecs[k]);
+			free(right_patch_vecs[k]);
+			free(left_mag_patch_vecs[k]);
+			free(right_mag_patch_vecs[k]);
+			free(left_patch_next_vecs[k]);
+			free(right_patch_next_vecs[k]);
+			free(left_mag_patch_next_vecs[k]);
+			free(right_mag_patch_next_vecs[k]);
+		}
 	} // end omp parallel
     
     printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
@@ -10717,12 +10882,77 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     return Accessable_grid;
 }  // end VerticalLineLocus
 
-void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration)
+void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration)
 {
     double P1 = 0.10;
     double P2 = 0.01;
     int P_HS_step = 2;
     int kernel_size = 1;
+    double ncc_alpha, ncc_beta;
+    bool pre_DEMtif = proinfo->pre_DEMtif;
+    bool check_ortho = false;
+    
+    if(Pyramid_step == 4 && iteration == 1)
+        check_ortho = false;
+    else
+        check_ortho = true;
+    
+    if(pre_DEMtif)
+        check_ortho = true;
+    
+    double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+    
+    if(Pyramid_step >= 4)
+    {
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.8)
+            ncc_alpha = 0.8;
+    }
+    else if(Pyramid_step >= 3)
+    {
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.6)
+            ncc_alpha = 0.6;
+    }
+    else if(Pyramid_step == 2)
+    {
+        ncc_alpha = 1.0 - (0.4 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.4)
+            ncc_alpha = 0.4;
+    }
+    else
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+    
+    if(pre_DEMtif)
+    {
+        if (Pyramid_step == 4) {
+            ncc_alpha = 0.9 - ((4-Pyramid_step)*0.3 + (iteration-1)*0.05);
+            if(ncc_alpha < 0.7)
+                ncc_alpha = 0.7;
+        }
+        else if(Pyramid_step == 3)
+        {
+            ncc_alpha = 1.0 - ((4-Pyramid_step)*0.3 + (iteration-1)*0.05);
+            if(ncc_alpha < 0.5)
+                ncc_alpha = 0.5;
+        }
+        else if(Pyramid_step == 2)
+        {
+            ncc_alpha = 1.0 - (0.4 + (iteration-1)*0.05);
+            if(ncc_alpha < 0.4)
+                ncc_alpha = 0.4;
+        }
+        else
+            ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+    }
+    
+    if(ncc_alpha < 0.1)
+        ncc_alpha = 0.1;
+    
+    
+    ncc_beta = 1.0 - ncc_alpha;
+    
+    printf("ncc_alpha ncc_beta %f %f\n",ncc_alpha,ncc_beta);
     
 #pragma omp parallel for schedule(guided)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
@@ -10763,7 +10993,12 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
             {
                 if(grid_voxel[pt_index][height_step].flag_cal)
                 {
-                    WNCC_sum = grid_voxel[pt_index][height_step].WNCC;
+                    if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                        WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                    else
+                        WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                    
+                    //WNCC_sum = grid_voxel[pt_index][height_step].WNCC;
                     
                     if(Pyramid_step > 0)
                     {
@@ -10801,7 +11036,12 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                                             double V3 = -10;
                                             double V4 = -10;
                                             
-                                            V3 = grid_voxel[t_index][t_index_h_index].WNCC;
+                                            if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                                                V3 = grid_voxel[t_index][t_index_h_index].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                                            else
+                                                V3 = grid_voxel[t_index][t_index_h_index].INCC;
+                                            
+                                            //V3 = grid_voxel[t_index][t_index_h_index].WNCC;
                                             
                                             int HS_diff = abs(nccresult[t_index].max_WNCC_pos - t_index_h_index);
                                             
@@ -10820,8 +11060,19 @@ void AWNCC(VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccr
                                             
                                             //if(t_index_h_index >=1 && t_index_h_index < GridPT3[pt_index].NumOfHeight - 1)
                                             {
-                                                V1 = grid_voxel[t_index][t_index_h_index_1].WNCC - P1;
-                                                V2 = grid_voxel[t_index][t_index_h_index_2].WNCC - P1;
+                                                if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                                                    V1 = grid_voxel[t_index][t_index_h_index_1].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta - P1;
+                                                else
+                                                    V1 = grid_voxel[t_index][t_index_h_index_1].INCC - P1;
+                                                
+                                                //V1 = grid_voxel[t_index][t_index_h_index_1].WNCC - P1;
+                                                
+                                                if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                                                    V2 = grid_voxel[t_index][t_index_h_index_2].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta - P1;
+                                                else
+                                                    V2 = grid_voxel[t_index][t_index_h_index_2].INCC - P1;
+                                                
+                                                //V2 = grid_voxel[t_index][t_index_h_index_2].WNCC - P1;
                                                 
                                                 double max_value12 = V1 > V2 ? V1 : V2;
                                                 double max_value23 = max_value12 > V3 ? max_value12 : V3;
@@ -12281,7 +12532,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     printf("PPM of select MPs = %f\n",PPM);
     double roh_next;
 
-    double minimum_Th = 0.2*2;
+    double minimum_Th = 0.4;
     
     if(Pyramid_step == 0)
         minimum_Th = 0.2;
@@ -12305,8 +12556,8 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
 
     temp_fid            = fopen(filename_mps,"w");
 
-    if(Pyramid_step >= 5)
-        roh_next    = 0;
+    if(Pyramid_step >= 2)
+        roh_next    = 0.05;
     else
         roh_next    = (double)(0.05);
     
@@ -12377,14 +12628,14 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
             roh_th      = roh_next;
 
             //ratio of 1st peak roh / 2nd peak roh
-            if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2))// && Pyramid_step >= 1))
+            if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2))// || Pyramid_step <= 1)
                 ROR = 1.0;
             else
                 ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
             
             
             
-            if(Pyramid_step <= 0)
+            if(Pyramid_step == 0)
             {
                 if(ROR >= (0.1 - 0.03*(3 - Pyramid_step)) && roh_height[grid_index].result0 > minimum_Th)
                     index_2 = true;
@@ -16059,12 +16310,13 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, int pyramid_step)
 {
     bool ret = false;
+    int count_image = 0;
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(Subsetsize[ti].height > Template_size/2*pow(2,pyramid_step) && Subsetsize[ti].width > Template_size/2*pow(2,pyramid_step))
         {
             proinfo->check_selected_image[ti] = true;
-            ret = true;
+            count_image++;
         }
         else
             proinfo->check_selected_image[ti] = false;
@@ -16075,7 +16327,13 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
         printf("SubsetImage : Subset of reference image is too small to cover the kernel size!!\n");
         ret = false;
     }
-    
+    else if(count_image < 2)
+    {
+        printf("SubsetImage : not enough image taken to matching (less than 2)!!\n");
+        ret = false;
+    }
+    else
+        ret = true;
     return ret;
 }
 
@@ -16235,355 +16493,192 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
     }
 }
 
-CSize BR_MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, float *DEM_ortho)
+double CalMemorySize_Post(CSize DEM_size, CSize Final_DEMsize)
 {
-    FILE *poutDEM;
-    FILE *poutMatchtag;
-    FILE *poutheader;
+    long int Memory = 0;
     
-    int header_line = 7;
-    int row,col;
-    int row_end = iter_row_end;
-    int col_end = t_col_end;
-    int find_level = 0;
-    int find_iter  = final_iteration;
-    long int size;
-    int index_file;
-    double grid_size;
+    long int DEM_values = (long)(sizeof(float)*DEM_size.width*DEM_size.height);
     
-    CSize DEM_size, DEMinter_size;
+    printf("DEM_value %f\t%d\t%d\n",DEM_values/1024.0/1024.0/1024.0,DEM_size.width,DEM_size.height);
     
-    double boundary[4];
+    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+    printf("value %f\t%d\t%d\n",value/1024.0/1024.0/1024.0,Final_DEMsize.width,Final_DEMsize.height);
     
-    //float *DEM, *DEMinter, *DEM_ortho;
-    //bool *Matchtag;
-    char DEM_str[500];
+    long int value_pt = (long)(sizeof(unsigned char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+    printf("value_pt %f\n",value_pt/1024.0/1024.0/1024.0);
     
-    bool check_gs = false;
+    Memory = DEM_values + value + value_pt;
     
-    //find boundary of DEM
-    boundary[0] = 10000000.0;
-    boundary[1] = 10000000.0;
-    boundary[2] = -10000000.0;
-    boundary[3] = -10000000.0;
+    double result = (double)(Memory/1024.0/1024.0/1024.0);
+    printf("DEM total memory %f\n",result);
     
-    int count_matched_files = 0;
-    //#pragma omp parallel for private(index_file) schedule(guided)
-    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
-    {
-        int row,col;
-        
-        row = (int)(floor(index_file/col_end))+1;
-        col = index_file%col_end+1;
-        if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
-        {
-            FILE *pfile;
-            char t_str[500];
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,find_iter);
-            pfile   = fopen(t_str,"r");
-            if(pfile)
-            {
-                count_matched_files++;
-                printf("matched tiles %s\n",t_str);
-                fseek(pfile,0,SEEK_END);
-                size = ftell(pfile);
-                if(size > 0)
-                {
-                    char h_t_str[500];
-                    FILE *p_hfile;
-                    //sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col,find_level,find_iter);
-                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
-                    p_hfile     = fopen(h_t_str,"r");
-                    if(p_hfile)
-                    {
-                        int iter;
-                        for(iter=0;iter<header_line;iter++)
-                        {
-                            int t_row,t_col,t_level,t_col_size,t_row_size;
-                            double t_grid_size;
-                            double t_boundary[4];
-                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
-                            if(iter == header_line-1)
-                            {
-                                grid_size = t_grid_size;
-                                t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
-                                t_boundary[3] = t_boundary[1] + t_grid_size*t_row_size;
-                                
-                                //#pragma omp critical
-                                {
-                                    if(boundary[0] > t_boundary[0])
-                                        boundary[0]     = t_boundary[0];
-                                    if(boundary[1] > t_boundary[1])
-                                        boundary[1]     = t_boundary[1];
-                                    
-                                    if(boundary[2] < t_boundary[2])
-                                        boundary[2]     = t_boundary[2];
-                                    if(boundary[3] < t_boundary[3])
-                                        boundary[3]     = t_boundary[3];
-                                }
-                            }
-                        }
-                        fclose(p_hfile);
-                    }
-                }
-                fclose(pfile);
-            }
-        }
-    }
-    
-    if(count_matched_files < 1)
-    {
-        printf("No matched tiles. Please check overlapped area or image quality!!\n");
-        exit(1);
-    }
-    
-    /*
-     boundary[0] = (int)(boundary[0]/40.0)*40 - 40;
-     boundary[1] = (int)(boundary[1]/40.0)*40 - 40;
-     boundary[2] = (int)(boundary[2]/40.0)*40 + 40;
-     boundary[3] = (int)(boundary[3]/40.0)*40 + 40;
-     */
-    boundary[0] -= 10*grid_size;//= (int)(boundary[0]/40.0)*40 - 40;
-    boundary[1] -= 10*grid_size;//= (int)(boundary[1]/40.0)*40 - 40;
-    boundary[2] += 10*grid_size;//= (int)(boundary[2]/40.0)*40 + 40;
-    boundary[3] += 10*grid_size;//= (int)(boundary[3]/40.0)*40 + 40;
-    
-    printf("boundary %f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3]);
-    
-    DEM_size.width      = (int)(ceil( (double)(boundary[2] - boundary[0]) /grid_size ));
-    DEM_size.height     = (int)(ceil( (double)(boundary[3] - boundary[1]) /grid_size ));
-    
-    return DEM_size;
+    return result;
 }
 
-double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, float *DEM_ortho)
+double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize)
+{
+    long int Memory = 0;
+    
+    long int DEM_values = (long)(sizeof(float)*DEM_size.width*DEM_size.height);
+    
+    printf("DEM_value %f\t%d\t%d\n",DEM_values/1024.0/1024.0/1024.0,DEM_size.width,DEM_size.height);
+    
+    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
+    printf("value %f\t%d\t%d\n",value/1024.0/1024.0/1024.0,Final_DEMsize.width,Final_DEMsize.height);
+    
+    long int value_pt = (long)(sizeof(unsigned char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
+    printf("value_pt %f\n",value_pt/1024.0/1024.0/1024.0);
+    
+    Memory = DEM_values + value + value_pt;
+    
+    double result = (double)(Memory/1024.0/1024.0/1024.0);
+    printf("MT total memory %f\n",result);
+    
+    return result;
+}
+
+double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize)
+{
+    long int Memory = 0;
+    
+    long int DEM_values = (long)(sizeof(float)*DEM_size.width*DEM_size.height);
+    
+    printf("DEM_value %f\t%d\t%d\n",DEM_values/1024.0/1024.0/1024.0,DEM_size.width,DEM_size.height);
+    
+    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
+    printf("value %f\t%d\t%d\n",value/1024.0/1024.0/1024.0,Final_DEMsize.width,Final_DEMsize.height);
+    
+    long int value_pt = (long)(sizeof(unsigned char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+    printf("value_pt %f\n",value_pt/1024.0/1024.0/1024.0);
+    
+    Memory = DEM_values + value + value_pt;
+    
+    double result = (double)(Memory/1024.0/1024.0/1024.0);
+    printf("LSF total memory %f\n",result);
+    
+    return result;
+}
+
+double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, CSize Final_DEMsize, double *FinalDEM_boundary)
 {
     FILE *poutDEM;
     FILE *poutMatchtag;
     FILE *poutheader;
     
     int header_line = 7;
-    int row,col;
     int row_end = iter_row_end;
     int col_end = t_col_end;
     int find_level = 0;
     int find_iter  = final_iteration;
-    long int size;
     int index_file;
-    double grid_size;
+    double grid_size = info->DEM_resolution;
 
     CSize DEM_size, DEMinter_size;
 
     double boundary[4];
 
-    //float *DEM, *DEMinter, *DEM_ortho;
-    //bool *Matchtag;
-    char DEM_str[500];    
+    char DEM_str[500];
 
-    bool check_gs = false;
-
-    //find boundary of DEM
-    boundary[0] = 10000000.0;
-    boundary[1] = 10000000.0;
-    boundary[2] = -10000000.0;
-    boundary[3] = -10000000.0;
-
-    int count_matched_files = 0;
-//#pragma omp parallel for private(index_file) schedule(guided)
-    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
-    {
-        int row,col;
-        
-        row = (int)(floor(index_file/col_end))+1;
-        col = index_file%col_end+1;
-        if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
-        {
-            FILE *pfile;
-            char t_str[500];
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,find_iter);
-            pfile   = fopen(t_str,"r");
-            if(pfile)
-            {
-                count_matched_files++;
-                
-                //printf("matched tiles %s\n",t_str);
-                fseek(pfile,0,SEEK_END);
-                size = ftell(pfile);
-                if(size > 0)
-                {
-                    char h_t_str[500];
-                    FILE *p_hfile;
-                    //sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col,find_level,find_iter);
-                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
-                    p_hfile     = fopen(h_t_str,"r");
-                    if(p_hfile)
-                    {
-                        int iter;
-                        for(iter=0;iter<header_line;iter++)
-                        {
-                            int t_row,t_col,t_level,t_col_size,t_row_size;
-                            double t_grid_size;
-                            double t_boundary[4];
-                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&t_col_size,&t_row_size);
-                            if(iter == header_line-1)
-                            {
-                                grid_size = t_grid_size;
-                                t_boundary[2] = t_boundary[0] + t_grid_size*t_col_size;
-                                t_boundary[3] = t_boundary[1] + t_grid_size*t_row_size;
-
-    //#pragma omp critical
-                                {
-                                    if(boundary[0] > t_boundary[0])
-                                        boundary[0]     = t_boundary[0];
-                                    if(boundary[1] > t_boundary[1])
-                                        boundary[1]     = t_boundary[1];
-
-                                    if(boundary[2] < t_boundary[2])
-                                        boundary[2]     = t_boundary[2];
-                                    if(boundary[3] < t_boundary[3])
-                                        boundary[3]     = t_boundary[3];
-                                }
-                            }
-                        }
-                        fclose(p_hfile);
-                    }
-                }
-                fclose(pfile);
-            }
-        }
-    }
+    boundary[0] = FinalDEM_boundary[0];
+    boundary[1] = FinalDEM_boundary[1];
+    boundary[2] = FinalDEM_boundary[2];
+    boundary[3] = FinalDEM_boundary[3];
+    printf("MergeTile boundary %f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3]);
     
-    if(count_matched_files < 1)
-    {
-        printf("No matched tiles. Please check overlapped area or image quality!!\n");
-        exit(1);
-    }
-    
-    boundary[0] -= 10*grid_size;//= (int)(boundary[0]/40.0)*40 - 40;
-    boundary[1] -= 10*grid_size;//= (int)(boundary[1]/40.0)*40 - 40;
-    boundary[2] += 10*grid_size;//= (int)(boundary[2]/40.0)*40 + 40;
-    boundary[3] += 10*grid_size;//= (int)(boundary[3]/40.0)*40 + 40;
-
-    printf("boundary %f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3]);
-    //if(grid_size < info->DEM_resolution)
-    check_gs = false;
-
     buffer  = (int)(floor(buffer/grid_size));
 
-    DEM_size.width      = (int)(ceil( (double)(boundary[2] - boundary[0]) /grid_size ));
-    DEM_size.height     = (int)(ceil( (double)(boundary[3] - boundary[1]) /grid_size ));
+    DEM_size.width = Final_DEMsize.width;
+    DEM_size.height = Final_DEMsize.height;
     
-    printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
+    printf("dem size %d\t%d\t%d\n",DEM_size.width,DEM_size.height,buffer);
     
 #pragma omp parallel for schedule(guided)
     for(long index = 0 ; index < (long)DEM_size.height*(long)DEM_size.width ; index++)
     {
         DEM[index] = -9999;
-        DEM_ortho[index] = -1.0;
     }
     
     //setting DEM value
-#pragma omp parallel for private(index_file) schedule(guided)
-    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
+    for(int row = iter_row_start ; row <= row_end ; row ++)
     {
-        int row,col;
-        FILE *pfile;
-        char t_str[500];
-
-        row = (int)(floor(index_file/col_end))+1;
-        col = index_file%col_end+1;
-        
-        if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
+        for(int col = t_col_start ; col <= col_end ; col++)
         {
         
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,find_iter);
-            pfile   = fopen(t_str,"r");
-            if(pfile)
+            FILE *pfile;
+            char t_str[500];
+
+            //if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
             {
-                //printf("matched tiles %s\n",t_str);
-                fseek(pfile,0,SEEK_END);
-                size = ftell(pfile);
-                fseek(pfile,0L,SEEK_SET);
-                if(size > 0)
+            
+                sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,find_iter);
+                pfile   = fopen(t_str,"r");
+                if(pfile)
                 {
-                    char h_t_str[500];
-                    FILE *p_hfile, *p_hvfile, *p_orthofile;
-                    
-                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
-                    p_hfile     = fopen(h_t_str,"r");
-                    if(p_hfile)
+                    //printf("matched tiles %s\n",t_str);
+                    fseek(pfile,0,SEEK_END);
+                    long int size = ftell(pfile);
+                    fseek(pfile,0L,SEEK_SET);
+                    if(size > 0)
                     {
-                        int iter;
-                        char hv_t_str[500];
-                        char ortho_str[500];
-                        int row_size,col_size;
-                        double t_boundary[4];
-                        for(iter=0;iter<header_line;iter++)
+                        char h_t_str[500];
+                        FILE *p_hfile, *p_hvfile, *p_orthofile;
+                        
+                        sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
+                        p_hfile     = fopen(h_t_str,"r");
+                        if(p_hfile)
                         {
-                            int t_row,t_col,t_level;
-                            double t_grid_size;
-                            
-                            fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
-                                   &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
-                        }   
-                        sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,find_iter);
-                        
-                        sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,find_iter);
-                        
-                        p_hvfile    = fopen(hv_t_str,"rb");
-                        p_orthofile = fopen(ortho_str,"rb");
-                        
-                        if(p_hvfile)
-                        {
-                            float* temp_height = (float*)malloc(sizeof(float)*col_size*row_size);
-                            float* temp_ncc = (float*)malloc(sizeof(float)*col_size*row_size);
-                            
-                            fread(temp_height,sizeof(float),col_size*row_size,p_hvfile);
-                            fread(temp_ncc,sizeof(float),col_size*row_size,p_orthofile);
-                            
-                            long index_total;
-                            for(int iter_row = 0 ; iter_row < row_size ; iter_row ++)
+                            int iter;
+                            char hv_t_str[500];
+                            int row_size,col_size;
+                            double t_boundary[4];
+                            for(iter=0;iter<header_line;iter++)
                             {
-                                for(int iter_col = 0 ; iter_col < col_size ; iter_col++)
+                                int t_row,t_col,t_level;
+                                double t_grid_size;
+                                
+                                fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                                       &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                            }
+                            sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,find_iter);
+                            p_hvfile    = fopen(hv_t_str,"rb");
+                            
+                            if(p_hvfile)
+                            {
+                                float* temp_height = (float*)malloc(sizeof(float)*col_size*row_size);
+                                fread(temp_height,sizeof(float),col_size*row_size,p_hvfile);
+                                
+                                #pragma omp parallel for schedule(guided)
+                                for(int iter_row = 0 ; iter_row < row_size ; iter_row ++)
                                 {
-                                    double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
-                                    double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
-                                    long index = (long)(t_row*DEM_size.width + t_col + 0.01);
-                                    
-                                    float DEM_value;
-                                    DEM_value = temp_height[(long)(iter_row*col_size + iter_col)];
-                                    //fscanf(p_hvfile,"%lf\t",&DEM_value);
-                                    
-                                    float ortho_value;
-                                    ortho_value = temp_ncc[(long)(iter_row*col_size + iter_col)];
-                                    //fscanf(p_orthofile,"%lf\t",&ortho_value);
-                                    
-                                    if(index >= 0 && index < (long)DEM_size.width*(long)DEM_size.height &&
-                                       iter_row > buffer && iter_row < row_size - buffer &&
-                                       iter_col > buffer && iter_col < col_size - buffer)
+                                    for(int iter_col = 0 ; iter_col < col_size ; iter_col++)
                                     {
-                                        if(DEM_value > -1000)// && DEM_value != 0)
-                                            DEM[index] = DEM_value;
+                                        double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
+                                        double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
+                                        long index = (long)((long)t_row*(long)DEM_size.width + (long)t_col + 0.01);
                                         
-                                        DEM_ortho[index] = ortho_value;
+                                        float DEM_value;
+                                        DEM_value = temp_height[(long)(iter_row*col_size + iter_col)];
+                                        if(index >= 0 && index < (long)DEM_size.width*(long)DEM_size.height &&
+                                           iter_row > buffer && iter_row < row_size - buffer &&
+                                           iter_col > buffer && iter_col < col_size - buffer)
+                                        {
+                                            if(DEM_value > -1000)
+                                            {
+                                                DEM[index] = DEM_value;
+                                            }
+                                        }
                                     }
                                 }
-                                //fscanf(p_hvfile,"\n");
-                                //fscanf(p_orthofile,"\n");
+                                
+                                free(temp_height);
+                                fclose(p_hvfile);
                             }
                             
-                            free(temp_height);
-                            free(temp_ncc);
-                            fclose(p_hvfile);
-                            fclose(p_orthofile);
+                            fclose(p_hfile);
                         }
-                        
-                        fclose(p_hfile);
                     }
+                    fclose(pfile);
                 }
-                fclose(pfile);
             }
         }
     }
@@ -16599,7 +16694,226 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     return grid_size;
 }
 
-void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, float* DEM_values,float* Ortho_values)
+double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM_ortho, CSize Final_DEMsize, double *FinalDEM_boundary)
+{
+    FILE *poutDEM;
+    FILE *poutMatchtag;
+    FILE *poutheader;
+    
+    int header_line = 7;
+    int row_end = iter_row_end;
+    int col_end = t_col_end;
+    int find_level = 0;
+    int find_iter  = final_iteration;
+    int index_file;
+    double grid_size = info->DEM_resolution;
+    
+    CSize DEM_size, DEMinter_size;
+    
+    double boundary[4];
+    
+    char DEM_str[500];
+    
+    boundary[0] = FinalDEM_boundary[0];
+    boundary[1] = FinalDEM_boundary[1];
+    boundary[2] = FinalDEM_boundary[2];
+    boundary[3] = FinalDEM_boundary[3];
+    printf("MergeOrtho boundary %f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3]);
+    
+    buffer  = (int)(floor(buffer/grid_size));
+    
+    DEM_size.width = Final_DEMsize.width;
+    DEM_size.height = Final_DEMsize.height;
+    printf("dem size %d\t%d\t%d\t%f\n",DEM_size.width,DEM_size.height,buffer,grid_size);
+    
+#pragma omp parallel for schedule(guided)
+    for(long index_a = 0 ; index_a < (long)DEM_size.height*(long)DEM_size.width ; index_a++)
+    {
+        DEM_ortho[index_a] = -1.0;
+    }
+    
+    //setting DEM value
+    for(int row = iter_row_start ; row <= row_end ; row ++)
+    {
+        for(int col = t_col_start ; col <= col_end ; col++)
+        {
+            FILE *pfile;
+            char t_str[500];
+            
+            //printf("row col %d\t%d\t%d\t%d\t%d\t%d\t\n",row,col,iter_row_start,row_end,t_col_start,col_end);
+            //if(row >= iter_row_start && row <= row_end && col >= t_col_start &&  col <= col_end)
+            {
+                
+                sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,find_iter);
+                pfile   = fopen(t_str,"r");
+                if(pfile)
+                {
+                    fseek(pfile,0,SEEK_END);
+                    long int size = ftell(pfile);
+                    fseek(pfile,0L,SEEK_SET);
+                    if(size > 0)
+                    {
+                        char h_t_str[500];
+                        FILE *p_hfile, *p_hvfile, *p_orthofile;
+                        
+                        sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
+                        p_hfile     = fopen(h_t_str,"r");
+                        if(p_hfile)
+                        {
+                            int iter;
+                            char hv_t_str[500];
+                            char ortho_str[500];
+                            int row_size,col_size;
+                            double t_boundary[4];
+                            for(iter=0;iter<header_line;iter++)
+                            {
+                                int t_row,t_col,t_level;
+                                double t_grid_size;
+                                
+                                fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                                       &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                            }
+                            sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,find_iter);
+                            p_orthofile = fopen(ortho_str,"rb");
+                            
+                            if(p_orthofile)
+                            {
+                                //printf("%s\t%d\t%d\n",ortho_str,row_size,col_size);
+                                float* temp_ncc = (float*)malloc(sizeof(float)*col_size*row_size);
+                                fread(temp_ncc,sizeof(float),col_size*row_size,p_orthofile);
+                                
+                                #pragma omp parallel for schedule(guided)
+                                for(int iter_row = 0 ; iter_row < row_size ; iter_row ++)
+                                {
+                                    for(int iter_col = 0 ; iter_col < col_size ; iter_col++)
+                                    {
+                                        double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
+                                        double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
+                                        long index = (long)(t_row*DEM_size.width + t_col + 0.01);
+                                        float ortho_value = 0;
+                                        ortho_value = temp_ncc[(long)((long)iter_row*(long)col_size + (long)iter_col)];
+                                        
+                                        if(index >= 0 && index < (long)DEM_size.width*(long)DEM_size.height &&
+                                           iter_row > buffer && iter_row < row_size - buffer &&
+                                           iter_col > buffer && iter_col < col_size - buffer)
+                                        {
+                                            if(ortho_value > -1.0)
+                                                DEM_ortho[index] = ortho_value;
+                                        }
+                                    }
+                                }
+                                free(temp_ncc);
+                                fclose(p_orthofile);
+                            }
+                            
+                            fclose(p_hfile);
+                        }
+                    }
+                    fclose(pfile);
+                }
+            }
+        }
+    }
+    
+    sprintf(DEM_str, "%s/%s_dem_header_tin.txt", info->save_filepath, info->Outputpath_name);
+    
+    printf("name %s\t%f\t%f\t%f\t%d\t%d\n",DEM_str,boundary[0],boundary[3],grid_size,DEM_size.width,DEM_size.height);
+    
+    poutheader = fopen(DEM_str,"w");
+    fprintf(poutheader,"%f\t%f\t%f\t%d\t%d\n",boundary[0],boundary[3],grid_size,DEM_size.width,DEM_size.height);
+    fclose(poutheader);
+    
+    return grid_size;
+}
+
+CSize DEM_final_Size(char *save_path, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double *boundary)
+{
+    CSize final_size;
+    double minX,maxX, minY, maxY,minHeight,maxHeight;
+    double grid;
+    double mt_grid;
+    int index_file;
+    int col_count, row_count;
+    
+    minX = 10000000;
+    minY = 10000000;
+    maxX = -10000000;
+    maxY = -10000000;
+    
+    minHeight = 100000;
+    maxHeight = -100000;
+    
+    grid     = grid_resolution;
+    
+    printf("DEM grid = %lf\n",grid);
+    int count_matched_files = 0;
+    
+    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
+    {
+        int row,col;
+        FILE *pfile;
+        char t_str[500];
+        
+        row = (int)(floor(index_file/col_end)) + 1;
+        col = index_file%col_end+1;
+        
+        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
+        {
+            double minmaxBR[6];
+            sprintf(t_str,"%s/txt/matched_BR_row_%d_col_%d.txt",save_path,row,col);
+            pfile = fopen(t_str,"r");
+            if(pfile)
+            {
+                count_matched_files++;
+                fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
+                //printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
+                if(minX > minmaxBR[0])
+                    minX     = minmaxBR[0];
+                if(minY > minmaxBR[1])
+                    minY     = minmaxBR[1];
+                
+                if(maxX < minmaxBR[2])
+                    maxX     = minmaxBR[2];
+                if(maxY < minmaxBR[3])
+                    maxY     = minmaxBR[3];
+                if(minHeight > minmaxBR[4])
+                    minHeight = minmaxBR[4];
+                if(maxHeight < minmaxBR[5])
+                    maxHeight = minmaxBR[5];
+                fclose(pfile);
+            }
+        }
+    }
+    
+    if(count_matched_files < 1)
+    {
+        printf("No matched tiles. Please check overlapped area or image quality!!\n");
+        exit(1);
+    }
+    
+    minX -= 10*grid;
+    maxX += 10*grid;
+    minY -= 10*grid;
+    maxY += 10*grid;
+    
+    boundary[0] = minX;
+    boundary[1] = minY;
+    boundary[2] = maxX;
+    boundary[3] = maxY;
+    
+    col_count = (int)((maxX - minX)/grid) + 1;
+    row_count = (int)((maxY - minY)/grid) + 1;
+    
+    final_size.width = col_count;
+    final_size.height = row_count;
+    
+    printf("DEM_final_Size %d\t%d\n",final_size.width,final_size.height);
+    printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3],minHeight,maxHeight);
+    
+    return final_size;
+}
+
+void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide,CSize Final_DEMsize, float* DEM_values, float* value, unsigned char* value_pt, double *FinalDEM_boundary)
 {
     double dummy;
     int i0, cnthold,i,j,index;
@@ -16607,16 +16921,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     double dis_X, dis_Y;
     double grid;
     double mt_grid;
-    float *value;
-    float *value_orthoncc;
-    unsigned char    *value_pt;
     int index_file;
-    NNXY *pt_save;
     int row_count, col_count,row_count_mt, col_count_mt, DEM_rows,DEM_cols;
     FILE* fout;
     FILE* fheader;
     FILE     *afile;
-    //FILE* t_file;
     FILE* forthoncc;
     
     char t_savefile[500];
@@ -16638,21 +16947,6 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     long total_null_cell = 0;
     int threads_num;
     int guided_size;
-    float *cal_gridpts_X = NULL;
-    float *cal_gridpts_Y = NULL;
-    struct calgrid
-    {
-        double X, Y;
-        struct calgird *next;
-    };
-    
-    struct calgrid *head = NULL;
-    struct calgrid *cur = NULL;
-    struct calgrid *tail = NULL;
-    struct calgrid *newNode = NULL;
-    
-    ndim     = 2;
-    ndim1 = ndim + 1;
     
     minX = 10000000;
     minY = 10000000;
@@ -16666,120 +16960,20 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     mt_grid  = mt_grid_resolution;
     
     printf("DEM grid = %lf\t mt grid = %lf\n",grid,mt_grid);
+    
+    minX = FinalDEM_boundary[0];
+    minY = FinalDEM_boundary[1];
+    maxX = FinalDEM_boundary[2];
+    maxY = FinalDEM_boundary[3];
     /*
-    ndata = 0;
-//#pragma omp parallel for shared(row_end,col_end,save_path) private(index_file) reduction(+:ndata)
-    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
-    {
-        int row,col;
-        FILE *pfile;
-        char t_str[500];
-        
-        row = (int)(floor(index_file/col_end)) + 1;
-        col = index_file%col_end+1;
-        
-        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
-        {
-            
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
-            printf("matched tiles %s\n",t_str);
-            pfile   = fopen(t_str,"r");
-            if(pfile)
-            {
-                //printf("row %d\tcol %d\n",row,col);
-                long int size;
-                fseek(pfile,0,SEEK_END);
-                size = ftell(pfile);
-                fseek(pfile,0L,SEEK_SET);
-                if(size > 0)
-                {
-                    double X,Y,Z;
-                    while(fscanf(pfile,"%lf\t%lf\t%lf\n",&X,&Y,&Z) != EOF)
-                    {
-    //#pragma omp critical
-                        {
-                            if(minX > X)
-                                minX     = X;
-                            if(minY > Y)
-                                minY     = Y;
-                            
-                            if(maxX < X)
-                                maxX     = X;
-                            if(maxY < Y)
-                                maxY     = Y;
-                            if(minHeight > Z)
-                                minHeight = Z;
-                            if(maxHeight < Z)
-                                maxHeight = Z;
-                        }
-                        
-                        ndata = ndata + 1;
-                    }
-                }
-                fclose(pfile);
-            }
-        }
-    }
-    
-    printf("end loading matched pts\n");
-    */
-    
-    for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
-    {
-        int row,col;
-        FILE *pfile;
-        char t_str[500];
-        
-        row = (int)(floor(index_file/col_end)) + 1;
-        col = index_file%col_end+1;
-        
-        if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
-        {
-            double minmaxBR[6];
-            sprintf(t_str,"%s/txt/matched_BR_row_%d_col_%d.txt",save_path,row,col);
-            pfile = fopen(t_str,"r");
-            if(pfile)
-            {
-                fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
-                //printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
-                if(minX > minmaxBR[0])
-                    minX     = minmaxBR[0];
-                if(minY > minmaxBR[1])
-                    minY     = minmaxBR[1];
-                
-                if(maxX < minmaxBR[2])
-                    maxX     = minmaxBR[2];
-                if(maxY < minmaxBR[3])
-                    maxY     = minmaxBR[3];
-                if(minHeight > minmaxBR[4])
-                    minHeight = minmaxBR[4];
-                if(maxHeight < minmaxBR[5])
-                    maxHeight = minmaxBR[5];
-                fclose(pfile);
-            }
-        }
-    }
-    
-    printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minX,minY,maxX,maxY,minHeight,maxHeight);
-    minX -= 10*grid;
-    maxX += 10*grid;
-    minY -= 10*grid;
-    maxY += 10*grid;
-    
-    dis_X = maxX - minX;
-    dis_Y = maxY - minY;
-    
     col_count = (int)((maxX - minX)/grid) + 1;
     row_count = (int)((maxY - minY)/grid) + 1;
     
     col_count_mt = (int)((maxX - minX)/mt_grid) + 1;            
     row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
-    
-    value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    value_pt = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
-    
-    t_ndata = ndata;
+    */
+    col_count = Final_DEMsize.width;
+    row_count = Final_DEMsize.height;
     
     sprintf(DEM_header, "%s/%s_dem_header_tin.txt", save_path,Outputpath_name);
     fheader = fopen(DEM_header,"r");
@@ -16792,78 +16986,52 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     for(i=0;i<row_count;i++)
     {
         for(j=0;j<col_count;j++)
+        {
             value[(long)i*(long)col_count + (long)j] = -9999;
+        }
     }
     
-    cal_gridpts_X    = (float*)malloc(sizeof(float)*(long)DEM_cols*(long)DEM_rows);
-    cal_gridpts_Y    = (float*)malloc(sizeof(float)*(long)DEM_cols*(long)DEM_rows);
-    printf("memory allocation %d\t%d\n",row_count,col_count);
-    //if ((fheader = fopen(iterfile,"r")) != NULL)
+    #pragma omp parallel for schedule(guided) reduction(+:total_search_count)
+    for(long ix=0;ix<(long)DEM_cols*(long)DEM_rows;ix++)
     {
-        //#pragma omp parallel for schedule(guided)
-        for(long ix=0;ix<(long)DEM_cols*(long)DEM_rows;ix++)
+        int row,col;
+        double t_z;
+        double t_ortho;
+        double t_x, t_y;
+        row = (int)(floor(ix/DEM_cols));
+        col = ix%DEM_cols;
+        
+        t_x = DEM_minX + col*mt_grid;
+        t_y = DEM_maxY - row*mt_grid;
+        
+        t_z = DEM_values[(long)row*(long)DEM_cols + (long)col];
+        
+        double d_row,d_col;
+        if(t_x >= minX && t_x < maxX && t_y >= minY && t_y < maxY)
         {
-            int row,col;
-            double t_z;
-            double t_ortho;
-            double t_x, t_y;
-            row = (int)(floor(ix/DEM_cols));
-            col = ix%DEM_cols;
+            d_row = ((maxY - t_y)/grid);
+            d_col = ((t_x - minX)/grid);
             
-            t_x = DEM_minX + col*mt_grid;
-            t_y = DEM_maxY - row*mt_grid;
+            long t_index = (long)((long)d_row*(long)col_count + (long)d_col + 0.01);
             
-            t_z = DEM_values[(long)row*(long)DEM_cols + (long)col];
-            t_ortho = Ortho_values[(long)row*(long)DEM_cols + (long)col];
-            
-            double d_row,d_col;
-            if(t_x >= minX && t_x < maxX && t_y >= minY && t_y < maxY)
+            if(t_index < (long)col_count*(long)row_count && d_row < row_count && d_col < col_count)
             {
-                d_row = ((maxY - t_y)/grid);
-                d_col = ((t_x - minX)/grid);
-                
-                long t_index = (long)((long)d_row*(long)col_count + (long)d_col + 0.01);
-                
-                if(t_index < (long)col_count*(long)row_count && d_row < row_count && d_col < col_count)
+                value[t_index] = t_z;
+                value_pt[t_index] = 0;
+                if(t_z > -1000)
                 {
-                    value[t_index] = t_z;
-                    value_pt[t_index] = 0;
-                    
-                    value_orthoncc[t_index] = t_ortho;
-                    
-                    if(t_z > -1000)
-                    {
-                        cal_gridpts_X[total_search_count] = t_x;
-                        cal_gridpts_Y[total_search_count] = t_y;
-                        
-                        total_search_count++;
-                    }
+                    value_pt[t_index] = 2;
+                    total_search_count++;
                 }
             }
-            
         }
-        free(DEM_values);
-        free(Ortho_values);
+        
     }
+    free(DEM_values);
     
     printf("Done tfile write\n");
    
-    X_center = minX + dis_X/2.0;
-    Y_center = minY + dis_Y/2.0;
-    
     buffer_clip  = (int)(floor(buffer_clip/mt_grid));
-    
-    pt_save  = (NNXY*)malloc(sizeof(NNXY)*(long)row_count*(long)col_count);
-    for(i=0;i<row_count;i++)
-    {
-        for(j=0;j<col_count;j++)
-        {
-            pt_save[(long)i*(long)col_count + (long)j].X = -999999999;
-            pt_save[(long)i*(long)col_count + (long)j].Y = -999999999;
-            pt_save[(long)i*(long)col_count + (long)j].Z = -9999;
-        }
-    }
-    printf("Done initialize pt_save\n");
     
     //#pragma omp parallel for schedule(guided) private(index_file)
     for(index_file = 0 ; index_file <= row_end*col_end ; index_file++)
@@ -16877,21 +17045,16 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
         
         if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
         {
-            
             sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",save_path,row,col,find_iter);
             pfile   = fopen(t_str,"rb");
             if(pfile)
             {
-                //printf("matched row %d\tcol %d\n",row,col);
-                //printf("matched tiles %s\n",t_str);
                 long int size;
                 fseek(pfile,0,SEEK_END);
                 size = ftell(pfile);
                 fseek(pfile,0L,SEEK_SET);
                 if(size > 0)
                 {
-                    double pos_row, pos_col, clip_pos_row,clip_pos_col;
-                    float t_x, t_y, t_z;
                     char h_t_str[500];
                     char c_t_str[500];
                     
@@ -16906,7 +17069,6 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                     
                     if(p_hfile)
                     {
-                        //printf("header row %d\tcol %d\n",row,col);
                         int iter;
                         char hv_t_str[500];
                         int row_size,col_size;
@@ -16919,23 +17081,24 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                             fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
                                    &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
                             
-                            //printf("%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n",t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
-                        }   
+                        }
                         int count_MPs;
                         fscanf(c_hfile,"%d\n",&count_MPs);
-                        //printf("count Mp = %d\n",count_MPs);
                         F3DPOINT *temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
                         fread(temp_pts,sizeof(F3DPOINT),count_MPs,pfile);
                         
-                        for(int t_i = 0 ; t_i < count_MPs ; t_i++)
+                        #pragma omp parallel for schedule(guided)
+                        for(long int t_i = 0 ; t_i < count_MPs ; t_i++)
                         {
                             if(temp_pts[t_i].flag != 1)
-                            //while(fscanf(pfile,"%lf\t%lf\t%lf\n",&t_x,&t_y,&t_z) != EOF)
                             {
+                                float t_x, t_y, t_z;
+                                double pos_row, pos_col;
+                                double clip_pos_row,clip_pos_col;
+                                
                                 t_x = temp_pts[t_i].m_X;
                                 t_y = temp_pts[t_i].m_Y;
                                 t_z = temp_pts[t_i].m_Z;
-                                //printf("pts %f\t%f\t%f\n",t_x,t_y,t_z);
                                 
                                 pos_col = (t_x - minX)/grid;
                                 pos_row = (maxY - t_y)/grid;
@@ -16948,12 +17111,9 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                    clip_pos_col > buffer_clip && clip_pos_col < col_size - buffer_clip &&
                                    clip_pos_row > buffer_clip && clip_pos_row < row_size - buffer_clip)
                                 {
-                                    long t_index = (long)((pos_row)*col_count + pos_col + 0.01);
+                                    long t_index = (long)((long)(pos_row)*(long)col_count + (long)pos_col + 0.01);
                                     value[t_index] = t_z;
                                     value_pt[t_index] = 1;
-                                    pt_save[t_index].X = t_x;
-                                    pt_save[t_index].Y = t_y;
-                                    pt_save[t_index].Z = t_z;
                                 }
                             }
                         }
@@ -16968,7 +17128,6 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                         remove(t_str);
                         exit(1);
                     }
-                    
                 }
                 fclose(pfile);
             }
@@ -16978,50 +17137,46 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     printf("Done read matched pts\n");
     
     //IDW Interpolation
+    long int total_interpolated = 0;
     if(total_search_count > 0 && !check_Matchtag)
     {
-#pragma omp parallel for schedule(guided)
-        for(long count = 0;count < total_search_count;count++)
+#pragma omp parallel for schedule(guided) reduction(+:total_interpolated)
+        for(long count = 0;count < (long)row_count*(long)col_count;count++)
         {
+            long int row_tt = (int)(floor(count/col_count));
+            long int col_tt = count%col_count;
+            //long int index_pt_save = col_count*row_tt + col_tt;
+            
             double pos_row, pos_col, pos_row_mt, pos_col_mt;
-            int check = 0;
+            int check = 1;
             int row_interval, col_interval;
-            double t_value;
             double query[2];
             double t_q[2];
             int iteration;
             char save_file[500];
             
-            query[0]        = cal_gridpts_X[count];
-            query[1]        = cal_gridpts_Y[count];
+            query[0]        = col_tt*grid + minX;
+            query[1]        = maxY - row_tt*grid;
             
             t_q[0]          = query[0];
             t_q[1]          = query[1];
             
-            row_interval    = 100;
+            row_interval    = 50;
             col_interval    = row_interval;
             
-            pos_col = ((query[0] - minX)/grid);
-            pos_row = ((maxY - query[1])/grid);
+            pos_col = col_tt;
+            pos_row = row_tt;
             
-            pos_col_mt = ((query[0] - minX)/mt_grid);
-            pos_row_mt = ((maxY - query[1])/mt_grid);
-            
-            int pos_index = (int)(pos_row*col_count + pos_col + 0.01);
+            long int pos_index = (long int)((long)pos_row*(long)col_count + (long)pos_col + 0.01);
             
             if (pos_col >= 0 && pos_col < col_count && pos_row >= 0 && pos_row < row_count)
             {
-                t_value  = value[pos_index];
-                
-                if(value_pt[pos_index] == 1)
+                if(value_pt[pos_index] == 2 && value[pos_index] > - 1000)
                 {
-                    check = 1;
+                    check = 0;
+                    value_pt[pos_index] = 0;
                 }
             }
-            else {
-                check = 1;
-            }
-            
             
             if(!check)
             {
@@ -17031,335 +17186,31 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                 int rendata;
                 
                 //IDW Interpolation
-                height = FindNebPts_F_M_IDW(pt_save, row_count, col_count, grid, minX, minY, maxX, maxY, t_q[0], t_q[1],&rendata,iteration,iteration,ndim1,save_file);
-                if(height == -9999)
-                    value[pos_index] = height;
-                else if(height < minHeight-100 || height > maxHeight + 100)
+                height = FindNebPts_F_M_IDW(value, value_pt, row_count, col_count, grid, minX, minY, maxX, maxY, t_q[0], t_q[1],&rendata,iteration,iteration,ndim1,save_file);
+                
+                //if(height > minHeight-100 && height < maxHeight + 100)
                 {
-                }
-                else 
-                {
-                    value[pos_index] = height;
+                    if(height > -9999)
+                    {
+                        value[pos_index] = height;
+                        total_interpolated++;
+                    }
                 }
             }
+            
+            if(value_pt[pos_index] == 2)
+                value_pt[pos_index] = 0;
         }
     }
-    
-    if(cal_gridpts_X)
-        free(cal_gridpts_X);
-    if(cal_gridpts_Y)
-        free(cal_gridpts_Y);
-    
-    free(pt_save);
-    
-    printf("end interpolation\n");
-    
-    
-    printf("start null\n");
-    long count_null_cell = 0;
-    int check_while = 0;
-    
-    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    float *t_value = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
-    unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
-    
-    memcpy(t_value,value,sizeof(float)*(long)col_count*(long)row_count);
-    memcpy(t_value_orthoncc,value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-    memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-    
-    int iter_check = 0;
-    int check_size = 0;
-    int max_total_iteration = 3;
-    if(grid > 2)
-        max_total_iteration = 3;
-    int total_iteration;
-    double th_rate = 0.6;
-    int grid_rate = (int)(8.0/(double)grid);
-    if(grid_rate < 1)
-        grid_rate = 1;
-    
-    printf("first grid rate %d\n",grid_rate);
-    
-    for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+/*
+#pragma omp parallel for schedule(guided)
+    for(long count = 0;count < (long)(row_count)*(long)(col_count);count++)
     {
-        check_while = 0;
-        check_size = total_iteration*grid_rate;
-        
-        //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
-        int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
-        while(check_while == 0)
-        {
-            iter_check ++;
-            //printf("1st null iteration %d\t%d\n",check_size,iter_check);
-            
-            count_null_cell = 0;
-            
-#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-            for (long index = 0; index < col_count*row_count; index++)
-            {
-                int row, col;
-                
-                long count_cell;
-                int t_i, t_j;
-                int count1 = 0;
-                int count2 = 0;
-                int count3 = 0;
-                int count4 = 0;
-                
-                double sum_h;
-                double sum_ortho;
-                
-                row = (int)(floor(index/col_count));
-                col = index%col_count;
-                
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-                {
-                    count_cell = 0;
-                    sum_h = 0;
-                    sum_ortho = 0;
-                    
-                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
-                    {
-                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
-                        {
-                            int index_row = row + t_i;
-                            int index_col = col + t_j;
-                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                            
-                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
-                            {
-                                if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1 && value_orthoncc[t_index] > 0.0)
-                                {
-                                
-                                    
-                                    sum_ortho += value_orthoncc[t_index];
-                                    
-                                    count_cell++;
-                                }
-                            }
-                        }
-                    }
-                    
-                    if (count_cell >= 7 && count_cell >= total_size*th_rate )
-                    {
-                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
-                        
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 1;
-                        
-                        count_null_cell ++;
-                    }
-                }
-                
-            }
-            
-            memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-            
-            if(count_null_cell == 0)
-                check_while = 1;
-        }
+        if(value_pt[count] == 2)
+            value_pt[count] = 0;
     }
-    
-    total_mt_count = 0;
-    
-    
-    iter_check = 0;
-    check_size = 10*grid_rate;
-    total_iteration = 0;
-    printf("second null\n");
-    //while(total_iteration < max_total_iteration)
-    {
-        check_while = 0;
-        //check_size ++;
-        while(check_while == 0)
-        {
-            iter_check ++;
-            //printf("2nd null iteration %d\t%d\n",check_size,iter_check);
-            
-            count_null_cell = 0;
-            int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
-#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-            for (long index = 0; index < col_count*row_count; index++)
-            {
-                int row, col;
-                long count_cell;
-                int t_i, t_j;
-                double sum_h;
-                double sum_ortho;
-                
-                int count_low_cell = 0;
-                int count_island_points = 0;
-                
-                row = (int)(floor(index/col_count));
-                col = index%col_count;
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
-                {
-                    sum_ortho = 0;
-                    count_cell = 0;
-                    
-                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
-                    {
-                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
-                        {
-                            int index_row = row + t_i;
-                            int index_col = col + t_j;
-                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                            
-                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
-                            {
-                                if(value_pt[t_index] == 0)
-                                {
-                                    sum_ortho += value_orthoncc[t_index];
-                                    count_cell++;
-                                    
-                                    if(value_orthoncc[t_index] < 0.0)
-                                    {
-                                        count_low_cell++;
-                                    }
-                                }
-                                /*
-                                //DEM island points removeal
-                                if(value_pt[t_index] == 0 && value[t_index] <= -1000)
-                                    count_island_points++;
-                                 */
-                            }
-                        }
-                    }
-                    
-                    sum_ortho /= (double)count_cell;
-                    
-                    if (count_low_cell >= total_size*0.3)
-                    {
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
-                        
-                        count_null_cell ++;
-                    }
-                    /*
-                    //DEM island points removeal
-                    if (count_island_points >= total_size*0.5)
-                        value[(long)row*(long)col_count + (long)col] = -9999;
-                     */
-                }
-            }
-            
-            if(count_null_cell == 0)
-                check_while = 1;
-            
-            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-            //memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
-        }
-        //total_iteration = total_iteration + 1;
-    }
-    
-    
-    if(grid_rate > 1)
-    {
-        printf("last iteration\n");
-        
-        iter_check = 0;
-        check_size = 0;
-        max_total_iteration = 3;
-        total_iteration;
-        th_rate = 0.6;
-        
-        for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
-        {
-            check_while = 0;
-            check_size = total_iteration;
-            
-            //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
-            int total_size = (2*check_size+1)*(2*check_size+1);
-            while(check_while == 0)
-            {
-                iter_check ++;
-                //printf("1st null iteration %d\t%d\n",check_size,iter_check);
-                
-                count_null_cell = 0;
-                
-#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-                for (long index = 0; index < col_count*row_count; index++)
-                {
-                    int row, col;
-                    
-                    long count_cell;
-                    long count_all_cell = 0;
-                    int count_island_points = 0;
-                    int t_i, t_j;
-                    double sum_h;
-                    double sum_ortho;
-                    int count1 = 0;
-                    int count2 = 0;
-                    int count3 = 0;
-                    int count4 = 0;
-                    
-                    row = (int)(floor(index/col_count));
-                    col = index%col_count;
-                    
-                    
-                    if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-                    {
-                        count_cell = 0;
-                        sum_h = 0;
-                        sum_ortho = 0;
-                        
-                        
-                        for (t_i = -check_size; t_i <= check_size;t_i++ )
-                        {
-                            for (t_j = -check_size; t_j <= check_size; t_j++)
-                            {
-                                int index_row = row + t_i;
-                                int index_col = col + t_j;
-                                long int t_index = (long)index_row*(long)col_count + (long)index_col;
-                                
-                                if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
-                                {
-                                    if(value_pt[t_index] == 1 && value_orthoncc[t_index] > 0.0)
-                                    {
-                                        sum_ortho += value_orthoncc[t_index];
-                                        count_cell++;
-                                    }
-                                    /*
-                                    //DEM island points removeal
-                                    if(value_pt[t_index] == 0 && value[t_index] <= -1000)
-                                        count_island_points++;
-                                     */
-                                }
-                            }
-                        }
-                        
-                        if (count_cell >= total_size*th_rate )
-                        {
-                            t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
-                            
-                            t_value_pt[(long)row*(long)col_count + (long)col] = 1;
-                            
-                            count_null_cell ++;
-                        }
-                        /*
-                        //DEM island points removeal
-                        if (count_island_points >= total_size*0.5)
-                            value[(long)row*(long)col_count + (long)col] = -9999;
-                         */
-                    }
-                }
-                memcpy(value_orthoncc,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
-                memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
-                
-                if(count_null_cell == 0)
-                    check_while = 1;
-            }
-        }
-    }
-    
-    printf("end last iteration\n");
-    
-    
-    free(t_value_orthoncc);
-    free(t_value_pt);
-    
-    printf("end null\n");
+ */
+    printf("end interpolation\t%d\t%d\n",total_search_count,total_interpolated);
     
     /*
     //DEM boundary filter
@@ -17428,13 +17279,10 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
         }
     }
 */
-    free(t_value);
-    
-    
     //smoothing
     float *value_sm = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
-                
-//#pragma omp parallel for shared(value,value_sm,col_count,row_count) private(index)
+    
+#pragma omp parallel for schedule(guided)
     for (long index = 0; index < (long)col_count*(long)row_count; index++) 
     {
         int row, col;
@@ -17459,17 +17307,19 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             {
                 int index_row = row + t_i;
                 int index_col = col + t_j;
+                long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                
                 if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
                 {
-                    if(value[(long)index_row*(long)col_count + (long)index_col] != -9999)
+                    if(value[t_index] != -9999)
                     {
                         count_cell++;
-                        sum_h += value[(long)index_row*(long)col_count + (long)index_col];
+                        sum_h += value[t_index];
                     }
                     
                     if (value[(long)row*(long)col_count + (long)col] == -9999)
                     {
-                        if(value[(long)index_row*(long)col_count + (long)index_col] != -9999 && t_i != 0 && t_j != 0)
+                        if(value[t_index] != -9999 && t_i != 0 && t_j != 0)
                         {
                             null_count_cell++;
                             null_sum_h += value[(long)index_row*(long)col_count + (long)index_col];
@@ -17477,29 +17327,8 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                     }
 
                 }
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
-                {
-                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 1)
-                    {
-                        count_match_grid++;
-                    }
-                }
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -9999)
-                {
-                    if(value_pt[(long)index_row*(long)col_count + (long)index_col] == 0)
-                    {
-                        count_null_grid++;
-                    }
-                }
-            }
+             }
         }
-        
-        if(count_match_grid >= 8)
-            value_pt[(long)row*(long)col_count + (long)col] = 1;
-        if(count_null_grid >= 8)
-            value_pt[(long)row*(long)col_count + (long)col] = 0;
         
         if(count_cell > 0)
             value_sm[(long)row*(long)col_count + (long)col] = sum_h / count_cell;
@@ -17511,13 +17340,6 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     }
     printf("end smoothing\n");
     
-    free(value);
-    value = (float*)malloc(sizeof(float)*(long)col_count*(long)row_count);
-    memcpy(value,value_sm,sizeof(float)*(long)col_count*(long)row_count);
-    free(value_sm);
-    
-    printf("end loading mpts, %ld\t%d\t%f\t%f\t%ld\t%ld!!\n",total_search_count,buffer_clip,minHeight,maxHeight,total_mt_count,total_check_count);
-    
     if(!check_Matchtag)
     {
         if(divide == 0)
@@ -17527,7 +17349,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
 
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_dem.tif", save_path, Outputpath_name);
-            WriteGeotiff(GEOTIFF_dem_filename, value, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
+            WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
         }
         else
         {
@@ -17536,9 +17358,452 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem.tif", save_path, Outputpath_name,divide);
-            WriteGeotiff(GEOTIFF_dem_filename, value, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
+            WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 4);
         }
     }
+    printf("Done writing DEM tif\n");
+    free(value_sm);
+}
+
+void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, float* Ortho_values,float* value, unsigned char* value_pt,CSize Final_DEMsize, double *FinalDEM_boundary)
+{
+    double dummy;
+    int i0, cnthold,i,j,index;
+    double minX,maxX, minY, maxY,DEM_minX,DEM_maxY,minHeight,maxHeight;
+    double dis_X, dis_Y;
+    double grid;
+    double mt_grid;
+    int index_file;
+    int row_count, col_count,row_count_mt, col_count_mt, DEM_rows,DEM_cols;
+    FILE* fout;
+    FILE* fheader;
+    FILE     *afile;
+    FILE* forthoncc;
+    
+    char t_savefile[500];
+    char outfile[500];
+    char DEM_header[500];
+    
+    double X_center;
+    double Y_center;
+    
+    int header_line = 7;
+    int find_iter  = final_iteration;
+    int interval_row = 20;
+    int buffer_row   = 5;
+    int t_ndata;
+    int ndim,ndim1,ndata;
+    long total_search_count = 0;
+    long total_mt_count = 0;
+    long total_check_count = 0;
+    long total_null_cell = 0;
+    int threads_num;
+    int guided_size;
+    
+    ndim     = 2;
+    ndim1 = ndim + 1;
+    
+    minX = 10000000;
+    minY = 10000000;
+    maxX = -10000000;
+    maxY = -10000000;
+    
+    minHeight = 100000;
+    maxHeight = -100000;
+    
+    grid     = grid_resolution;
+    mt_grid  = mt_grid_resolution;
+    
+    minX = FinalDEM_boundary[0];
+    minY = FinalDEM_boundary[1];
+    maxX = FinalDEM_boundary[2];
+    maxY = FinalDEM_boundary[3];
+    /*
+    col_count = (int)((maxX - minX)/grid) + 1;
+    row_count = (int)((maxY - minY)/grid) + 1;
+    
+    col_count_mt = (int)((maxX - minX)/mt_grid) + 1;
+    row_count_mt = (int)((maxY - minY)/mt_grid) + 1;
+    */
+    col_count = Final_DEMsize.width;
+    row_count = Final_DEMsize.height;
+    
+    sprintf(DEM_header, "%s/%s_dem_header_tin.txt", save_path,Outputpath_name);
+    fheader = fopen(DEM_header,"r");
+    fscanf(fheader,"%lf\t%lf\t%lf\t%d\t%d",&DEM_minX,&DEM_maxY,&dummy,&DEM_cols,&DEM_rows);
+    fclose(fheader);
+    
+    remove(DEM_header);
+
+    printf("start null\n");
+    long count_null_cell = 0;
+    int check_while = 0;
+    
+    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
+    
+    memcpy(t_value_orthoncc,Ortho_values,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+    
+    int iter_check = 0;
+    int check_size = 0;
+    int max_total_iteration = 3;
+    if(grid > 2)
+        max_total_iteration = 3;
+    int total_iteration;
+    double th_rate = 0.6;
+    int grid_rate = (int)(8.0/(double)grid);
+    if(grid_rate < 1)
+        grid_rate = 1;
+    
+    printf("first grid rate %d\n",grid_rate);
+    
+    for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+    {
+        check_while = 0;
+        check_size = total_iteration*grid_rate;
+        
+        //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
+        int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+        while(check_while == 0)
+        {
+            iter_check ++;
+            //printf("1st null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+            
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+            for (long index = 0; index < (long)col_count*(long)row_count; index++)
+            {
+                int row, col;
+                
+                long count_cell;
+                int t_i, t_j;
+                int count1 = 0;
+                int count2 = 0;
+                int count3 = 0;
+                int count4 = 0;
+                
+                double sum_h;
+                double sum_ortho;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+                
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                {
+                    count_cell = 0;
+                    sum_h = 0;
+                    sum_ortho = 0;
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
+                            {
+                                if(value_pt[t_index] == 1 && Ortho_values[t_index] > 0.0)
+                                {
+                                    sum_ortho += Ortho_values[t_index];
+                                    count_cell++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (count_cell >= 7 && count_cell >= total_size*th_rate )
+                    {
+                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                        count_null_cell ++;
+                    }
+                }
+            }
+            
+            memcpy(Ortho_values,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            
+            if(count_null_cell == 0)
+                check_while = 1;
+        }
+    }
+    
+    total_mt_count = 0;
+    
+    iter_check = 0;
+    check_size = 10*grid_rate;
+    total_iteration = 0;
+    printf("second null\n");
+    //while(total_iteration < max_total_iteration)
+    {
+        check_while = 0;
+        //check_size ++;
+        while(check_while == 0)
+        {
+            iter_check ++;
+            printf("2nd null iteration %d\t%d\n",check_size,iter_check);
+            
+            count_null_cell = 0;
+            int count_highnull_cell = 0;
+            int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell,count_highnull_cell)
+            for (long index = 0; index < (long)col_count*(long)row_count; index++)
+            {
+                int row, col;
+                //long count_cell;
+                int t_i, t_j;
+                double sum_h;
+                //double sum_ortho;
+                
+                int count_low_cell = 0;
+                int count_high_cell = 0;
+                //int count_island_points = 0;
+                
+                row = (int)(floor(index/col_count));
+                col = index%col_count;
+                
+                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
+                {
+                    //sum_ortho = 0;
+                    //count_cell = 0;
+                    
+                    for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
+                    {
+                        for (t_j = -check_size; t_j <= check_size; t_j+=grid_rate)
+                        {
+                            int index_row = row + t_i;
+                            int index_col = col + t_j;
+                            long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                            
+                            if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
+                            {
+                                if(value_pt[t_index] == 0)
+                                {
+                                    //sum_ortho += Ortho_values[t_index];
+                                    //count_cell++;
+                                    
+                                    if(Ortho_values[t_index] < 0.0)
+                                        count_low_cell++;
+                                    else if(Ortho_values[t_index] > 0.0)
+                                        count_high_cell++;
+                                }
+                                
+                                 //DEM island points removeal
+                                 //if(value_pt[t_index] == 0 && value[t_index] <= -1000)
+                                 //count_island_points++;
+                                
+                            }
+                        }
+                    }
+                    
+                    //sum_ortho /= (double)count_cell;
+                    
+                    if(count_low_cell >= total_size*0.3)
+                    {
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
+                        count_null_cell ++;
+                    }
+                    
+                    if(count_high_cell >= total_size*0.5)
+                    {
+                        t_value_pt[(long)row*(long)col_count + (long)col] = 2;
+                        count_highnull_cell++;
+                    }
+                    
+                     //DEM island points removeal
+                     //if (count_island_points >= total_size*0.5)
+                     //value[(long)row*(long)col_count + (long)col] = -9999;
+                    
+                }
+            }
+            printf("%d\t%d\n",count_null_cell,count_highnull_cell);
+            if(count_null_cell == 0)
+                check_while = 1;
+            
+            memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+            //memcpy(value,t_value,sizeof(float)*(long)col_count*(long)row_count);
+        }
+        //total_iteration = total_iteration + 1;
+    }
+ 
+    
+     #pragma omp parallel for schedule(guided)
+     for (long index = 0; index < (long)col_count*(long)row_count; index++)
+     {
+         if(t_value_pt[index] > 0)
+         {
+             t_value_pt[index] = 1;
+             value_pt[index] = 1;
+         }
+     }
+    
+    
+    if(grid_rate > 1)
+    {
+        printf("last iteration\n");
+        
+        iter_check = 0;
+        check_size = 0;
+        max_total_iteration = 3;
+        total_iteration;
+        th_rate = 0.6;
+        
+        for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
+        {
+            check_while = 0;
+            check_size = total_iteration;
+            
+            //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
+            int total_size = (2*check_size+1)*(2*check_size+1);
+            while(check_while == 0)
+            {
+                iter_check ++;
+                //printf("last iteration %d\t%d\n",check_size,iter_check);
+                
+                count_null_cell = 0;
+                
+#pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+                for (long index = 0; index < (long)col_count*(long)row_count; index++)
+                {
+                    int row, col;
+                    
+                    long count_cell;
+                    long count_all_cell = 0;
+                    int count_island_points = 0;
+                    int t_i, t_j;
+                    double sum_h;
+                    double sum_ortho;
+                    int count1 = 0;
+                    int count2 = 0;
+                    int count3 = 0;
+                    int count4 = 0;
+                    
+                    row = (int)(floor(index/col_count));
+                    col = index%col_count;
+                    
+                    
+                    if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                    {
+                        count_cell = 0;
+                        sum_h = 0;
+                        sum_ortho = 0;
+                        
+                        for (t_i = -check_size; t_i <= check_size;t_i++ )
+                        {
+                            for (t_j = -check_size; t_j <= check_size; t_j++)
+                            {
+                                int index_row = row + t_i;
+                                int index_col = col + t_j;
+                                long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                                
+                                if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count )
+                                {
+                                    if(value_pt[t_index] > 0 && Ortho_values[t_index] > 0.0 && value[t_index] > -100)
+                                    {
+                                        sum_ortho += Ortho_values[t_index];
+                                        count_cell++;
+                                    }
+                                    
+                                     //DEM island points removeal
+                                     //if(value_pt[t_index] == 0 && value[t_index] <= -1000)
+                                     //count_island_points++;
+                                    
+                                }
+                            }
+                        }
+                        
+                        if (count_cell >= total_size*th_rate )
+                        {
+                            t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                            
+                            t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                            
+                            count_null_cell ++;
+                        }
+                        
+                         //DEM island points removeal
+                         //if (count_island_points >= total_size*0.5)
+                         //value[(long)row*(long)col_count + (long)col] = -9999;
+                        
+                    }
+                }
+                memcpy(Ortho_values,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+                memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
+                
+                if(count_null_cell == 0)
+                    check_while = 1;
+            }
+        }
+    }
+    
+    free(t_value_orthoncc);
+    free(Ortho_values);
+    
+    printf("end last iteration\n");
+    #pragma omp parallel for schedule(guided)
+    for (long index = 0; index < (long)col_count*(long)row_count; index++)
+    {
+        int row, col;
+        int check_size;
+        long count_cell;
+        long null_count_cell;
+        int t_i, t_j;
+        double sum_h, null_sum_h;
+        int count_null_grid = 0;
+        int count_match_grid = 0;
+        
+        row = (int)(floor(index/col_count));
+        col = index%col_count;
+        count_cell = 0;
+        null_count_cell = 0;
+        sum_h = 0;
+        null_sum_h = 0;
+        
+        for (t_i = -1; t_i <= 1;t_i++ )
+        {
+            for (t_j = -1; t_j <= 1; t_j++)
+            {
+                int index_row = row + t_i;
+                int index_col = col + t_j;
+                long int t_index = (long)index_row*(long)col_count + (long)index_col;
+                
+                if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count)
+                {
+                    if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                    {
+                        if(value_pt[t_index] > 0)
+                        {
+                            count_match_grid++;
+                        }
+                    }
+                    
+                    if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -9999)
+                    {
+                        if(value_pt[t_index] == 0)
+                        {
+                            count_null_grid++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if(count_match_grid >= 8)
+            t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+        if(count_null_grid >= 8)
+            t_value_pt[(long)row*(long)col_count + (long)col] = 0;
+    }
+    
+    free(value);
+    free(value_pt);
+
+    printf("end smoothing\n");
+    printf("end null\n");
     
     char GEOTIFF_matchtag_filename[500];
     if(divide == 0)
@@ -17546,11 +17811,9 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     else
         sprintf(GEOTIFF_matchtag_filename, "%s/%s_%d_matchtag.tif", save_path, Outputpath_name,divide);
     
-    WriteGeotiff(GEOTIFF_matchtag_filename, value_pt, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 1);
+    WriteGeotiff(GEOTIFF_matchtag_filename, t_value_pt, col_count, row_count, grid, minX, maxY, _param.projection, _param.zone, Hemisphere, 1);
     
-    free(value);
-    free(value_pt);
-    free(value_orthoncc);
+    free(t_value_pt);
 }
 
 void Envihdr_writer(TransParam _param, char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type)
@@ -17751,7 +18014,7 @@ CSize Envihdr_reader(char *filename)
     return image_size;
 }
 
-double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path)
+double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path)
 {
     double result;
     double row_pos, col_pos;
@@ -17785,7 +18048,7 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
                 if(grid_pos >= 0 && grid_pos < row_size*col_size && 
                    row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)// && radius > distance)
                 {
-                    if(input[grid_pos].Z != -9999)
+                    if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
                     {
                         (*numpts)++;
                         
@@ -17806,7 +18069,7 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
             }
         }
         
-        if (interval >= row_interval || ((*numpts) >= 20 && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
+        if (interval >= row_interval || ((*numpts) >= 10 && count1 >= 2 && count2 >= 2 && count3 >= 2 && count4 >= 2))
         {
             check_stop = 1;
             final_interval = interval;
@@ -17828,15 +18091,18 @@ double FindNebPts_F_M_IDW(NNXY *input, int row_size, int col_size, double grid, 
             if(grid_pos >= 0 && grid_pos < row_size*col_size && 
                row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
             {
-                if(input[grid_pos].Z != -9999)
+                if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
                 {
                     double x,y,x_ref,y_ref;
-                    x = input[grid_pos].X;
-                    y = input[grid_pos].Y;
-                    x_ref = X;
-                    y_ref = Y;
-                    diff[*numpts] = sqrt((x-x_ref)*(x-x_ref) + (y-y_ref)*(y-y_ref));
-                    height[*numpts] = input[grid_pos].Z;
+                    //x = input[grid_pos].X;
+                    //y = input[grid_pos].Y;
+                    double dis_X = (col*grid);
+                    double dis_Y = (row*grid);
+                    //x_ref = X;
+                    //y_ref = Y;
+                    diff[*numpts] = sqrt(dis_X*dis_X + dis_Y*dis_Y);
+                    //diff[*numpts] = sqrt((x-x_ref)*(x-x_ref) + (y-y_ref)*(y-y_ref));
+                    height[*numpts] = input[grid_pos];
                     (*numpts)++;
                 }
             }
@@ -17881,6 +18147,9 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     char OrthoGEOTIFFFilename[500];
     char Ortho_header[500];
     
+    time_t ST = 0, ET = 0;
+    double gap;
+    
     char* tmp_chr; 
     double DEM_resolution, Image_resolution, Ortho_resolution;
     double OrthoGridFactor;
@@ -17894,6 +18163,9 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     CSize DEM_size, Image_size;
     TransParam param;
     FrameInfo m_frameinfo;
+    
+    
+    ST = time(0);
     
     if(args.sensor_type == AB)
     {
@@ -18134,8 +18406,9 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         }
     }
     
-    double subfactor                      = pow(6-impyramid_step,2.0);
-    subfactor                       = 1;
+    double subfactor                      = pow(4-impyramid_step,2.0);
+    if(subfactor <= 1)
+        subfactor                       = 1;
     int sub_height                  = ceil(Orthoimagesize.height/subfactor);
     int sub_width                   = ceil(Orthoimagesize.width/subfactor);
     int height_interval             = Ortho_resolution*sub_height;
@@ -18219,22 +18492,22 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                 int col_size    = (int)((X_size[1] - X_size[0])/Ortho_resolution + 0.5);
                 int row_size    = (int)((Y_size[1] - Y_size[0])/Ortho_resolution + 0.5);
                 
-//#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided)
                 for(int count = 0; count < col_size*row_size ; count++)
                 {
                     double row  = ((int)(floor(count/col_size)))*Ortho_resolution + Y_size[0];
                     double col  = (count % col_size)*Ortho_resolution + X_size[0];
 
-                    int index1,index2,index3, index4;
+                    long int index1,index2,index3, index4;
                     double t_col, t_row;
-                    int t_col_int, t_row_int;
+                    long int t_col_int, t_row_int;
                     double dcol,drow;
                     
                     t_col       = (col - DEM_minX)/DEM_resolution;
                     t_row       = (DEM_maxY - row)/DEM_resolution;
                     
-                    t_col_int   = (int)(t_col + 0.01);
-                    t_row_int   = (int)(t_row + 0.01);
+                    t_col_int   = (long int)(t_col + 0.01);
+                    t_row_int   = (long int)(t_row + 0.01);
                     
                     dcol        = t_col - t_col_int;
                     drow        = t_row - t_row_int;
@@ -18243,10 +18516,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                     {
                         double value1, value2, value3, value4, value;
                         
-                        index1  = (t_col_int   ) + (t_row_int   )*DEM_size.width;
-                        index2  = (t_col_int +1) + (t_row_int   )*DEM_size.width;
-                        index3  = (t_col_int   ) + (t_row_int +1)*DEM_size.width;
-                        index4  = (t_col_int +1) + (t_row_int +1)*DEM_size.width;
+                        index1  = (t_col_int   ) + (t_row_int   )*(long)DEM_size.width;
+                        index2  = (t_col_int +1) + (t_row_int   )*(long)DEM_size.width;
+                        index3  = (t_col_int   ) + (t_row_int +1)*(long)DEM_size.width;
+                        index4  = (t_col_int +1) + (t_row_int +1)*(long)DEM_size.width;
                         
                         value1      = DEM_value[index1];
                         value2      = DEM_value[index2];
@@ -18293,23 +18566,23 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                             t_col       = temp_pt.m_X;
                             t_row       = temp_pt.m_Y;
                             
-                            t_col_int   = (int)(t_col + 0.01);
-                            t_row_int   = (int)(t_row + 0.01);
+                            t_col_int   = (long int)(t_col + 0.01);
+                            t_row_int   = (long int)(t_row + 0.01);
                             
                             dcol        = t_col - t_col_int;
                             drow        = t_row - t_row_int;
                             
                             //printf("temp_pt %f\t%f\n",temp_pt.m_X,temp_pt.m_Y);
                             if(t_col_int >= 0 && t_col_int +1 < Image_size.width && t_row_int >= 0 && t_row_int +1 < Image_size.height
-                               && (t_col_int +1) + (t_row_int +1)*Image_size.width < Image_size.width*Image_size.height)
+                               && (t_col_int +1) + (t_row_int +1)*(long)Image_size.width < (long)Image_size.width*(long)Image_size.height)
                             {
                                 //printf("inside of image value\n");
                                 double value1, value2, value3, value4, value;
-                                int index;
-                                index1  = (t_col_int   ) + (t_row_int   )*Image_size.width;
-                                index2  = (t_col_int +1) + (t_row_int   )*Image_size.width;
-                                index3  = (t_col_int   ) + (t_row_int +1)*Image_size.width;
-                                index4  = (t_col_int +1) + (t_row_int +1)*Image_size.width;
+                                long int index;
+                                index1  = (t_col_int   ) + (t_row_int   )*(long)Image_size.width;
+                                index2  = (t_col_int +1) + (t_row_int   )*(long)Image_size.width;
+                                index3  = (t_col_int   ) + (t_row_int +1)*(long)Image_size.width;
+                                index4  = (t_col_int +1) + (t_row_int +1)*(long)Image_size.width;
                                 
                                 if(impyramid_step > 0)
                                 {
@@ -18328,11 +18601,11 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                                 value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
                                     + value3*(1-dcol)*drow + value4*dcol*drow;
                                 
-                                t_col_int       = (int)((col - OrthoBoundary[0])/Ortho_resolution + 0.01);
-                                t_row_int       = (int)((OrthoBoundary[3] - row)/Ortho_resolution + 0.01);
-                                index           = t_col_int + t_row_int*Orthoimagesize.width;
+                                t_col_int       = (long int)((col - OrthoBoundary[0])/Ortho_resolution + 0.01);
+                                t_row_int       = (long int)((OrthoBoundary[3] - row)/Ortho_resolution + 0.01);
+                                index           = t_col_int + t_row_int*(long)Orthoimagesize.width;
                                 
-                                if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < Orthoimagesize.width*Orthoimagesize.height)
+                                if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < (long)Orthoimagesize.width*(long)Orthoimagesize.height)
                                 {
                                     //printf("inside of ortho\n");
                                     result_ortho[index] = value1;
@@ -18344,8 +18617,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                 
                 if(impyramid_step > 0)
                     free(pyimg);
+                
+                free(subimage);
             }
-            free(subimage);
+            
         }
     }
     free(RPCs);
@@ -18353,6 +18628,11 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     
     WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
     free(result_ortho);
+    
+    ET = time(0);
+    
+    gap = difftime(ET,ST);
+    printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
 }
 
 D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step)
@@ -18373,7 +18653,7 @@ uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg)
     if(filter_size < 3)
         filter_size = 3;
     
-    printf("level %d\tfilter size %d\n",py_level,filter_size);
+    //printf("level %d\tfilter size %d\n",py_level,filter_size);
     
     pyimg = CreateImagePyramid_ortho(subimg,data_size[0],filter_size,(double)(filter_size/2.0));
     
@@ -18763,10 +19043,10 @@ uint16 *Readtiff_ortho(char *filename, CSize Imagesize, int *cols, int *rows, CS
     
     if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
-        printf("tif open\n");
+        //printf("tif open\n");
         tif  = TIFFOpen(filename,"r");
         check_ftype = 1;
-        printf("tif open end\n");
+        //printf("tif open end\n");
     }
     else if(!strcmp("bin",ext+1))
     {
@@ -19378,6 +19658,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         }
         else
         {
+            printf("geotiff info %s\n",GIMP_path);
             seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, grid_size);
             check_open_header = true;
         }
@@ -19511,9 +19792,10 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
     printf("DEM file = %s\n",GIMP_path);
     if(check_ftype == 2)
     {
-        seeddem = (float*)calloc(sizeof(float),seeddem_size.width*seeddem_size.height);
+        long int data_length = (long)seeddem_size.width*(long)seeddem_size.height;
+        seeddem = (float*)calloc(sizeof(float),data_length);
         bin = fopen(GIMP_path,"rb");
-        fread(seeddem,sizeof(float),seeddem_size.width*seeddem_size.height,bin);
+        fread(seeddem,sizeof(float),data_length,bin);
     }
     else
     {
@@ -19596,15 +19878,16 @@ unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size)
     return matchtag;
 }
 
-void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem,unsigned char* matchtag, float *smooth_DEM)
+void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem, float *smooth_DEM)
 {
     long int i,j;
     
     double sigma_th = MPP_stereo_angle/2.0 + MPP_stereo_angle*0.1*smooth_iteration;
     long int total_selected_points = 0;
     double sigma_sum = 0;
+    double sigma2_sum = 0;
     long int data_length = (long int)seeddem_size.width*(long int)seeddem_size.height;
-    float *temp_sigma = (float*)malloc(sizeof(float)*data_length);
+    //float *temp_sigma = (float*)malloc(sizeof(float)*data_length);
     double sum_fitted_Z = 0;
     
     printf("sigma_th = %f\tMPP %f\n",sigma_th,MPP_stereo_angle);
@@ -19624,7 +19907,7 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
         long int row_start = 0;
         long int row_end = data_length;
         
-#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sum_fitted_Z)// private (row_start,row_end)
+#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sum_fitted_Z, sigma2_sum)// private (row_start,row_end)
         for(long int iter_count = row_start ; iter_count < row_end ; iter_count++)
             //for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
         {
@@ -19636,7 +19919,7 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
             
             if(seeddem[iter_count] > -100)
             {
-                sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, matchtag, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
+                sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
                 
                 double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
                 
@@ -19644,41 +19927,43 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
                 
                 if(check_smooth_iter)
                 {
-                    if(sigma < 20 && sigma > -1 && selected_count > 6)
+                    if(sigma < 20 && sigma > 0 && selected_count > 6)
                     {
                         smooth_DEM[iter_count] = fitted_Z;
                         sum_fitted_Z += fitted_Z;
                         total_selected_points++;
                         sigma_sum += sigma;
-                        temp_sigma[iter_count] = sigma;
+                        sigma2_sum += (sigma*sigma);
+                        //temp_sigma[iter_count] = sigma;
                     }
                     else
                     {
                         smooth_DEM[iter_count] = seeddem[iter_count];
-                        temp_sigma[iter_count] = -9999;
+                        //temp_sigma[iter_count] = -9999;
                     }
                 }
                 else
                 {
-                    if(sigma < 20 && sigma > -1 && selected_count > 6)
+                    if(sigma < 20 && sigma > 0 && selected_count > 6)
                     {
                         smooth_DEM[iter_count] = fitted_Z;
                         sum_fitted_Z += fitted_Z;
                         total_selected_points++;
                         sigma_sum += sigma;
-                        temp_sigma[iter_count] = sigma;
+                        sigma2_sum += (sigma*sigma);
+                        //temp_sigma[iter_count] = sigma;
                     }
                     else
                     {
                         smooth_DEM[iter_count] = seeddem[iter_count];
-                        temp_sigma[iter_count] = -9999;
+                        //temp_sigma[iter_count] = -9999;
                     }
                 }
             }
             else
             {
                 smooth_DEM[iter_count] = seeddem[iter_count];
-                temp_sigma[iter_count] = -9999;
+                //temp_sigma[iter_count] = -9999;
             }
                 
         }
@@ -19686,29 +19971,35 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
     }
     
     *sigma_average = sigma_sum/total_selected_points;
+    
+    
+    //printf("%f\t%f\n",sigma2_sum,((double)(sigma_sum*sigma_sum)));
+    *sigma_std = sqrt( (double)(sigma2_sum)/(double)(total_selected_points) - ((double)(*sigma_average**sigma_average)) );
+    printf("avg sigma %f\tstd sigma %f\ttotal_pts %ld\n",*sigma_average,*sigma_std,total_selected_points);
+    /*
     sigma_sum = 0;
-    printf("avg sigma %f\ttotal_pts %ld\n",*sigma_average,total_selected_points);
 #pragma omp parallel for schedule(guided) reduction(+:sigma_sum)
     for(i=0 ; i<seeddem_size.width*seeddem_size.height ; i++)
     {
         if(temp_sigma[i] > -1)
             sigma_sum = sigma_sum + (temp_sigma[i] - *sigma_average)*(temp_sigma[i] - *sigma_average);
     }
-    
+
     *sigma_std = sqrt(sigma_sum/total_selected_points);
-    printf("std sigma %f\n",*sigma_std);
+    printf("mem std sigma %f\n",*sigma_std);
+    */
     
-    free(temp_sigma);
+    //free(temp_sigma);
 }
 
-double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSFINFO *Grid_info, float *input,unsigned char* matchtag, int row_size, int col_size, double grid, long int X, long int Y, long int *numpts, double *fitted_Z)
+double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSFINFO *Grid_info, float *input, int row_size, int col_size, double grid, long int X, long int Y, long int *numpts, double *fitted_Z)
 {
     double result;
     long int row_pos, col_pos;
     int row,col;
     long int size_pts;
     int check_stop = 0;
-    long int final_interval;
+    int final_interval;
     int interval = 2;
     int count1,count2,count3,count4;
     int max_pts = 9;
@@ -19743,7 +20034,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     if(smooth_iter > 0)
     {
         double t_sigma = Grid_info[t_index].lsf_std;
-        int pre_final_interval = Grid_info[t_index].lsf_kernel;
+        int pre_final_interval = (int)Grid_info[t_index].lsf_kernel;
     
         if(add_interval > 0)
         {
@@ -19764,7 +20055,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
          else*/
         {
             
-            final_interval = Grid_info[t_index].lsf_kernel;
+            final_interval = (int)Grid_info[t_index].lsf_kernel;
             
             
             if(grid <= 0.1)
@@ -19827,7 +20118,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                        row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size /* && col != 0 && row != 0*/)// && radius > distance)
                     {
                         
-                        if(input[grid_pos] > -100 && matchtag[grid_pos] == 1)
+                        if(input[grid_pos] > -100)
                         {
                             if      (row >= 0 && row <=  interval && col >= 0 && col <=  interval)
                             {
@@ -19890,7 +20181,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                    row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
                 {
                     
-                    if(input[grid_pos] > - 100 && matchtag[grid_pos] == 1)
+                    if(input[grid_pos] > - 100)
                     {
                         (*numpts)++;
                         
@@ -19944,7 +20235,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     if(grid_pos >= 0 && grid_pos < data_length &&
                        row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size )
                     {
-                        if(input[grid_pos] > - 100 && matchtag[grid_pos] == 1)
+                        if(input[grid_pos] > - 100)
                         {
                             double x,y,z;
                             x = (grid_pos_col*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
@@ -20108,7 +20399,9 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                         max_Z = temp_fitted_Z;
                 }
                 
-                sigma = sqrt(sum/(*numpts));
+                if(sum > 0 && *numpts > 0)
+                {
+                    sigma = sqrt(sum/(*numpts));
                 
                 /*if(sigma > 20)
                  {
@@ -20116,7 +20409,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                  sigma = 15;
                  }
                  else*/
-                {
+                //{
                     double diff_Z = fabs(max_Z - min_Z);
                     
                     double A = X_matrix->val[0][0];
@@ -20193,6 +20486,9 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     else
                         sigma = 999999;
                 }
+                else
+                    sigma = 999999;
+                
                 GMA_double_destroy(A_matrix);
                 GMA_double_destroy(L_matrix);
                 GMA_double_destroy(AT_matrix);
@@ -20221,7 +20517,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     return sigma;
 }
 
-void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, CSize DEM_size)
+void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, int divide)
 {
     FILE* pFile_DEM = NULL;
     char str_DEMfile[1000];
@@ -20232,15 +20528,31 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     char DEM_GEOTIFF_filename[500];
     char result_file[500];
     char metafilename[500];
+    CSize DEM_size;
+    long int DEM_length;
     
-    sprintf(str_DEMfile, "%s/%s_dem.tif", savepath,outputpath);
-    sprintf(str_smooth_file,"%s/%s_smooth.raw",savepath,outputpath);
-    sprintf(DEM_header, "%s/%s_smooth.hdr", savepath,outputpath);
-    sprintf(DEM_GEOTIFF_filename, "%s/%s_dem_smooth.tif", savepath, outputpath);
-    sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
-    sprintf(str_matchfile,"%s/%s_matchtag.raw",savepath,outputpath);
-    sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",savepath,outputpath);
-    sprintf(result_file,"%s/%s_smooth_result.txt",savepath,outputpath);
+    if(divide == 0)
+    {
+        sprintf(str_DEMfile, "%s/%s_dem.tif", savepath,outputpath);
+        sprintf(str_smooth_file,"%s/%s_smooth.raw",savepath,outputpath);
+        sprintf(DEM_header, "%s/%s_smooth.hdr", savepath,outputpath);
+        sprintf(DEM_GEOTIFF_filename, "%s/%s_dem_smooth.tif", savepath, outputpath);
+        sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
+        sprintf(str_matchfile,"%s/%s_matchtag.raw",savepath,outputpath);
+        sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",savepath,outputpath);
+        sprintf(result_file,"%s/%s_smooth_result.txt",savepath,outputpath);
+    }
+    else
+    {
+        sprintf(str_DEMfile, "%s/%s_%d_dem.tif", savepath,outputpath,divide);
+        sprintf(str_smooth_file,"%s/%s_%d_smooth.raw",savepath,outputpath,divide);
+        sprintf(DEM_header, "%s/%s_%d_smooth.hdr", savepath,outputpath,divide);
+        sprintf(DEM_GEOTIFF_filename, "%s/%s_%d_dem_smooth.tif", savepath, outputpath,divide);
+        sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
+        sprintf(str_matchfile,"%s/%s_%d_matchtag.raw",savepath,outputpath,divide);
+        sprintf(str_matchfile_tif,"%s/%s_%d_matchtag.tif",savepath,outputpath,divide);
+        sprintf(result_file,"%s/%s_%d_smooth_result.txt",savepath,outputpath,divide);
+    }
     
     printf("dem file %s\n",str_DEMfile);
     printf("metafilename %s\n",metafilename);
@@ -20266,7 +20578,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         double MPP_stereo_angle = MPP;
         LSFINFO *Grid_info = NULL;
         float* seeddem = NULL;
-        unsigned char* matchtag = NULL;
+        //unsigned char* matchtag = NULL;
         double minX, maxY;
         
         /*
@@ -20304,11 +20616,15 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         printf("MPP_stereo_angle %f\n",MPP_stereo_angle);
         
         DEM_size = GetDEMsize(str_DEMfile,metafilename,&param,&grid_size,seeddem,&minX,&maxY);
+        printf("DEM_size %d\t%d\n",DEM_size.width,DEM_size.height);
         
         seeddem = GetDEMValue(str_DEMfile,DEM_size);
+        printf("Done seeddem\n");
         
-        matchtag = (unsigned char*)calloc(sizeof(unsigned char),DEM_size.width*DEM_size.height);
-        for(int i = 0; i< DEM_size.height*DEM_size.width ; i++)
+        DEM_length = (long)(DEM_size.height)*(long)(DEM_size.width);
+        //matchtag = (unsigned char*)calloc(sizeof(unsigned char),DEM_length);
+        printf("Done matchtag memory allocation %ld\n",DEM_length);
+        /*for(long int i = 0; i< DEM_length ; i++)
         {
             if(seeddem[i] > -100)
                 matchtag[i] = 1;
@@ -20351,8 +20667,8 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         printf("%d\n",DEM_size.height);
         printf("%f\n",grid_size);
         
-        Grid_info = (LSFINFO*)calloc(sizeof(LSFINFO),DEM_size.width*DEM_size.height);
-        float *smooth_DEM = (float*)calloc(sizeof(float),DEM_size.width*DEM_size.height);
+        Grid_info = (LSFINFO*)calloc(sizeof(LSFINFO),DEM_length);
+        float *smooth_DEM = (float*)calloc(sizeof(float),DEM_length);
         
         
         double max_std = -100000;
@@ -20375,7 +20691,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
                 }
             }
             
-            DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,matchtag,smooth_DEM);
+            DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,smooth_DEM);
             
             if(sigma_avg > max_std)
             {
@@ -20408,7 +20724,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         printf("%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         
-        free(matchtag);
+        //free(matchtag);
         free(seeddem);
         free(smooth_DEM);
         

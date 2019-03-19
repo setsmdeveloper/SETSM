@@ -117,6 +117,7 @@ typedef struct tagNCCresult
 	double result1; //second peak roh
 	float result2; //first peak height
 	float result3; //second peak height
+    float GNCC;
 	int result4; //peak count
     double max_WNCC;
     int max_WNCC_pos;
@@ -125,7 +126,7 @@ typedef struct tagNCCresult
     int maxHeight;
     int NumOfHeight;
     bool check_height_change;
-	int roh_count;
+	//int roh_count;
 } NCCresult;
 
 typedef struct UpdateGrid{
@@ -144,7 +145,7 @@ typedef struct UpdateGrid{
 
 typedef struct tagVoxelinfo
 {
-    float WNCC;
+    //float GNCC;
     float height;
     bool flag_cal;
     float INCC;
@@ -152,7 +153,7 @@ typedef struct tagVoxelinfo
 
 typedef struct LSFinfo{
     float lsf_std;
-    int lsf_kernel;
+    unsigned char lsf_kernel;
 }LSFINFO;
 
 typedef struct BlunderIP{
