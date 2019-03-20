@@ -1473,7 +1473,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
 
         printf("# of detected threads by openmp = %d\n",omp_get_max_threads());
         
-        printf("# of allocated threads = %d\n",omp_get_max_threads());
+		printf("# of allocated threads = %d\tinput image counts = %d\n",omp_get_max_threads(),proinfo->number_of_images);
         
         if(Maketmpfolders(proinfo))
         {
@@ -1599,7 +1599,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             
             CalMPP_pair(convergence_angle,mean_product_res, proinfo->resolution, &MPP_stereo_angle);
             
-            printf("image resolution %f\n",proinfo->resolution);
+			printf("image resolution %f\t%f\n",proinfo->resolution,mean_product_res);
             
             if(args.check_Matchtag)
                 proinfo->check_Matchtag = args.check_Matchtag;
@@ -4668,6 +4668,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
         }
         else  // Collinear Equation, Frame sensor
         {
+			printf("Load aerial info\n");
             bopened = OpenDMCproject(args.EO_Path, info, args);
         }
         
@@ -4787,12 +4788,29 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 //                   info->frameinfo.m_Camera.m_ImageSize.height,info->frameinfo.m_Camera.m_CCDSize);
             
             info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
-            
-/*            for(int ti = 0 ; ti < info->number_of_images ; ti++)
+			/*
+            for(int ti = 0 ; ti < info->number_of_images ; ti++)
             {
+                FILE *p_xml;
+                p_xml = fopen(info->RPCfilename[ti],"r");
+                fscanf(p_xml,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&info->frameinfo.Photoinfo[ti].m_Xl,
+                       &info->frameinfo.Photoinfo[ti].m_Yl,
+                       &info->frameinfo.Photoinfo[ti].m_Zl,
+                       &info->frameinfo.Photoinfo[ti].m_Wl,
+                       &info->frameinfo.Photoinfo[ti].m_Pl,
+                       &info->frameinfo.Photoinfo[ti].m_Kl);
+                fclose(p_xml);
+
                 sprintf(info->frameinfo.Photoinfo[ti].path,"%s",info->Imagefilename[ti]);
                 printf("%s\n",info->Imagefilename[ti]);
                 printf("%s\n",info->frameinfo.Photoinfo[ti].path);
+
+				printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                       info->frameinfo.Photoinfo[ti].path,
+                       info->frameinfo.Photoinfo[ti].m_Xl,info->frameinfo.Photoinfo[ti].m_Yl,info->frameinfo.Photoinfo[ti].m_Zl,
+                       info->frameinfo.Photoinfo[ti].m_Wl,info->frameinfo.Photoinfo[ti].m_Pl,info->frameinfo.Photoinfo[ti].m_Kl);
+
+
             }
 */
             bopened = true;
