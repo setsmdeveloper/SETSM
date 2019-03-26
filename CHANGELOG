@@ -10,15 +10,20 @@ SETSM 4.0.0 (?/?/2019)
     - Replaced triangulation libraries with integer-based algorithm
     - Refactored code to reduce roundoff error
 
+SETSM 3.4.3 (3/18/2019)
+
+* Changes since 3.4.3
+    - Bug fixes
+
 SETSM 3.4.2 (2/3/2019)
 
 * Changes since 3.4.1
-    - Unknown changes
+    - Bug fixes
 
 SETSM 3.4.1 (1/14/2019)
 
 * Changes since 3.4.0
-    - Unknown changes
+    - Bug fixes
 
 SETSM 3.4.0 (11/14/2018)
 
@@ -26,6 +31,7 @@ SETSM 3.4.0 (11/14/2018)
     - Command-line arguments changed
     - default.txt no longer used
     - Many changes to the algorithm and code
+    - Improved running time
 
 SETSM 3.3.2 (07/13/2018)
 
