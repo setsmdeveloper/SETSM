@@ -2791,7 +2791,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 
                 CSize t_Imagesize;
                 double tmp_mem = 0;
-                GetImageSize(proinfo->Imagefilename[ti],&t_Imagesize);
+                //GetImageSize(proinfo->Imagefilename[ti],&t_Imagesize);
+                t_Imagesize.width = (subBoundary[2] - subBoundary[0])/0.7;
+                t_Imagesize.height = (subBoundary[3] - subBoundary[1])/0.7;
                 long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
                 tmp_mem += (sizeof(uint16)*data_length);
                 tmp_mem += (sizeof(uint16)*data_length);
@@ -2939,27 +2941,30 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     double new_subBoundary_RA[4];
                     bool check_new_subBoundary_RA = false;
                     double preBoundary[4] = {0};
-                    if(lengthOfX < lengthOfY)
+                    double coverage = lengthOfY*lengthOfX/1000000.0;
+                    if(coverage > tilesize_RA*tilesize_RA/1000000.0)
                     {
-                        if(lengthOfY > tilesize_RA)
+                        if(lengthOfX < lengthOfY)
                         {
-                            check_RA_divide = true;
-                            division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
-                            division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
-                            total_tile = division_X*division_Y;
+                            if(lengthOfY > tilesize_RA)
+                            {
+                                check_RA_divide = true;
+                                division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
+                                division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
+                                total_tile = division_X*division_Y;
+                            }
+                        }
+                        else
+                        {
+                            if(lengthOfX > tilesize_RA)
+                            {
+                                check_RA_divide = true;
+                                division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
+                                division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
+                                total_tile = division_X*division_Y;
+                            }
                         }
                     }
-                    else
-                    {
-                        if(lengthOfX > tilesize_RA)
-                        {
-                            check_RA_divide = true;
-                            division_X = (int) (ceil(lengthOfX / (tilesize_RA)));
-                            division_Y = (int) (ceil(lengthOfY / (tilesize_RA)));
-                            total_tile = division_X*division_Y;
-                        }
-                    }
-                 
                     
                     printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
                     
