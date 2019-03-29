@@ -13,7 +13,9 @@ SETSM 4.0.0 (?/?/2019)
 SETSM 3.4.3 (3/18/2019)
 
 * Changes since 3.4.3
-    - Bug fixes
+    - Memory issue fixed
+    - Memory requirements reduced
+    - Support for 50cm DEMS improved
 
 SETSM 3.4.2 (2/3/2019)
 
