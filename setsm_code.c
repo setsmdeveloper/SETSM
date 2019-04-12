@@ -2037,10 +2037,13 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             t_col_start     = 1;
                             t_col_end       = t_col_start + 1;
                             
+                            double temp_DEM_resolution = proinfo->DEM_resolution;
+                            proinfo->DEM_resolution = 16;
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
                                                              RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
                                                              Limagesize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,(double)convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                            proinfo->DEM_resolution = temp_DEM_resolution;
                         }
                     }
                     
@@ -3248,13 +3251,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
                         
-                        if(level == 0 &&  iteration == 3)
-                            matching_change_rate = 0.001;
-                        
                         int Accessable_grid;
                         bool level_check_matching_rate = false;
-                        while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
+                        while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th) ) )
                         {
+                            if(level == 0 &&  iteration == 3)
+                                matching_change_rate = 0.001;
+                            
                             printf("%f \t %f\n",Th_roh,Th_roh_min);
                             
                             double pre_3sigma, pre_mean;
@@ -4242,9 +4245,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             if (!lower_level_match && Th_roh < Th_roh_min)
                             {
-                                iteration++;
-                                matching_change_rate = 0.001;
-                                Th_roh_min = 0.4;
+                                if(level > 0)
+                                {
+                                    iteration++;
+                                    matching_change_rate = 0.001;
+                                    Th_roh_min = 0.4;
+                                }
                             }
                                
                             if(level == 0)
