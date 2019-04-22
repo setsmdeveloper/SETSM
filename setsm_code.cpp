@@ -11862,8 +11862,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     {
                         for(int col = -Half_template_size; col <= Half_template_size ; col++)
                         {
-                            double radius  = sqrt((double)(row*row + col*col));
-                            if(radius <= Half_template_size-1)
+                            double radius2  = (double)(row*row + col*col);
+                            if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                             {
                                 double pos_row_left = -100;
                                 double pos_col_left = -100;
@@ -15878,7 +15878,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
                 Half_template_size   = (int)(Template_size/2.0);
 
-                #pragma omp parallel for shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+                //#pragma omp parallel for shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
                 for(i = 0; i<NumofPts ; i++)
                 {
                     D2DPOINT Left_Imagecoord,Left_Imagecoord_p;
@@ -18151,6 +18151,8 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     CSize DEM_size, Image_size;
     TransParam param;
     FrameInfo m_frameinfo;
+    m_frameinfo.m_Camera.m_focalLength  = 0;
+    m_frameinfo.m_Camera.m_CCDSize      = 0;
     
     
     ST = time(0);
@@ -21248,9 +21250,9 @@ double Correlate(double *L, double *R, int N)
 	}
 
 	double rho;
-	if (SumL2 > 0  &&  SumR2 > 0)
+	if (SumL2*SumR2 > 0)
 	{
-		rho = SumLR / (sqrt(SumL2*SumR2));
+		rho = SumLR / sqrt(SumL2*SumR2);
 	}
 	else
 	{
