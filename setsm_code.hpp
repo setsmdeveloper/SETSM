@@ -39,7 +39,7 @@ typedef struct nnXY
 	float Z;
 } NNXY;
 
-int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath);
+int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 char* SetOutpathName(char *_path);
 
 bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
@@ -53,7 +53,7 @@ void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *
 void SetPySizes(CSize *data_size_lr, CSize Lsubsetsize, int level);
 void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double f_demsize);
 void SetThs(ProInfo *proinfo,int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start);
-D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
+D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
 				   double *py_resolution, double *grid_resolution, double *subBoundary);
 UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,char* metafilename);
 int	 CalTotalIteration(uint8 DEM_level,int level);
@@ -112,7 +112,13 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 					   uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
 					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
 					   char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next,int Py_combined_level, bool check_matching_rate);
-void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration);
+
+void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost);
+void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost);
+
+void SGM_NCC(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, bool check_ortho, double P1, double P2, double ncc_alpha, double ncc_beta, double step_height, int P_HS_step,
+             float* LHcost_pre,float* LHcost_curr, float **SumCost, int *u_col, int *v_row, int *start_col, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3);
+void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel);
 
 void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
 
@@ -223,7 +229,7 @@ bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_
 double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level);
 
 //orthogeneration
-void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide);
+void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide,double **ImageParam);
 D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg);
 uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_size, double _sigma);

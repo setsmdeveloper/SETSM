@@ -4,15 +4,15 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-#TIFFPATH=$(HOME)/libtiff
-#TIFFINC=-I$(TIFFPATH)/include
-#TIFFLIB=-L$(TIFFPATH)/lib
+TIFFPATH=/home/noh.56/software/tiff-4.0.3/libtiff
+TIFFINC=-I/home/noh.56/software/tiff-4.0.3/include
+TIFFLIB=-L/home/noh.56/software/tiff-4.0.3/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-#GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
-#GEOTIFFINC=-I$(GEOTIFFPATH)/include
-#GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
+GEOTIFFPATH=/home/noh.56/software/libgeotiff-1.4.2/libxtiff
+GEOTIFFINC=-I/home/noh.56/software/libgeotiff-1.4.2/include
+GEOTIFFLIB=-L/home/noh.56/software/libgeotiff-1.4.2/lib
 
 MPIFLAGS = -DBUILDMPI
 
@@ -28,8 +28,8 @@ ifeq ($(COMPILER), intel)
   CXX=icpc
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -O3 -qopenmp -xHost
-  CXXFLAGS=-std=c++11 -O3 -qopenmp -xHost
+  CFLAGS=-std=c99 -O3 -qopenmp 
+  CXXFLAGS=-std=c++11 -O3 -qopenmp 
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
   CXX=pgc++
