@@ -1,7 +1,3 @@
-# This Makefile requires a compiler-specific Makefile.include.  
-# Select the appropriate include file from the Makefile_includes 
-# directory, copy to this directory, and rename as Makefile.include.
-
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
 #TIFFPATH=$(HOME)/libtiff

@@ -3320,9 +3320,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("template size =%d\n",Template_size);
                             
-                            //echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
-                            
-                            
+                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"init");
                             
                             if(!check_matching_rate)
                             {
@@ -3346,7 +3344,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             
                             
-                            //echo_print_nccresults(proinfo->save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,"inter");
+                            //echo_print_nccresults(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"inter");
                             
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -12385,8 +12383,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                                 Count_N++;
 							}
                         }  // if (rtn)
-                    }
-                }  //  end Row=PixelMinXY[1] loop
+                    }  //  // end Col=PixelMinXY[0] loop
+                }  // end Row=PixelMinXY[1] loop
         
 				// Compute correlations
                 if(Count_N >= 1)
@@ -21250,7 +21248,7 @@ double Correlate(double *L, double *R, int N)
 	}
 
 	double rho;
-	if (SumL2*SumR2 > 0)
+	if (SumL2 > 1e-8 && SumR2 > 1e-8)
 	{
 		rho = SumLR / sqrt(SumL2*SumR2);
 	}
