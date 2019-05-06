@@ -8915,7 +8915,7 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
                 }
             }
 
-            result_img[r*result_size.width + c] = (uint16)temp;
+            result_img[r*result_size.width + c] = round(temp);
         }
     }
     
@@ -11146,8 +11146,8 @@ void SGM_NCC(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, bo
 void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel)
 {
     // P2 >= P1
-    double P1 = 0.01;
-    double P2 = 0.01;
+    double P1 = 0.001;
+    double P2 = 0.005;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -11222,7 +11222,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     bool check_SGM = false;
     bool check_diagonal = true;
     
-    int SGM_th_py = 0;
+    int SGM_th_py = 3;
     if(Pyramid_step >= SGM_th_py)// && iteration%2 == 1)
         check_SGM = true;
     
@@ -11962,6 +11962,13 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                                     nccresult[grid_index].result3 = pre_height;
                                 }
                             }
+                            /*
+                            if(check_SGM_peak)
+                            {
+                                nccresult[pt_index].result1 = -1.0;
+                                nccresult[pt_index].result3 = -9999;
+                            }
+                             */
                         }
                     }
                 }
@@ -13352,6 +13359,7 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
     printf("PPM of select MPs = %f\n",PPM);
     double roh_next;
     double minimum_Th;
+    int SGM_th_py = 3;
     
     if(IsRA)
     {
@@ -13393,15 +13401,17 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
             double min_roh_th;
             
             double th_add = 0.00;
-            
+            //if(Pyramid_step >= SGM_th_py)// && iteration%2 == 1)
+            //    th_add = 0.30;
+                
             if(Pyramid_step == 4)
-                min_roh_th = 0.05 + (iteration-1)*0.01 + th_add;
+                min_roh_th = 0.05;// + (iteration-1)*0.01 + th_add;
             else if(Pyramid_step == 3)
-                min_roh_th = 0.10 + (iteration-1)*0.01 + th_add;
+                min_roh_th = 0.30;// + (iteration-1)*0.01 + th_add;
             else if(Pyramid_step == 2)
-                min_roh_th = 0.20 + th_add;// + (iteration-1)*0.01
+                min_roh_th = 0.60 + th_add;// + (iteration-1)*0.01
             else if(Pyramid_step == 1)
-                min_roh_th = 0.40 + th_add;// + (iteration-1)*0.01;
+                min_roh_th = 0.70 + th_add;// + (iteration-1)*0.01;
             
             int roh_iter = 999;
             bool check_stop = false;
@@ -13438,8 +13448,10 @@ int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UG
         }
         
     }
-    
-    
+    /*
+    if(Pyramid_step >= SGM_th_py)
+        minimum_Th = -100;
+    */
     bool check_iter_end = false;
     FILE* temp_fid;
     double h_divide;
