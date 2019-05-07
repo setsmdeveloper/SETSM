@@ -8787,7 +8787,7 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
                 }
             }
 
-            result_img[r*result_size.width + c] = (uint16)temp;
+            result_img[r*result_size.width + c] = round(temp);
         }
     }
     
@@ -14825,7 +14825,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                         if(!m_bHeight[Index])
                         {
                             double CurGPXY[2]={0.};
-                            double Z = -1000.0;
+                            float Z = -1000.0;
                             bool rtn = false;
                             double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
                             double v23[2], v2P[2], v31[2], v3P[2];
