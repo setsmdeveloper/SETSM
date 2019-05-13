@@ -10082,9 +10082,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 												ncc_mag = -1;
 											}
 										}
-										if (ncc > 1)
+										if (ncc_mag > 1)
 										{
-											ncc = 1;
+											ncc_mag = 1;
 										}
 
 										temp_roh = temp_roh + ncc + ncc_mag;
@@ -10132,9 +10132,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 													ncc_mag = -1;
 												}
 											}
-											if (ncc > 1)
+											if (ncc_mag > 1)
 											{
-												ncc = 1;
+												ncc_mag = 1;
 											}
 
 											temp_roh = temp_roh + ncc + ncc_mag;
@@ -10580,9 +10580,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 																	ncc_mag = -1;
 																}
 															}
-															if (ncc > 1)
+															if (ncc_mag > 1)
 															{
-																ncc = 1;
+																ncc_mag = 1;
 															}
 
 															temp_roh = temp_roh + ncc + ncc_mag;
@@ -10639,9 +10639,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 																		ncc_mag = -1;
 																	}
 																}
-																if (ncc > 1)
+																if (ncc_mag > 1)
 																{
-																	ncc = 1;
+																	ncc_mag = 1;
 																}
 
 																temp_roh = temp_roh + ncc + ncc_mag;
