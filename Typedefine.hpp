@@ -252,6 +252,16 @@ typedef struct ProjectInfo{
     bool check_selected_image[MaxImages];
     bool check_full_cal;
     
+    //SGM test flag
+    bool check_SNCC;
+    bool check_updateheight;
+    bool check_blunderdetection;
+    bool check_NCCpeak;
+    bool check_minTH;
+    bool check_adaptive_P2;
+    bool check_orthoblunder;
+    int SGM_py;
+    
     FrameInfo frameinfo;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
@@ -325,6 +335,16 @@ typedef struct ArgumentInfo{
     bool check_fl;
     bool check_ccd;
     bool check_full_cal;
+    
+    //SGM test flag
+    bool check_SNCC;
+    bool check_updateheight;
+    bool check_blunderdetection;
+    bool check_NCCpeak;
+    bool check_minTH;
+    bool check_adaptive_P2;
+    bool check_orthoblunder;
+    int SGM_py;
     
 } ARGINFO;
 
