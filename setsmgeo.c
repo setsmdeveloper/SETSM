@@ -151,6 +151,7 @@ int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, dou
         default:
             break;
     }
+	return 0;
 }
 
 int SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere)
@@ -201,5 +202,6 @@ int SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere)
             GTIFKeySet(gtif, ProjectedCSTypeGeoKey, TYPE_SHORT, 1, PCS_WGS84_UTM_zone_1S - 1 + zone);
         }
     }
+	return 0;
 }
 
