@@ -260,6 +260,7 @@ typedef struct ProjectInfo{
     bool check_minTH;
     bool check_adaptive_P2;
     bool check_orthoblunder;
+    bool check_8d;
     int SGM_py;
     
     FrameInfo frameinfo;
@@ -344,6 +345,7 @@ typedef struct ArgumentInfo{
     bool check_minTH;
     bool check_adaptive_P2;
     bool check_orthoblunder;
+    bool check_8d;
     int SGM_py;
     
 } ARGINFO;

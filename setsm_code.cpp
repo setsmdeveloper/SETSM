@@ -88,6 +88,7 @@ int main(int argc,char *argv[])
     args.check_minTH = true;
     args.check_adaptive_P2 = true;
     args.check_orthoblunder = true;
+    args.check_8d = true;
     args.SGM_py = 0;
     
     args.number_of_images = 2;
@@ -655,6 +656,19 @@ int main(int argc,char *argv[])
                     {
                         args.SGM_py = atoi(argv[i+1]);
                         printf("SGM pyramid level %d\n",args.SGM_py);
+                    }
+                }
+                
+                if (strcmp("-SGM8D",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input SGM 8 direction (default is 1)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.check_8d = atoi(argv[i+1]);
+                        printf("SGM pyramid level %d\n",args.check_8d);
                     }
                 }
                 
@@ -1598,6 +1612,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->check_adaptive_P2 = args.check_adaptive_P2;
     proinfo->check_orthoblunder = args.check_orthoblunder;
     proinfo->SGM_py = args.SGM_py;
+    proinfo->check_8d = args.check_8d;
     
     printf("Option of check_SNCC %d\n",proinfo->check_SNCC);
     printf("Option of check_updateheight %d\n",proinfo->check_updateheight);
@@ -1607,6 +1622,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     printf("Option of check_adaptive_P2 %d\n",proinfo->check_adaptive_P2);
     printf("Option of check_orthoblunder %d\n",proinfo->check_orthoblunder);
     printf("SGM pyramid level %d\n",proinfo->SGM_py);
+    printf("SGM 8 direction %d\n",proinfo->check_8d);
     
     if(OpenProject(_filename,proinfo,args))
     {
@@ -3458,7 +3474,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             if(proinfo->DEM_resolution >= 8)
                                 ortho_level = 3;
                             
-                            if(level >= ortho_level)
+                            if(level >= ortho_level && proinfo->check_orthoblunder)
                             {
                                 check_ortho_cal = true;
                                 
@@ -3469,8 +3485,6 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 check_ortho_cal = false;
                             }
-                            
-                            check_ortho_cal = proinfo->check_orthoblunder;
                             
                             printf("%d\tortho level = %d\n",check_ortho_cal,ortho_level);
                             
@@ -11139,7 +11153,7 @@ void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long
     {
         float iter_height = grid_voxel[pt_index][height_step].height;
         
-        //if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
+        if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
         {
             //if(grid_voxel[pt_index][height_step].flag_cal)
             {
@@ -11170,7 +11184,7 @@ void SGM_con_pos(ProInfo *proinfo,int pts_col, int pts_row, CSize Size_Grid2D, i
         {
             iter_height = grid_voxel[pt_index][height_step].height;
             
-            //if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
+            if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
             {
                 //if(grid_voxel[pt_index][height_step].flag_cal)
                 {
@@ -11329,10 +11343,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     float **SumCost = NULL;
     
     bool check_SGM = false;
-    bool check_diagonal = true;
+    bool check_diagonal = proinfo->check_8d;
     
     int SGM_th_py = 0;
-    if(Pyramid_step >= proinfo->SGM_py)// && iteration%2 == 1)
+    if(Pyramid_step >= proinfo->SGM_py || Pyramid_step == 0)
         check_SGM = true;
     
     printf("check_SGM %d\n",check_SGM);
@@ -11944,7 +11958,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     {
         bool check_SGM_peak = false;
         
-        if(Pyramid_step >= proinfo->SGM_py)// && iteration%2 == 1)
+        if(Pyramid_step >= proinfo->SGM_py || Pyramid_step == 0)
             check_SGM_peak = true;
         
         int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
@@ -13545,13 +13559,13 @@ int SelectMPs(ProInfo *proinfo, NCCresult* roh_height, CSize Size_Grid2D, D2DPOI
                 //    th_add = 0.30;
                 
                 if(Pyramid_step == 4)
-                    min_roh_th = 0.05 + (iteration-1)*0.01 + th_add;
+                    min_roh_th = 0.80 + (iteration-1)*0.01 + th_add;
                 else if(Pyramid_step == 3)
-                    min_roh_th = 0.15 + (iteration-1)*0.01 + th_add;
+                    min_roh_th = 0.80 + (iteration-1)*0.01 + th_add;
                 else if(Pyramid_step == 2)
-                    min_roh_th = 0.60 + th_add;// + (iteration-1)*0.01
+                    min_roh_th = 0.80 + th_add;// + (iteration-1)*0.01
                 else if(Pyramid_step == 1)
-                    min_roh_th = 0.70 + th_add;// + (iteration-1)*0.01;
+                    min_roh_th = 0.80 + th_add;// + (iteration-1)*0.01;
                 
                 int roh_iter = 999;
                 bool check_stop = false;
@@ -13584,16 +13598,16 @@ int SelectMPs(ProInfo *proinfo, NCCresult* roh_height, CSize Size_Grid2D, D2DPOI
             else
             {
                 minimum_Th = 0.2;
-                printf("minimum TH %f\n",minimum_Th);
             }
             
         }
     }
     else
     {
-        if(Pyramid_step >= SGM_th_py)
-            minimum_Th = -100;
+        minimum_Th = -100;
     }
+    
+    printf("minimum TH %f\n",minimum_Th);
     
     bool check_iter_end = false;
     FILE* temp_fid;
