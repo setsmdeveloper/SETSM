@@ -10054,7 +10054,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 									for (int k=0; k<3; k++)
 									{
 										double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
-										if (isnan(ncc))
+										if (ncc == -99)
 										{
 											if (Pyramid_step <= 1)
 											{
@@ -10071,7 +10071,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 										}
 
 										double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
-										if (isnan(ncc_mag))
+										if (ncc_mag == -99)
 										{
 											if (Pyramid_step <= 4)
 											{
@@ -10104,7 +10104,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 										for (int k=0; k<3; k++)
 										{
 											double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (isnan(ncc))
+											if (ncc == -99)
 											{
 												if (Pyramid_step <= 1)
 												{
@@ -10121,7 +10121,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 											}
 
 											double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (isnan(ncc_mag))
+											if (ncc_mag == -99)
 											{
 												if (Pyramid_step <= 4)
 												{
@@ -10552,7 +10552,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 														for (int k=0; k<3; k++)
 														{
 															double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-															if (isnan(ncc))
+															if (ncc == -99)
 															{
 																if (Pyramid_step <= 1)
 																{
@@ -10569,7 +10569,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 															}
 
 															double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-															if (isnan(ncc_mag))
+															if (ncc_mag == -99)
 															{
 																if (Pyramid_step <= 4)
 																{
@@ -10611,7 +10611,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 															for (int k=0; k<3; k++)
 															{
 																double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
-																if (isnan(ncc))
+																if (ncc == -99)
 																{
 																	if (Pyramid_step <= 1)
 																	{
@@ -10628,7 +10628,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 																}
 
 																double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
-																if (isnan(ncc_mag))
+																if (ncc_mag == -99)
 																{
 																	if (Pyramid_step <= 4)
 																	{
@@ -11528,7 +11528,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-							if (isnan(ncc))
+							if (ncc == -99)
 							{
 								if (Pyramid_step <= 4)
 								{
@@ -11541,7 +11541,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
 							}
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-							if (isnan(ncc_mag))
+							if (ncc_mag == -99)
 							{
 								if (Pyramid_step <= 4)
 								{
@@ -11974,7 +11974,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-							if (isnan(ncc))
+							if (ncc == -99)
 							{
 								if (Pyramid_step <= 1)
 								{
@@ -11987,7 +11987,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
 							}
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-							if (isnan(ncc_mag))
+							if (ncc_mag == -99)
 							{
 								if (Pyramid_step <= 1)
 								{
@@ -12390,12 +12390,12 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                 if(Count_N >= 1)
                 {
 					double ncc_1 = Correlate(left_patch_vec, right_patch_vec, Count_N);
-					if (isnan(ncc_1))
+					if (ncc_1 == -99)
 					{
 						ncc_1 = -1;
 					}
 					double ncc_2 = Correlate(left_mag_patch_vec, right_mag_patch_vec, Count_N);
-					if (isnan(ncc_2))
+					if (ncc_2 == -99)
 					{
 						ncc_2 = -1;
 					}
@@ -21222,7 +21222,7 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
 // Support routines for VerticalLineLocus*
 
 // Compute the correlation between two arrays using a numerically stable formulation
-// Return the correlation coefficient or NaN if undefined
+// Return the correlation coefficient or -99 if undefined
 double Correlate(double *L, double *R, int N)
 {
 	double Lmean = 0;
@@ -21254,7 +21254,7 @@ double Correlate(double *L, double *R, int N)
 	}
 	else
 	{
-		rho = (double) NAN;
+		rho = -99;
 	}
 
 	return rho;
