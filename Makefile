@@ -20,18 +20,18 @@ HDRS = Typedefine.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_ty
 
 
 ifeq ($(COMPILER), intel)
-  CC=icc
-  CXX=icpc
-  MPICC=mpicc
-  MPICXX=mpicxx
+  CC?=icc
+  CXX?=icpc
+  MPICC?=mpicc
+  MPICXX?=mpicxx
   CFLAGS=-std=c99 -qopenmp
   CXXFLAGS=-std=c++11 -qopenmp
   OPTFLAGS?=-O3 -xHost
 else
-  CC=gcc
-  CXX=g++
-  MPICC=mpicc
-  MPICXX=mpicxx
+  CC?=gcc
+  CXX?=g++
+  MPICC?=mpicc
+  MPICXX?=mpicxx
   CFLAGS=-std=c99 -fopenmp
   CXXFLAGS=-std=c++11 -fopenmp
   OPTFLAGS?=-O3 -ffast-math -march=native
@@ -62,4 +62,3 @@ $(OBJS) : $(HDRS)
 clean :
 	rm -f setsm setsm_mpi
 	rm -f *.o
-
