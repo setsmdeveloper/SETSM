@@ -50,15 +50,26 @@ make
 make install
 ```
 
-### Building SETSM using one of the provided Makefiles
+### Building SETSM using the provided Makefile
 
-Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
-compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
-use.  Copy the selected file to Makefile and edit it if necessary to set the 
-correct path to the TIFF and GeoTIFF libraries.  SETSM can then be built simply by typing:
+The Makefile supports building SETSM with the Intel, GNU and Cray 
+compilers.  Use one of the following commands as appropriate.  If no compiler 
+is specified it defaults to gcc/g++.
 ```
-make
+COMPILER=intel make
+COMPILER=cray make
+COMPILER make
 ```
+
+You may need to edit the Makefile to set the 
+correct path to the TIFF and GeoTIFF libraries.
+
+You can also set the OPTFLAGS variable to override the default optimization flags,
+for example,
+```
+COMPILER=intel OPTFLAGS='-O3 -fp-model precise' make
+```
+
 
 #### Parallel SETSM with MPI (Message-Passing Interface)
 To build SETSM for parallel computing with MPI, follow the above steps then use:
@@ -71,7 +82,7 @@ OpenMPI.  It should work with other MPI implementations with minor changes
 to the Makefile.
 
 If SETSM is built with both MPI and OpenMP it is usually best to run one 
-MPI process per compute node and allow threading within the node.
+MPI process per compute node and allow multithreading within the node.
 
 #### A note about precision
 
