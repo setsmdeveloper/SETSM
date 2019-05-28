@@ -1,18 +1,18 @@
 SETSM Change Log
 ----------------
-This file briefly describes the changes to the SETSM software package.  
+This file briefly describes the changes to the SETSM software package.
 The most recent changes are listed first.
 
 SETSM 4.0.0 (?/?/2019)
 
-* Changes since 3.4.2
+* Changes since 3.4.3
     - Changed code to C++
     - Replaced triangulation libraries with integer-based algorithm
     - Refactored code to reduce roundoff error
 
 SETSM 3.4.3 (3/18/2019)
 
-* Changes since 3.4.3
+* Changes since 3.4.2
     - Memory issue fixed
     - Memory requirements reduced
     - Support for 50cm DEMS improved
