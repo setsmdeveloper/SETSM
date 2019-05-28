@@ -27,7 +27,7 @@ ifeq ($(COMPILER), intel)
   CFLAGS=-std=c99 -qopenmp
   CXXFLAGS=-std=c++11 -qopenmp
   OPTFLAGS?=-O3 -xHost
-ifeq ($(COMPILER), cray)
+else ifeq ($(COMPILER), cray)
   CC?=cc
   CXX?=CC
   MPICC?=mpicc
