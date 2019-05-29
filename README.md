@@ -58,7 +58,7 @@ is specified it defaults to gcc/g++.
 ```
 COMPILER=intel make
 COMPILER=cray make
-COMPILER make
+make
 ```
 
 You may need to edit the Makefile to set the 
