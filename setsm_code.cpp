@@ -1755,8 +1755,32 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             
             if(Boundary_size.height/1000.0 > args.overlap_length || Boundary_size.width/1000.0 > args.overlap_length)
             {
-                printf("Overlapped area between stereo pair is very long along the strip(height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area in strip direction into several small area less than 30 km\nBounary(minX, minY, maxX, maxY[m]) = %f %f %f %f\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
-                exit(1);
+                double new_height = (10000000 - Boundary[3] + Boundary[1])/1000.0;
+                if( new_height > args.overlap_length)
+                {
+                    printf("Overlapped area between stereo pair is very long along the strip(height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area in strip direction into several small area less than 30 km\nBounary(minX, minY, maxX, maxY[m]) = %f %f %f %f\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                    exit(1);
+                }
+                else
+                {
+                    //if(10000000 - Boundary[3] > Boundary[1])
+                    {
+                        double temp_h = Boundary[1];
+                        Boundary[1] = Boundary[3];
+                        Boundary[3] = 10000000 + temp_h;
+                    }/*
+                    else
+                    {
+                        Boundary[3] = Boundary[1];
+                        Boundary[1] = 0;
+                    }*/
+                    
+                    Boundary_size.width     = Boundary[2] - Boundary[0];
+                    Boundary_size.height    = Boundary[3] - Boundary[1];
+                    printf("cross equator boundary_size %f\t%d\t%d\n",new_height,Boundary_size.width,Boundary_size.height);
+                    printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                }
+                //exit(1);
             }
             
             
@@ -7782,12 +7806,19 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     lonlat[3].m_Y = minLat;
     D2DPOINT *XY = wgs2ps(_param, 4, lonlat);
     
+    printf("lonlat X %f\t%f\t%f\t%f\n",lonlat[0].m_X,lonlat[1].m_X,lonlat[2].m_X,lonlat[3].m_X);
+    printf("lonlat Y %f\t%f\t%f\t%f\n",lonlat[0].m_Y,lonlat[1].m_Y,lonlat[2].m_Y,lonlat[3].m_Y);
+    
+    printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+    printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+    
     double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
     double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
     
     double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
     double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
     
+    printf("minmaxXY %f\t%f\t%f\t%f\n",minX,minY,maxX,maxY);
     _boundary[0] =  floor(minX);
     _boundary[1] =  floor(minY);
     _boundary[2] =  ceil(maxX);
@@ -10477,9 +10508,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                             {
                                                 check_orientation = true;
                                             }
-                                            
-                                            if(Pyramid_step <= proinfo->SGM_py)
-                                                check_orientation = true;
+                                            check_orientation = true;
+                                            //if(Pyramid_step <= proinfo->SGM_py)
+                                            //    check_orientation = true;
                                             
                                             if(check_orientation)
                                             {
@@ -11060,89 +11091,238 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                         int t_index_h_index   = (int)((iter_height - nccresult[t_index].minHeight)/step_height);
                         int t_index_h_index_1 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) - P_HS_step;
                         int t_index_h_index_2 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) + P_HS_step;
+                        double V1,V2,V3,V4;
                         
-                        /*if(t_index_h_index_1 == -1)
+                        if(t_index_h_index == 0 && t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight)
                         {
-                            double V2 = LHcost_pre[t_index_h_index_2] - P1;
-                            double V3 = LHcost_pre[t_index_h_index];
-                            double V4 = nccresult[t_index].max_WNCC - P2;
-                            
-                            double max_value23 = V2 > V3 ? V2 : V3;
-                            double max_value = max_value23 > V4 ? max_value23 : V4;
-                            double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
-                            LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                            
-                            SumCost[pt_index][height_step] += LHcost_curr[height_step];
-                            
-                            printf("row col height %d\t%d\t%d\t%f\t%d\n",pts_row,pts_col,height_step,SumCost[pt_index][height_step],nccresult[pt_index].NumOfHeight);
+                            if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                            {
+                                V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                V3 = LHcost_pre[t_index_h_index];
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value23 = V2 > V3 ? V2 : V3;
+                                double max_value = max_value23 > V4 ? max_value23 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else if(grid_voxel[t_index][t_index_h_index].flag_cal)
+                            {
+                                V3 = LHcost_pre[t_index_h_index];
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V3 > V4 ? V3 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else if(grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                            {
+                                V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V2 > V4 ? V2 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else
+                            {
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
                         }
-                        else if(t_index_h_index_2 == nccresult[t_index].NumOfHeight )
+                        else if(t_index_h_index == nccresult[t_index].NumOfHeight - 1 && t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight)
                         {
-                            double V1 = LHcost_pre[t_index_h_index_1] - P1;
-                            double V3 = LHcost_pre[t_index_h_index];
-                            double V4 = nccresult[t_index].max_WNCC - P2;
-                            
-                            double max_value23 = V1 > V3 ? V1 : V3;
-                            double max_value = max_value23 > V4 ? max_value23 : V4;
-                            double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
-                            LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                            
-                            printf("row col height %d\t%d\t%d\t%f\t%d\n",pts_row,pts_col,height_step,SumCost[pt_index][height_step],nccresult[pt_index].NumOfHeight);
-                        }*/
-                        if(t_index_h_index   >= 0 && t_index_h_index   < nccresult[t_index].NumOfHeight &&
-                           t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight &&
-                           t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight )
+                            if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_1].flag_cal)
+                            {
+                                V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                V3 = LHcost_pre[t_index_h_index];
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value23 = V1 > V3 ? V1 : V3;
+                                double max_value = max_value23 > V4 ? max_value23 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else if(grid_voxel[t_index][t_index_h_index].flag_cal)
+                            {
+                                V3 = LHcost_pre[t_index_h_index];
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V3 > V4 ? V3 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else if(grid_voxel[t_index][t_index_h_index_1].flag_cal)
+                            {
+                                V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V1 > V4 ? V1 : V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                            else
+                            {
+                                V4 = nccresult[t_index].max_WNCC - P2;
+                                
+                                double max_value = V4;
+                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                            }
+                        }
+                        else if(t_index_h_index   > 0 && t_index_h_index   < nccresult[t_index].NumOfHeight - 1 &&
+                                t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight &&
+                                t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight )
                         {
                             //if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_1].flag_cal
                             //   && grid_voxel[t_index][t_index_h_index_2].flag_cal)
                             {
-                                double V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                double V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                double V3 = LHcost_pre[t_index_h_index];
-                                double V4 = nccresult[t_index].max_WNCC - P2;
                                 
-                                /*
-                                int HS_diff = abs(nccresult[t_index].max_WNCC_pos - t_index_h_index);
-                                
-                                if( HS_diff < P_HS_step)
-                                    V4 = V3;
-                                else if(HS_diff >= P_HS_step && HS_diff < 2*P_HS_step)
-                                    V4 = V3 - P1;
+                                if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_1].flag_cal
+                                   && grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                                {
+                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V3 = LHcost_pre[t_index_h_index];
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value12 = V1 > V2 ? V1 : V2;
+                                    double max_value23 = max_value12 > V3 ? max_value12 : V3;
+                                    double max_value = max_value23 > V4 ? max_value23 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_1].flag_cal)
+                                {
+                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V3 = LHcost_pre[t_index_h_index];
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value12 = V1;
+                                    double max_value23 = max_value12 > V3 ? max_value12 : V3;
+                                    double max_value = max_value23 > V4 ? max_value23 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index_1].flag_cal && grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                                {
+                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value12 = V1 > V2 ? V1 : V2;
+                                    double max_value23 = max_value12 > V3 ? max_value12 : V3;
+                                    double max_value = max_value23 > V4 ? max_value23 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index].flag_cal && grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                                {
+                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V3 = LHcost_pre[t_index_h_index];
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value12 = V2;
+                                    double max_value23 = max_value12 > V3 ? max_value12 : V3;
+                                    double max_value = max_value23 > V4 ? max_value23 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index].flag_cal)
+                                {
+                                    V3 = LHcost_pre[t_index_h_index];
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value23 = V3;
+                                    double max_value = max_value23 > V4 ? max_value23 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index_1].flag_cal)
+                                {
+                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value = V1 > V4 ? V1 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
+                                else if(grid_voxel[t_index][t_index_h_index_2].flag_cal)
+                                {
+                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value = V2 > V4 ? V2 : V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                }
                                 else
                                 {
-                                    double P2_f = P1 + HS_diff/(2.0*P_HS_step)*P2;
-                                    if(P2_f > 0.6)
-                                        P2_f = 0.6;
-                                    
-                                    V4 = nccresult[t_index].max_WNCC - P2_f;
                                     V4 = nccresult[t_index].max_WNCC - P2;
+                                    
+                                    double max_value = V4;
+                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
+                                    SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                */
-                                double max_value12 = V1 > V2 ? V1 : V2;
-                                double max_value23 = max_value12 > V3 ? max_value12 : V3;
-                                double max_value = max_value23 > V4 ? max_value23 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
-                                LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 
-                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                                /*
+                                 int HS_diff = abs(nccresult[t_index].max_WNCC_pos - t_index_h_index);
+                                 
+                                 if( HS_diff < P_HS_step)
+                                 V4 = V3;
+                                 else if(HS_diff >= P_HS_step && HS_diff < 2*P_HS_step)
+                                 V4 = V3 - P1;
+                                 else
+                                 {
+                                 double P2_f = P1 + HS_diff/(2.0*P_HS_step)*P2;
+                                 if(P2_f > 0.6)
+                                 P2_f = 0.6;
+                                 
+                                 V4 = nccresult[t_index].max_WNCC - P2_f;
+                                 V4 = nccresult[t_index].max_WNCC - P2;
+                                 }
+                                 */
                                 
                                 //printf("row col height %d\t%d\t%d\t%f\t%d\n",pts_row,pts_col,height_step,SumCost[pt_index][height_step],nccresult[pt_index].NumOfHeight);
                                 //fprintf(pfile,"%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\n",height_step,iter_height,WNCC_sum,V1,V2,V3,V4,max_value,nccresult[t_index].max_WNCC,nccresult[t_index].max_WNCC_pos,LHcost_curr[height_step]);
                             }
                             /*else
-                            {
-                                LHcost_curr[height_step] = WNCC_sum;
-                                
-                                SumCost[pt_index][height_step] += LHcost_curr[height_step];
-                            }
+                             {
+                             LHcost_curr[height_step] = WNCC_sum;
+                             
+                             SumCost[pt_index][height_step] += LHcost_curr[height_step];
+                             }
                              */
                             
                             
                         }
                         else
                         {
-                            LHcost_curr[height_step] = -10.0;
-                         
+                            V4 = nccresult[t_index].max_WNCC - P2;
+                            
+                            double max_value = V4;
+                            double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                            
+                            LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                             SumCost[pt_index][height_step] += LHcost_curr[height_step];
                         }
                         
@@ -11158,8 +11338,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
 void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel)
 {
     // P2 >= P1
-    double P1 = 0.01;
-    double P2 = 0.02;
+    double P1 = 0.1;
+    double P2 = 0.3;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -11897,6 +12077,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         bool check_rho  = false;
         
         int max_roh_id = 0;
+        bool cell_check_peak = false;
         
         for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
@@ -11921,7 +12102,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             
             if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
             {
-                if(grid_voxel[pt_index][height_step].flag_cal)
+                //if(grid_voxel[pt_index][height_step].flag_cal)
                 {
                     if(check_SGM_peak)
                     {
@@ -12029,6 +12210,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                                     nccresult[grid_index].result3 = pre_height;
                                 }
                             }
+                            cell_check_peak = true;
                         }
                     }
                 }
@@ -12046,43 +12228,128 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             nccresult[pt_index].result3 = -9999;
         }
         
-        int kernel_t = 4;
-        
-        int left_end = max_roh_id - kernel_t;
-        int right_end = max_roh_id + kernel_t;
-        
-        if(right_end > nccresult[pt_index].NumOfHeight-1)
-            right_end = nccresult[pt_index].NumOfHeight-1;
-        
-        if(left_end < 0)
-            left_end = 0;
-        
-        if(max_roh_id - left_end > right_end - max_roh_id)
-            kernel_t = right_end - max_roh_id;
-        else
-            kernel_t = max_roh_id - left_end;
-        
+        if(cell_check_peak && nccresult[pt_index].result2 > -100 && Pyramid_step <= 1)
         {
-            double sum_rho = 0;
-            double sum_weightH = 0;
+            int kernel_t = 2;
+            
+            int left_end = max_roh_id - kernel_t;
+            int right_end = max_roh_id + kernel_t;
+            
+            if(right_end > nccresult[pt_index].NumOfHeight-1)
+                right_end = nccresult[pt_index].NumOfHeight-1;
+            
+            if(left_end < 0)
+                left_end = 0;
+            
+            if(max_roh_id - left_end > right_end - max_roh_id)
+                kernel_t = right_end - max_roh_id;
+            else
+                kernel_t = max_roh_id - left_end;
+            
+            int count_kernel = 0;
+            double WNCC_sum = 0;
             for(int k=-kernel_t;k<=kernel_t;k++)
             {
-                double WNCC_sum = 0;
-                if(check_SGM_peak)
-                    WNCC_sum = SumCost[pt_index][max_roh_id+k];
-                else
+                if(grid_voxel[pt_index][max_roh_id+k].height > - 100)
                 {
-                    if(check_ortho && nccresult[pt_index].GNCC > -1.0)
-                        WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
-                    else
-                        WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC;
+                    count_kernel++;
                 }
-                sum_rho += WNCC_sum;
-                sum_weightH += WNCC_sum*grid_voxel[pt_index][max_roh_id+k].height;
             }
             
-            nccresult[pt_index].result2 = sum_weightH/sum_rho;
+            if(count_kernel >= 3)
+            {
+                GMA_double *A_matrix = GMA_double_create(count_kernel, 3);
+                GMA_double *L_matrix = GMA_double_create(count_kernel, 1);
+                GMA_double *AT_matrix = GMA_double_create(3,count_kernel);
+                GMA_double *ATA_matrix = GMA_double_create(3,3);
+                
+                GMA_double *ATAI_matrix = GMA_double_create(3,3);
+                GMA_double *ATL_matrix = GMA_double_create(3,1);
+                
+                GMA_double *X_matrix = GMA_double_create(3,1);
+                GMA_double *AX_matrix = GMA_double_create(count_kernel,1);
+                GMA_double *V_matrix = GMA_double_create(count_kernel,1);
+                
+                
+                //polynomial fitting
+                int count_matrix = 0;
+                
+                for(int k=-kernel_t;k<=kernel_t;k++)
+                {
+                    if(check_SGM_peak)
+                        WNCC_sum = SumCost[pt_index][max_roh_id+k];
+                    else
+                    {
+                        if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                            WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                        else
+                            WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC;
+                    }
+                    
+                    if(grid_voxel[pt_index][max_roh_id+k].height > - 100)
+                    {
+                        A_matrix->val[count_matrix][0] = grid_voxel[pt_index][max_roh_id+k].height*grid_voxel[pt_index][max_roh_id+k].height;
+                        A_matrix->val[count_matrix][1] = grid_voxel[pt_index][max_roh_id+k].height;
+                        A_matrix->val[count_matrix][2] = 1.0;
+                        
+                        L_matrix->val[count_matrix][0] = WNCC_sum;
+                        //printf("%f\t%f\n",WNCC_sum,grid_voxel[pt_index][max_roh_id+k].height);
+                        count_matrix++;
+                    }
+                }
+                
+                GMA_double_Tran(A_matrix,AT_matrix);
+                GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                GMA_double_inv(ATA_matrix,ATAI_matrix);
+                GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                
+                if(X_matrix->val[0][0] < 0)
+                {
+                    //nccresult[pt_index].result2 = -(X_matrix->val[1][0]*X_matrix->val[1][0] -4*X_matrix->val[0][0]*X_matrix->val[2][0])/(4*X_matrix->val[0][0]);
+                    nccresult[pt_index].result2 = -X_matrix->val[1][0]/(2*X_matrix->val[0][0]);
+                    //printf("id %d\tmax %f\n",iter_count,nccresult[pt_index].result2);
+                }
+                else
+                {
+                    for(int k=-kernel_t;k<=kernel_t;k++)
+                    {
+                        if(check_SGM_peak)
+                            WNCC_sum = SumCost[pt_index][max_roh_id+k];
+                        else
+                        {
+                            if(check_ortho && nccresult[pt_index].GNCC > -1.0)
+                                WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                            else
+                                WNCC_sum = grid_voxel[pt_index][max_roh_id+k].INCC;
+                        }
+                        
+                        if(grid_voxel[pt_index][max_roh_id+k].height > - 100)
+                        {
+                            //printf("id %d\tmin %f\t%f\n",iter_count,WNCC_sum,grid_voxel[pt_index][max_roh_id+k].height);
+                        }
+                    }
+                }
+                
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
+            }
+            else
+            {
+                //printf("not enough points %f\n",nccresult[pt_index].result2);
+            }
         }
+        
+        
     }
     printf("done find peak\n");
     
@@ -15619,13 +15886,13 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
         if(iteration >= 2)
             BufferOfHeight = meters_per_pixel*2;
         else {
-            BufferOfHeight = meters_per_pixel*3;
+            BufferOfHeight = meters_per_pixel*2;
         }
     }   
     else if(pyramid_step == 0)
     {
         if(iteration == 1)
-            BufferOfHeight = meters_per_pixel*2;
+            BufferOfHeight = meters_per_pixel;
         else {
             BufferOfHeight = meters_per_pixel;
         }
