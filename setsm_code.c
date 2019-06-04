@@ -1706,8 +1706,32 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             
             if(Boundary_size.height/1000.0 > args.overlap_length || Boundary_size.width/1000.0 > args.overlap_length)
             {
-                printf("Overlapped area between stereo pair is very long along the strip(height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area in strip direction into several small area less than 30 km\nBounary(minX, minY, maxX, maxY[m]) = %f %f %f %f\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
-                exit(1);
+                double new_height = (10000000 - Boundary[3] + Boundary[1])/1000.0;
+                if( new_height > args.overlap_length)
+                {
+                    printf("Overlapped area between stereo pair is very long along the strip(height=%3.2f(km), width=%3.2f(km)), so that the assumption of RPC bias computation (less than 50km) is not satisfied,\nso relative RPC bias can be not accurately compensated. \nPlease process after split the overlapped area in strip direction into several small area less than 30 km\nBounary(minX, minY, maxX, maxY[m]) = %f %f %f %f\n",Boundary_size.height/1000.0,Boundary_size.width/1000.0,Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                    exit(1);
+                }
+                else
+                {
+                    if(10000000 - Boundary[3] > Boundary[1])
+                    {
+                        //double temp_h = Boundary[1];
+                        Boundary[1] = Boundary[3];
+                        Boundary[3] = 10000000;
+                    }
+                    else
+                    {
+                        Boundary[3] = Boundary[1];
+                        Boundary[1] = 0;
+                    }
+                    
+                    Boundary_size.width     = Boundary[2] - Boundary[0];
+                    Boundary_size.height    = Boundary[3] - Boundary[1];
+                    printf("cross equator boundary_size %f\t%d\t%d\n",new_height,Boundary_size.width,Boundary_size.height);
+                    printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                }
+                //exit(1);
             }
             
             
@@ -9288,7 +9312,11 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             if(nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
                                 change_step_max = (int)((GridPT3[t_i].maxHeight - nccresult[t_i].maxHeight)/height_step + 0.5);
                        
-                            nccresult[t_i].check_height_change = true;
+                            nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
+                            nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
+                            
+                            if(abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
+                                nccresult[t_i].check_height_change = true;
                         }
                         else
                             nccresult[t_i].check_height_change = false;
