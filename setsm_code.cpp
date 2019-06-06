@@ -13750,9 +13750,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             else if(Pyramid_step == 3)
                 min_roh_th = 0.10 + (iteration-1)*0.01 + th_add;
             else if(Pyramid_step == 2)
-                min_roh_th = 0.50 + th_add;// + (iteration-1)*0.01
+                min_roh_th = 0.60 + th_add;// + (iteration-1)*0.01
             else if(Pyramid_step == 1)
-                min_roh_th = 0.70 + th_add;// + (iteration-1)*0.01;
+                min_roh_th = 0.80 + th_add;// + (iteration-1)*0.01
             
             if(Pyramid_step <= SGM_th_py )
             {
@@ -13815,7 +13815,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
     else if(Pyramid_step ==1)
         h_divide = 2;
     else {
-        h_divide = 6;
+        h_divide = 2;
     }
 
     temp_fid            = fopen(filename_mps,"w");
@@ -13823,7 +13823,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
     //roh_next = 0.45 - 0.10*(4-Pyramid_step);
     
     if(Pyramid_step >= 2)
-        roh_next    = 0.10;
+        roh_next    = 0.05;
     else
         roh_next    = (double)(0.05);
     
