@@ -91,7 +91,7 @@ int main(int argc,char *argv[])
     args.focal_length = 120;
     args.CCD_size = 12;
     
-    args.SGM_py = -1;
+    args.SGM_py = 1;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -1763,17 +1763,17 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 }
                 else
                 {
-                    //if(10000000 - Boundary[3] > Boundary[1])
+                    if(10000000 - Boundary[3] > Boundary[1])
                     {
-                        double temp_h = Boundary[1];
+                        //double temp_h = Boundary[1];
                         Boundary[1] = Boundary[3];
-                        Boundary[3] = 10000000 + temp_h;
-                    }/*
+                        Boundary[3] = 10000000;
+                    }
                     else
                     {
                         Boundary[3] = Boundary[1];
                         Boundary[1] = 0;
-                    }*/
+                    }
                     
                     Boundary_size.width     = Boundary[2] - Boundary[0];
                     Boundary_size.height    = Boundary[3] - Boundary[1];
@@ -9439,7 +9439,11 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             if(nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
                                 change_step_max = (int)((GridPT3[t_i].maxHeight - nccresult[t_i].maxHeight)/height_step + 0.5);
                        
-                            nccresult[t_i].check_height_change = true;
+                            nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
+                            nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
+                            
+                            if(abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
+                                nccresult[t_i].check_height_change = true;
                         }
                         else
                             nccresult[t_i].check_height_change = false;
@@ -10508,7 +10512,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                             {
                                                 check_orientation = true;
                                             }
-                                            check_orientation = true;
+                                            //check_orientation = true;
                                             //if(Pyramid_step <= proinfo->SGM_py)
                                             //    check_orientation = true;
                                             
@@ -11339,7 +11343,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
 {
     // P2 >= P1
     double P1 = 0.1;
-    double P2 = 0.3;
+    double P2 = 0.2;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -12102,7 +12106,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             
             if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
             {
-                //if(grid_voxel[pt_index][height_step].flag_cal)
+                if(grid_voxel[pt_index][height_step].flag_cal)
                 {
                     if(check_SGM_peak)
                     {
@@ -12227,10 +12231,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             nccresult[pt_index].result1 = -1.0;
             nccresult[pt_index].result3 = -9999;
         }
-        
+        /*
         if(cell_check_peak && nccresult[pt_index].result2 > -100 && Pyramid_step <= 1)
         {
-            int kernel_t = 2;
+            int kernel_t = 4;
             
             int left_end = max_roh_id - kernel_t;
             int right_end = max_roh_id + kernel_t;
@@ -12348,7 +12352,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 //printf("not enough points %f\n",nccresult[pt_index].result2);
             }
         }
-        
+        */
         
     }
     printf("done find peak\n");
@@ -13746,9 +13750,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             else if(Pyramid_step == 3)
                 min_roh_th = 0.10 + (iteration-1)*0.01 + th_add;
             else if(Pyramid_step == 2)
-                min_roh_th = 0.40 + th_add;// + (iteration-1)*0.01
+                min_roh_th = 0.50 + th_add;// + (iteration-1)*0.01
             else if(Pyramid_step == 1)
-                min_roh_th = 0.60 + th_add;// + (iteration-1)*0.01;
+                min_roh_th = 0.70 + th_add;// + (iteration-1)*0.01;
             
             if(Pyramid_step <= SGM_th_py )
             {
@@ -15886,13 +15890,13 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
         if(iteration >= 2)
             BufferOfHeight = meters_per_pixel*2;
         else {
-            BufferOfHeight = meters_per_pixel*2;
+            BufferOfHeight = meters_per_pixel*3;
         }
     }   
     else if(pyramid_step == 0)
     {
         if(iteration == 1)
-            BufferOfHeight = meters_per_pixel;
+            BufferOfHeight = meters_per_pixel*2;
         else {
             BufferOfHeight = meters_per_pixel;
         }
