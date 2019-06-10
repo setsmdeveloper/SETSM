@@ -7623,7 +7623,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
         _minmaxheight[0] = -100;
     }
     
-    D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+    D2DPOINT lonlat[4];
     lonlat[0].m_X = minLon;
     lonlat[0].m_Y = minLat;
     lonlat[1].m_X = minLon;
@@ -7648,7 +7648,6 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     //_imagesize->height = (unsigned int) (ceil((_boundary[3] - _boundary[1]) / _res[1]));
     //_imagesize->width = (unsigned int) (ceil((_boundary[2] - _boundary[0]) / _res[0]));
     
-    free(lonlat);
     free(XY);
 }
 
@@ -18971,7 +18970,7 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
     {
         double L, P, H, Line, Samp;
         double deltaP = 0.0, deltaR = 0.0;
-        double *Coeff;
+        double Coeff[4];
         
         L       = (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
         P       = (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
@@ -18996,8 +18995,6 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
             
             P       = (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
         }
-        
-        Coeff   = (double*)malloc(sizeof(double)*4);
 
         for(int j=0;j<4;j++)
         {
@@ -19027,7 +19024,6 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
         
         IP[i].m_Y       = deltaP + Line;
         IP[i].m_X       = deltaR + Samp;
-        free(Coeff);
     }
 
     return IP;
@@ -19202,7 +19198,7 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
     
     
     double L, P, H, Line, Samp, deltaP, deltaR;
-    double *Coeff;
+    double Coeff[4];
     deltaP = 0.0;
     deltaR = 0.0;
     
@@ -19229,8 +19225,6 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
         
         P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     }
-    
-    Coeff   = (double*)malloc(sizeof(double)*4);
 
     for(j=0;j<4;j++)
     {
@@ -19257,11 +19251,10 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
         deltaR      = _imageparam[3] + _imageparam[4]*Samp + _imageparam[5]*Line;
         break;
     }
-    
+
     IP.m_Y      = deltaP + Line;
     IP.m_X      = deltaR + Samp;
-    free(Coeff);
-    
+
     return IP;
 }
 
@@ -19283,7 +19276,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
     
     D2DPOINT *XY    = (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
-    D2DPOINT *LonLat= (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
+    D2DPOINT LonLat[4];
     double t_minX, t_maxX, t_minY, t_maxY;
     
     LonLat[0].m_X = minLon;
@@ -20296,7 +20289,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             double temp_fitted_Z;
             double diff_Z;
             long int selected_count = 0;
-            int *hist = (int*)calloc(sizeof(int),20);
+            int hist[20] = {};
             for(row = 0; row < *numpts ; row++)
             {
                 int hist_index = (int)(fabs(V_matrix->val[row][0]));
@@ -20322,7 +20315,6 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 }
                 row++;
             }
-            free(hist);
             
             for(row = 0; row < *numpts ; row++)
             {
