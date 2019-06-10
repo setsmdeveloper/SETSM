@@ -31,6 +31,8 @@
 
 const char setsm_version[] = "3.4.3";
 
+const double RA_resolution = 16;
+
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
@@ -2692,6 +2694,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
         }
         
+		double TIN_resolution;
+		if (proinfo->IsRA)
+		{
+			TIN_resolution = RA_resolution;
+		}
+		else
+		{
+			TIN_resolution = proinfo->DEM_resolution;
+		}
 
         bool check_cal = false;
         if(proinfo->IsRA)
@@ -3567,7 +3578,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3654,7 +3665,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, proinfo->DEM_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, TIN_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3861,7 +3872,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
                                         sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                                         
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -12906,9 +12917,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             TIN_split_level = 2;
         
     }
+
+	double TIN_resolution = proinfo->DEM_resolution;
     if(IsRA)
     {
         TIN_split_level = 4;
+		TIN_resolution = RA_resolution;
     }
     
     if(count_MPs > 10)
@@ -13033,7 +13047,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
                 sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -13140,7 +13154,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
                     
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, TIN_resolution);
                     
                     free(input_tri_pts);
                     
@@ -13395,7 +13409,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
-    printf("\tTINCreate: PTS = %d, width = %d, height = %d\n", numofpts, width, height);
+    printf("\tTINCreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
 
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
