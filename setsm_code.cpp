@@ -385,6 +385,8 @@ int main(int argc,char *argv[])
                     sprintf(str_matchfile,"%s_matchtag.raw",t_name);
                     sprintf(str_matchfile_tif,"%s_matchtag.tif",t_name);
                     sprintf(result_file,"%s_smooth_result.txt",t_name);
+
+                    free(tmp_chr);
                 }
                 else
                 {
@@ -905,6 +907,8 @@ int main(int argc,char *argv[])
                                     exit(0);
                                 }
                             }
+
+                            free(temp_path);
                         }
 
                         if(args.check_seeddem)
@@ -959,6 +963,7 @@ int main(int argc,char *argv[])
                             }
                             
                             free(Metafile1);
+                            free(temp_path);
                         }
                         
                     }
@@ -2553,6 +2558,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         {
             printf("Check output directory path!!\n");
         }
+
+        free(image_info);
     }
     else {
     }
@@ -2564,6 +2571,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     time_fid            = fopen(computation_file,"w");
     fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
     fclose(time_fid);
+
+    free(proinfo);
 
 #ifdef BUILDMPI
     // Make sure to finalize
@@ -2774,8 +2783,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 filename = GetFileName(proinfo->Imagefilename[ti]);
                 filename = remove_ext(filename);
                 sprintf(Subsetfilename[ti],"%s/%s_subset_%d_%d.raw",proinfo->tmpdir,filename,row,col);
+                free(filename);
             }
-            
 
             printf("subsetimage\n");
             
@@ -2834,13 +2843,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     
                     CSize Size_Grid2D, pre_Size_Grid2D;
 
-                    CSize **data_size_lr;
-                    
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                    {
-                        if(proinfo->check_selected_image[ti])
-                            data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
-                    }
+                    CSize **data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
                     
                     UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
                     
@@ -3076,6 +3079,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         if(!flag_start)
                         {
                             printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo->pre_DEMtif,proinfo->priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
+                            if (GridPT3)
+                                free(GridPT3);
                             GridPT3 = SetGrid3PT(proinfo,param, dem_update_flag, flag_start, Size_Grid2D, Th_roh, level, minmaxHeight,subBoundary,grid_resolution,proinfo->metafilename);
                         }
                         
@@ -4321,7 +4326,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         free(BStartpos);
                         
                         if(level > Py_combined_level)
+                        {
                             free(Startpos_next);
+                            free(SubImages_next);
+                            free(SubOriImages_next);
+                            free(SubMagImages_next);
+                        }
                         
                         if(level > 0)
                             level   = level - 1;
@@ -4724,6 +4734,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                     exit(0);
                 }
             }
+
+            free(tmp_chr);
         }
         
         sprintf(info->save_filepath,"%s",args.Outputpath);
@@ -4847,7 +4859,8 @@ int Maketmpfolders(ProInfo *info)
     {
         int status;
         status = mkdir(info->save_filepath,0777);
-        if (opendir(info->save_filepath) == NULL)
+        DIR* dir = opendir(info->save_filepath);
+        if (dir == NULL)
         {
             if (status == -1)
             {
@@ -4855,6 +4868,7 @@ int Maketmpfolders(ProInfo *info)
                 exit(1);
             }
         }
+        closedir(dir);
         sprintf(temp_filepath,"%s/txt",info->save_filepath);
         mkdir(temp_filepath,0777);
         sprintf(temp_filepath,"%s/tif",info->save_filepath);
@@ -5608,7 +5622,7 @@ char* remove_ext(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc(strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');
@@ -5679,6 +5693,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
         tmp = remove_ext(filename);
         sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader(tmp);
+        free(tmp);
         
         ret = true;
         
@@ -6706,6 +6721,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
 
             printf("hdr path %s\n",hdr_path);
             seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &minX, &maxY, &grid_size);
+            free(hdr_path);
         }
     }
     
@@ -8644,6 +8660,8 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
             fclose(pFile_raw);
         if(pFile_check_file)
             fclose(pFile_check_file);
+
+        free(filename_py);
     }
 
 }
@@ -8657,15 +8675,16 @@ uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uin
 
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
-
     sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out         = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
         fread(out,sizeof(uint16),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
+
     return out;
 }
 
@@ -8679,13 +8698,14 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint8*)malloc(sizeof(uint8)*data_size.height*data_size.width);
         fread(out,sizeof(uint8),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
 
     return out;
 }
@@ -8697,19 +8717,20 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
     FILE *pFile;
     char *filename_py;
     char t_str[500];
-    
+
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
         fread(out,sizeof(uint16),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
-    
-    
+
+
     double sum = 0;
     int count = 0;
     double residual = 0;
@@ -10864,17 +10885,17 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     
             }
         }
-        if (all_im_cd)
-            free(all_im_cd);
-        
-        if(check_combined_WNCC)
-        {
-            if (all_im_cd_next)
-                free(all_im_cd_next);
-        }
-        
     }
-    
+
+    if (all_im_cd)
+        free(all_im_cd);
+
+    if(check_combined_WNCC)
+    {
+        if (all_im_cd_next)
+            free(all_im_cd_next);
+    }
+
     return Accessable_grid;
 }  // end VerticalLineLocus
 
@@ -16472,21 +16493,25 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
 
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
                 
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
          
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s.raw",save_path,filename_py);
                 status = remove(t_str);
+                free(filename_py);
             }
         }
     }
@@ -18820,6 +18845,7 @@ bool GetImageSize_ortho(char *filename, CSize *Imagesize)
         tmp = remove_ext_ortho(filename);
         sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader_ortho(tmp);
+        free(tmp);
         
         ret = true;
         
@@ -19275,7 +19301,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
     maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
     
-    D2DPOINT *XY    = (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
+    D2DPOINT *XY;
     D2DPOINT LonLat[4];
     double t_minX, t_maxX, t_minY, t_maxY;
     
@@ -19308,8 +19334,9 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     
     Imagesize->height    = ceil(fabs(Boundary[3] - Boundary[1])/Ortho_resolution);
     Imagesize->width     = ceil(fabs(Boundary[2] - Boundary[0])/Ortho_resolution);
-    
-    
+
+    free(XY);
+
     printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
     return true;
 }
@@ -19583,7 +19610,7 @@ char* remove_ext_ortho(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc(strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');
@@ -19657,6 +19684,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
             seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, grid_size);
             check_open_header = true;
         }
+
+        free(hdr_path);
     }
     else if(check_ftype == 2)
     {
@@ -19671,6 +19700,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
             fclose(phdr);
             check_open_header = true;
         }
+
+        free(hdr_path);
     }
     
     if(pFile_meta && !check_open_header)
