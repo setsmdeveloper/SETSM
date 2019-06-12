@@ -5140,8 +5140,11 @@ void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res
     
     if(info->pre_DEMtif)
     {
-        if(info->seedDEMsigma <= 20)
+        if(info->seedDEMsigma <= 15)
             *pyramid_step   = 2;
+        else if(info->seedDEMsigma <= 30)
+            *pyramid_step   = 3;
+        
     }
     
     if(info->DEM_resolution  >= 10)
@@ -11352,7 +11355,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
 {
     // P2 >= P1
     double P1 = 0.1;
-    double P2 = 0.2;
+    double P2 = 0.4;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -16008,6 +16011,15 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
         
         if (BufferOfHeight < 0.5)
             BufferOfHeight = 0.5;
+    }
+    
+    if(pre_DEMtif)
+    {
+        if(BufferOfHeight > seedDEMsigma)
+        {
+            BufferOfHeight = seedDEMsigma;
+        }
+        printf("buff %f seed %f \n",BufferOfHeight,seedDEMsigma);
     }
     /*
     if(pyramid_step <= proinfo->SGM_py)
