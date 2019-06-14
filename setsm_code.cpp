@@ -22685,7 +22685,7 @@ double Correlate(double *L, double *R, int N)
             SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
         }
 
-        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
+        if (SumL2 > 0  &&  SumR2 > 0)
         {
             rho = SumLR / (sqrt(SumL2*SumR2));
             int rI = (int)((rho + 0.002)*1000);
