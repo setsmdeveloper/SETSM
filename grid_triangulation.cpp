@@ -1,6 +1,13 @@
 /***************************************
- * Triangulation algorithm based off of
- * algorithms described in TODO and TODO
+ * The triangulation algorithm in the code was adapted from the methods in these 
+ * two papers:
+ * [1] Wenzhou Wu, Yikang Rui, Fenzhen Su, Liang Cheng & Jiechen Wang (2014) 
+ * Novel parallel algorithm for constructing Delaunay triangulation based on a
+ * twofold-divide-and-conquer scheme, GIScience & Remote Sensing, 51:5, 537-554, DOI:
+ * 10.1080/15481603.2014.946666
+ * [2] Leonidas Guibas & Jorge Stolfi (1985) Primitives for the Manipulation of 
+ * General Subdivisions and the Computation of Voronoi Diagrams, ACM Transactions on 
+ * Graphics, 51:2, 74-123.
  ***************************************/
 
 #include <iostream>

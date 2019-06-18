@@ -31,6 +31,8 @@
 
 const char setsm_version[] = "3.4.3";
 
+const double RA_resolution = 16;
+
 char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
@@ -400,6 +402,8 @@ int main(int argc,char *argv[])
                     sprintf(str_matchfile,"%s_matchtag.raw",t_name);
                     sprintf(str_matchfile_tif,"%s_matchtag.tif",t_name);
                     sprintf(result_file,"%s_smooth_result.txt",t_name);
+
+                    free(tmp_chr);
                 }
                 else
                 {
@@ -959,6 +963,8 @@ int main(int argc,char *argv[])
                                     exit(0);
                                 }
                             }
+
+                            free(temp_path);
                         }
 
                         if(args.check_seeddem)
@@ -1013,6 +1019,7 @@ int main(int argc,char *argv[])
                             }
                             
                             free(Metafile1);
+                            free(temp_path);
                         }
                         
                     }
@@ -1701,45 +1708,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
             *return_param = param;
             
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-            {
-                
-                Imageparams[ti][0]  = proinfo->RA_param[ti][0];
-                Imageparams[ti][1]  = proinfo->RA_param[ti][1];
-                
-                if(proinfo->sensor_type == SB)
-                    SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
-                else
-                    SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
-                
-                if(ti == 0)
-                {
-                    for(i=0;i<4;i++)
-                        Boundary[i] = LBoundary[i];
-                    
-                    Hinterval   = LHinterval;
-                    
-                    ori_minmaxHeight[0] = LminmaxHeight[0];
-                    ori_minmaxHeight[1] = LminmaxHeight[1];
-                }
-                else
-                {
-                    for(i=0;i<4;i++)
-                    {
-                        if(i<2)
-                            Boundary[i] = ceil((max(LBoundary[i], Boundary[i]) / 2.0)) * 2;
-                        else
-                            Boundary[i] = floor((min(LBoundary[i], Boundary[i]) / 2.0)) * 2;
-                    }
-                    
-                    if(LHinterval > Hinterval)
-                        Hinterval   = LHinterval;
-                    
-                    ori_minmaxHeight[0] = min(LminmaxHeight[0],ori_minmaxHeight[0]);
-                    ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
-                }
-            }
-        
+            double lonlatboundary[4] = {0.0};
             if(args.check_boundary)
             {
                 Boundary[0] = args.Min_X;
@@ -1747,6 +1716,99 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 Boundary[2] = args.Max_X;
                 Boundary[3] = args.Max_Y;
             }
+            else
+            {
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    Imageparams[ti][0]  = proinfo->RA_param[ti][0];
+                    Imageparams[ti][1]  = proinfo->RA_param[ti][1];
+                    
+                    if(proinfo->sensor_type == SB)
+                        SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
+                    else
+                        SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+                    
+                    
+                    if(ti == 0)
+                    {
+                        for(i=0;i<4;i++)
+                            lonlatboundary[i] = LBoundary[i];
+                        
+                        Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = LminmaxHeight[0];
+                        ori_minmaxHeight[1] = LminmaxHeight[1];
+                    }
+                    else
+                    {
+                        for(i=0;i<4;i++)
+                        {
+                            if(i<2)
+                                lonlatboundary[i] = max(LBoundary[i], lonlatboundary[i]);
+                            else
+                                lonlatboundary[i] = min(LBoundary[i], lonlatboundary[i]);
+                        }
+                        
+                        if(LHinterval > Hinterval)
+                            Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = min(LminmaxHeight[0],ori_minmaxHeight[0]);
+                        ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
+                    }
+                }
+                
+                
+            }
+            printf("lonlatboundary = %f\t%f\t%f\t%f\n",lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+            D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+            lonlat[0].m_X = lonlatboundary[0];
+            lonlat[0].m_Y = lonlatboundary[1];
+            lonlat[1].m_X = lonlatboundary[0];
+            lonlat[1].m_Y = lonlatboundary[3];
+            lonlat[2].m_X = lonlatboundary[2];
+            lonlat[2].m_Y = lonlatboundary[3];
+            lonlat[3].m_X = lonlatboundary[2];
+            lonlat[3].m_Y = lonlatboundary[1];
+            
+            D2DPOINT *XY = wgs2ps(param, 4, lonlat);
+            
+            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+            if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
+            {
+                double below_eq = 10000000 - XY[0].m_Y;
+                double above_eq = XY[1].m_Y;
+                if(below_eq > above_eq)
+                {
+                    XY[1].m_Y = 10000000;
+                    XY[2].m_Y = 10000000;
+                }
+                else
+                {
+                    XY[0].m_Y = 0;
+                    XY[3].m_Y = 0;
+                }
+            }
+            
+            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+            double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
+            double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
+            
+            double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
+            double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
+            
+            free(lonlat);
+            free(XY);
+            
+            Boundary[0] = ceil(minX/2.0)*2;
+            Boundary[1] = ceil(minY/2.0)*2;
+            Boundary[2] = floor(maxX/2.0)*2;
+            Boundary[3] = floor(maxY/2.0)*2;
+            
             printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
             
             CSize Boundary_size;
@@ -2643,6 +2705,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         {
             printf("Check output directory path!!\n");
         }
+
+        free(image_info);
     }
     else {
     }
@@ -2654,6 +2718,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     time_fid            = fopen(computation_file,"w");
     fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
     fclose(time_fid);
+
+    free(proinfo);
 
 #ifdef BUILDMPI
     // Make sure to finalize
@@ -2784,6 +2850,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
         }
         
+		double TIN_resolution;
+		if (proinfo->IsRA)
+		{
+			TIN_resolution = RA_resolution;
+		}
+		else
+		{
+			TIN_resolution = proinfo->DEM_resolution;
+		}
 
         bool check_cal = false;
         if(proinfo->IsRA)
@@ -2855,8 +2930,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                 filename = GetFileName(proinfo->Imagefilename[ti]);
                 filename = remove_ext(filename);
                 sprintf(Subsetfilename[ti],"%s/%s_subset_%d_%d.raw",proinfo->tmpdir,filename,row,col);
+                free(filename);
             }
-            
 
             printf("subsetimage\n");
             
@@ -2917,13 +2992,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     
                     CSize Size_Grid2D, pre_Size_Grid2D;
 
-                    CSize **data_size_lr;
-                    
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                    {
-                        if(proinfo->check_selected_image[ti])
-                            data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
-                    }
+                    CSize **data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
                     
                     UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
                     
@@ -3162,6 +3231,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         if(!flag_start)
                         {
                             printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo->pre_DEMtif,proinfo->priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
+                            if (GridPT3)
+                                free(GridPT3);
                             GridPT3 = SetGrid3PT(proinfo,param, dem_update_flag, flag_start, Size_Grid2D, Th_roh, level, minmaxHeight,subBoundary,grid_resolution,proinfo->metafilename);
                         }
                         
@@ -3427,9 +3498,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             printf("template size =%d\n",Template_size);
                             
-                            //echoprint_Gridinfo(proinfo,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"init");
-                            
-                            
+                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"init");
                             
                             if(!check_matching_rate)
                             {
@@ -3459,7 +3528,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             
                             
-                            //echo_print_nccresults(proinfo->save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,"inter");
+                            //echo_print_nccresults(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"inter");
                             
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -3682,7 +3751,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3769,7 +3838,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, proinfo->DEM_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, TIN_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3976,7 +4045,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
                                         sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                                         
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -4440,7 +4509,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         free(BStartpos);
                         
                         if(level > Py_combined_level)
+                        {
                             free(Startpos_next);
+                            free(SubImages_next);
+                            free(SubOriImages_next);
+                            free(SubMagImages_next);
+                        }
                         
                         if(level > 0)
                             level   = level - 1;
@@ -4843,6 +4917,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                     exit(0);
                 }
             }
+
+            free(tmp_chr);
         }
         
         sprintf(info->save_filepath,"%s",args.Outputpath);
@@ -4966,7 +5042,8 @@ int Maketmpfolders(ProInfo *info)
     {
         int status;
         status = mkdir(info->save_filepath,0777);
-        if (opendir(info->save_filepath) == NULL)
+        DIR* dir = opendir(info->save_filepath);
+        if (dir == NULL)
         {
             if (status == -1)
             {
@@ -4974,6 +5051,7 @@ int Maketmpfolders(ProInfo *info)
                 exit(1);
             }
         }
+        closedir(dir);
         sprintf(temp_filepath,"%s/txt",info->save_filepath);
         mkdir(temp_filepath,0777);
         sprintf(temp_filepath,"%s/tif",info->save_filepath);
@@ -5791,7 +5869,7 @@ char* remove_ext(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc(strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');
@@ -5862,6 +5940,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
         tmp = remove_ext(filename);
         sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader(tmp);
+        free(tmp);
         
         ret = true;
         
@@ -6889,6 +6968,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
 
             printf("hdr path %s\n",hdr_path);
             seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &minX, &maxY, &grid_size);
+            free(hdr_path);
         }
     }
     
@@ -7806,7 +7886,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
         _minmaxheight[0] = -100;
     }
     
-    D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+    D2DPOINT lonlat[4];
     lonlat[0].m_X = minLon;
     lonlat[0].m_Y = minLat;
     lonlat[1].m_X = minLon;
@@ -7815,31 +7895,24 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     lonlat[2].m_Y = maxLat;
     lonlat[3].m_X = maxLon;
     lonlat[3].m_Y = minLat;
-    D2DPOINT *XY = wgs2ps(_param, 4, lonlat);
+    
+    double minX = min(lonlat[3].m_X, min(lonlat[2].m_X, min(lonlat[0].m_X, lonlat[1].m_X)));
+    double maxX = max(lonlat[3].m_X, max(lonlat[2].m_X, max(lonlat[0].m_X, lonlat[1].m_X)));
+    
+    double minY = min(lonlat[3].m_Y, min(lonlat[2].m_Y, min(lonlat[0].m_Y, lonlat[1].m_Y)));
+    double maxY = max(lonlat[3].m_Y, max(lonlat[2].m_Y, max(lonlat[0].m_Y, lonlat[1].m_Y)));
     
     printf("lonlat X %f\t%f\t%f\t%f\n",lonlat[0].m_X,lonlat[1].m_X,lonlat[2].m_X,lonlat[3].m_X);
     printf("lonlat Y %f\t%f\t%f\t%f\n",lonlat[0].m_Y,lonlat[1].m_Y,lonlat[2].m_Y,lonlat[3].m_Y);
     
-    printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
-    printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
-    
-    double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
-    double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
-    
-    double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
-    double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
-    
     printf("minmaxXY %f\t%f\t%f\t%f\n",minX,minY,maxX,maxY);
-    _boundary[0] =  floor(minX);
-    _boundary[1] =  floor(minY);
-    _boundary[2] =  ceil(maxX);
-    _boundary[3] =  ceil(maxY);
+    _boundary[0] =  (minX);
+    _boundary[1] =  (minY);
+    _boundary[2] =  (maxX);
+    _boundary[3] =  (maxY);
     
     //_imagesize->height = (unsigned int) (ceil((_boundary[3] - _boundary[1]) / _res[1]));
     //_imagesize->width = (unsigned int) (ceil((_boundary[2] - _boundary[0]) / _res[0]));
-    
-    free(lonlat);
-    free(XY);
 }
 
 
@@ -8835,6 +8908,8 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
             fclose(pFile_raw);
         if(pFile_check_file)
             fclose(pFile_check_file);
+
+        free(filename_py);
     }
 
 }
@@ -8848,15 +8923,16 @@ uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uin
 
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
-
     sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out         = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
         fread(out,sizeof(uint16),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
+
     return out;
 }
 
@@ -8870,13 +8946,14 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint8*)malloc(sizeof(uint8)*data_size.height*data_size.width);
         fread(out,sizeof(uint8),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
 
     return out;
 }
@@ -8888,19 +8965,20 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
     FILE *pFile;
     char *filename_py;
     char t_str[500];
-    
+
     filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,py_level);
+    free(filename_py);
     pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
         fread(out,sizeof(uint16),data_size.height*data_size.width,pFile);
+        fclose(pFile);
     }
-    fclose(pFile);
-    
-    
+
+
     double sum = 0;
     int count = 0;
     double residual = 0;
@@ -10267,7 +10345,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 									for (int k=0; k<3; k++)
 									{
 										double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
-										if (!isnan(ncc))
+										if (ncc != -99)
 										{
                                             if (ncc > 1)
                                                 ncc = 1;
@@ -10278,7 +10356,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         }
 							
 										double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
-										if (!isnan(ncc_mag))
+										if (ncc_mag != -99)
 										{
                                             if (ncc_mag > 1)
                                                 ncc_mag = 1;
@@ -10304,7 +10382,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 										for (int k=0; k<3; k++)
 										{
 											double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (!isnan(ncc))
+											if (ncc != -99)
 											{
                                                 if (ncc > 1)
                                                     ncc = 1;
@@ -10314,7 +10392,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                             }
 
 											double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (!isnan(ncc_mag))
+											if (ncc_mag != -99)
 											{
                                                 if (ncc_mag > 1)
                                                     ncc_mag = 1;
@@ -10741,7 +10819,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 														for (int k=0; k<3; k++)
 														{
 															double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-															if (!isnan(ncc))
+															if (ncc != -99)
 															{
                                                                 if(ncc > 1)
                                                                     ncc = 1;
@@ -10752,7 +10830,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 															}
 
 															double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-															if (!isnan(ncc_mag))
+															if (ncc_mag != -99)
 															{
                                                                 if(ncc_mag > 1)
                                                                     ncc_mag = 1;
@@ -10787,7 +10865,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 															for (int k=0; k<3; k++)
 															{
 																double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
-																if (!isnan(ncc))
+																if (ncc != -99)
 																{
                                                                     if(ncc > 1)
                                                                         ncc = 1;
@@ -10798,7 +10876,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                 }
 
 																double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
-																if (!isnan(ncc_mag))
+																if (ncc_mag != -99)
 																{
                                                                     if(ncc_mag > 1)
                                                                         ncc_mag = 1;
@@ -11030,17 +11108,17 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     
             }
         }
-        if (all_im_cd)
-            free(all_im_cd);
-        
-        if(check_combined_WNCC)
-        {
-            if (all_im_cd_next)
-                free(all_im_cd_next);
-        }
-        
     }
-    
+
+    if (all_im_cd)
+        free(all_im_cd);
+
+    if(check_combined_WNCC)
+    {
+        if (all_im_cd_next)
+            free(all_im_cd_next);
+    }
+
     return Accessable_grid;
 }  // end VerticalLineLocus
 
@@ -11354,8 +11432,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
 void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel)
 {
     // P2 >= P1
-    double P1 = 0.1;
-    double P2 = 0.4;
+    double P1 = 0.2;
+    double P2 = 0.3;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -12821,7 +12899,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-                            if (!isnan(ncc))
+							if (ncc != -99)
                             {
                                 if (ncc > 1)
                                     ncc = 1;
@@ -12832,7 +12910,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                             }
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-                            if (!isnan(ncc_mag))
+							if (ncc_mag != -99)
                             {
                                 if (ncc_mag > 1)
                                     ncc_mag = 1;
@@ -13147,8 +13225,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     {
                         for(int col = -Half_template_size; col <= Half_template_size ; col++)
                         {
-                            double radius  = sqrt((double)(row*row + col*col));
-                            if(radius <= Half_template_size-1)
+                            double radius2  = (double)(row*row + col*col);
+                            if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                             {
                                 double pos_row_left = -100;
                                 double pos_col_left = -100;
@@ -13262,7 +13340,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-							if (!isnan(ncc))
+							if (ncc != -99)
 							{
                                 if (ncc > 1)
                                     ncc = 1;
@@ -13273,7 +13351,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                             }
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-							if (!isnan(ncc_mag))
+							if (ncc_mag != -99)
 							{
                                 if (ncc_mag > 1)
                                     ncc_mag = 1;
@@ -13665,8 +13743,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                                 Count_N++;
 							}
                         }  // if (rtn)
-                    }
-                }  //  end Row=PixelMinXY[1] loop
+                    }  //  // end Col=PixelMinXY[0] loop
+                }  // end Row=PixelMinXY[1] loop
         
 				// Compute correlations
                 if(Count_N >= 1)
@@ -13674,7 +13752,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     double temp_roh = 0;
                     double count_roh = 0;
 					double ncc_1 = Correlate(left_patch_vec, right_patch_vec, Count_N);
-					if (!isnan(ncc_1))
+					if (ncc_1 != -99)
 					{
                         if(ncc_1 > 1)
                             ncc_1 = 1;
@@ -13683,7 +13761,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     }
                         
 					double ncc_2 = Correlate(left_mag_patch_vec, right_mag_patch_vec, Count_N);
-                    if (!isnan(ncc_2))
+					if (ncc_2 != -99)
                     {
                         if(ncc_2 > 1)
                             ncc_2 = 1;
@@ -14300,9 +14378,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             TIN_split_level = 2;
         
     }
+
+	double TIN_resolution = proinfo->DEM_resolution;
     if(IsRA)
     {
         TIN_split_level = 4;
+		TIN_resolution = RA_resolution;
     }
     
     if(count_MPs > 10)
@@ -14428,7 +14509,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
                 sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -14535,7 +14616,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
                     
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, proinfo->DEM_resolution);
+                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, TIN_resolution);
                     
                     free(input_tri_pts);
                     
@@ -14689,7 +14770,7 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
-    printf("\tTINCreate: PTS = %d, width = %d, height = %d\n", numofpts, width, height);
+    printf("\tTINCreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
 
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
@@ -16225,7 +16306,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                         if(!m_bHeight[Index])
                         {
                             double CurGPXY[2]={0.};
-                            double Z = -1000.0;
+                            float Z = -1000.0;
                             bool rtn = false;
                             double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
                             double v23[2], v2P[2], v31[2], v3P[2];
@@ -17831,21 +17912,25 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
 
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
                 
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,count);
                 status = remove(t_str);
+                free(filename_py);
          
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s.raw",save_path,filename_py);
                 status = remove(t_str);
+                free(filename_py);
             }
         }
     }
@@ -19535,6 +19620,8 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     CSize DEM_size, Image_size;
     TransParam param;
     FrameInfo m_frameinfo;
+    m_frameinfo.m_Camera.m_focalLength  = 0;
+    m_frameinfo.m_Camera.m_CCDSize      = 0;
     
     
     ST = time(0);
@@ -20205,6 +20292,7 @@ bool GetImageSize_ortho(char *filename, CSize *Imagesize)
         tmp = remove_ext_ortho(filename);
         sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader_ortho(tmp);
+        free(tmp);
         
         ret = true;
         
@@ -20355,7 +20443,7 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
     {
         double L, P, H, Line, Samp;
         double deltaP = 0.0, deltaR = 0.0;
-        double *Coeff;
+        double Coeff[4];
         
         L       = (_GP[i].m_X - _rpc[0][2])/_rpc[1][2];
         P       = (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
@@ -20380,8 +20468,6 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
             
             P       = (_GP[i].m_Y - _rpc[0][3])/_rpc[1][3];
         }
-        
-        Coeff   = (double*)malloc(sizeof(double)*4);
 
         for(int j=0;j<4;j++)
         {
@@ -20411,7 +20497,6 @@ D2DPOINT* GetObjectToImageRPC_ortho(double **_rpc, uint8 _numofparam, double *_i
         
         IP[i].m_Y       = deltaP + Line;
         IP[i].m_X       = deltaR + Samp;
-        free(Coeff);
     }
 
     return IP;
@@ -20586,7 +20671,7 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
     
     
     double L, P, H, Line, Samp, deltaP, deltaR;
-    double *Coeff;
+    double Coeff[4];
     deltaP = 0.0;
     deltaR = 0.0;
     
@@ -20613,8 +20698,6 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
         
         P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     }
-    
-    Coeff   = (double*)malloc(sizeof(double)*4);
 
     for(j=0;j<4;j++)
     {
@@ -20641,11 +20724,10 @@ D2DPOINT GetObjectToImageRPC_single_ortho(double **_rpc, uint8 _numofparam, doub
         deltaR      = _imageparam[3] + _imageparam[4]*Samp + _imageparam[5]*Line;
         break;
     }
-    
+
     IP.m_Y      = deltaP + Line;
     IP.m_X      = deltaR + Samp;
-    free(Coeff);
-    
+
     return IP;
 }
 
@@ -20666,8 +20748,8 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
     maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
     
-    D2DPOINT *XY    = (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
-    D2DPOINT *LonLat= (D2DPOINT*)malloc(sizeof(D2DPOINT)*4);
+    D2DPOINT *XY;
+    D2DPOINT LonLat[4];
     double t_minX, t_maxX, t_minY, t_maxY;
     
     LonLat[0].m_X = minLon;
@@ -20699,8 +20781,9 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     
     Imagesize->height    = ceil(fabs(Boundary[3] - Boundary[1])/Ortho_resolution);
     Imagesize->width     = ceil(fabs(Boundary[2] - Boundary[0])/Ortho_resolution);
-    
-    
+
+    free(XY);
+
     printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
     return true;
 }
@@ -20974,7 +21057,7 @@ char* remove_ext_ortho(char* mystr)
     char *lastdot;
     if (mystr == NULL)
         return NULL;
-    if ((retstr = (char*)malloc (strlen (mystr) + 1)) == NULL)
+    if ((retstr = (char*)malloc(strlen (mystr) + 1)) == NULL)
         return NULL;
     strcpy (retstr, mystr);
     lastdot = strrchr (retstr, '.');
@@ -21048,6 +21131,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
             seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, grid_size);
             check_open_header = true;
         }
+
+        free(hdr_path);
     }
     else if(check_ftype == 2)
     {
@@ -21062,6 +21147,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
             fclose(phdr);
             check_open_header = true;
         }
+
+        free(hdr_path);
     }
     
     if(pFile_meta && !check_open_header)
@@ -21680,7 +21767,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             double temp_fitted_Z;
             double diff_Z;
             long int selected_count = 0;
-            int *hist = (int*)calloc(sizeof(int),20);
+            int hist[20] = {};
             for(row = 0; row < *numpts ; row++)
             {
                 int hist_index = (int)(fabs(V_matrix->val[row][0]));
@@ -21706,7 +21793,6 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 }
                 row++;
             }
-            free(hist);
             
             for(row = 0; row < *numpts ; row++)
             {
@@ -22620,8 +22706,7 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
 // Support routines for VerticalLineLocus*
 
 // Compute the correlation between two arrays using a numerically stable formulation
-// Return the correlation coefficient or NaN if undefined
-
+// Return the correlation coefficient or -99 if undefined
 double Correlate(double *L, double *R, int N)
 {
 	double Lmean = 0;
@@ -22649,67 +22734,25 @@ double Correlate(double *L, double *R, int N)
             SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
         }
 
-        if (SumL2 > 0  &&  SumR2 > 0)
+        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
         {
             rho = SumLR / (sqrt(SumL2*SumR2));
-            int rI = (int)((rho + 0.002)*1000);
-            rho = (double)(rI/1000.0);
+            int rI = (int)round(rho*1000);
+            rho = (double)rI / 1000.0;
         }
         else
         {
-            rho = (double) NAN;
+            rho = (double) -99;
         }
     }
     else
     {
-        rho = (double) NAN;
+        rho = (double) -99;
     }
  
 	return rho;
 }
-/*
-double Correlate(double *L, double *R, int N)
-{
-    double Sum_LR = 0;
-    double Sum_L2 = 0;
-    double Sum_R2 = 0;
-    double Sum_L = 0;
-    double Sum_R = 0;
-    double rho;
-    
-    if(N > 0)
-    {
-        for (int i=0; i<N; i++)
-        {
-            Sum_LR += L[i]*R[i];
-            Sum_L2 += L[i]*L[i];
-            Sum_R2 += R[i]*R[i];
-            Sum_L += L[i];
-            Sum_R += R[i];
-        }
-        
-        double val1 = Sum_L2 - Sum_L*Sum_L/(double)N;
-        double val2 = Sum_R2 - Sum_R*Sum_R/(double)N;
-        
-        if (val1 > 0 && val2 > 0)
-        {
-            double de = sqrt(val1*val2);
-            double de2 = Sum_LR - Sum_L*Sum_R/(double)N;
-            rho = de2/de;
-        }
-        else
-        {
-            rho = (double) NAN;
-        }
-    }
-    else
-    {
-        rho = (double) NAN;
-    }
-    
-    return rho;
-}
-*/
+
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
 double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, double dx, double dy)
@@ -22720,9 +22763,6 @@ double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, doubl
 		(double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
 		(double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
-    //int rI = (int)((patch + 0.01)*100);
-    //patch = (int)(rI/100.0);
-    
 	return patch;
 }
 
