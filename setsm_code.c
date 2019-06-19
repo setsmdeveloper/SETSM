@@ -1652,45 +1652,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
             *return_param = param;
             
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-            {
-                
-                Imageparams[ti][0]  = proinfo->RA_param[ti][0];
-                Imageparams[ti][1]  = proinfo->RA_param[ti][1];
-                
-                if(proinfo->sensor_type == SB)
-                    SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
-                else
-                    SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
-                
-                if(ti == 0)
-                {
-                    for(i=0;i<4;i++)
-                        Boundary[i] = LBoundary[i];
-                    
-                    Hinterval   = LHinterval;
-                    
-                    ori_minmaxHeight[0] = LminmaxHeight[0];
-                    ori_minmaxHeight[1] = LminmaxHeight[1];
-                }
-                else
-                {
-                    for(i=0;i<4;i++)
-                    {
-                        if(i<2)
-                            Boundary[i] = ceil((max(LBoundary[i], Boundary[i]) / 2.0)) * 2;
-                        else
-                            Boundary[i] = floor((min(LBoundary[i], Boundary[i]) / 2.0)) * 2;
-                    }
-                    
-                    if(LHinterval > Hinterval)
-                        Hinterval   = LHinterval;
-                    
-                    ori_minmaxHeight[0] = min(LminmaxHeight[0],ori_minmaxHeight[0]);
-                    ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
-                }
-            }
-        
+	    double lonlatboundary[4] = {0.0};
             if(args.check_boundary)
             {
                 Boundary[0] = args.Min_X;
@@ -1698,8 +1660,100 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 Boundary[2] = args.Max_X;
                 Boundary[3] = args.Max_Y;
             }
-            printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            else
+            {
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    Imageparams[ti][0]  = proinfo->RA_param[ti][0];
+                    Imageparams[ti][1]  = proinfo->RA_param[ti][1];
+                    
+                    if(proinfo->sensor_type == SB)
+                        SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
+                    else
+                        SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+                    
+                    
+                    if(ti == 0)
+                    {
+                        for(i=0;i<4;i++)
+                            lonlatboundary[i] = LBoundary[i];
+                        
+                        Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = LminmaxHeight[0];
+                        ori_minmaxHeight[1] = LminmaxHeight[1];
+                    }
+                    else
+                    {
+                        for(i=0;i<4;i++)
+                        {
+                            if(i<2)
+                                lonlatboundary[i] = max(LBoundary[i], lonlatboundary[i]);
+                            else
+                                lonlatboundary[i] = min(LBoundary[i], lonlatboundary[i]);
+                        }
+                        
+                        if(LHinterval > Hinterval)
+                            Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = min(LminmaxHeight[0],ori_minmaxHeight[0]);
+                        ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
+                    }
+                }
+                
+                
+            }
+            printf("lonlatboundary = %f\t%f\t%f\t%f\n",lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
             
+            D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+            lonlat[0].m_X = lonlatboundary[0];
+            lonlat[0].m_Y = lonlatboundary[1];
+            lonlat[1].m_X = lonlatboundary[0];
+            lonlat[1].m_Y = lonlatboundary[3];
+            lonlat[2].m_X = lonlatboundary[2];
+            lonlat[2].m_Y = lonlatboundary[3];
+            lonlat[3].m_X = lonlatboundary[2];
+            lonlat[3].m_Y = lonlatboundary[1];
+            
+            D2DPOINT *XY = wgs2ps(param, 4, lonlat);
+            
+            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+            if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
+            {
+                double below_eq = 10000000 - XY[0].m_Y;
+                double above_eq = XY[1].m_Y;
+                if(below_eq > above_eq)
+                {
+                    XY[1].m_Y = 10000000;
+                    XY[2].m_Y = 10000000;
+                }
+                else
+                {
+                    XY[0].m_Y = 0;
+                    XY[3].m_Y = 0;
+                }
+            }
+            
+            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+	    double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
+            double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
+            
+            double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
+            double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
+            
+            free(lonlat);
+            free(XY);
+ 
+            Boundary[0] = ceil(minX/2.0)*2;
+            Boundary[1] = ceil(minY/2.0)*2;
+            Boundary[2] = floor(maxX/2.0)*2;
+            Boundary[3] = floor(maxY/2.0)*2;
+            
+            printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);            
             CSize Boundary_size;
             Boundary_size.width     = Boundary[2] - Boundary[0];
             Boundary_size.height    = Boundary[3] - Boundary[1];
@@ -7683,24 +7737,26 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     lonlat[2].m_Y = maxLat;
     lonlat[3].m_X = maxLon;
     lonlat[3].m_Y = minLat;
-    D2DPOINT *XY = wgs2ps(_param, 4, lonlat);
+
+    double minX = min(lonlat[3].m_X, min(lonlat[2].m_X, min(lonlat[0].m_X, lonlat[1].m_X)));
+    double maxX = max(lonlat[3].m_X, max(lonlat[2].m_X, max(lonlat[0].m_X, lonlat[1].m_X)));
     
-    double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
-    double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
-    
-    double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
-    double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
-    
-    _boundary[0] =  floor(minX);
-    _boundary[1] =  floor(minY);
-    _boundary[2] =  ceil(maxX);
-    _boundary[3] =  ceil(maxY);
+    double minY = min(lonlat[3].m_Y, min(lonlat[2].m_Y, min(lonlat[0].m_Y, lonlat[1].m_Y)));
+    double maxY = max(lonlat[3].m_Y, max(lonlat[2].m_Y, max(lonlat[0].m_Y, lonlat[1].m_Y)));
+
+    printf("lonlat X %f\t%f\t%f\t%f\n",lonlat[0].m_X,lonlat[1].m_X,lonlat[2].m_X,lonlat[3].m_X);
+    printf("lonlat Y %f\t%f\t%f\t%f\n",lonlat[0].m_Y,lonlat[1].m_Y,lonlat[2].m_Y,lonlat[3].m_Y);
+
+    printf("minmaxXY %f\t%f\t%f\t%f\n",minX,minY,maxX,maxY);    
+    _boundary[0] =  (minX);
+    _boundary[1] =  (minY);
+    _boundary[2] =  (maxX);
+    _boundary[3] =  (maxY);
     
     //_imagesize->height = (unsigned int) (ceil((_boundary[3] - _boundary[1]) / _res[1]));
     //_imagesize->width = (unsigned int) (ceil((_boundary[2] - _boundary[0]) / _res[0]));
     
     free(lonlat);
-    free(XY);
 }
 
 
