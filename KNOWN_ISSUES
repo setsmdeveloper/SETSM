@@ -1,0 +1,13 @@
+Known issues with the current SETSM release:
+
+Issue:  Compiler vectorization bug -- It appears that the Intel 16, 17 and 18 
+compilers and GCC prior to v. 9 have a bug related to vectorization for 
+AVX instruction sets.
+
+Symptom:  SETSM results may not be repeatable for identical runs.
+
+Recommended solution:  Use Intel 19.0.3 or GCC 9.1 or newer version.
+
+Alternative workaround:  For Intel, replace the -xHost option with -xSSE3.  
+For GCC, remove -march=native.
+

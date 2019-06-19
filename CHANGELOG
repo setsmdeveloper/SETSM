@@ -3,12 +3,15 @@ SETSM Change Log
 This file briefly describes the changes to the SETSM software package.
 The most recent changes are listed first.
 
-SETSM 4.0.0 (?/?/2019)
+SETSM 4.0.0 (6/??/2019)
 
 * Changes since 3.4.3
     - Changed code to C++
     - Replaced triangulation libraries with integer-based algorithm
     - Refactored code to reduce roundoff error
+    - UTM equator boundary bug fix
+    - Voxel out of memory issue fix
+    - Semi Global Matching application
 
 SETSM 3.4.3 (3/18/2019)
 
