@@ -31,7 +31,7 @@
 
 const char setsm_version[] = "3.4.3";
 
-const double RA_resolution = 16;
+//const double RA_resolution = 16;
 
 char *dirname(char *path);
 
@@ -2173,7 +2173,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             t_col_end       = t_col_start + 1;
                             
                             double temp_DEM_resolution = proinfo->DEM_resolution;
-                            proinfo->DEM_resolution = 16;
+                            proinfo->DEM_resolution = Image_res[0]*pow(2,pyramid_step+1);
                             final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                              subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
                                                              RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
@@ -2850,8 +2850,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
         }
         
-		double TIN_resolution;
-		if (proinfo->IsRA)
+		double TIN_resolution = proinfo->DEM_resolution;
+		/*if (proinfo->IsRA)
 		{
 			TIN_resolution = RA_resolution;
 		}
@@ -2859,7 +2859,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 		{
 			TIN_resolution = proinfo->DEM_resolution;
 		}
-
+         */
         bool check_cal = false;
         if(proinfo->IsRA)
             check_cal = true;
@@ -3357,7 +3357,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
-                        total_memory = CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level);
+                        total_memory = CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level,level,minmaxHeight);
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
@@ -3751,7 +3751,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
+                                            printf("TINCreate resolution %f\n",grid_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3838,7 +3839,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, TIN_resolution);
+                                            printf("TINCreate resolution %f\n",grid_resolution);
+                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -4045,7 +4047,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
                                         sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
-                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
+                                        printf("TINCreate resolution %f\n",grid_resolution);
+                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                         
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -4595,7 +4598,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     return final_iteration;
 }
 
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level)
+double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight)
 {
     double Memory = 0;
     
@@ -4677,10 +4680,42 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
         long int grid_voxel = (double)(sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
         for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
         {
-            int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
+            bool check_blunder_cell = true;
+            double th_height = 1000;
             
-            if(NumberofHeightVoxel > 0 )
-                grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+            if ( pyramid_step >= 2)
+                check_blunder_cell = false;
+            else if( GridPT3[t_i].Matched_flag != 0)
+            {
+                if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
+                {
+                    if(pyramid_step <= 1)
+                    {
+                        if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
+                            check_blunder_cell = false;
+                    }
+                    
+                    if(pyramid_step == 1)
+                    {
+                        if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
+                            check_blunder_cell = false;
+                    }
+                    
+                    if(pyramid_step == 0)
+                    {
+                        if(abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height)
+                            check_blunder_cell = false;
+                    }
+                }
+            }
+            
+            if(!check_blunder_cell)
+            {
+                int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
+                
+                if(NumberofHeightVoxel > 0 )
+                    grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+            }
         }
         Memory += (grid_voxel);
     }
@@ -11432,8 +11467,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
 void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel)
 {
     // P2 >= P1
-    double P1 = 0.2;
-    double P2 = 0.3;
+    double P1 = 0.3;
+    double P2 = 0.4;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -14379,11 +14414,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
         
     }
 
-	double TIN_resolution = proinfo->DEM_resolution;
+	double TIN_resolution = grid_resolution;
     if(IsRA)
     {
         TIN_split_level = 4;
-		TIN_resolution = RA_resolution;
+		//TIN_resolution = RA_resolution;
     }
     
     if(count_MPs > 10)
@@ -14509,7 +14544,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
                 sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
-                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, TIN_resolution);
+                printf("TINCreate resolution %f\n",grid_resolution);
+                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -14616,7 +14652,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
                     
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, TIN_resolution);
+                    printf("TINCreate resolution %f\n",grid_resolution);
+                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
                     
                     free(input_tri_pts);
                     
