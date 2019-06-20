@@ -6919,7 +6919,7 @@ D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size
 
 void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight)
 {
-    double minX, maxX, minY,maxY,grid_size,a_minX,a_maxX,a_minY,a_maxY;
+    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0, a_minX = 0, a_maxX = 0, a_minY = 0, a_maxY = 0;
     CSize seeddem_size;
     char* hdr_path;
     FILE *bin;
@@ -18457,7 +18457,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     int interval_row = 20;
     int buffer_row   = 5;
     int t_ndata;
-    int ndim,ndim1,ndata;
+    int ndim = 0, ndim1 = 0, ndata = 0;
     long total_search_count = 0;
     long total_mt_count = 0;
     long total_check_count = 0;
@@ -19688,7 +19688,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     int impyramid_step;
     double** RPCs;
     double row_grid_size, col_grid_size;
-    bool Hemisphere;
+    bool Hemisphere = false;
     double DEM_minX, DEM_maxY;
     double minLat,minLon;
     CSize DEM_size, Image_size;
