@@ -11220,7 +11220,10 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                         int t_index_h_index   = (int)((iter_height - nccresult[t_index].minHeight)/step_height);
                         int t_index_h_index_1 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) - P_HS_step;
                         int t_index_h_index_2 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) + P_HS_step;
-                        double V1,V2,V3,V4;
+                        double V1 = 0;
+                        double V2 = 0;
+                        double V3 = 0;
+                        double V4 = 0;
                         
                         if(t_index_h_index == 0 && t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight)
                         {
@@ -11468,7 +11471,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
 {
     // P2 >= P1
     double P1 = 0.3;
-    double P2 = 0.4;
+    double P2 = 0.6;
     
     int P_HS_step = 1;
     int kernel_size = 1;
@@ -12202,26 +12205,30 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         
         
         double pre_rho  = -1.0;
+        double pre_rho_WNCC = -1.0;
         float pre_height= 0.0;
+        int pre_height_step = 0;
         int direction   = 0;
         bool check_rho  = false;
         
         int max_roh_id = 0;
+        double max_roh = 0;
         bool cell_check_peak = false;
         
         for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
             if(height_step == 0)
             {
-                nccresult[pt_index].result0 = -1.0;
+                nccresult[pt_index].result0 = -1000.0;
                 nccresult[pt_index].result2 = -1000;
-                nccresult[pt_index].result1 = -1.0;
+                nccresult[pt_index].result1 = -1000.0;
                 nccresult[pt_index].result3 = -1000;
                 nccresult[pt_index].result4 = 0;
             }
             //int count_cell = 1;
             
-            double temp_rho;
+            double temp_rho = 0;
+            double WNCC_temp_rho = 0;
             int grid_index;
             double diff_rho;
             int t_direction;
@@ -12232,11 +12239,17 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             
             if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
             {
-                if(grid_voxel[pt_index][height_step].flag_cal)
+                //if(grid_voxel[pt_index][height_step].flag_cal)
                 {
                     if(check_SGM_peak)
                     {
                         temp_rho = SumCost[pt_index][height_step];//count_cell;
+                        
+                        if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
+                            WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                        else
+                            WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                        WNCC_temp_rho = WNCC_sum;
                         /*
                         if(temp_rho <= 0)
                         {
@@ -12256,6 +12269,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                                 WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
                             else
                                 WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                            WNCC_temp_rho = WNCC_sum;
                             /*
                             {
                                 
@@ -12352,6 +12366,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                              */
                         }
                         temp_rho = WNCC_sum;
+                    
                     }
                     //printf("%d\t%d\t%d\tWNCC_sum %f\n",pts_row,pts_col,height_step,WNCC_sum);
                     //find peak
@@ -12399,7 +12414,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                             nccresult[grid_index].result3 = -9999;
 
                             max_roh_id = height_step;
-                            
+                            max_roh = WNCC_temp_rho;
                             
                         }
                     }
@@ -12418,7 +12433,8 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                                 temp_2 = nccresult[grid_index].result2;
                                 nccresult[grid_index].result2 = pre_height;
                                 
-                                max_roh_id = height_step;
+                                max_roh_id = pre_height_step;
+                                max_roh = pre_rho_WNCC;
                                 
                                 if(nccresult[grid_index].result1 < temp_1)
                                 {
@@ -12440,16 +12456,37 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 }
                 
                 pre_rho                = temp_rho;
-                
+                pre_rho_WNCC           = WNCC_temp_rho;
                 pre_height             = iter_height;
+                pre_height_step        = height_step;
+                
                 direction              = t_direction;
             }
         }
         
         if(check_SGM_peak)
         {
-            nccresult[pt_index].result1 = -1.0;
-            nccresult[pt_index].result3 = -9999;
+            //if(cell_check_peak)
+            {
+                /*
+                double WNCC_re = 0;
+                if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
+                    WNCC_re = grid_voxel[pt_index][max_roh_id].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                else
+                    WNCC_re = grid_voxel[pt_index][max_roh_id].INCC;
+                */
+                if(Pyramid_step == 0 && iteration >= 2)
+                    nccresult[pt_index].result0 = max_roh;
+                nccresult[pt_index].result1 = -1.0;
+                nccresult[pt_index].result3 = -9999;
+            }
+            /*else
+            {
+                nccresult[pt_index].result0 = -1.0;
+                nccresult[pt_index].result1 = -1.0;
+                nccresult[pt_index].result3 = -9999;
+            }
+             */
         }
         /*
         if(cell_check_peak && nccresult[pt_index].result2 > -100 && Pyramid_step <= 1)
@@ -13976,14 +14013,14 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             
             if(Pyramid_step <= SGM_th_py )
             {
-                min_roh_th = 0.70 - Pyramid_step*0.1;
+                min_roh_th = 0.95 - Pyramid_step*0.1;
                 if(min_roh_th < 0.5)
                     min_roh_th = 0.5;
             }
             
             int roh_iter = 999;
             bool check_stop = false;
-            minimum_Th = 0.5;
+            minimum_Th = 0.2;
             while(!check_stop && roh_iter > 0)
             {
                 sum_roh_count += hist[roh_iter];
