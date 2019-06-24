@@ -33,7 +33,7 @@ else ifeq ($(COMPILER), cray)
   MPICC?=mpicc
   MPICXX?=mpicxx
   CFLAGS=
-  CXXFLAGS=
+  CXXFLAGS=-hstd=c++11
   OPTFLAGS?=
 else
   CC_CMD?=gcc
