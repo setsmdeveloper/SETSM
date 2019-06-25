@@ -1715,6 +1715,34 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 Boundary[1] = args.Min_Y;
                 Boundary[2] = args.Max_X;
                 Boundary[3] = args.Max_Y;
+                
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    Imageparams[ti][0]  = proinfo->RA_param[ti][0];
+                    Imageparams[ti][1]  = proinfo->RA_param[ti][1];
+                    
+                    if(proinfo->sensor_type == SB)
+                        SetDEMBoundary(RPCs[ti],Image_res,param,Hemisphere,LBoundary,LminmaxHeight,&LHinterval);
+                    else
+                        SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+                    
+                    
+                    if(ti == 0)
+                    {
+                        Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = LminmaxHeight[0];
+                        ori_minmaxHeight[1] = LminmaxHeight[1];
+                    }
+                    else
+                    {
+                        if(LHinterval > Hinterval)
+                            Hinterval   = LHinterval;
+                        
+                        ori_minmaxHeight[0] = min(LminmaxHeight[0],ori_minmaxHeight[0]);
+                        ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
+                    }
+                }
             }
             else
             {
@@ -1757,58 +1785,57 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                 }
                 
+                printf("lonlatboundary = %f\t%f\t%f\t%f\n",lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+                D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
+                lonlat[0].m_X = lonlatboundary[0];
+                lonlat[0].m_Y = lonlatboundary[1];
+                lonlat[1].m_X = lonlatboundary[0];
+                lonlat[1].m_Y = lonlatboundary[3];
+                lonlat[2].m_X = lonlatboundary[2];
+                lonlat[2].m_Y = lonlatboundary[3];
+                lonlat[3].m_X = lonlatboundary[2];
+                lonlat[3].m_Y = lonlatboundary[1];
+            
+                D2DPOINT *XY = wgs2ps(param, 4, lonlat);
+            
+                printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+                printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+                if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
+                {
+                    double below_eq = 10000000 - XY[0].m_Y;
+                    double above_eq = XY[1].m_Y;
+                    if(below_eq > above_eq)
+                    {
+                        XY[1].m_Y = 10000000;
+                        XY[2].m_Y = 10000000;
+                    }
+                    else
+                    {
+                        XY[0].m_Y = 0;
+                        XY[3].m_Y = 0;
+                    }
+                }
+            
+                printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
+                printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
+            
+                double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
+                double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
+            
+                double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
+                double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
+            
+                free(lonlat);
+                free(XY);
+            
+                Boundary[0] = ceil(minX/2.0)*2;
+                Boundary[1] = ceil(minY/2.0)*2;
+                Boundary[2] = floor(maxX/2.0)*2;
+                Boundary[3] = floor(maxY/2.0)*2;
                 
             }
-            printf("lonlatboundary = %f\t%f\t%f\t%f\n",lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
-            
-            D2DPOINT *lonlat = (D2DPOINT *) malloc(sizeof(D2DPOINT) * 4);
-            lonlat[0].m_X = lonlatboundary[0];
-            lonlat[0].m_Y = lonlatboundary[1];
-            lonlat[1].m_X = lonlatboundary[0];
-            lonlat[1].m_Y = lonlatboundary[3];
-            lonlat[2].m_X = lonlatboundary[2];
-            lonlat[2].m_Y = lonlatboundary[3];
-            lonlat[3].m_X = lonlatboundary[2];
-            lonlat[3].m_Y = lonlatboundary[1];
-            
-            D2DPOINT *XY = wgs2ps(param, 4, lonlat);
-            
-            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
-            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
-            
-            if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
-            {
-                double below_eq = 10000000 - XY[0].m_Y;
-                double above_eq = XY[1].m_Y;
-                if(below_eq > above_eq)
-                {
-                    XY[1].m_Y = 10000000;
-                    XY[2].m_Y = 10000000;
-                }
-                else
-                {
-                    XY[0].m_Y = 0;
-                    XY[3].m_Y = 0;
-                }
-            }
-            
-            printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
-            printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
-            
-            double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
-            double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
-            
-            double minY = min(XY[3].m_Y, min(XY[2].m_Y, min(XY[0].m_Y, XY[1].m_Y)));
-            double maxY = max(XY[3].m_Y, max(XY[2].m_Y, max(XY[0].m_Y, XY[1].m_Y)));
-            
-            free(lonlat);
-            free(XY);
-            
-            Boundary[0] = ceil(minX/2.0)*2;
-            Boundary[1] = ceil(minY/2.0)*2;
-            Boundary[2] = floor(maxX/2.0)*2;
-            Boundary[3] = floor(maxY/2.0)*2;
-            
             printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
             
             CSize Boundary_size;
