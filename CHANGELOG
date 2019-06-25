@@ -3,7 +3,7 @@ SETSM Change Log
 This file briefly describes the changes to the SETSM software package.
 The most recent changes are listed first.
 
-SETSM 4.0.0 (6/??/2019)
+SETSM 4.0.0 (6/26/2019)
 
 * Changes since 3.4.3
     - Changed code to C++
