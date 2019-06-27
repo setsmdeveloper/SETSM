@@ -3384,7 +3384,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
-                        total_memory = CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level,level,minmaxHeight);
+                        double level_total_memory =  CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level,level,minmaxHeight,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,Imagesizes,data_size_lr);
+                        
+                        if(total_memory < level_total_memory)
+                            total_memory = level_total_memory;
+                        
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
@@ -4625,7 +4629,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     return final_iteration;
 }
 
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight)
+double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes)
 {
     double Memory = 0;
     
@@ -4655,7 +4659,7 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     Memory += (image + oriimage + magimage);
     //printf("memory 1 %f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage);
     long int GridPT  = (double)(sizeof(D2DPOINT)*Size_Grid2D.height*Size_Grid2D.width);
-    Memory += (GridPT);
+    Memory += (GridPT)*3;
     //printf("memory 2 %f\n",Memory);
     long int GridPT3_size = (double)(sizeof(UGRID)*Size_Grid2D.height*Size_Grid2D.width);
     Memory += (GridPT3_size);
@@ -4707,41 +4711,44 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
         long int grid_voxel = (double)(sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
         for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
         {
-            bool check_blunder_cell = true;
-            double th_height = 1000;
-            
-            if ( pyramid_step >= 2)
-                check_blunder_cell = false;
-            else if( GridPT3[t_i].Matched_flag != 0)
+        if(check_image_boundary(info,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
             {
-                if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
+                bool check_blunder_cell = true;
+                double th_height = 1000;
+                
+                if ( pyramid_step >= 2)
+                    check_blunder_cell = false;
+                else if( GridPT3[t_i].Matched_flag != 0)
                 {
-                    if(pyramid_step <= 1)
+                    if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
                     {
-                        if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
-                            check_blunder_cell = false;
-                    }
-                    
-                    if(pyramid_step == 1)
-                    {
-                        if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
-                            check_blunder_cell = false;
-                    }
-                    
-                    if(pyramid_step == 0)
-                    {
-                        if(abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height)
-                            check_blunder_cell = false;
+                        if(pyramid_step <= 1)
+                        {
+                            if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
+                                check_blunder_cell = false;
+                        }
+                        
+                        if(pyramid_step == 1)
+                        {
+                            if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
+                                check_blunder_cell = false;
+                        }
+                        
+                        if(pyramid_step == 0)
+                        {
+                            if(abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height)
+                                check_blunder_cell = false;
+                        }
                     }
                 }
-            }
-            
-            if(!check_blunder_cell)
-            {
-                int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
                 
-                if(NumberofHeightVoxel > 0 )
-                    grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+                if(!check_blunder_cell)
+                {
+                    int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
+                    
+                    if(NumberofHeightVoxel > 0 )
+                        grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+                }
             }
         }
         Memory += (grid_voxel);
@@ -9496,7 +9503,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
 #pragma omp parallel for schedule(guided)
     for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
     {
-        if(check_image_boundary(proinfo,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
+       if(check_image_boundary(proinfo,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
         {
             int change_step_min = 0;
             int change_step_max = 0;
