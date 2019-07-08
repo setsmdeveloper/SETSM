@@ -13,13 +13,15 @@ the Ohio State University, www.osu.edu.
 Software engineering team:  Judy Gardiner and Karen Tomko, 
 the Ohio Supercomputer Center, www.osc.edu
 
-This software includes code derived from the voronoi algorithm by 
-Steven Fortune (http://ect.bell-labs.com/who/sjf/) 
-as modified by Derek Bradley 
-(http://zurich.disneyresearch.com/derekbradley/voronoi.html)
-
-Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
-Algorithmica 2, 153-174.
+The triangulation algorithm in the code was adapted from the methods in these 
+two papers:
+[1] Wenzhou Wu, Yikang Rui, Fenzhen Su, Liang Cheng & Jiechen Wang (2014) 
+Novel parallel algorithm for constructing Delaunay triangulation based on a
+twofold-divide-and-conquer scheme, GIScience & Remote Sensing, 51:5, 537-554, DOI:
+10.1080/15481603.2014.946666
+[2] Leonidas Guibas & Jorge Stolfi (1985) Primitives for the Manipulation of 
+General Subdivisions and the Computation of Voronoi Diagrams, ACM Transactions on 
+Graphics, 51:2, 74-123.
 
 ## Installation instructions
 
@@ -48,15 +50,26 @@ make
 make install
 ```
 
-### Building SETSM using one of the provided Makefiles
+### Building SETSM using the provided Makefile
 
-Makefiles are provided for building SETSM with the Intel, PGI, GNU and Cray 
-compilers.  Select the appropriate Makefile.* based on the compiler you plan to 
-use.  Copy the selected file to Makefile and edit it if necessary to set the 
-correct path to the TIFF and GeoTIFF libraries.  SETSM can then be built simply by typing:
+The Makefile supports building SETSM with the Intel, GNU and Cray 
+compilers.  Use one of the following commands as appropriate.  If no compiler 
+is specified it defaults to gcc/g++.
 ```
+COMPILER=intel make
+COMPILER=cray make
 make
 ```
+
+You may need to edit the Makefile to set the 
+correct path to the TIFF and GeoTIFF libraries.
+
+You can also set the OPTFLAGS variable to override the default optimization flags,
+for example,
+```
+COMPILER=intel OPTFLAGS='-O3 -fp-model precise' make
+```
+
 
 #### Parallel SETSM with MPI (Message-Passing Interface)
 To build SETSM for parallel computing with MPI, follow the above steps then use:
@@ -69,7 +82,7 @@ OpenMPI.  It should work with other MPI implementations with minor changes
 to the Makefile.
 
 If SETSM is built with both MPI and OpenMP it is usually best to run one 
-MPI process per compute node and allow threading within the node.
+MPI process per compute node and allow multithreading within the node.
 
 #### A note about precision
 
@@ -121,17 +134,6 @@ make install
 ```
 
 Note:  The SETSM CMake build with the Cray compiler does not yet work.  
-
-### Building SETSM with an alternative triangulation library
-
-By default, SETSM uses Steve Fortune's voronoi code for Delaunay triangulation.  
-It also supports Jonathan Shewchuk's Triangle library, available at 
-https://www.cs.cmu.edu/~quake/triangle.html.  To use Triangle in place of the 
-default triangulation code, download the code and place the files triangle.c 
-and triangle.h in the directory with the SETSM code.  Use Makefile.Triangle as 
-a model for building SETSM with Triangle.  Note that Triangle has restrictions 
-related to commercial distribution.  The user is responsible for complying with 
-all license terms.
 
 ## License
 
