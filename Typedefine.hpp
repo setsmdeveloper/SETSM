@@ -14,16 +14,6 @@
  * limitations under the License.
  */
 
-/*
- * Includes code derived from the voronoi algorithm by Steven Fortune
- * (http://ect.bell-labs.com/who/sjf/)
- * as modified by Derek Bradley
- * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
- *
- * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
- * Algorithmica 2, 153-174.
- */
-
 #include "tiff.h"
 
 #ifndef _Typedefine_H_
@@ -37,7 +27,7 @@
 #define MaxImages 3
 
 #ifndef bool
-#define bool unsigned char
+//#define bool unsigned char
 #define true 0x1
 #define false 0x0
 #endif
@@ -155,7 +145,7 @@ typedef struct UpdateGrid{
 
 typedef struct tagVoxelinfo
 {
-    //float GNCC;
+    //float ANCC;
     float height;
     bool flag_cal;
     float INCC;
@@ -236,6 +226,7 @@ typedef struct ProjectInfo{
 	int threads_num;
     int number_of_images;
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
+    uint8 pyramid_level;
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -259,6 +250,18 @@ typedef struct ProjectInfo{
 	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
     bool check_Matchtag;
     bool check_selected_image[MaxImages];
+    bool check_full_cal;
+    
+    //SGM test flag
+    bool check_SNCC;
+    bool check_updateheight;
+    bool check_blunderdetection;
+    bool check_NCCpeak;
+    bool check_minTH;
+    bool check_adaptive_P2;
+    bool check_orthoblunder;
+    bool check_8d;
+    int SGM_py;
     
     FrameInfo frameinfo;
     
@@ -295,7 +298,8 @@ typedef struct ArgumentInfo{
     int ortho_count;
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
-	
+    uint8 pyramid_level;
+    
     char Image[MaxImages][500];
 	char Outputpath[500];
 	char Outputpath_name[500];
@@ -331,6 +335,18 @@ typedef struct ArgumentInfo{
     bool check_EO;
     bool check_fl;
     bool check_ccd;
+    bool check_full_cal;
+    
+    //SGM test flag
+    bool check_SNCC;
+    bool check_updateheight;
+    bool check_blunderdetection;
+    bool check_NCCpeak;
+    bool check_minTH;
+    bool check_adaptive_P2;
+    bool check_orthoblunder;
+    bool check_8d;
+    int SGM_py;
     
 } ARGINFO;
 

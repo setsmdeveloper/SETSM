@@ -1,3 +1,6 @@
+#ifndef SETSM_CODE_H
+#define SETSM_CODE_H
+
 /*
  * Copyright 2017 Myoung-Jong Noh
  *
@@ -14,17 +17,7 @@
  * limitations under the License.
  */
 
-/*
- * Includes code derived from the voronoi algorithm by Steven Fortune
- * (http://ect.bell-labs.com/who/sjf/)
- * as modified by Derek Bradley
- * (http://zurich.disneyresearch.com/derekbradley/voronoi.html)
- *
- * Reference: Steve J. Fortune (1987) A Sweepline Algorithm for Voronoi Diagrams,
- * Algorithmica 2, 153-174.
- */
-
-#include "Typedefine.h"
+#include "Typedefine.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -46,7 +39,7 @@ typedef struct nnXY
 	float Z;
 } NNXY;
 
-int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath);
+int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 char* SetOutpathName(char *_path);
 
 bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
@@ -60,7 +53,7 @@ void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *
 void SetPySizes(CSize *data_size_lr, CSize Lsubsetsize, int level);
 void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, int pre_DEMtif, int IsRA, double f_demsize);
 void SetThs(ProInfo *proinfo,int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start);
-D2DPOINT *SetGrids(bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
+D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
 				   double *py_resolution, double *grid_resolution, double *subBoundary);
 UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,char* metafilename);
 int	 CalTotalIteration(uint8 DEM_level,int level);
@@ -119,7 +112,14 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 					   uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
 					   double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
 					   char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next,int Py_combined_level, bool check_matching_rate);
-void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration);
+/*
+void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index, FILE* pfile);
+void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost, double ortho_th, int pair_index, FILE* pfile);
+*/
+void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index);
+void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost, double ortho_th, int pair_index);
+
+void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel);
 
 void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level);
 
@@ -144,7 +144,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
 D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 D2DPOINT OriginalToPyramid_single(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
-int SelectMPs(NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
+int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
 			  double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
 			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle);
 
@@ -179,7 +179,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
 bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
 			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
 
-void TINCreate(D3DPOINT *ptslists,char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri);
+void TINCreate(D3DPOINT *ptslists,char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution);
 bool blunder_detection_TIN(int pre_DEMtif, double* ortho_ncc, double* INCC,bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
 						   D3DPOINT *ptslists, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 
 						   uint32 *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma);
@@ -194,7 +194,8 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
 bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update);
 UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
 					  double *minH_grid, double *maxH_grid, BL BL_param,D3DPOINT *pts, UI3DPOINT *tris,int IsRA, double MPP, char* save_path, uint8 tile_row, uint8 tile_col,bool check_level_end, double seedDEMsigma, bool level_check_matching_rate);
-
+UGRID* SetHeightRange_cp(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
+                         double *minH_grid, double *maxH_grid, BL BL_param,D3DPOINT *pts, UI3DPOINT *tris,int IsRA, double MPP, char* save_path, uint8 row, uint8 col,bool check_level_end,double seedDEMsigma, bool level_check_matching_rate);
 UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 UGRID* ResizeGirdPT3_RA(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 
@@ -227,10 +228,10 @@ CSize Envihdr_reader(char *filename);
 CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir);
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level);
+double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes);
 
 //orthogeneration
-void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide);
+void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide,double **ImageParam);
 D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg);
 uint16* CreateImagePyramid_ortho(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
@@ -289,3 +290,6 @@ D2DPOINT ImageToPhoto_single(D2DPOINT _image, float _CCDSize, CSize _imgsize);
 bool OpenDMCproject(char* project_path,ProInfo *proinfo, ARGINFO args);
 void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundary, double* _minmaxheight, double* _Hinterval);
 bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double gridspace, CSize DEM_size, double minX, double maxY, double Ortho_resolution, EO Photo, CAMERA_INFO m_Camera, RM M);
+double Correlate(double *L, double *R, int N);
+double InterpolatePatch(uint16 *Image, long int position, CSize ImageSize, double dx, double dy);
+#endif // SETSM_CODE_H

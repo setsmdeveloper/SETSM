@@ -1,4 +1,4 @@
-#include "setsmgeo.h"
+#include "setsmgeo.hpp"
 #include <stdint.h>
 
 #define FLOAT 4
@@ -8,7 +8,7 @@
 #define N(a) (sizeof(a) / sizeof(a[0]))
 #define GDAL_NODATA 42113
 static const TIFFFieldInfo xtiffFieldInfo[] = {
-    { GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, "GDAL_NODATA" }
+    { GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDAL_NODATA" }
 };
 
 #define STRIP_SIZE_DEFAULT 8192
@@ -37,15 +37,15 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
     }
 
     if (bytes == 0)
-    { 
+    {
         // Unknown data type
         return -1;
     }
 
     long int int_mem = (long)(bytes*height*width);
     double tif_mem = (double)(int_mem/1024.0/1024.0/1024.0);
-    printf("tif mem %f\n",tif_mem);
-    if(tif_mem < 4)
+    printf("tif mem %f\tsize %d\t%d\tdata type %d\n",tif_mem,height,width,data_type);
+    if(tif_mem < 3.5)
         tif = XTIFFOpen(filename, "w");
     else
         tif = XTIFFOpen(filename, "w8");
@@ -54,7 +54,7 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
         printf("WriteGeotiff failed in XTIFFOpen\n");
         return -1;
     }
-    
+
     gtif = GTIFNew(tif);
     if (!gtif)
     {
@@ -62,7 +62,7 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
         XTIFFClose(tif);
         return -1;
     }
-    
+
     SetUpTIFFDirectory(tif, width, height, scale, minX, maxY, data_type);
     SetUpGeoKeys(gtif, projection, zone, NS_hemisphere);
     for (int row=0; row<height; row++)
@@ -72,9 +72,9 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
             TIFFError("WriteGeotiff_DEM","failure in WriteScanline on row %d\n", row);
         }
     }
-                
+
     GTIFWriteKeys(gtif);
-    GTIFFree(gtif); 
+    GTIFFree(gtif);
     XTIFFClose(tif);
     return 0;
 }
@@ -108,7 +108,7 @@ CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_
     return image_size;
 }
 
-int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, double minX, double maxY, int data_type)
+void SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, double minX, double maxY, int data_type)
 {
     double tiepoints[6] = {0};
     double pixscale[3] = {0};
@@ -116,7 +116,7 @@ int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, dou
     tiepoints[4] = maxY;
     pixscale[0] = scale;
     pixscale[1] = scale;
-    
+
     TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
     TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
     TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_LZW);
@@ -126,7 +126,7 @@ int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, dou
     TIFFSetField(tif, TIFFTAG_GEOPIXELSCALE, 3,pixscale);
     TIFFSetField(tif, TIFFTAG_PREDICTOR, 1);
     TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
-    
+
     switch (data_type)
     {
         case FLOAT:
@@ -153,7 +153,7 @@ int SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, dou
     }
 }
 
-int SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere)
+void SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere)
 {
     GTIFKeySet(gtif, GTModelTypeGeoKey, TYPE_SHORT, 1, ModelProjected);
     GTIFKeySet(gtif, GTRasterTypeGeoKey, TYPE_SHORT, 1, RasterPixelIsArea);
@@ -202,4 +202,3 @@ int SetUpGeoKeys(GTIF *gtif, int projection, int zone, int NS_hemisphere)
         }
     }
 }
-
