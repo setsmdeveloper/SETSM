@@ -14612,12 +14612,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             if( !(Pyramid_step == 0 && iteration == 3) /*&& Pyramid_step > proinfo->SGM_py*/)
             {
                 UI3DPOINT *trilists;
-                
+                FullTriangulation *origTri;
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
                 sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                 printf("TINCreate resolution %f\n",grid_resolution);
-                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -14688,14 +14688,22 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         flag = false;
                     
                     printf("start TIN\n");
-
+                    
+                    D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[1]);
                     D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                     uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
                     FILE *pTri;
                     
+                    int t_blunder_counts=0;
                     int t_tri_counts = 0;
                     for(i=0;i<count_MPs;i++)
                     {
+                        if (ptslists[i].flag == 1)
+                        {
+                            input_blunder_pts[t_blunder_counts].m_X = ptslists[i].m_X;
+                            input_blunder_pts[t_blunder_counts].m_Y = ptslists[i].m_Y;
+                            t_blunder_counts++;
+                        }
                         if(flag)
                         {
                             if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
@@ -14721,12 +14729,14 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 
                     }
                     
-                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
+                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(count_MPs-t_blunder_counts)*4);
                     
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                    printf("TINCreate resolution %f\n",grid_resolution);
-                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
+                    printf("TINRecreate resolution %f\n",grid_resolution);
+                    printf("Removing and Retriangulating");
+                    TINRecreate(input_blunder_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri);
                     
+                    free(input_blunder_pts);
                     free(input_tri_pts);
                     
                     trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
@@ -14865,11 +14875,11 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     return count;
 }
 
-void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution)
+FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
-        return;
+        return NULL;
     }
 
     double minX_ptslists = min_max[0];
@@ -14922,12 +14932,63 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
         col = tris[t][2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
     }
-
     delete [] tris;
-    delete triangulation;
     delete [] points_ptrs;
     delete [] grid_points;
+    return triangulation;
 }
+
+
+
+FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri)
+{
+
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
+
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    printf("\tTINRecreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    GridPoint *grid_points = new GridPoint[numofpts];
+    for (std::size_t t = 0; t < numofpts; ++t)
+    {
+        GridPoint p = {(ptslists[t].m_X - minX_ptslists) / resolution, (ptslists[t].m_Y - minY_ptslists) / resolution};
+        grid_points[t].col = p.col;
+        grid_points[t].row = p.row;
+        index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
+        oldTri->RemovePointAndRetriangulate(p);
+    }
+
+    std::size_t max_num_tris = 2 * numofpts;
+    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    *count_tri = (int)(oldTri->GetAllTris(tris));
+
+    for (std::size_t t = 0; t < *count_tri; t++)
+    {
+        int row, col;
+
+        row = tris[t][0].row;
+        col = tris[t][0].col;
+        trilists[t].m_X = index_in_ptslists[row * width + col];
+
+        row = tris[t][1].row;
+        col = tris[t][1].col;
+        trilists[t].m_Y = index_in_ptslists[row * width + col];
+        
+        row = tris[t][2].row;
+        col = tris[t][2].col;
+        trilists[t].m_Z = index_in_ptslists[row * width + col];
+    }
+    delete [] tris;
+    delete [] grid_points;
+    return oldTri;
+}
+
+
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
                            D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,

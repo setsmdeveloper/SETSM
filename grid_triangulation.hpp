@@ -34,6 +34,7 @@ class GridTriangulation
 	public:
 		GridTriangulation(INDEX width, INDEX height);
 		~GridTriangulation();
+		Grid<GridType, IterType> *getGrid();
 		void Triangulate(GridPoint *points[], size_t num_points);
 		void SetEdgeOut(const GridPoint &p, Edge *e) { this->grid->SetElem(p, e); }
 		Edge *GetEdgeOut(const GridPoint &p) { return this->grid->GetElem(p); }

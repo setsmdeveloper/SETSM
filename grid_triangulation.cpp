@@ -91,6 +91,14 @@ GridTriangulation<GridType, IterType>::~GridTriangulation()
 	delete this->edge_list;
 }
 
+
+template <typename GridType, typename IterType>
+Grid<GridType, IterType> *GridTriangulation<GridType, IterType>::getGrid()
+{
+	return this->grid;
+}
+
+
 template <typename GridType, typename IterType>
 Edge *GridTriangulation<GridType, IterType>::AddEdgeAndTwin(const GridPoint &orig, const GridPoint &dest)
 {
