@@ -14734,8 +14734,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                     printf("TINRecreate resolution %f\n",grid_resolution);
                     printf("Removing and Retriangulating");
-                    TINRecreate(input_blunder_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri);
-                    
+                    origTri = TINRecreate(input_tri_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
+                    printf("Done Retriangulating\n");
                     free(input_blunder_pts);
                     free(input_tri_pts);
                     
@@ -14915,7 +14915,6 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(triangulation->GetAllTris(tris));
-
     for (std::size_t t = 0; t < *count_tri; t++)
     {
         int row, col;
@@ -14940,7 +14939,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts
 
 
 
-FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri)
+FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
 {
 
     double minX_ptslists = min_max[0];
@@ -14950,23 +14949,25 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numofp
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
-    printf("\tTINRecreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
+    printf("\tTINRecreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numblunders, width, height, resolution);
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
-    GridPoint *grid_points = new GridPoint[numofpts];
     for (std::size_t t = 0; t < numofpts; ++t)
     {
-        GridPoint p = {(ptslists[t].m_X - minX_ptslists) / resolution, (ptslists[t].m_Y - minY_ptslists) / resolution};
-        grid_points[t].col = p.col;
-        grid_points[t].row = p.row;
-        index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
+        index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
+    }
+    for (std::size_t t = 0; t < numblunders; ++t)
+    {
+        GridPoint p = {(blunderlist[t].m_Y - minY_ptslists) / resolution, (blunderlist[t].m_X - minX_ptslists) / resolution};
         oldTri->RemovePointAndRetriangulate(p);
     }
+
+    
 
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(oldTri->GetAllTris(tris));
-
+    printf("Check\n");
     for (std::size_t t = 0; t < *count_tri; t++)
     {
         int row, col;
@@ -14983,8 +14984,8 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numofp
         col = tris[t][2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
     }
+    printf("LastCheck!\n");
     delete [] tris;
-    delete [] grid_points;
     return oldTri;
 }
 
