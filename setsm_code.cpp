@@ -14949,7 +14949,7 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblu
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
-    printf("\tTINRecreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numblunders, width, height, resolution);
+    printf("\tTINRecreate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
     for (std::size_t t = 0; t < numofpts; ++t)

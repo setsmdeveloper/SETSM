@@ -59,6 +59,27 @@ inline INT128 InCircle(const GridPoint &a, const GridPoint &b, const GridPoint &
 	return d_13 * bc - d_23 * ac + d_33 * ab;
 }
 
+/* Assumes a, b, c in counter-clockwise order
+ * Then	positive if d in circle,
+ * 	negative if d outside circle,
+ * 	zero if d on circle
+ */
+inline bool InCircleOrient(const GridPoint &a, const GridPoint &b, const GridPoint &c, const GridPoint &d)
+{
+
+        INT128 d2 = d.col*d.col+d.row*d.row; 
+        INT128 c2 = c.col*c.col+c.row*c.row;
+        INT128 b2 = b.col*b.col+b.row*b.row;
+        INT128 t1 = a.col*(b.row*(c2-d2)-b2*(c.row-d.row)+c.row*d2-d.row*c2);
+	INT128 t2 = a.row*(b.col*(c2-d2)-b2*(c.col-d.col)+c.col*d2-d.col*c2);
+	INT128 t3 = (a.row*a.row+a.col*a.col)*(b.col*(c.row-d.row)-b.row*(c.col-d.col)+c.col*d.row-d.col*c.row);
+        INT128 t4 = b.col*(c.row*d2-d.row*c2)-b.row*(c.col*d2-d.col*c2)+b2*(c.col*d.row-d.col*c.row);
+	INT128 det = t1-t2+t3-t4;
+
+	return det>0;
+}
+
+
 inline bool LessThanPtrXY(GridPoint *a, GridPoint *b)
 {
 	if (a && b) return LessThanXY(*a, *b);
@@ -737,7 +758,7 @@ Edge *GridTriangulation<GridType, IterType>::NextCrossEdge(Edge *base)
 	// are valid, the code arbitrarily select the
 	// left-to-right candidate
 	if (!valid_l && !valid_r) return 0;
-	else if (!valid_l || (valid_r && (InCircle(l_cand->twin->orig, l_cand->orig, r_cand->orig, r_cand->twin->orig) > 0))) return (this->Bridge(*base, *(r_cand->twin)))->twin;
+	else if (!valid_l || (valid_r && (InCircle(l_cand->twin->orig, l_cand->orig, r_cand->orig, r_cand->twin->orig)) > 0)) return (this->Bridge(*base, *(r_cand->twin)))->twin;
 	else return (this->Bridge(*l_cand, *base))->twin;
 }
 
@@ -781,6 +802,27 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 	// Base Case
 	if (n <= 3) return;
 
+        if( n == 4 )
+        {
+            TriangulateEmpty4(edge);
+            return;
+        }
+        if( n == 5 )
+        {
+            TriangulateEmpty5(edge);
+            return;
+        }
+        if( n == 6 )
+        {
+            TriangulateEmpty6(edge);
+            return;
+        }/*
+        if( n == 7 )
+        {
+            TriangulateEmpty7(edge);
+            return;
+        }
+*/
 	// Recursive Case
 	std::vector<Edge *> edges;
 	edges.reserve(n);
@@ -797,12 +839,13 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 		bool is_delaunay = true;
 		for (int j = 2; j < n; ++j)
 		{
-			if ((j != i) && (InCircle(e->twin->orig, e->orig, edges[i]->orig, edges[j]->orig) > 0))
+			if ((j != i) && (InCircle(e->twin->orig, e->orig, edges[i]->orig, edges[j]->orig)>0))
 			{
 				is_delaunay = 0;
 				break;
 			}
 		}
+
 
 		if (is_delaunay)
 		{
@@ -827,6 +870,343 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 		}
 	}
 }
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::TriangulateEmpty4(Edge &edge)
+{
+
+std::vector<Edge *> edges;
+edges.reserve(4);
+Edge *e = &edge;
+	for (int i = 0; i < 4; ++i)
+	{
+		edges.push_back(e);
+		e = e->dnext;
+	}
+        if(InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[3]->orig)>0)
+	{
+		this->Bridge(*(edges[0]),*(edges[3]));
+	}else{
+		this->Bridge(*(edges[1]), *(edges[0]));
+	}
+}
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::TriangulateEmpty5(Edge &edge)
+{
+
+	std::vector<Edge *> edges;
+	edges.reserve(5);
+	Edge *e = &edge;
+	for (int i = 0; i < 5; ++i)
+	{
+		edges.push_back(e);
+		e = e->dnext;
+	}
+	auto Triangulatev0 = [this, edges]()
+	{
+		this->Bridge(*(edges[1]), *(edges[0]));
+		this->Bridge(*(edges[4]), *(edges[3]));
+	};
+	auto Triangulatev1 = [this, edges]()
+	{
+		this->Bridge(*(edges[2]), *(edges[1]));
+		this->Bridge(*(edges[0]), *(edges[4]));
+	};
+	auto Triangulatev2 = [this, edges]()
+	{
+		this->Bridge(*(edges[3]), *(edges[2]));
+		this->Bridge(*(edges[1]), *(edges[0]));
+	};
+	auto Triangulatev3 = [this, edges]()
+	{
+		this->Bridge(*(edges[4]), *(edges[3]));
+		this->Bridge(*(edges[2]), *(edges[1]));
+
+	};
+	auto Triangulatev4 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};
+        if(InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[3]->orig)>0)
+	{
+		if( InCircle(edges[1]->orig, edges[0]->orig, edges[3]->orig, edges[4]->orig)>0 )
+		{
+			if( InCircle(edges[2]->orig, edges[1]->orig, edges[3]->orig, edges[4]->orig)>0 )
+			{
+				Triangulatev4();
+			}else
+			{
+				Triangulatev1();
+			}
+		}else
+			Triangulatev3();
+		{
+					}
+	}else
+	{
+		if( InCircle(edges[2]->orig, edges[0]->orig, edges[3]->orig, edges[4]->orig)>0)
+		{
+			if( InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[4]->orig)>0 )
+			{
+				Triangulatev4();
+			}else
+			{
+				Triangulatev2();
+			}
+		}else
+		{
+			Triangulatev0();
+		}
+	}
+
+}
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
+{
+
+	std::vector<Edge *> edges;
+	edges.reserve(6);
+	Edge *e = &edge;
+	for (int i = 0; i < 6; ++i)
+	{
+		edges.push_back(e);
+		e = e->dnext;
+	}
+	auto TriangulateN = [this, edges](int vert)
+	{
+		Edge *e = this->Bridge(*(edges[1+vert]), *(edges[vert]));
+		this->Bridge(*(edges[2+vert]), *(e->twin));
+		this->Bridge(*(edges[(4+vert)%6]), *(edges[3+vert]));
+	};
+	/*auto N1 = [this, edges]()
+	{
+		e = this->Bridge(*(edges[2]), *(edges[1]));
+		this->Bridge(*(edges[3]), *(e->twin));
+		this->Bridge(*(edges[5]), *edges[4]);
+	};
+	auto N2 = [this, edges]()
+	{
+		e = this->Bridge(*(edges[3]), *(edges[2]));
+		this->Bridge(*(edges[4]), *(e->twin));
+		this->Bridge(*(edges[0]), *(edges[5]);
+	};*/
+	auto TriangulateStar = [this, edges](int vert)
+	{
+		Edge *e = this->Bridge(*(edges[(1+vert)%6]), *(edges[vert%6]));
+		this->Bridge(*(edges[(2+vert)%6]), *(e->twin));
+		this->Bridge(*(edges[(5+vert)%6]), *(edges[(4+vert)%6]));
+	};
+	/*auto Star1 = [this, edges]()
+	{
+		e = this->Bridge(*(edges[2]), *(edges[1]));
+		this->Bridge(*(edges[3]), *(e->twin));
+		this->Bridge(*(edges[0]), *(edges[5]));
+	};
+        auto Star2 = [this, edges]()
+	{
+		e = this->Bridge(*(edges[3]), *(edges[2]));
+		this->Bridge(*(edges[4]), *(e->twin));
+		this->Bridge(*(edges[1]), *(edges[0]));
+
+	};
+	auto Star3 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};
+	auto Star4 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};
+	auto Star5 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};*/
+	auto TriangulateAntiN = [this, edges](int vert)
+	{
+		Edge *e = this->Bridge(*(edges[2+vert]), *(edges[1+vert]));
+		this->Bridge(*(e->twin), *(edges[vert]));
+		this->Bridge(*(edges[(5+vert)%6]), *(edges[(4+vert)%6]));
+	};
+	/*auto AntiN1 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};
+	auto AntiN2 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};*/
+	auto TriangulateDiamond = [this, edges](int vert)
+	{
+		this->Bridge(*(edges[1+vert]), *(edges[vert]));
+		this->Bridge(*(edges[3+vert]), *(edges[2+vert]));
+		this->Bridge(*(edges[(5+vert)%6]), *(edges[4+vert]));
+	};/*
+	auto Diamond1 = [this, edges]()
+	{
+		this->Bridge(*(edges[0]), *(edges[4]));
+		this->Bridge(*(edges[3]), *(edges[2]));
+	};*/
+	if(InCircle(edges[3]->orig, edges[2]->orig, edges[0]->orig, edges[1]->orig)>0)
+	{
+		if( InCircle(edges[3]->orig, edges[2]->orig, edges[5]->orig, edges[4]->orig)>0 )
+		{
+			if( InCircle(edges[3]->orig, edges[2]->orig, edges[4]->orig, edges[1]->orig)>0 )
+			{
+				if( InCircle(edges[1]->orig, edges[0]->orig, edges[3]->orig, edges[4]->orig)>0 )
+				{
+					if( InCircle(edges[1]->orig, edges[0]->orig, edges[4]->orig, edges[5]->orig)>0 )
+					{
+						TriangulateStar(1);
+					}else
+					{
+						TriangulateN(1);
+					}
+				}else
+				{
+					TriangulateAntiN(0);
+				}
+			}else
+			{
+				if( InCircle(edges[2]->orig, edges[1]->orig, edges[4]->orig, edges[5]->orig)>0 )
+				{
+					TriangulateN(2);
+				}else
+				{
+					if( InCircle(edges[1]->orig, edges[0]->orig, edges[4]->orig, edges[5]->orig)>0 )
+					{
+						TriangulateAntiN(1);
+					}else
+					{
+						TriangulateStar(4);
+					}
+				}
+			}
+		}else
+		{
+			if( InCircle(edges[3]->orig, edges[2]->orig, edges[5]->orig, edges[1]->orig)>0 )
+			{
+				if( InCircle(edges[4]->orig, edges[3]->orig, edges[5]->orig, edges[1]->orig)>0 )
+				{
+					if( InCircle(edges[1]->orig, edges[0]->orig, edges[3]->orig, edges[4]->orig)>0 )
+					{
+						if( InCircle(edges[1]->orig, edges[0]->orig, edges[4]->orig, edges[5]->orig)>0 )
+						{
+							TriangulateStar(1);
+						}else
+						{
+							TriangulateN(1);
+						}
+					}else
+					{
+						TriangulateAntiN(0);
+					}
+				}else
+				{
+					if( InCircle(edges[1]->orig, edges[0]->orig, edges[3]->orig, edges[5]->orig)>0 )
+					{
+						TriangulateDiamond(1);
+					}else
+					{
+						if( InCircle(edges[0]->orig, edges[5]->orig, edges[3]->orig, edges[4]->orig)>0 )
+						{
+							TriangulateAntiN(0);
+						}else
+						{
+							TriangulateStar(3);
+						}
+					}
+				}
+			}else
+			{
+				TriangulateStar(5);
+			}
+		}
+	}else
+	{
+		if( InCircle(edges[3]->orig, edges[2]->orig, edges[5]->orig, edges[4]->orig)>0)
+		{
+			if( InCircle(edges[3]->orig, edges[2]->orig, edges[0]->orig, edges[4]->orig)>0 )
+			{
+				if( InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[4]->orig)>0 )
+				{
+					if( InCircle(edges[2]->orig, edges[1]->orig, edges[5]->orig, edges[4]->orig)>0 )
+					{
+						if( InCircle(edges[1]->orig, edges[0]->orig, edges[5]->orig, edges[4]->orig)>0 )
+						{
+							TriangulateStar(4);
+						}else
+						{
+							TriangulateAntiN(1);
+						}
+					}else
+					{
+						TriangulateN(2);
+					}
+				}else
+				{
+					if( InCircle(edges[0]->orig, edges[5]->orig, edges[2]->orig, edges[4]->orig)>0 )
+					{
+						TriangulateDiamond(0);
+					}else
+					{
+						if( InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[5]->orig)>0 )
+						{
+							TriangulateN(2);
+						}else
+						{
+							TriangulateStar(2);
+						}
+					}
+				}
+			}else
+			{
+				TriangulateStar(0);
+			}
+		}else
+		{
+			if( InCircle(edges[3]->orig, edges[2]->orig, edges[0]->orig, edges[5]->orig)>0 )
+			{
+				if( InCircle(edges[1]->orig, edges[0]->orig, edges[2]->orig, edges[5]->orig)>0 )
+				{
+					TriangulateStar(5);
+				}else
+				{
+					TriangulateAntiN(2);
+				}	
+			}else
+			{
+				if( InCircle(edges[0]->orig, edges[5]->orig, edges[3]->orig, edges[4]->orig)>0 )
+				{
+					TriangulateStar(0);
+				}else
+				{
+					TriangulateN(0);
+				}
+			}
+		}
+	}
+
+}
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::TriangulateEmpty7(Edge &edge)
+{
+
+
+
+}
+
 
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::TriangulateBorder(Edge& e, const GridPoint& p)

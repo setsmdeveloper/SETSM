@@ -56,6 +56,10 @@ class GridTriangulation
 			this->grid->IgnorePoint(p);
 		}
 		void TriangulateEmptyPolygon(Edge &edge);
+		void TriangulateEmpty4(Edge &edge);	
+		void TriangulateEmpty5(Edge &edge);	
+		void TriangulateEmpty6(Edge &edge);
+		void TriangulateEmpty7(Edge &edge);
 		void TriangulateBorder(Edge& e, const GridPoint& p);
 		void RemovePointAndRetriangulate(const GridPoint &p);
 
