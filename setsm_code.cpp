@@ -11610,10 +11610,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         int row_iter[8] = { 1, 1, 1, -1,  1,  1, -1, -1};
         int col_iter[8] = { 1,-1, 1,  1,  1, -1,  1, -1};
         
-        int start_row[8]    = {                    0,                   0,                   0, Size_Grid2D.height-1,                   0,                   0,  Size_Grid2D.height-1 , Size_Grid2D.height-1};
-        int end_row[8]      = {Size_Grid2D.height   , Size_Grid2D.height , Size_Grid2D.height ,                    0, Size_Grid2D.height , Size_Grid2D.height ,                     0 ,                    0};
-        int start_col[8]    = {                    0, Size_Grid2D.width-1,                   0,                    0,                   0, Size_Grid2D.width-1,                     0 , Size_Grid2D.width-1 };
-        int end_col[8]      = {Size_Grid2D.width    ,                   0, Size_Grid2D.width  , Size_Grid2D.width   , Size_Grid2D.width  ,                   0,  Size_Grid2D.width    ,                    0};
+        int start_row[8]    = {                         0,                        0,                        0, (int)Size_Grid2D.height-1,                        0,                        0, (int) Size_Grid2D.height-1 , (int)Size_Grid2D.height-1};
+        int end_row[8]      = {(int)Size_Grid2D.height   , (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                         0, (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                          0 ,                         0};
+        int start_col[8]    = {                         0, (int)Size_Grid2D.width-1,                        0,                         0,                        0, (int)Size_Grid2D.width-1,                          0 , (int)Size_Grid2D.width-1 };
+        int end_col[8]      = {(int)Size_Grid2D.width    ,                        0, (int)Size_Grid2D.width  , (int)Size_Grid2D.width   , (int)Size_Grid2D.width  ,                        0, (int) Size_Grid2D.width    ,                         0};
         
         int direction_iter = 0;
         
@@ -15439,7 +15439,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                               
                             if((fabs(ddh_1) > height_th || fabs(ddh_2) > height_th || fabs(ddh_3) > height_th) && check_match)
                             {
-                                int order[3]    = {reference_index,target_index_0,target_index_1};
+                                int order[3]    = {(int)reference_index,target_index_0,target_index_1};
                                 double height[3] = {pt0.m_Z,pt1.m_Z,pt2.m_Z};
                                 double h1,h2,dh;
                                 int t_o_min,t_o_max,t_o_mid;
