@@ -3783,8 +3783,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
-                                            
+                                            FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                            delete origTri;
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
                                             for(i=0;i<count_tri;i++)
@@ -3871,8 +3871,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             
                                             sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
-                                            
+                                            FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
+                                            delete origTri;
+
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
                                             for(i=0;i<count_tri;i++)
@@ -4079,8 +4080,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                         printf("TINCreate resolution %f\n",grid_resolution);
-                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
-                                        
+                                        FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                        delete origTri;
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
                                         for(i=0;i<count_tri;i++)
@@ -14640,7 +14641,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
                     blunder_count[0] = 0;
                     blunder_count[1] = 0;
-                    
+                   
+                    bool *detBlunders = (bool*)calloc(sizeof(bool), count_MPs);
+ 
                     if(IsRA != 1)
                     {
                         SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
@@ -14653,7 +14656,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                                   NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                                                   save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,true);
                     }
-                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, count_MPs,
+                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, detBlunders, count_MPs,
                                           trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight,IsRA,seedDEMsigma);
                     
                     free(ortho_ncc);
@@ -14688,8 +14691,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         flag = false;
                     
                     printf("start TIN\n");
-                    
-                    D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[1]);
+                    printf("count_blunders = %d\n", count_blunders);
+                    D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
                     D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                     uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
                     FILE *pTri;
@@ -14698,7 +14701,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     int t_tri_counts = 0;
                     for(i=0;i<count_MPs;i++)
                     {
-                        if (ptslists[i].flag == 1)
+                        if (detBlunders[i])
                         {
                             input_blunder_pts[t_blunder_counts].m_X = ptslists[i].m_X;
                             input_blunder_pts[t_blunder_counts].m_Y = ptslists[i].m_Y;
@@ -14708,10 +14711,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         {
                             if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
                             {
-                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+				input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
                                 input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
                                 check_id[t_tri_counts]          = i;
-                                
                                 t_tri_counts++;
                             }
                         }
@@ -14722,23 +14724,21 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                                 input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
                                 input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
                                 check_id[t_tri_counts]          = i;
-                                
                                 t_tri_counts++;
                             }
                         }
 
                     }
-                    
-                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(count_MPs-t_blunder_counts)*4);
-                    
+                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
+                    printf("t_blunder_counts = %d, t_tri_counts = %d\n", t_blunder_counts, t_tri_counts);
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                     printf("TINRecreate resolution %f\n",grid_resolution);
                     printf("Removing and Retriangulating");
-                    origTri = TINRecreate(input_tri_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
+                    TINRecreate(input_tri_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
                     printf("Done Retriangulating\n");
                     free(input_blunder_pts);
                     free(input_tri_pts);
-                    
+                    free(detBlunders); 
                     trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                     i = 0;
                     for(i=0;i<count_tri;i++)
@@ -14797,7 +14797,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 printf("DecisionMP : end VerticalLineLocus_blunder\n");
                 free(ortho_ncc);
                 free(INCC);
-                
+                delete origTri;
             }
             else
             {
@@ -14939,7 +14939,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts
 
 
 
-FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
+void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
 {
 
     double minX_ptslists = min_max[0];
@@ -14961,7 +14961,6 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblu
         GridPoint p = {(blunderlist[t].m_Y - minY_ptslists) / resolution, (blunderlist[t].m_X - minX_ptslists) / resolution};
         oldTri->RemovePointAndRetriangulate(p);
     }
-
     
 
     std::size_t max_num_tris = 2 * numofpts;
@@ -14974,6 +14973,7 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblu
 
         row = tris[t][0].row;
         col = tris[t][0].col;
+
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
         row = tris[t][1].row;
@@ -14986,13 +14986,12 @@ FullTriangulation *TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblu
     }
     printf("LastCheck!\n");
     delete [] tris;
-    return oldTri;
 }
 
 
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
-                           D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
+                           D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
                            double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma)
 {
     uint8 pyramid_step, iteration;
@@ -15717,6 +15716,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                         }
                     }
                 }
+		detectedBlunders[index] = (pts[index].flag==1 || pts[index].flag==3);
             }
         }
          

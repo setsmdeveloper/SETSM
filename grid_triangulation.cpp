@@ -983,79 +983,25 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 		this->Bridge(*(edges[2+vert]), *(e->twin));
 		this->Bridge(*(edges[(4+vert)%6]), *(edges[3+vert]));
 	};
-	/*auto N1 = [this, edges]()
-	{
-		e = this->Bridge(*(edges[2]), *(edges[1]));
-		this->Bridge(*(edges[3]), *(e->twin));
-		this->Bridge(*(edges[5]), *edges[4]);
-	};
-	auto N2 = [this, edges]()
-	{
-		e = this->Bridge(*(edges[3]), *(edges[2]));
-		this->Bridge(*(edges[4]), *(e->twin));
-		this->Bridge(*(edges[0]), *(edges[5]);
-	};*/
 	auto TriangulateStar = [this, edges](int vert)
 	{
 		Edge *e = this->Bridge(*(edges[(1+vert)%6]), *(edges[vert%6]));
 		this->Bridge(*(edges[(2+vert)%6]), *(e->twin));
 		this->Bridge(*(edges[(5+vert)%6]), *(edges[(4+vert)%6]));
 	};
-	/*auto Star1 = [this, edges]()
-	{
-		e = this->Bridge(*(edges[2]), *(edges[1]));
-		this->Bridge(*(edges[3]), *(e->twin));
-		this->Bridge(*(edges[0]), *(edges[5]));
-	};
-        auto Star2 = [this, edges]()
-	{
-		e = this->Bridge(*(edges[3]), *(edges[2]));
-		this->Bridge(*(edges[4]), *(e->twin));
-		this->Bridge(*(edges[1]), *(edges[0]));
-
-	};
-	auto Star3 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};
-	auto Star4 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};
-	auto Star5 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};*/
+	
 	auto TriangulateAntiN = [this, edges](int vert)
 	{
 		Edge *e = this->Bridge(*(edges[2+vert]), *(edges[1+vert]));
 		this->Bridge(*(e->twin), *(edges[vert]));
 		this->Bridge(*(edges[(5+vert)%6]), *(edges[(4+vert)%6]));
 	};
-	/*auto AntiN1 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};
-	auto AntiN2 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};*/
-	auto TriangulateDiamond = [this, edges](int vert)
+		auto TriangulateDiamond = [this, edges](int vert)
 	{
 		this->Bridge(*(edges[1+vert]), *(edges[vert]));
 		this->Bridge(*(edges[3+vert]), *(edges[2+vert]));
 		this->Bridge(*(edges[(5+vert)%6]), *(edges[4+vert]));
-	};/*
-	auto Diamond1 = [this, edges]()
-	{
-		this->Bridge(*(edges[0]), *(edges[4]));
-		this->Bridge(*(edges[3]), *(edges[2]));
-	};*/
+	};
 	if(InCircle(edges[3]->orig, edges[2]->orig, edges[0]->orig, edges[1]->orig)>0)
 	{
 		if( InCircle(edges[3]->orig, edges[2]->orig, edges[5]->orig, edges[4]->orig)>0 )
