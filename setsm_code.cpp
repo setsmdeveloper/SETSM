@@ -1491,7 +1491,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     total_ST = time(0);
     
     
-    ProInfo *proinfo = (ProInfo*)malloc(sizeof(ProInfo));
+    ProInfo *proinfo = (ProInfo*)calloc(sizeof(ProInfo), 1);
     proinfo->number_of_images = args.number_of_images;
     proinfo->sensor_type = args.sensor_type;
     proinfo->System_memory = args.System_memory;
