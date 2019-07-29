@@ -133,8 +133,6 @@ make
 make install
 ```
 
-Note:  The SETSM CMake build with the Cray compiler does not yet work.
-
 ## License
 
 SETSM is released under the Apache 2.0 license, a copy of which is included in
