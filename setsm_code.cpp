@@ -14748,8 +14748,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         trilists[i].m_Z = check_id[t_trilists[i].m_Z];
                     }
                     
-                    free(t_trilists);
-                    free(check_id);
+                    //free(t_trilists);
+                    //free(check_id);
 
                     printf("end TIN\n");
                     
@@ -14956,19 +14956,30 @@ void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOIN
     {
         index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
     }
+
+    GridPoint *grid_blunders = new GridPoint[numblunders];
+
     for (std::size_t t = 0; t < numblunders; ++t)
     {
-        GridPoint p = {(blunderlist[t].m_Y - minY_ptslists) / resolution, (blunderlist[t].m_X - minX_ptslists) / resolution};
-        oldTri->RemovePointAndRetriangulate(p);
+        grid_blunders[t].col = (blunderlist[t].m_X - minX_ptslists) / resolution;
+        grid_blunders[t].row = (blunderlist[t].m_Y - minY_ptslists) / resolution;
+    }
+
+    GridPoint **blunder_ptrs = new GridPoint*[numblunders];
+    #pragma omp parallel
+    {
+        #pragma omp for
+        for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     }
     
-
+    oldTri->Retriangulate(blunder_ptrs, numblunders);
+    printf("Retriangulated\n");
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(oldTri->GetAllTris(tris));
     printf("Check\n");
     for (std::size_t t = 0; t < *count_tri; t++)
-    {
+    {	
         int row, col;
 
         row = tris[t][0].row;
@@ -14986,6 +14997,9 @@ void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOIN
     }
     printf("LastCheck!\n");
     delete [] tris;
+    delete [] blunder_ptrs;
+    delete [] grid_blunders;
+    printf("Deleted\n");
 }
 
 

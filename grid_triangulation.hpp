@@ -36,6 +36,9 @@ class GridTriangulation
 		~GridTriangulation();
 		Grid<GridType, IterType> *getGrid();
 		void Triangulate(GridPoint *points[], size_t num_points);
+		Edge *FindFaceRepresentative(Edge *edge);
+		void RemoveAllPoints(GridPoint **blunders, size_t num_blunders);
+		void Retriangulate(GridPoint **blunders, size_t num_blunders);
 		void SetEdgeOut(const GridPoint &p, Edge *e) { this->grid->SetElem(p, e); }
 		Edge *GetEdgeOut(const GridPoint &p) { return this->grid->GetElem(p); }
 		void RemovePoint(const GridPoint &p)

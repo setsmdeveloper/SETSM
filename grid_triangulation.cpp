@@ -13,8 +13,10 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <iterator>
+#include <bits/stdc++.h>
+#include <utility>
 #include <omp.h>
-
 #include "grid_triangulation.hpp"
 
 //////////////////////////////////////
@@ -715,6 +717,124 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::Triangulate3(GridPoint *poi
 }
 
 template <typename GridType, typename IterType>
+Edge *GridTriangulation<GridType, IterType>::FindFaceRepresentative(Edge *edge)
+{
+	Edge *e = edge;
+	Edge *tmp = e;
+	GridPoint max_point = e->orig;
+	GridPoint start = e->orig;
+	while(tmp->orig != start)
+	{
+		if(LessThanXY(max_point, tmp->orig))
+		{
+			max_point = tmp->orig;
+			e = tmp;
+		}
+		tmp = tmp->dnext;
+	}
+	return tmp;	
+}
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[], size_t num_blunders)
+{
+	#pragma omp parallel
+	{
+		#pragma omp single
+		{
+			int med = num_blunders/2;
+			std::nth_element(blunders, blunders+med, blunders+num_blunders, LessThanPtrYX);
+			std::vector<GridPoint> Unlinked1;
+			std::vector<GridPoint> Unlinked2;
+			std::vector<GridPoint> Linked;
+			int parpoints = 0;
+			for(size_t t = 0; t<med; t++)
+			{
+				GridPoint p = *(blunders[t]);
+				Edge *e = this->GetEdgeOut(p);
+				if(e!=0)
+				{
+					Edge *f = e;
+					GridPoint mid = *blunders[med];
+					bool unlink = true;
+					do
+					{
+						if(LessThanYX(mid, f->twin->orig) || p == mid || f->twin->orig == mid)
+						{
+							unlink = false;
+						}
+					}while((f=f->twin->dnext)!=e);
+					if(unlink)
+					{
+						Unlinked1.push_back(p);
+						parpoints++;
+					}else
+					{
+						Linked.push_back(p);
+					}
+				}
+			}
+			printf("moving to 2nd half\n");
+			for(size_t t = med; t<num_blunders; t++)
+			{
+				GridPoint p = *(blunders[t]);
+				Edge *e = this->GetEdgeOut(p);
+				if(e!=0)
+				{
+					Edge *f = e;
+					GridPoint mid = *blunders[med];
+					bool unlink = true;
+					do
+					{
+						if(LessThanYX(f->twin->orig, mid) || p == mid || f->twin->orig == mid)
+						{
+							unlink = false;
+						}
+					}while((f = f->twin->dnext)!=e);	
+					if(unlink)
+					{
+						Unlinked2.push_back(p);
+						parpoints++;
+					}else
+					{
+						Linked.push_back(p);
+					}
+				}
+			}
+			printf("Linked Points Removed (jk). Parpoints: %d\n", parpoints);
+			#pragma omp task
+			{
+				printf("Task 1 started\n");
+				for(auto it = Unlinked1.begin(); it!=Unlinked1.end(); it++)
+				{
+					this->RemovePointAndRetriangulate(*it);
+				}
+				printf("Task 1 finished!\n");
+			}
+			
+			#pragma omp task
+			{
+				printf("Task 2 started\n");
+				for(auto it = Unlinked2.begin(); it!=Unlinked2.end(); it++)
+				{
+					this->RemovePointAndRetriangulate(*it);
+				}
+				printf("Task 2 finished!\n");
+			}
+			#pragma omp taskwait
+			printf("Linked points starting\n");
+			for(auto it = Linked.begin(); it!=Linked.end(); it++)
+			{
+				this->RemovePointAndRetriangulate(*it);	
+			}
+			printf("Points removed\n");
+		}
+	}
+}
+
+
+template <typename GridType, typename IterType>
 Edge *GridTriangulation<GridType, IterType>::NextCrossEdge(Edge *base)
 {
 	// Determine first valid candidate for next left-to-right
@@ -801,7 +921,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 
 	// Base Case
 	if (n <= 3) return;
-
+	
         if( n == 4 )
         {
             TriangulateEmpty4(edge);
@@ -1186,15 +1306,21 @@ void GridTriangulation<GridType, IterType>::RemovePointAndRetriangulate(const Gr
 	if (e == 0)
 	{
 		e = e_p->dnext;
-		this->RemovePoint(p);
-		this->TriangulateEmptyPolygon(*e);
+		#pragma omp critical
+		{
+			this->RemovePoint(p);
+			this->TriangulateEmptyPolygon(*e);
+		}
 	}
 	else
 	{
 		GridPoint end_point = e->twin->dnext->twin->orig;
 		Edge *start_edge = e->dnext;
-		this->RemovePoint(p);
-		this->TriangulateBorder(*start_edge, end_point);
+		#pragma omp critical
+		{
+			this->RemovePoint(p);
+			this->TriangulateBorder(*start_edge, end_point);
+		}
 	}
 }
 
