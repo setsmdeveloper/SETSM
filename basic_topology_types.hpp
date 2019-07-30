@@ -12,6 +12,7 @@
  **************************
  **************************/
 #define THREADED_CUTOFF 100	// Number of points after which the algorithm should switch to a serial triangulation
+#define RETRI_CUTOFF 50	// Number of points after which the algorithm should switch to a serial triangulation
 
 // TODO
 typedef int64_t INT64;

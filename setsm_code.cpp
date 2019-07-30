@@ -14748,8 +14748,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         trilists[i].m_Z = check_id[t_trilists[i].m_Z];
                     }
                     
-                    //free(t_trilists);
-                    //free(check_id);
+                    free(t_trilists);
+                    free(check_id);
 
                     printf("end TIN\n");
                     
@@ -14973,11 +14973,9 @@ void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOIN
     }
     
     oldTri->Retriangulate(blunder_ptrs, numblunders);
-    printf("Retriangulated\n");
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(oldTri->GetAllTris(tris));
-    printf("Check\n");
     for (std::size_t t = 0; t < *count_tri; t++)
     {	
         int row, col;
@@ -14995,11 +14993,9 @@ void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOIN
         col = tris[t][2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
     }
-    printf("LastCheck!\n");
     delete [] tris;
     delete [] blunder_ptrs;
     delete [] grid_blunders;
-    printf("Deleted\n");
 }
 
 

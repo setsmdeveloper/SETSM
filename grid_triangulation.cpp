@@ -739,96 +739,196 @@ Edge *GridTriangulation<GridType, IterType>::FindFaceRepresentative(Edge *edge)
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[], size_t num_blunders)
 {
+	std::vector<GridPoint*> blunder_vector(blunders, blunders+num_blunders);
 	#pragma omp parallel
 	{
 		#pragma omp single
 		{
-			int med = num_blunders/2;
-			std::nth_element(blunders, blunders+med, blunders+num_blunders, LessThanPtrYX);
-			std::vector<GridPoint> Unlinked1;
-			std::vector<GridPoint> Unlinked2;
-			std::vector<GridPoint> Linked;
-			int parpoints = 0;
-			for(size_t t = 0; t<med; t++)
+			this->RetriangulateHorizontal(blunder_vector, num_blunders);	
+		}
+	}
+}
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<GridPoint*> blunders, size_t num_blunders)
+{
+	if(num_blunders > RETRI_CUTOFF)
+	{
+		int med = num_blunders/2;
+		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.begin()+num_blunders, LessThanPtrYX);
+		int len1 = 0;
+		int len2 = 0;
+		int linked_len = 0;
+		std::vector<GridPoint*> Unlinked1;
+		Unlinked1.reserve(num_blunders/2);
+		std::vector<GridPoint*> Unlinked2;
+		Unlinked2.reserve(num_blunders/2);
+		std::vector<GridPoint*> Linked;
+		for(auto it = blunders.begin(); it!=(blunders.begin()+med); it++)
+		{
+			GridPoint *p = *it;
+			Edge *e = this->GetEdgeOut(*p);
+			if(e!=0)
 			{
-				GridPoint p = *(blunders[t]);
-				Edge *e = this->GetEdgeOut(p);
-				if(e!=0)
+				Edge *f = e;
+				GridPoint mid = **(blunders.begin()+med-1);
+				bool unlink = true;
+				do
 				{
-					Edge *f = e;
-					GridPoint mid = *blunders[med];
-					bool unlink = true;
-					do
+					if(LessThanYX(mid, f->twin->orig))
 					{
-						if(LessThanYX(mid, f->twin->orig) || p == mid || f->twin->orig == mid)
-						{
-							unlink = false;
-						}
-					}while((f=f->twin->dnext)!=e);
-					if(unlink)
-					{
-						Unlinked1.push_back(p);
-						parpoints++;
-					}else
-					{
-						Linked.push_back(p);
+						unlink = false;
+						break;
 					}
+				}while((f=f->twin->dnext)!=e);
+				if(unlink)
+				{
+					Unlinked1.push_back(p);
+					len1++;
+				}else
+				{
+					Linked.push_back(p);
+					linked_len++;
 				}
 			}
-			printf("moving to 2nd half\n");
-			for(size_t t = med; t<num_blunders; t++)
+		}
+		for(auto it = blunders.begin()+med; it!=blunders.end(); it++)
+		{
+			GridPoint *p = *it;
+			Edge *e = this->GetEdgeOut(*p);
+			if(e!=0)
 			{
-				GridPoint p = *(blunders[t]);
-				Edge *e = this->GetEdgeOut(p);
-				if(e!=0)
+				Edge *f = e;
+				GridPoint mid = **(blunders.begin()+med);
+				bool unlink = true;
+				do
 				{
-					Edge *f = e;
-					GridPoint mid = *blunders[med];
-					bool unlink = true;
-					do
+					if(LessThanYX(f->twin->orig, mid))
 					{
-						if(LessThanYX(f->twin->orig, mid) || p == mid || f->twin->orig == mid)
-						{
-							unlink = false;
-						}
-					}while((f = f->twin->dnext)!=e);	
-					if(unlink)
-					{
-						Unlinked2.push_back(p);
-						parpoints++;
-					}else
-					{
-						Linked.push_back(p);
+						unlink = false;
+						break;
 					}
-				}
-			}
-			printf("Linked Points Removed (jk). Parpoints: %d\n", parpoints);
-			#pragma omp task
-			{
-				printf("Task 1 started\n");
-				for(auto it = Unlinked1.begin(); it!=Unlinked1.end(); it++)
+				}while((f = f->twin->dnext)!=e);	
+				if(unlink)
 				{
-					this->RemovePointAndRetriangulate(*it);
-				}
-				printf("Task 1 finished!\n");
-			}
-			
-			#pragma omp task
-			{
-				printf("Task 2 started\n");
-				for(auto it = Unlinked2.begin(); it!=Unlinked2.end(); it++)
+					Unlinked2.push_back(p);
+					len2++;
+				}else
 				{
-					this->RemovePointAndRetriangulate(*it);
+					Linked.push_back(p);
+					linked_len++;
 				}
-				printf("Task 2 finished!\n");
 			}
-			#pragma omp taskwait
-			printf("Linked points starting\n");
-			for(auto it = Linked.begin(); it!=Linked.end(); it++)
+		}
+		#pragma omp task
+		{
+			this->RetriangulateHorizontal(Unlinked1, len1);
+		}
+		
+		#pragma omp task
+		{
+			this->RetriangulateHorizontal(Unlinked2, len2);
+		}
+		#pragma omp taskwait
+		this->RetriangulateHorizontal(Linked, linked_len);
+	}else
+	{
+		for(auto it = blunders.begin(); it!=blunders.end(); it++)
+		{
+			this->RemovePointAndRetriangulate(**it);
+		}
+	}
+}
+
+
+template <typename GridType, typename IterType>
+void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<GridPoint*> blunders, size_t num_blunders)
+{
+	if(num_blunders > RETRI_CUTOFF)
+	{
+		int med = num_blunders/2;
+		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.begin()+num_blunders, LessThanPtrXY);
+		int len1 = 0;
+		int len2 = 0;
+		int linked_len = 0;
+		std::vector<GridPoint*> Unlinked1;
+		Unlinked1.reserve(num_blunders/2);
+		std::vector<GridPoint*> Unlinked2;
+		Unlinked2.reserve(num_blunders/2);
+		std::vector<GridPoint*> Linked;
+		for(auto it = blunders.begin(); it!=(blunders.begin()+med); it++)
+		{
+			GridPoint *p = *it;
+			Edge *e = this->GetEdgeOut(*p);
+			if(e!=0)
 			{
-				this->RemovePointAndRetriangulate(*it);	
+				Edge *f = e;
+				GridPoint mid = **(blunders.begin()+med-1);
+				bool unlink = true;
+				do
+				{
+					if(LessThanXY(mid, f->twin->orig))
+					{
+						unlink = false;
+						break;
+					}
+				}while((f=f->twin->dnext)!=e);
+				if(unlink)
+				{
+					Unlinked1.push_back(p);
+					len1++;
+				}else
+				{
+					Linked.push_back(p);
+					linked_len++;
+				}
 			}
-			printf("Points removed\n");
+		}
+		for(auto it = blunders.begin()+med; it!=blunders.end(); it++)
+		{
+			GridPoint *p = *it;
+			Edge *e = this->GetEdgeOut(*p);
+			if(e!=0)
+			{
+				Edge *f = e;
+				GridPoint mid = **(blunders.begin()+med);
+				bool unlink = true;
+				do
+				{
+					if(LessThanXY(f->twin->orig, mid))
+					{
+						unlink = false;
+						break;
+					}
+				}while((f = f->twin->dnext)!=e);	
+				if(unlink)
+				{
+					Unlinked2.push_back(p);
+					len2++;
+				}else
+				{
+					Linked.push_back(p);
+					linked_len++;
+				}
+			}
+		}
+		#pragma omp task
+		{
+			this->RetriangulateVertical(Unlinked1, len1);
+		}
+		
+		#pragma omp task
+		{
+			this->RetriangulateVertical(Unlinked2, len2);
+		}
+		#pragma omp taskwait
+		this->RetriangulateVertical(Linked, linked_len);
+	}else
+	{
+		for(auto it = blunders.begin(); it!=blunders.end(); it++)
+		{
+			this->RemovePointAndRetriangulate(**it);
 		}
 	}
 }
