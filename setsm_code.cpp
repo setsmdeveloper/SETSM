@@ -14691,7 +14691,6 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         flag = false;
                     
                     printf("start TIN\n");
-                    printf("count_blunders = %d\n", count_blunders);
                     D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
                     D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                     uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
@@ -14730,12 +14729,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 
                     }
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
-                    printf("t_blunder_counts = %d, t_tri_counts = %d\n", t_blunder_counts, t_tri_counts);
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                     printf("TINRecreate resolution %f\n",grid_resolution);
-                    printf("Removing and Retriangulating");
                     TINRecreate(input_tri_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
-                    printf("Done Retriangulating\n");
                     free(input_blunder_pts);
                     free(input_tri_pts);
                     free(detBlunders); 
