@@ -1096,9 +1096,8 @@ template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::TriangulateEmpty4(Edge &edge)
 {
 
-std::vector<Edge *> edges;
-edges.reserve(4);
-Edge *e = &edge;
+	std::vector<Edge *> edges;
+	Edge *e = &edge;
 	for (int i = 0; i < 4; ++i)
 	{
 		edges.push_back(e);
@@ -1117,7 +1116,6 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty5(Edge &edge)
 {
 
 	std::vector<Edge *> edges;
-	edges.reserve(5);
 	Edge *e = &edge;
 	for (int i = 0; i < 5; ++i)
 	{
@@ -1190,7 +1188,6 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 {
 
 	std::vector<Edge *> edges;
-	edges.reserve(6);
 	Edge *e = &edge;
 	for (int i = 0; i < 6; ++i)
 	{
