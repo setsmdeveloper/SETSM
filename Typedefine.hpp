@@ -24,7 +24,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 3
+#define MaxImages 10
 
 #ifndef bool
 //#define bool unsigned char
@@ -214,7 +214,9 @@ typedef struct ProjectInfo{
 	double cal_boundary[4];
 	double RA_param[MaxImages][2];
 	double seedDEMsigma;
-	
+    double LBoundary[4];
+    double RBoundary[4];
+    
 	double minHeight;
 	double maxHeight;
 	double System_memory;
@@ -336,6 +338,8 @@ typedef struct ArgumentInfo{
     bool check_fl;
     bool check_ccd;
     bool check_full_cal;
+    int check_coreg;
+    int check_sdm_ortho;
     
     //SGM test flag
     bool check_SNCC;
@@ -398,6 +402,23 @@ typedef struct
     long double **val;
     long double *data;
 } GMA_double;
+
+
+typedef struct UpdateGridSDM{
+    double roh;
+    double ortho_ncc;
+    double col_shift;
+    double row_shift;
+    
+}UGRIDSDM;
+
+typedef struct tagNCCresultSDM
+{
+    double result0;
+    D2DPOINT result2;
+    D2DPOINT result3;
+ } NCCresultSDM;
+
 
 #endif
 

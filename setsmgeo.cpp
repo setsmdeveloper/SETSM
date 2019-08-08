@@ -108,6 +108,36 @@ CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_
     return image_size;
 }
 
+CSize ReadGeotiff_info_dxy(char *filename, double *minX, double *maxY, double *grid_size_dx, double *grid_size_dy)
+{
+    TIFF *tif;
+    CSize image_size;
+    
+    tif = XTIFFOpen(filename, "r");
+    if (tif)
+    {
+        uint16 count = 0;
+        double *data = 0;
+        
+        TIFFGetField(tif, TIFFTAG_GEOTIEPOINTS, &count, &data);
+        if (minX != NULL) *minX = data[3];
+        if (maxY != NULL) *maxY = data[4];
+        
+        TIFFGetField(tif, TIFFTAG_GEOPIXELSCALE, &count, &data);
+        if (grid_size_dx != NULL) *grid_size_dx = data[0];
+        if (grid_size_dy != NULL) *grid_size_dy = data[1];
+        
+        size_t value = 0;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &value);
+        image_size.width = value;
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &value);
+        image_size.height = value;
+        
+        XTIFFClose(tif);
+    }
+    return image_size;
+}
+
 void SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, double minX, double maxY, int data_type)
 {
     double tiepoints[6] = {0};
