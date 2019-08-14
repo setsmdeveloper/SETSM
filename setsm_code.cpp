@@ -17585,30 +17585,25 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
     for(j=0;j<9;j++)
         result_rho[j]       = -1.00;
 
+	// Allocate vectors for correlation
+	double *left_patch_vecs[3];
+	double *right_patch_vecs[3];
+	int patch_size = (2*Half_template_size+1)*(2*Half_template_size+1);
+	for (int k=0; k<3; k++)
+	{
+		left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+		right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+	}
+
     for(mask_row = - half_mask_size ; mask_row <= half_mask_size ; mask_row++)
     {
         for(mask_col = - half_mask_size ; mask_col <= half_mask_size ; mask_col++)
         {
             double rot_theta = 0.0;
-            double Sum_LR = 0;
-            double Sum_L = 0;
-            double Sum_R = 0;
-            double Sum_L2 = 0;
-            double Sum_R2 = 0;
-            double Sum_LR_2 = 0;
-            double Sum_L_2 = 0;
-            double Sum_R_2 = 0;
-            double Sum_L2_2 = 0;
-            double Sum_R2_2 = 0;
-            double Sum_LR_3 = 0;
-            double Sum_L_3 = 0;
-            double Sum_R_3 = 0;
-            double Sum_L2_3 = 0;
-            double Sum_R2_3 = 0;
             int Count_N[3] = {0};          
             int row, col;
             int N;
-            double val1, val2, de, de2, ncc_1, ncc_2, ncc_3;
+            double ncc_1, ncc_2, ncc_3;
             double temp_rho;
             int grid_index;
 
@@ -17651,6 +17646,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             } else {
                                 left_patch = (double) (_leftimage[position]);
                             }
+							left_patch_vecs[0][Count_N[0]] = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -17663,15 +17659,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             } else {
                                 right_patch = (double) (_rightimage[position]);
                             }
+							right_patch_vecs[0][Count_N[0]] = right_patch;
                             
                             //end
                             Count_N[0]++;
-
-                            Sum_LR            = Sum_LR + left_patch*right_patch;
-                            Sum_L             = Sum_L  + left_patch;
-                            Sum_R             = Sum_R  + right_patch;
-                            Sum_L2            = Sum_L2 + left_patch*left_patch;
-                            Sum_R2            = Sum_R2 + right_patch*right_patch;
 
                             if(multi_flag == 1)
                             {
@@ -17681,11 +17672,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                     {
-                                        Sum_LR_2  = Sum_LR_2 + left_patch*right_patch;
-                                        Sum_L_2   = Sum_L_2  + left_patch;
-                                        Sum_R_2   = Sum_R_2  + right_patch;
-                                        Sum_L2_2  = Sum_L2_2 + left_patch*left_patch;
-                                        Sum_R2_2  = Sum_R2_2 + right_patch*right_patch;
+										left_patch_vecs[1][Count_N[1]] = left_patch;
+										right_patch_vecs[1][Count_N[1]] = right_patch;
                                         Count_N[1]++;
                                     }
                                 }
@@ -17695,60 +17683,38 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                     {
-                                        Sum_LR_3  = Sum_LR_3 + left_patch*right_patch;
-                                        Sum_L_3   = Sum_L_3  + left_patch;
-                                        Sum_R_3   = Sum_R_3  + right_patch;
-                                        Sum_L2_3  = Sum_L2_3 + left_patch*left_patch;
-                                        Sum_R2_3  = Sum_R2_3 + right_patch*right_patch;
+										left_patch_vecs[2][Count_N[2]] = left_patch;
+										right_patch_vecs[2][Count_N[2]] = right_patch;
                                         Count_N[2]++;
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
+                }  // end col loop
+            }  // end row loop
 
             if(Count_N[0] > 0)
             {
-                N               = Count_N[0];
-                val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
-                val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
-                de            = sqrt(val1*val2);
-                de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
-                if( val1*val2 > 0)
-                    ncc_1           = de2/de;
-                else
+				ncc_1 = Correlate(left_patch_vecs[0],right_patch_vecs[0],Count_N[0]);
+                if (ncc_1 ==-99)
                     ncc_1           = -1.0;
 
                 if(multi_flag == 1)
                 {
                     if(Count_N[1] > 0)
                     {
-                        N                   = Count_N[1];
-                        val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
-                        val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                        de                  = sqrt(val1*val2);
-                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                        if( val1*val2 > 0)
-                            ncc_2         = de2/de;
-                        else
-                            ncc_2           = -1.0;
+						ncc_2 = Correlate(left_patch_vecs[1],right_patch_vecs[1],Count_N[1]);
+                		if (ncc_2 ==-99)
+                    		ncc_2           = -1.0;
                     }
 
                     if(Count_N[2] > 0)
                     {
-                        N                   = Count_N[2];
-                        val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
-                        val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                        de                  = sqrt(val1*val2);
-                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                        if( val1*val2 > 0)
-                            ncc_3         = de2/de;
-                        else
-                            ncc_3           = -1.0;
+						ncc_3 = Correlate(left_patch_vecs[2],right_patch_vecs[2],Count_N[2]);
+                		if (ncc_3 ==-99)
+                    		ncc_3           = -1.0;
                     }
-
                 }
 
                 if(multi_flag == 1)
@@ -17774,9 +17740,14 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                 cell_count++;
             }
 
-            
-        }
-    }
+        }  // end mask_col loop
+    }  // end mask_row loop
+
+	for (int k=0; k<3; k++)
+	{
+		free(left_patch_vecs[k]);
+		free(right_patch_vecs[k]);
+	}
 
     if(cell_count == 9)
     {
