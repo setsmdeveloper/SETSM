@@ -8,14 +8,15 @@
  * [2] Leonidas Guibas & Jorge Stolfi (1985) Primitives for the Manipulation of 
  * General Subdivisions and the Computation of Voronoi Diagrams, ACM Transactions on 
  * Graphics, 51:2, 74-123.
+ * Retriangulation uses low degree optimizations from this paper
+ * [3]  Olivier Devillers. Vertex Removal in Two Dimensional Delaunay Triangulation: 
+ * Speed-up by Low Degrees Optimization. Computational Geometry, Elsevier, 2011, 44, 
+ * pp.169-177
  ***************************************/
 
 #include <iostream>
 #include <algorithm>
 #include <vector>
-#include <iterator>
-#include <bits/stdc++.h>
-#include <utility>
 #include <omp.h>
 #include "grid_triangulation.hpp"
 
@@ -60,27 +61,6 @@ inline INT128 InCircle(const GridPoint &a, const GridPoint &b, const GridPoint &
 
 	return d_13 * bc - d_23 * ac + d_33 * ab;
 }
-
-/* Assumes a, b, c in counter-clockwise order
- * Then	positive if d in circle,
- * 	negative if d outside circle,
- * 	zero if d on circle
- */
-inline bool InCircleOrient(const GridPoint &a, const GridPoint &b, const GridPoint &c, const GridPoint &d)
-{
-
-        INT128 d2 = d.col*d.col+d.row*d.row; 
-        INT128 c2 = c.col*c.col+c.row*c.row;
-        INT128 b2 = b.col*b.col+b.row*b.row;
-        INT128 t1 = a.col*(b.row*(c2-d2)-b2*(c.row-d.row)+c.row*d2-d.row*c2);
-	INT128 t2 = a.row*(b.col*(c2-d2)-b2*(c.col-d.col)+c.col*d2-d.col*c2);
-	INT128 t3 = (a.row*a.row+a.col*a.col)*(b.col*(c.row-d.row)-b.row*(c.col-d.col)+c.col*d.row-d.col*c.row);
-        INT128 t4 = b.col*(c.row*d2-d.row*c2)-b.row*(c.col*d2-d.col*c2)+b2*(c.col*d.row-d.col*c.row);
-	INT128 det = t1-t2+t3-t4;
-
-	return det>0;
-}
-
 
 inline bool LessThanPtrXY(GridPoint *a, GridPoint *b)
 {
@@ -716,34 +696,15 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::Triangulate3(GridPoint *poi
 	return ex;
 }
 
-template <typename GridType, typename IterType>
-Edge *GridTriangulation<GridType, IterType>::FindFaceRepresentative(Edge *edge)
-{
-	Edge *e = edge;
-	Edge *tmp = e;
-	GridPoint max_point = e->orig;
-	GridPoint start = e->orig;
-	while(tmp->orig != start)
-	{
-		if(LessThanXY(max_point, tmp->orig))
-		{
-			max_point = tmp->orig;
-			e = tmp;
-		}
-		tmp = tmp->dnext;
-	}
-	return tmp;	
-}
-
-
+//Main retriangulation method, begins recursive divide and conquer
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[], size_t num_blunders)
 {
-	std::vector<GridPoint*> blunder_vector(blunders, blunders+num_blunders);
 	#pragma omp parallel
 	{
 		#pragma omp single
 		{
+			std::vector<GridPoint*> blunder_vector(blunders, blunders+num_blunders);
 			this->RetriangulateHorizontal(blunder_vector, num_blunders);	
 		}
 	}
@@ -755,8 +716,9 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 {
 	if(num_blunders > RETRI_CUTOFF)
 	{
+		//Split blunders in half. Will be sorted into three sets: top and bottom portion (Unlinkeds), and middle (Linked).
 		int med = num_blunders/2;
-		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.begin()+num_blunders, LessThanPtrYX);
+		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrYX);
 		int len1 = 0;
 		int len2 = 0;
 		int linked_len = 0;
@@ -765,35 +727,7 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 		std::vector<GridPoint*> Unlinked2;
 		Unlinked2.reserve(num_blunders/2);
 		std::vector<GridPoint*> Linked;
-		for(auto it = blunders.begin(); it!=(blunders.begin()+med); it++)
-		{
-			GridPoint *p = *it;
-			Edge *e = this->GetEdgeOut(*p);
-			if(e!=0)
-			{
-				Edge *f = e;
-				GridPoint mid = **(blunders.begin()+med-1);
-				bool unlink = true;
-				do
-				{
-					if(LessThanYX(mid, f->twin->orig))
-					{
-						unlink = false;
-						break;
-					}
-				}while((f=f->twin->dnext)!=e);
-				if(unlink)
-				{
-					Unlinked1.push_back(p);
-					len1++;
-				}else
-				{
-					Linked.push_back(p);
-					linked_len++;
-				}
-			}
-		}
-		for(auto it = blunders.begin()+med; it!=blunders.end(); it++)
+		for(auto it = blunders.begin(); it!=blunders.end(); it++)
 		{
 			GridPoint *p = *it;
 			Edge *e = this->GetEdgeOut(*p);
@@ -804,16 +738,24 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 				bool unlink = true;
 				do
 				{
-					if(LessThanYX(f->twin->orig, mid))
+					//If edge spans boundary, point is linked.
+					if(LessThanYX(mid, f->twin->orig) != LessThanYX(mid, *p))
 					{
 						unlink = false;
 						break;
 					}
-				}while((f = f->twin->dnext)!=e);	
+				}while((f=f->twin->dnext)!=e);
 				if(unlink)
 				{
-					Unlinked2.push_back(p);
-					len2++;
+					if((it-blunders.begin())<med)
+					{
+						Unlinked1.push_back(p);
+						len1++;
+					}else
+					{
+						Unlinked2.push_back(p);
+						len2++;
+					}
 				}else
 				{
 					Linked.push_back(p);
@@ -830,10 +772,12 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 		{
 			this->RetriangulateHorizontal(Unlinked2, len2);
 		}
+		//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
 		#pragma omp taskwait
 		this->RetriangulateHorizontal(Linked, linked_len);
 	}else
 	{
+		//Remove blunders and retriangulate. This is base case
 		for(auto it = blunders.begin(); it!=blunders.end(); it++)
 		{
 			this->RemovePointAndRetriangulate(**it);
@@ -847,8 +791,9 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 {
 	if(num_blunders > RETRI_CUTOFF)
 	{
+		//Same as vertical split except now there are left and right portions (Unlinked) as well as a middle portion (Linked).
 		int med = num_blunders/2;
-		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.begin()+num_blunders, LessThanPtrXY);
+		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrXY);
 		int len1 = 0;
 		int len2 = 0;
 		int linked_len = 0;
@@ -857,35 +802,7 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 		std::vector<GridPoint*> Unlinked2;
 		Unlinked2.reserve(num_blunders/2);
 		std::vector<GridPoint*> Linked;
-		for(auto it = blunders.begin(); it!=(blunders.begin()+med); it++)
-		{
-			GridPoint *p = *it;
-			Edge *e = this->GetEdgeOut(*p);
-			if(e!=0)
-			{
-				Edge *f = e;
-				GridPoint mid = **(blunders.begin()+med-1);
-				bool unlink = true;
-				do
-				{
-					if(LessThanXY(mid, f->twin->orig))
-					{
-						unlink = false;
-						break;
-					}
-				}while((f=f->twin->dnext)!=e);
-				if(unlink)
-				{
-					Unlinked1.push_back(p);
-					len1++;
-				}else
-				{
-					Linked.push_back(p);
-					linked_len++;
-				}
-			}
-		}
-		for(auto it = blunders.begin()+med; it!=blunders.end(); it++)
+		for(auto it = blunders.begin(); it!=blunders.end(); it++)
 		{
 			GridPoint *p = *it;
 			Edge *e = this->GetEdgeOut(*p);
@@ -896,16 +813,23 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 				bool unlink = true;
 				do
 				{
-					if(LessThanXY(f->twin->orig, mid))
+					if(LessThanXY(mid, f->twin->orig)!=LessThanXY(mid, *p))
 					{
 						unlink = false;
 						break;
 					}
-				}while((f = f->twin->dnext)!=e);	
+				}while((f=f->twin->dnext)!=e);
 				if(unlink)
 				{
-					Unlinked2.push_back(p);
-					len2++;
+					if((it-blunders.begin())<med)
+					{
+						Unlinked1.push_back(p);
+						len1++;
+					}else
+					{
+						Unlinked2.push_back(p);
+						len2++;
+					}
 				}else
 				{
 					Linked.push_back(p);
@@ -1021,7 +945,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 
 	// Base Case
 	if (n <= 3) return;
-	
+	//Extended base cases from [3]	
         if( n == 4 )
         {
             TriangulateEmpty4(edge);
@@ -1036,13 +960,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
         {
             TriangulateEmpty6(edge);
             return;
-        }/*
-        if( n == 7 )
-        {
-            TriangulateEmpty7(edge);
-            return;
         }
-*/
 	// Recursive Case
 	std::vector<Edge *> edges;
 	edges.reserve(n);
@@ -1091,7 +1009,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmptyPolygon(Edge &edge)
 	}
 }
 
-
+//Examine trees in [3] for clarity.
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::TriangulateEmpty4(Edge &edge)
 {
@@ -1182,7 +1100,6 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty5(Edge &edge)
 
 }
 
-
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 {
@@ -1194,6 +1111,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 		edges.push_back(e);
 		e = e->dnext;
 	}
+	//vert paramater accounts for rotational symmetries and reduces clutter
 	auto TriangulateN = [this, edges](int vert)
 	{
 		Edge *e = this->Bridge(*(edges[1+vert]), *(edges[vert]));
@@ -1213,7 +1131,7 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 		this->Bridge(*(e->twin), *(edges[vert]));
 		this->Bridge(*(edges[(5+vert)%6]), *(edges[(4+vert)%6]));
 	};
-		auto TriangulateDiamond = [this, edges](int vert)
+	auto TriangulateDiamond = [this, edges](int vert)
 	{
 		this->Bridge(*(edges[1+vert]), *(edges[vert]));
 		this->Bridge(*(edges[3+vert]), *(edges[2+vert]));
@@ -1358,19 +1276,10 @@ void GridTriangulation<GridType, IterType>::TriangulateEmpty6(Edge &edge)
 			}
 		}
 	}
-
 }
 
 
-template <typename GridType, typename IterType>
-void GridTriangulation<GridType, IterType>::TriangulateEmpty7(Edge &edge)
-{
-
-
-
-}
-
-
+//Starting with edge e and finishing at point p, repair border by adding edges on convex hull along the way and triangulating corresponding empty polygons
 template <typename GridType, typename IterType>
 void GridTriangulation<GridType, IterType>::TriangulateBorder(Edge& e, const GridPoint& p)
 {
@@ -1403,21 +1312,15 @@ void GridTriangulation<GridType, IterType>::RemovePointAndRetriangulate(const Gr
 	if (e == 0)
 	{
 		e = e_p->dnext;
-		#pragma omp critical
-		{
-			this->RemovePoint(p);
-			this->TriangulateEmptyPolygon(*e);
-		}
+		this->RemovePoint(p);
+		this->TriangulateEmptyPolygon(*e);
 	}
 	else
 	{
 		GridPoint end_point = e->twin->dnext->twin->orig;
 		Edge *start_edge = e->dnext;
-		#pragma omp critical
-		{
-			this->RemovePoint(p);
-			this->TriangulateBorder(*start_edge, end_point);
-		}
+		this->RemovePoint(p);
+		this->TriangulateBorder(*start_edge, end_point);
 	}
 }
 

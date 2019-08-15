@@ -55,7 +55,7 @@ inline std::size_t Convert(const GridPoint &p, INDEX width) { return p.row * wid
 // Data structure for (half-)edge in grid
 struct Edge
 {
-	Edge *dnext;	// Next edge out of destination vertex, counter-clockwise
+	Edge *dnext;	// Next edge out of destination vertex, counter-clockwise. That is, starting from a point on Edge e, rotate CCW. The next edge you tough this way is e's dnext. Note that this is opposite from some sources where dnext would be the next clockwise edge.
 	Edge *oprev;	// Previous edge into origin vertex, counter-clockwise (that is, next edge into origin, clockwise)
 	Edge *twin;	// The companion edge with origin and destination switched
 	GridPoint orig;	// The origin of the edge
@@ -168,6 +168,7 @@ void EdgeList::SetGrid(Grid<GridType, IterType> *grid)
 	for (size_t t = 0; t < this->size; t++)
 	{
 		if (invalid_edge[t]) continue;
+
 		
 		grid->SetElem((this->edges[t]).orig, this->edges + t);
 	}
