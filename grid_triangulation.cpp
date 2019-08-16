@@ -106,8 +106,10 @@ template <typename GridType, typename IterType>
 Edge *GridTriangulation<GridType, IterType>::AddEdgeAndTwin(const GridPoint &orig, const GridPoint &dest)
 {
 	// Get edges from edge list
-	Edge *e = this->edge_list->GetNewEdge();
-	Edge *et = this->edge_list->GetNewEdge(); 
+	Edge *e;
+	Edge *et;
+	e = this->edge_list->GetNewEdge();
+	et = this->edge_list->GetNewEdge(); 
 
 	// Set next/prev appropriately
 	e->twin = (e->oprev = (e->dnext = et));
@@ -705,27 +707,29 @@ void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[],
 		#pragma omp single
 		{
 			std::vector<GridPoint*> blunder_vector(blunders, blunders+num_blunders);
-			this->RetriangulateHorizontal(blunder_vector, num_blunders);	
+			this->RetriangulateHorizontal(blunder_vector);	
 		}
 	}
+	this->edge_list->SetGrid(this->grid);
 }
 
 
 template <typename GridType, typename IterType>
-void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<GridPoint*> blunders, size_t num_blunders)
+void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<GridPoint*> blunders)
 {
-	if(num_blunders > RETRI_CUTOFF)
+	if(blunders.size() > RETRI_CUTOFF)
 	{
 		//Split blunders in half. Will be sorted into three sets: top and bottom portion (Unlinkeds), and middle (Linked).
-		int med = num_blunders/2;
+		int med = blunders.size()/2;
 		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrYX);
 		int len1 = 0;
 		int len2 = 0;
 		int linked_len = 0;
 		std::vector<GridPoint*> Unlinked1;
-		Unlinked1.reserve(num_blunders/2);
+		//There should never be more than half of the total blunders in either half given we split by # of blunders and some are in the middle, so reserve med
+		Unlinked1.reserve(med);
 		std::vector<GridPoint*> Unlinked2;
-		Unlinked2.reserve(num_blunders/2);
+		Unlinked2.reserve(med);
 		std::vector<GridPoint*> Linked;
 		for(auto it = blunders.begin(); it!=blunders.end(); it++)
 		{
@@ -750,31 +754,29 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 					if((it-blunders.begin())<med)
 					{
 						Unlinked1.push_back(p);
-						len1++;
 					}else
 					{
 						Unlinked2.push_back(p);
-						len2++;
 					}
 				}else
 				{
 					Linked.push_back(p);
-					linked_len++;
 				}
 			}
 		}
+		//Spawn two tasks to remove unlinked blunders on each side
 		#pragma omp task
 		{
-			this->RetriangulateHorizontal(Unlinked1, len1);
+			this->RetriangulateHorizontal(Unlinked1);
 		}
 		
 		#pragma omp task
 		{
-			this->RetriangulateHorizontal(Unlinked2, len2);
+			this->RetriangulateHorizontal(Unlinked2);
 		}
 		//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
 		#pragma omp taskwait
-		this->RetriangulateHorizontal(Linked, linked_len);
+		this->RetriangulateHorizontal(Linked);
 	}else
 	{
 		//Remove blunders and retriangulate. This is base case
@@ -787,20 +789,17 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 
 
 template <typename GridType, typename IterType>
-void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<GridPoint*> blunders, size_t num_blunders)
+void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<GridPoint*> blunders)
 {
-	if(num_blunders > RETRI_CUTOFF)
+	if(blunders.size() > RETRI_CUTOFF)
 	{
 		//Same as vertical split except now there are left and right portions (Unlinked) as well as a middle portion (Linked).
-		int med = num_blunders/2;
+		int med = blunders.size()/2;
 		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrXY);
-		int len1 = 0;
-		int len2 = 0;
-		int linked_len = 0;
 		std::vector<GridPoint*> Unlinked1;
-		Unlinked1.reserve(num_blunders/2);
+		Unlinked1.reserve(med);
 		std::vector<GridPoint*> Unlinked2;
-		Unlinked2.reserve(num_blunders/2);
+		Unlinked2.reserve(med);
 		std::vector<GridPoint*> Linked;
 		for(auto it = blunders.begin(); it!=blunders.end(); it++)
 		{
@@ -824,30 +823,27 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 					if((it-blunders.begin())<med)
 					{
 						Unlinked1.push_back(p);
-						len1++;
 					}else
 					{
 						Unlinked2.push_back(p);
-						len2++;
 					}
 				}else
 				{
 					Linked.push_back(p);
-					linked_len++;
 				}
 			}
 		}
 		#pragma omp task
 		{
-			this->RetriangulateVertical(Unlinked1, len1);
+			this->RetriangulateVertical(Unlinked1);
 		}
 		
 		#pragma omp task
 		{
-			this->RetriangulateVertical(Unlinked2, len2);
+			this->RetriangulateVertical(Unlinked2);
 		}
 		#pragma omp taskwait
-		this->RetriangulateVertical(Linked, linked_len);
+		this->RetriangulateVertical(Linked);
 	}else
 	{
 		for(auto it = blunders.begin(); it!=blunders.end(); it++)
@@ -1312,15 +1308,21 @@ void GridTriangulation<GridType, IterType>::RemovePointAndRetriangulate(const Gr
 	if (e == 0)
 	{
 		e = e_p->dnext;
-		this->RemovePoint(p);
-		this->TriangulateEmptyPolygon(*e);
+		#pragma omp critical
+		{
+			this->RemovePoint(p);
+			this->TriangulateEmptyPolygon(*e);
+		}
 	}
 	else
 	{
 		GridPoint end_point = e->twin->dnext->twin->orig;
 		Edge *start_edge = e->dnext;
-		this->RemovePoint(p);
-		this->TriangulateBorder(*start_edge, end_point);
+		#pragma omp critical
+		{
+			this->RemovePoint(p);
+			this->TriangulateBorder(*start_edge, end_point);
+		}
 	}
 }
 
