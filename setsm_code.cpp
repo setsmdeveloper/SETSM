@@ -3782,7 +3782,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
                                             FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                             delete origTri;
@@ -3870,7 +3870,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
                                             //Save triangulation and delete it since we will not use it
                                             FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
@@ -4080,7 +4080,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
-                                        //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                        sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                         printf("TINCreate resolution %f\n",grid_resolution);
                                         //Save triangulation and delete it since we will not use it
                                         FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
@@ -14619,7 +14619,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 FullTriangulation *origTri;
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
-                //sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
+                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                 printf("TINCreate resolution %f\n",grid_resolution);
                 //Save triangulation for later use as we will remove blunders directly from this triangulation
                 origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
@@ -14955,7 +14955,6 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
 }
 
 
-
 void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
 {
 
@@ -14967,6 +14966,7 @@ void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, doubl
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
     printf("\tTINRecreate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
+
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
     for (std::size_t t = 0; t < numofpts; ++t)
@@ -14975,12 +14975,6 @@ void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, doubl
     }
 
     GridPoint *grid_blunders = new GridPoint[numblunders];
-    //Check to ensure grid width/height fit in 16 bit integers
-    if(width > 32767 || height > 32767)
-    {
-        printf("Grid is too large. width: %d height: %d\n", width, height);
-	exit(1);
-    }
     for (std::size_t t = 0; t < numblunders; ++t)
     {
         grid_blunders[t].col = (blunderlist[t].m_X - minX_ptslists) / resolution;
@@ -14988,11 +14982,8 @@ void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, doubl
     }
 
     GridPoint **blunder_ptrs = new GridPoint*[numblunders];
-    #pragma omp parallel
-    {
-        #pragma omp for
-        for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
-    }
+    #pragma omp parallel for
+    for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     
     oldTri->Retriangulate(blunder_ptrs, numblunders);
     std::size_t max_num_tris = 2 * numofpts;
@@ -15019,7 +15010,6 @@ void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, doubl
     delete [] blunder_ptrs;
     delete [] grid_blunders;
 }
-
 
 
 bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
