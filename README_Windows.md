@@ -34,7 +34,7 @@ Use Cygwin, a large collection of GNU and Open Source tools providing functional
 	* Change the TIFFPATH and uncomment those 3 lines if the TIFF library is in a different location.
 	* Change the GEOTIFFPATH and uncomment those 3 lines if the GeoTIFF library is in a different location.
 4. Make sure your images and their corresponding header files (*.xml) have the same filename and are in the same directory.
-6. Run SETSM according to the SETSM User Manual. (The example below is out of date.)
+5. Run SETSM according to the SETSM User Manual. (The example below is out of date.)
 
 ```
 ./setsm [image1(*.raw|*.tif)] [image2(*.raw|*.tif)] [outputpath/name] [-options]

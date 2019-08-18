@@ -47,7 +47,7 @@ inline bool LessThanXY(const GridPoint &a, const GridPoint &b) { return (a.col <
 // Compare function to sort by y/row then x/col
 inline bool LessThanYX(const GridPoint &a, const GridPoint &b) { return (a.row < b.row) || ((a.row == b.row) && (a.col > b.col)); } 
 // Conversion functions from GridPoint to linear index and vice versa
-inline GridPoint Convert(std::size_t index, INDEX width) { GridPoint p = { index / width, index % width }; return p; }
+inline GridPoint Convert(std::size_t index, INDEX width) { GridPoint p = { (int)(index / width), (int)(index % width) }; return p; }
 inline std::size_t Convert(const GridPoint &p, INDEX width) { return p.row * width + p.col; }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

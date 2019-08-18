@@ -19,6 +19,7 @@
 #include"grid_triangulation.hpp"
 
 #include "math.h"
+#include <cmath>
 #include <omp.h>
 #include <time.h>
 #include <dirent.h>
@@ -437,7 +438,7 @@ int main(int argc,char *argv[])
             
             
             pFile_DEM = fopen(str_DEMfile,"r");
-            printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+            printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
             
             if(pFile_DEM)
             {
@@ -1491,7 +1492,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     total_ST = time(0);
     
     
-    ProInfo *proinfo = (ProInfo*)malloc(sizeof(ProInfo));
+    ProInfo *proinfo = (ProInfo*)calloc(sizeof(ProInfo), 1);
     proinfo->number_of_images = args.number_of_images;
     proinfo->sensor_type = args.sensor_type;
     proinfo->System_memory = args.System_memory;
@@ -2501,7 +2502,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 FILE* pFile_DEM = NULL;
                                 
                                 pFile_DEM = fopen(str_DEMfile,"r");
-                                printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                                printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                                 final_iteration = 3;
                                 //if(!pFile_DEM)
                                 {
@@ -2624,7 +2625,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             FILE* pFile_DEM = NULL;
                             
                             pFile_DEM = fopen(str_DEMfile,"r");
-                            printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                            printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                             final_iteration = 3;
                             
                             //if(!pFile_DEM)
@@ -3781,9 +3782,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
-                                            FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                            FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                             delete origTri;
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -3869,10 +3870,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
                                             //Save triangulation and delete it since we will not use it
-                                            FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
+                                            FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
                                             delete origTri;
 
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
@@ -4079,10 +4080,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
-                                        sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                        //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                         printf("TINCreate resolution %f\n",grid_resolution);
                                         //Save triangulation and delete it since we will not use it
-                                        FullTriangulation *origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                        FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -11613,10 +11614,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         int row_iter[8] = { 1, 1, 1, -1,  1,  1, -1, -1};
         int col_iter[8] = { 1,-1, 1,  1,  1, -1,  1, -1};
         
-        int start_row[8]    = {                    0,                   0,                   0, Size_Grid2D.height-1,                   0,                   0,  Size_Grid2D.height-1 , Size_Grid2D.height-1};
-        int end_row[8]      = {Size_Grid2D.height   , Size_Grid2D.height , Size_Grid2D.height ,                    0, Size_Grid2D.height , Size_Grid2D.height ,                     0 ,                    0};
-        int start_col[8]    = {                    0, Size_Grid2D.width-1,                   0,                    0,                   0, Size_Grid2D.width-1,                     0 , Size_Grid2D.width-1 };
-        int end_col[8]      = {Size_Grid2D.width    ,                   0, Size_Grid2D.width  , Size_Grid2D.width   , Size_Grid2D.width  ,                   0,  Size_Grid2D.width    ,                    0};
+        int start_row[8]    = {                         0,                        0,                        0, (int)Size_Grid2D.height-1,                        0,                        0, (int) Size_Grid2D.height-1 , (int)Size_Grid2D.height-1};
+        int end_row[8]      = {(int)Size_Grid2D.height   , (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                         0, (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                          0 ,                         0};
+        int start_col[8]    = {                         0, (int)Size_Grid2D.width-1,                        0,                         0,                        0, (int)Size_Grid2D.width-1,                          0 , (int)Size_Grid2D.width-1 };
+        int end_col[8]      = {(int)Size_Grid2D.width    ,                        0, (int)Size_Grid2D.width  , (int)Size_Grid2D.width   , (int)Size_Grid2D.width  ,                        0, (int) Size_Grid2D.width    ,                         0};
         
         int direction_iter = 0;
         
@@ -14080,7 +14081,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             //    minimum_Th = 0.1;
             //minimum_Th = 0.4;
             
-            printf("minimum TH %f\t%f\t%d\t%d\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
+            printf("minimum TH %f\t%f\t%d\t%ld\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
             free(hist);
             //exit(1);
             
@@ -14618,10 +14619,10 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 FullTriangulation *origTri;
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
-                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
+                //sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                 printf("TINCreate resolution %f\n",grid_resolution);
                 //Save triangulation for later use as we will remove blunders directly from this triangulation
-                origTri = TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -14734,18 +14735,19 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     }
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
                     sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
-                    //If we have more bludners than points in triangulations, almost certainly faster to ditch old triangulation
+                    //If we have more blunders than points in triangulations, almost certainly faster to ditch old triangulation
+					//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
                     if(t_tri_counts<t_blunder_counts)
                     {
                         //Must delete old triangulation and create new one, should be faster
                         delete origTri;
                         printf("TINCreate resolution %f\n",grid_resolution);
-                        origTri = TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
+                        origTri = TINCreate(input_tri_pts,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
                     }else
                     {
                     	printf("TINRecreate resolution %f\n",grid_resolution);
                     	//Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                    	TINRecreate(input_tri_pts,bufstr,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
+                    	TINRecreate(input_tri_pts,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
                     }
                     free(input_blunder_pts);
                     free(input_tri_pts);
@@ -14887,7 +14889,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
 }
 
 //Returns created triangulation pointer
-FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution)
+FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -14921,11 +14923,8 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts
     }
 
     GridPoint **points_ptrs = new GridPoint*[numofpts];
-    #pragma omp parallel
-    {
-        #pragma omp for
-        for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
-    }
+    #pragma omp parallel for
+    for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
 
     FullTriangulation *triangulation = new FullTriangulation(width, height);
     triangulation->Triangulate(points_ptrs, numofpts);
@@ -14957,7 +14956,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts
 
 
 
-void TINRecreate(D3DPOINT *ptslists, char *filename_tri,int numblunders,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
+void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
 {
 
     double minX_ptslists = min_max[0];
@@ -15533,7 +15532,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                               
                             if((fabs(ddh_1) > height_th || fabs(ddh_2) > height_th || fabs(ddh_3) > height_th) && check_match)
                             {
-                                int order[3]    = {reference_index,target_index_0,target_index_1};
+                                int order[3]    = {(int)reference_index,target_index_0,target_index_1};
                                 double height[3] = {pt0.m_Z,pt1.m_Z,pt2.m_Z};
                                 double h1,h2,dh;
                                 int t_o_min,t_o_max,t_o_mid;
@@ -17520,7 +17519,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 uint8   Half_template_size;
                 double b_factor;
                 bool flag_boundary = false;
-                int i;
+				int i;
                 int count_pts = 0;
                 double sum_weight_X     = 0;
                 double sum_weight_Y     = 0;
@@ -17533,8 +17532,21 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 //calculation image coord from object coord by RFM in left and right image
                 b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
                 Half_template_size   = (int)(Template_size/2.0);
+				int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                #pragma omp parallel for shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh)
+				{
+				// Make patch vectors thread private rather than private to each loop iteration
+				// These are used by postNCC but allocated here for efficiency
+				double *left_patch_vecs[3];
+				double *right_patch_vecs[3];
+				for (int k=0; k<3; k++)
+				{
+					left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+					right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+				}
+
+#pragma omp for schedule(guided) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
                 for(i = 0; i<NumofPts ; i++)
                 {
                     D2DPOINT Left_Imagecoord,Left_Imagecoord_p;
@@ -17568,7 +17580,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                             ori_diff = ori_images[reference_id][index_l] - ori_images[ti][index_r];
                             
                             if(postNCC(Pyramid_step, ori_diff, Left_Y,  Left_X, Right_Y, Right_X,
-                                       subA,TsubA,InverseSubA,Template_size,_flag,bin_angle,LImagesize,RImagesize,Images[reference_id],Images[ti],&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh))
+                                       subA,TsubA,InverseSubA,Half_template_size,_flag,bin_angle,LImagesize,RImagesize,Images[reference_id],Images[ti],&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh,left_patch_vecs,right_patch_vecs))
                             {
                                 //#pragma omp critical
                                 {
@@ -17581,7 +17593,16 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                             }
                         }
                     }
-                }
+				} // end omp for
+
+				// free thread-private vectors
+				for (int k=0; k<3; k++)
+				{
+					free(left_patch_vecs[k]);
+					free(right_patch_vecs[k]);
+				}
+				} // end omp parallel
+
                 
 
                 if(count_pts > 10)
@@ -17633,8 +17654,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
 }
 
 
-bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
-             NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh)
+bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Half_template_size, 
+             NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
 {
 
     // input order: NumOfPt, LeftImage, RightImage, Template_size, center_row_left, center_col_left, center_row_right, center_col_right, ncc_weight
@@ -17656,10 +17677,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
     double diff_theta;
     int mask_row, mask_col;
 
-    int Half_template_size,half_mask_size;
+    int half_mask_size;
     int count = 0;
 
-    Half_template_size  = (int)(Template_size/2);
+    //Half_template_size  = (int)(Template_size/2);
     half_mask_size      = 1;
     
     rotate_flag = _flag.rotate_flag;
@@ -17685,25 +17706,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
         for(mask_col = - half_mask_size ; mask_col <= half_mask_size ; mask_col++)
         {
             double rot_theta = 0.0;
-            double Sum_LR = 0;
-            double Sum_L = 0;
-            double Sum_R = 0;
-            double Sum_L2 = 0;
-            double Sum_R2 = 0;
-            double Sum_LR_2 = 0;
-            double Sum_L_2 = 0;
-            double Sum_R_2 = 0;
-            double Sum_L2_2 = 0;
-            double Sum_R2_2 = 0;
-            double Sum_LR_3 = 0;
-            double Sum_L_3 = 0;
-            double Sum_R_3 = 0;
-            double Sum_L2_3 = 0;
-            double Sum_R2_3 = 0;
             int Count_N[3] = {0};          
             int row, col;
             int N;
-            double val1, val2, de, de2, ncc_1, ncc_2, ncc_3;
+            double ncc_1, ncc_2, ncc_3;
             double temp_rho;
             int grid_index;
 
@@ -17746,6 +17752,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             } else {
                                 left_patch = (double) (_leftimage[position]);
                             }
+							left_patch_vecs[0][Count_N[0]] = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -17758,15 +17765,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             } else {
                                 right_patch = (double) (_rightimage[position]);
                             }
+							right_patch_vecs[0][Count_N[0]] = right_patch;
                             
                             //end
                             Count_N[0]++;
-
-                            Sum_LR            = Sum_LR + left_patch*right_patch;
-                            Sum_L             = Sum_L  + left_patch;
-                            Sum_R             = Sum_R  + right_patch;
-                            Sum_L2            = Sum_L2 + left_patch*left_patch;
-                            Sum_R2            = Sum_R2 + right_patch*right_patch;
 
                             if(multi_flag == 1)
                             {
@@ -17776,11 +17778,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                     {
-                                        Sum_LR_2  = Sum_LR_2 + left_patch*right_patch;
-                                        Sum_L_2   = Sum_L_2  + left_patch;
-                                        Sum_R_2   = Sum_R_2  + right_patch;
-                                        Sum_L2_2  = Sum_L2_2 + left_patch*left_patch;
-                                        Sum_R2_2  = Sum_R2_2 + right_patch*right_patch;
+										left_patch_vecs[1][Count_N[1]] = left_patch;
+										right_patch_vecs[1][Count_N[1]] = right_patch;
                                         Count_N[1]++;
                                     }
                                 }
@@ -17790,60 +17789,38 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                     {
-                                        Sum_LR_3  = Sum_LR_3 + left_patch*right_patch;
-                                        Sum_L_3   = Sum_L_3  + left_patch;
-                                        Sum_R_3   = Sum_R_3  + right_patch;
-                                        Sum_L2_3  = Sum_L2_3 + left_patch*left_patch;
-                                        Sum_R2_3  = Sum_R2_3 + right_patch*right_patch;
+										left_patch_vecs[2][Count_N[2]] = left_patch;
+										right_patch_vecs[2][Count_N[2]] = right_patch;
                                         Count_N[2]++;
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
+                }  // end col loop
+            }  // end row loop
 
             if(Count_N[0] > 0)
             {
-                N               = Count_N[0];
-                val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
-                val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
-                de            = sqrt(val1*val2);
-                de2           = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
-                if( val1*val2 > 0)
-                    ncc_1           = de2/de;
-                else
+				ncc_1 = Correlate(left_patch_vecs[0],right_patch_vecs[0],Count_N[0]);
+                if (ncc_1 ==-99)
                     ncc_1           = -1.0;
 
                 if(multi_flag == 1)
                 {
                     if(Count_N[1] > 0)
                     {
-                        N                   = Count_N[1];
-                        val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
-                        val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
-                        de                  = sqrt(val1*val2);
-                        de2                 = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
-                        if( val1*val2 > 0)
-                            ncc_2         = de2/de;
-                        else
-                            ncc_2           = -1.0;
+						ncc_2 = Correlate(left_patch_vecs[1],right_patch_vecs[1],Count_N[1]);
+                		if (ncc_2 ==-99)
+                    		ncc_2           = -1.0;
                     }
 
                     if(Count_N[2] > 0)
                     {
-                        N                   = Count_N[2];
-                        val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
-                        val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
-                        de                  = sqrt(val1*val2);
-                        de2                 = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
-                        if( val1*val2 > 0)
-                            ncc_3         = de2/de;
-                        else
-                            ncc_3           = -1.0;
+						ncc_3 = Correlate(left_patch_vecs[2],right_patch_vecs[2],Count_N[2]);
+                		if (ncc_3 ==-99)
+                    		ncc_3           = -1.0;
                     }
-
                 }
 
                 if(multi_flag == 1)
@@ -17869,9 +17846,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                 cell_count++;
             }
 
-            
-        }
-    }
+        }  // end mask_col loop
+    }  // end mask_row loop
 
     if(cell_count == 9)
     {
@@ -18777,7 +18753,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                 
                             }
                         }
-                        printf("read_done count_MPs %d\t%d\n",count_read,count_out);
+                        printf("read_done count_MPs %ld\t%ld\n",count_read,count_out);
                         
                         free(temp_pts);
                         fclose(p_hfile);
@@ -18872,7 +18848,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             value_pt[count] = 0;
     }
  */
-    printf("end interpolation\t%d\t%d\n",total_search_count,total_interpolated);
+    printf("end interpolation\t%ld\t%ld\n",total_search_count,total_interpolated);
     
     /*
     //DEM boundary filter
@@ -19283,7 +19259,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                     
                 }
             }
-            printf("%d\t%d\n",count_null_cell,count_highnull_cell);
+            printf("%ld\t%d\n",count_null_cell,count_highnull_cell);
             if(count_null_cell == 0)
                 check_while = 1;
             
@@ -21949,240 +21925,313 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             
             double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
             
-            double N1 = X_matrix->val[0][0];
-            double N2 = X_matrix->val[1][0];
-            double N3 = 1.0;
-            
-            double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-            double angle = acos(fabs(N3)/norm)*180/3.141592;
-            
-            if(angle <= 0 && angle >= -90)
-                angle = fabs(angle);
-            else if(angle <= -270 && angle >= -360)
-                angle = 360 + angle;
-            else if(angle >= 270 && angle <= 360)
-                angle = 360 - angle;
-            
-            
-            //printf("vector %f\t%f\t%f\t norm %f\tangle %f\n",N1,N2,N3,norm,angle);
-            
-            double sum = 0;
-            double min_Z = 99999999999;
-            double max_Z = -99999999999;
-            double temp_fitted_Z;
-            double diff_Z;
-            long int selected_count = 0;
-            int hist[20] = {};
-            for(row = 0; row < *numpts ; row++)
+            if(plane_Z > -100 && plane_Z < 15000)
             {
-                int hist_index = (int)(fabs(V_matrix->val[row][0]));
-                if(hist_index > 19)
-                    hist_index = 19;
-                if(hist_index >= 0 && hist_index <= 19)
-                    hist[hist_index]++;
-            }
-            
-            int V_th = 20;
-            int hist_sum = 0;
-            double hist_rate;
-            bool check_V = true;
-            row = 0;
-            while(check_V && row < 20)
-            {
-                hist_sum += hist[row];
-                hist_rate = (double)hist_sum/(*numpts);
-                if(hist_rate > hist_th && hist_sum > 6)
+                double N1 = X_matrix->val[0][0];
+                double N2 = X_matrix->val[1][0];
+                double N3 = 1.0;
+                
+                double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+                double angle = acos(fabs(N3)/norm)*180/3.141592;
+                
+                if(angle <= 0 && angle >= -90)
+                    angle = fabs(angle);
+                else if(angle <= -270 && angle >= -360)
+                    angle = 360 + angle;
+                else if(angle >= 270 && angle <= 360)
+                    angle = 360 - angle;
+                
+                
+                //printf("vector %f\t%f\t%f\t norm %f\tangle %f\n",N1,N2,N3,norm,angle);
+                
+                double sum = 0;
+                double min_Z = 99999999999;
+                double max_Z = -99999999999;
+                double temp_fitted_Z;
+                double diff_Z;
+                long int selected_count = 0;
+                int hist[20] = {};
+                for(row = 0; row < *numpts ; row++)
                 {
-                    V_th = row;
-                    check_V = false;
+                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
+                    if(hist_index > 19)
+                        hist_index = 19;
+                    if(hist_index >= 0 && hist_index <= 19)
+                        hist[hist_index]++;
                 }
-                row++;
-            }
-            
-            for(row = 0; row < *numpts ; row++)
-            {
-                if(fabs(V_matrix->val[row][0]) > V_th+1)
-                    XY_save[row].flag = 0;
-                else
-                    selected_count++;
-            }
-            
-            GMA_double_destroy(A_matrix);
-            GMA_double_destroy(L_matrix);
-            GMA_double_destroy(AT_matrix);
-            GMA_double_destroy(ATA_matrix);
-            GMA_double_destroy(ATAI_matrix);
-            GMA_double_destroy(ATL_matrix);
-            GMA_double_destroy(X_matrix);
-            GMA_double_destroy(AX_matrix);
-            GMA_double_destroy(V_matrix);
-            
-            if(selected_count > 6)
-            {
-                A_matrix = GMA_double_create(selected_count, 6);
-                L_matrix = GMA_double_create(selected_count, 1);
-                AT_matrix = GMA_double_create(6,selected_count);
-                ATA_matrix = GMA_double_create(6,6);
                 
-                ATAI_matrix = GMA_double_create(6,6);
-                ATL_matrix = GMA_double_create(6,1);
-                
-                X_matrix = GMA_double_create(6,1);
-                AX_matrix = GMA_double_create(selected_count,1);
-                V_matrix = GMA_double_create(selected_count,1);
-                
-                count = 0;
+                int V_th = 20;
+                int hist_sum = 0;
+                double hist_rate;
+                bool check_V = true;
+                row = 0;
+                while(check_V && row < 20)
+                {
+                    hist_sum += hist[row];
+                    hist_rate = (double)hist_sum/(*numpts);
+                    if(hist_rate > hist_th && hist_sum > 6)
+                    {
+                        V_th = row;
+                        check_V = false;
+                    }
+                    row++;
+                }
                 
                 for(row = 0; row < *numpts ; row++)
                 {
-                    if(XY_save[row].flag == 1)
-                    {
-                        A_matrix->val[count][0] = XY_save[row].m_X*XY_save[row].m_X;
-                        A_matrix->val[count][1] = XY_save[row].m_X*XY_save[row].m_Y;
-                        A_matrix->val[count][2] = XY_save[row].m_Y*XY_save[row].m_Y;
-                        A_matrix->val[count][3] = XY_save[row].m_X;
-                        A_matrix->val[count][4] = XY_save[row].m_Y;
-                        A_matrix->val[count][5] = 1.0;
-                        
-                        L_matrix->val[count][0] = XY_save[row].m_Z;
-                        count++;
-                    }
-                }
-                
-                GMA_double_Tran(A_matrix,AT_matrix);
-                GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                GMA_double_inv(ATA_matrix,ATAI_matrix);
-                GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                
-                *numpts = selected_count;
-                
-                sum = 0;
-                min_Z = 99999999999;
-                max_Z = -99999999999;
-                for(row = 0; row < *numpts ; row++)
-                {
-                    sum += V_matrix->val[row][0] * V_matrix->val[row][0];
-                    
-                    
-                    temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
-                    X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
-                    
-                    if(min_Z > temp_fitted_Z)
-                        min_Z = temp_fitted_Z;
-                    if(max_Z < temp_fitted_Z)
-                        max_Z = temp_fitted_Z;
-                }
-                
-                if(sum > 0 && *numpts > 0)
-                {
-                    sigma = sqrt(sum/(*numpts));
-                
-                /*if(sigma > 20)
-                 {
-                 *fitted_Z = plane_Z;
-                 sigma = 15;
-                 }
-                 else*/
-                //{
-                    double diff_Z = fabs(max_Z - min_Z);
-                    
-                    double A = X_matrix->val[0][0];
-                    double B = X_matrix->val[0][2];
-                    double C = X_matrix->val[0][3];
-                    double D = X_matrix->val[0][4];
-                    double E = X_matrix->val[0][1];
-                    
-                    double det = 4*A*B - E*E;
-                    double det1 = D*E - 2*C*B;
-                    double det2 = 2*A*D - C*E;
-                    double xm = -(2*B*C - D*E)/det;
-                    double ym = -(2*A*D - C*E)/det;
-                    double diff_xm = (fabs(xm - X_scaled))/Scale_ptslists*distX_ptslists/grid;
-                    double diff_ym = (fabs(ym - Y_scaled))/Scale_ptslists*distY_ptslists/grid;
-                    
-                    bool check_clinder = false;
-                    if(det == 0 && det1 == det2)
-                        check_clinder = true;
-                    
-                    bool check_center_peak = false;
-                    
-                    if(!check_clinder && !check_center_peak)
-                    {
-                        
-                        *fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[0][1]*X_scaled*Y_scaled + X_matrix->val[0][2]*Y_scaled*Y_scaled +
-                        X_matrix->val[0][3]*X_scaled + X_matrix->val[0][4]*Y_scaled + X_matrix->val[0][5];
-                        
-                        if(grid > 2)
-                        {
-                            if(angle < 10)
-                                Grid_info[t_index].lsf_kernel = 4;
-                            else if(angle < 20)
-                                Grid_info[t_index].lsf_kernel = 3;
-                            else if(angle < 30)
-                                Grid_info[t_index].lsf_kernel = 2;
-                            else if(Grid_info[t_index].lsf_kernel < 2)
-                                Grid_info[t_index].lsf_kernel = 2;
-                        }
-                        else if(grid == 2)
-                        {
-                            if(angle < 10)
-                                Grid_info[t_index].lsf_kernel = 5 + add_interval;
-                            else if(angle < 20)
-                                Grid_info[t_index].lsf_kernel = 4 + add_interval;
-                            else if(angle < 30)
-                                Grid_info[t_index].lsf_kernel = 3 + add_interval;
-                            else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
-                                Grid_info[t_index].lsf_kernel = 2 + add_interval;
-                        }
-                        else if(grid == 1)
-                        {
-                            if(angle < 10)
-                                Grid_info[t_index].lsf_kernel = 7 + add_interval*2;
-                            else if(angle < 20)
-                                Grid_info[t_index].lsf_kernel = 6 + add_interval*2;
-                            else if(angle < 30)
-                                Grid_info[t_index].lsf_kernel = 5 + add_interval*2;
-                            else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
-                                Grid_info[t_index].lsf_kernel = 4 + add_interval*2;
-                        }
-                        else
-                        {
-                            if(angle < 10)
-                                Grid_info[t_index].lsf_kernel = 9 + add_interval*3;
-                            else if(angle < 20)
-                                Grid_info[t_index].lsf_kernel = 8 + add_interval*3;
-                            else if(angle < 30)
-                                Grid_info[t_index].lsf_kernel = 7 + add_interval*3;
-                            else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
-                                Grid_info[t_index].lsf_kernel = 6 + add_interval*3;
-                        }
-                    }
+                    if(std::abs(V_matrix->val[row][0]) > V_th+1)
+                        XY_save[row].flag = 0;
                     else
-                        sigma = 999999;
+                        selected_count++;
                 }
-                else
-                    sigma = 999999;
                 
                 GMA_double_destroy(A_matrix);
                 GMA_double_destroy(L_matrix);
                 GMA_double_destroy(AT_matrix);
                 GMA_double_destroy(ATA_matrix);
-                
                 GMA_double_destroy(ATAI_matrix);
                 GMA_double_destroy(ATL_matrix);
-                
                 GMA_double_destroy(X_matrix);
                 GMA_double_destroy(AX_matrix);
                 GMA_double_destroy(V_matrix);
+                
+                if(selected_count > 6)
+                {
+                    A_matrix = GMA_double_create(selected_count, 6);
+                    L_matrix = GMA_double_create(selected_count, 1);
+                    AT_matrix = GMA_double_create(6,selected_count);
+                    ATA_matrix = GMA_double_create(6,6);
+                    
+                    ATAI_matrix = GMA_double_create(6,6);
+                    ATL_matrix = GMA_double_create(6,1);
+                    
+                    X_matrix = GMA_double_create(6,1);
+                    AX_matrix = GMA_double_create(selected_count,1);
+                    V_matrix = GMA_double_create(selected_count,1);
+                    
+                    count = 0;
+                    
+                    for(row = 0; row < *numpts ; row++)
+                    {
+                        if(XY_save[row].flag == 1)
+                        {
+                            A_matrix->val[count][0] = XY_save[row].m_X*XY_save[row].m_X;
+                            A_matrix->val[count][1] = XY_save[row].m_X*XY_save[row].m_Y;
+                            A_matrix->val[count][2] = XY_save[row].m_Y*XY_save[row].m_Y;
+                            A_matrix->val[count][3] = XY_save[row].m_X;
+                            A_matrix->val[count][4] = XY_save[row].m_Y;
+                            A_matrix->val[count][5] = 1.0;
+                            
+                            L_matrix->val[count][0] = XY_save[row].m_Z;
+                            count++;
+                        }
+                    }
+                    
+                    GMA_double_Tran(A_matrix,AT_matrix);
+                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                    GMA_double_inv(ATA_matrix,ATAI_matrix);
+                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                    
+                    *numpts = selected_count;
+                    
+                    sum = 0;
+                    min_Z = 99999999999;
+                    max_Z = -99999999999;
+                    for(row = 0; row < *numpts ; row++)
+                    {
+                        sum += V_matrix->val[row][0] * V_matrix->val[row][0];
+                        
+                        
+                        temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
+                        X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
+                        
+                        if(min_Z > temp_fitted_Z)
+                            min_Z = temp_fitted_Z;
+                        if(max_Z < temp_fitted_Z)
+                            max_Z = temp_fitted_Z;
+                    }
+                    
+                    if(sum > 0 && *numpts > 0 && !isnan(sum))
+                    {
+                        sigma = sqrt(sum/(*numpts));
+                    
+                        if(isnan(sigma))
+                        {
+                            printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
+                            
+                            for(row = 0; row < *numpts ; row++)
+                            {
+                                double t_sum = V_matrix->val[row][0] * V_matrix->val[row][0];
+                                
+                                
+                                temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
+                                X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
+                                
+                                printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
+                            }
+                            
+                            exit(1);
+                        }
+                    /*if(sigma > 20)
+                     {
+                     *fitted_Z = plane_Z;
+                     sigma = 15;
+                     }
+                     else*/
+                    //{
+                        double diff_Z = fabs(max_Z - min_Z);
+                        
+                        double A = X_matrix->val[0][0];
+                        double B = X_matrix->val[0][2];
+                        double C = X_matrix->val[0][3];
+                        double D = X_matrix->val[0][4];
+                        double E = X_matrix->val[0][1];
+                        
+                        double det = 4*A*B - E*E;
+                        double det1 = D*E - 2*C*B;
+                        double det2 = 2*A*D - C*E;
+                        double xm = -(2*B*C - D*E)/det;
+                        double ym = -(2*A*D - C*E)/det;
+                        double diff_xm = (fabs(xm - X_scaled))/Scale_ptslists*distX_ptslists/grid;
+                        double diff_ym = (fabs(ym - Y_scaled))/Scale_ptslists*distY_ptslists/grid;
+                        
+                        bool check_clinder = false;
+                        if(det == 0 && det1 == det2)
+                            check_clinder = true;
+                        
+                        bool check_center_peak = false;
+                        
+                        if(!check_clinder && !check_center_peak)
+                        {
+                            
+                            *fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[0][1]*X_scaled*Y_scaled + X_matrix->val[0][2]*Y_scaled*Y_scaled +
+                            X_matrix->val[0][3]*X_scaled + X_matrix->val[0][4]*Y_scaled + X_matrix->val[0][5];
+                        }
+                        else
+                        {
+                            double sum_weight = 0;
+                            double sum_weigtdist = 0;
+                            double p = 1.5;
+                            for(row = 0; row < *numpts ; row++)
+                            {
+                                double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
+                                sum_weight += (1.0/pow(dist,p));
+                                sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
+                            }
+                            
+                            if(sum_weight > 0)
+                            {
+                                *fitted_Z = sum_weigtdist/sum_weight;
+                                sigma = 1;
+                            }
+                            else
+                                sigma = 999999;
+                        }
+                    }
+                    else
+                    {
+                        
+                        double sum_weight = 0;
+                        double sum_weigtdist = 0;
+                        double p = 1.5;
+                        for(row = 0; row < *numpts ; row++)
+                        {
+                            double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
+                            sum_weight += (1.0/pow(dist,p));
+                            sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
+                        }
+                        
+                        if(sum_weight > 0)
+                        {
+                            *fitted_Z = sum_weigtdist/sum_weight;
+                            sigma = 1;
+                        }
+                        else
+                            sigma = 999999;
+                    }
+                    
+                    if(grid > 2)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = 4;
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = 3;
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = 2;
+                        else if(Grid_info[t_index].lsf_kernel < 2)
+                            Grid_info[t_index].lsf_kernel = 2;
+                    }
+                    else if(grid == 2)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = 5 + add_interval;
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = 4 + add_interval;
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = 3 + add_interval;
+                        else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
+                            Grid_info[t_index].lsf_kernel = 2 + add_interval;
+                    }
+                    else if(grid == 1)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = 7 + add_interval*2;
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = 6 + add_interval*2;
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = 5 + add_interval*2;
+                        else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
+                            Grid_info[t_index].lsf_kernel = 4 + add_interval*2;
+                    }
+                    else
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = 9 + add_interval*3;
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = 8 + add_interval*3;
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = 7 + add_interval*3;
+                        else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
+                            Grid_info[t_index].lsf_kernel = 6 + add_interval*3;
+                    }
+                    
+                    GMA_double_destroy(A_matrix);
+                    GMA_double_destroy(L_matrix);
+                    GMA_double_destroy(AT_matrix);
+                    GMA_double_destroy(ATA_matrix);
+                    
+                    GMA_double_destroy(ATAI_matrix);
+                    GMA_double_destroy(ATL_matrix);
+                    
+                    GMA_double_destroy(X_matrix);
+                    GMA_double_destroy(AX_matrix);
+                    GMA_double_destroy(V_matrix);
+                }
+                else
+                {
+                    sigma = 999999;
+                    *numpts = 0;
+                }
             }
             else
             {
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
+                
                 sigma = 999999;
                 *numpts = 0;
             }
+            
             free(XY_save);
         }
         else
@@ -22242,7 +22291,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     
     
     pFile_DEM = fopen(str_DEMfile,"r");
-    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
     
     if(pFile_DEM)
     {
@@ -22583,7 +22632,7 @@ void GMA_double_printf(GMA_double *a)
     {
         for(cnt2=0;cnt2<a->ncols;cnt2++)
         {
-            printf("[%d,%d] %f\t",cnt1,cnt2,a->val[cnt1][cnt2]);
+            printf("[%ld,%ld] %Lf\t",cnt1,cnt2,a->val[cnt1][cnt2]);
         }
         printf("\n");
     }
@@ -22758,21 +22807,21 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
         {
             while(!feof(fp))
             {
-                fscanf(fp, "%s\n", &garbage);
-                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
-                fscanf(fp, "%s\t%d\t%d\n", &garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
-                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
+                fscanf(fp, "%s\n", garbage);
+                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
+                fscanf(fp, "%s\t%d\t%d\n", garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
+                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
                 proinfo->frameinfo.m_Camera.m_ppx = 0.0;
                 proinfo->frameinfo.m_Camera.m_ppy = 0.0;
                 
                 printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
                        proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
                 
-                fscanf(fp, "%s\n", &garbage);
-                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", &garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
+                fscanf(fp, "%s\n", garbage);
+                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
                 printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
                 
-                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\n", garbage);
                 
                 proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->frameinfo.NumberofPhotos);
                 proinfo->number_of_images = proinfo->frameinfo.NumberofPhotos;
@@ -22782,7 +22831,7 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
                 {
                     int image_number;
                     int strip_id;
-                    fscanf(fp, "%s\t%d\t%d\n", &garbage,&strip_id,&image_number);
+                    fscanf(fp, "%s\t%d\t%d\n", garbage,&strip_id,&image_number);
                     
                     for(int j=0;j<image_number;j++)
                     {

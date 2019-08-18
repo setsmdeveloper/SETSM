@@ -93,47 +93,45 @@ to experiment with floating-point related options if you have problems.
 ### Building and installing SETSM using CMake
 
 A CMake build is provided as an alternative to the Makefile method described 
-above.  The environment variable CC must be set to the compiler command to be 
+above.  The environment variable CXX must be set to the compiler command to be 
 used.  If the TIFF library is in a nonstandard location its path must be 
 provided using a -D flag as shown in the second example below.
 
-Example 1:  Build with icc.
+Example 1:  Build with CMake.
 ```
 mkdir build
 cd build
-CC=icc cmake ..
+cmake ..
 make
 make install
 ```
 
-Example 2:  Build with icc specifying a location for the TIFF library.
+Example 2:  Build with icpc specifying a location for the TIFF library.
 ```
 mkdir build
 cd build
-CC=icc cmake -DCMAKE_PREFIX_PATH=$HOME/libTIFF ..
+CXX=icpc cmake -DCMAKE_PREFIX_PATH=$HOME/libTIFF ..
 make
 make install
 ```
 
-Example 3:  Build with icc specifying a location for make install.
+Example 3:  Build with icpc specifying a location for make install.
 ```
 mkdir build
 cd build
-CC=icc cmake -DCMAKE_INSTALL_PREFIX=./desired_location ..
+CXX=icpc cmake -DCMAKE_INSTALL_PREFIX=./desired_location ..
 make
 make install
 ```
 
-Example 4: Build with mvapich2.
+Example 4:  Build with mvapich2.
 ```
 mkdir build
 cd build
-CC=mpicc MPI=on cmake ..
+CXX=mpicc MPI=on cmake ..
 make
 make install
 ```
-
-Note:  The SETSM CMake build with the Cray compiler does not yet work.  
 
 ## License
 
