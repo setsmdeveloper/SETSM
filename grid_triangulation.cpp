@@ -710,7 +710,7 @@ void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[],
 			this->RetriangulateHorizontal(blunder_vector);	
 		}
 	}
-	this->edge_list->SetGrid(this->grid);
+	this->grid->ReduceNumOfElems(num_blunders);
 }
 
 
@@ -765,17 +765,29 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 			}
 		}
 		//Spawn two tasks to remove unlinked blunders on each side
+		GridTriangulation *g_bottom = new GridTriangulation(this->width, this->height);
+		GridTriangulation *g_top = new GridTriangulation(this->width, this->height);
+		g_bottom->edge_list = this->edge_list->MakeLocalCopy();
+		g_top->edge_list = this->edge_list->MakeLocalCopy();
+		g_bottom->grid = this->grid;
+		g_top->grid = this->grid;
 		#pragma omp task
 		{
-			this->RetriangulateHorizontal(Unlinked1);
+			g_bottom->RetriangulateHorizontal(Unlinked1);
 		}
 		
 		#pragma omp task
 		{
-			this->RetriangulateHorizontal(Unlinked2);
+			g_top->RetriangulateHorizontal(Unlinked2);
 		}
 		//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
 		#pragma omp taskwait
+		this->edge_list->MergeUnused(*(g_bottom->edge_list));
+		this->edge_list->MergeUnused(*(g_top->edge_list));
+		g_bottom->grid = 0;
+		g_top->grid = 0;
+		delete g_bottom;
+		delete g_top;
 		this->RetriangulateHorizontal(Linked);
 	}else
 	{
@@ -833,16 +845,28 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 				}
 			}
 		}
+		GridTriangulation *g_left = new GridTriangulation(this->width, this->height);
+		GridTriangulation *g_right = new GridTriangulation(this->width, this->height);
+		g_left->edge_list = this->edge_list->MakeLocalCopy();
+		g_right->edge_list = this->edge_list->MakeLocalCopy();
+		g_left->grid = this->grid;
+		g_right->grid = this->grid;
 		#pragma omp task
 		{
-			this->RetriangulateVertical(Unlinked1);
+			g_left->RetriangulateVertical(Unlinked1);
 		}
 		
 		#pragma omp task
 		{
-			this->RetriangulateVertical(Unlinked2);
+			g_right->RetriangulateVertical(Unlinked2);
 		}
 		#pragma omp taskwait
+		this->edge_list->MergeUnused(*(g_left->edge_list));
+		this->edge_list->MergeUnused(*(g_right->edge_list));
+		g_left->grid = 0;
+		g_right->grid = 0;
+		delete g_left;
+		delete g_right;
 		this->RetriangulateVertical(Linked);
 	}else
 	{
@@ -1308,21 +1332,15 @@ void GridTriangulation<GridType, IterType>::RemovePointAndRetriangulate(const Gr
 	if (e == 0)
 	{
 		e = e_p->dnext;
-		#pragma omp critical
-		{
-			this->RemovePoint(p);
-			this->TriangulateEmptyPolygon(*e);
-		}
+		this->RemovePoint(p);
+		this->TriangulateEmptyPolygon(*e);
 	}
 	else
 	{
 		GridPoint end_point = e->twin->dnext->twin->orig;
 		Edge *start_edge = e->dnext;
-		#pragma omp critical
-		{
-			this->RemovePoint(p);
-			this->TriangulateBorder(*start_edge, end_point);
-		}
+		this->RemovePoint(p);
+		this->TriangulateBorder(*start_edge, end_point);
 	}
 }
 

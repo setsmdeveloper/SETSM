@@ -87,12 +87,18 @@ class EdgeList
 		std::size_t idx;	// Current length of 'unused_edges' 
 		std::size_t size;	// Maximum number of edges to store
 		bool is_part_of_split;	// Denotes whether this is part of a larger, split EdgeList
+		bool is_local_copy;	// Denotes whether this is a copy of the global EdgeList
 
 		// Alternative constructor to create EdgeList from components of a base EdgeList
 		//   edges - list of edge objects from base EdgeList
 		//   unused_edges - list of unused edges from base EdgeList
 		//   num_points = maximum number of points for THIS triangulation (not for base triangulation)
 		EdgeList(Edge *edges, Edge **unused_edges, std::size_t num_points);
+		// Alternative constructor to create a local EdgeList from a global EdgeList
+		// Used for parallel point removal
+		//   global_list - global EdgeList
+		//   num_unused = maximum number of unused edges for local point removal
+		EdgeList(Edge *edges, std::size_t num_points);
 	public:
 		// Standard constructor to create EdgeList from scratch
 		//   num_points - maximum number of points in corresponding triangulation
@@ -119,6 +125,11 @@ class EdgeList
 		//   right_list - the right EdgeList from SplitEdgeList call
 		// The input EdgeLists should have been created by calling SplitEdgeList on this
 		void MergeEdgeLists(EdgeList &left_list, EdgeList &right_list);
+		// Creates a copy of the current EdgeList with its own empty unused_edges and idx
+		EdgeList *MakeLocalCopy();
+		// Merges local unused list into the current unused list
+		//   local_list - the left EdgeList from MakeLocalCopy call
+		void MergeUnused(EdgeList &local_list);
 
 		// Sets grid so that each grid point corresponding to a point in the
 		// triangulation stores an pointer to an Edge object out of that point
