@@ -3782,7 +3782,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
                                             FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                             delete origTri;
@@ -14467,7 +14467,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
     double seedDEMsigma = proinfo->seedDEMsigma;
     double f_demsize = proinfo->DEM_resolution;
     
-    char bufstr[500];
+    //char bufstr[500];
     uint16 count            = 0;
     *p_flag             = true;
     int count_MPs       = count_MPs_input;
@@ -14619,7 +14619,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 FullTriangulation *origTri;
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
-                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
+                //sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                 printf("TINCreate resolution %f\n",grid_resolution);
                 //Save triangulation for later use as we will remove blunders directly from this triangulation
                 origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
@@ -14734,7 +14734,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 
                     }
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
-                    sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
+                    //sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                     //If we have more blunders than points in triangulations, almost certainly faster to ditch old triangulation
 					//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
                     if(t_tri_counts<t_blunder_counts)
@@ -14745,9 +14745,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         origTri = TINCreate(input_tri_pts,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
                     }else
                     {
-                    	printf("TINRecreate resolution %f\n",grid_resolution);
+                    	printf("TINUpdate resolution %f\n",grid_resolution);
                     	//Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                    	TINRecreate(input_tri_pts,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
+                    	TINUpdate(input_tri_pts,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
                     }
                     free(input_blunder_pts);
                     free(input_tri_pts);
@@ -14955,7 +14955,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
 }
 
 
-void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
+void TINUpdate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
 {
 
     double minX_ptslists = min_max[0];
@@ -14965,7 +14965,7 @@ void TINRecreate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, doubl
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
-    printf("\tTINRecreate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
+    printf("\tTINUpdate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
 
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
     index_in_ptslists.reserve(numofpts);
