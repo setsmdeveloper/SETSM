@@ -19,6 +19,7 @@
 #include"grid_triangulation.hpp"
 
 #include "math.h"
+#include <cmath>
 #include <omp.h>
 #include <time.h>
 #include <dirent.h>
@@ -465,7 +466,7 @@ int main(int argc,char *argv[])
             
             
             pFile_DEM = fopen(str_DEMfile,"r");
-            printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+            printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
             
             if(pFile_DEM)
             {
@@ -2606,7 +2607,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     FILE* pFile_DEM = NULL;
                                     
                                     pFile_DEM = fopen(str_DEMfile,"r");
-                                    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                                    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                                     final_iteration = 3;
                                     //if(!pFile_DEM)
                                     {
@@ -2729,7 +2730,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 FILE* pFile_DEM = NULL;
                                 
                                 pFile_DEM = fopen(str_DEMfile,"r");
-                                printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                                printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                                 final_iteration = 3;
                                 
                                 //if(!pFile_DEM)
@@ -14257,7 +14258,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             //    minimum_Th = 0.1;
             //minimum_Th = 0.4;
             
-            printf("minimum TH %f\t%f\t%d\t%d\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
+            printf("minimum TH %f\t%f\t%d\t%ld\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
             free(hist);
             //exit(1);
             
@@ -18861,7 +18862,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                 
                             }
                         }
-                        printf("read_done count_MPs %d\t%d\n",count_read,count_out);
+                        printf("read_done count_MPs %ld\t%ld\n",count_read,count_out);
                         
                         free(temp_pts);
                         fclose(p_hfile);
@@ -18956,7 +18957,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             value_pt[count] = 0;
     }
  */
-    printf("end interpolation\t%d\t%d\n",total_search_count,total_interpolated);
+    printf("end interpolation\t%ld\t%ld\n",total_search_count,total_interpolated);
     
     /*
     //DEM boundary filter
@@ -19367,7 +19368,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                     
                 }
             }
-            printf("%d\t%d\n",count_null_cell,count_highnull_cell);
+            printf("%ld\t%d\n",count_null_cell,count_highnull_cell);
             if(count_null_cell == 0)
                 check_while = 1;
             
@@ -22066,7 +22067,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 int hist[20] = {};
                 for(row = 0; row < *numpts ; row++)
                 {
-                    int hist_index = (int)(fabs(V_matrix->val[row][0]));
+                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
                     if(hist_index > 19)
                         hist_index = 19;
                     if(hist_index >= 0 && hist_index <= 19)
@@ -22092,7 +22093,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 
                 for(row = 0; row < *numpts ; row++)
                 {
-                    if(fabs(V_matrix->val[row][0]) > V_th+1)
+                    if(std::abs(V_matrix->val[row][0]) > V_th+1)
                         XY_save[row].flag = 0;
                     else
                         selected_count++;
@@ -22173,7 +22174,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     
                         if(isnan(sigma))
                         {
-                            printf("sum numpts %f\t%d\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
+                            printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
                             
                             for(row = 0; row < *numpts ; row++)
                             {
@@ -22183,7 +22184,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                                 temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
                                 X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
                                 
-                                printf("id %d\tt_sum %f\tV_matrix %f\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
+                                printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
                             }
                             
                             exit(1);
@@ -22404,7 +22405,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     
     
     pFile_DEM = fopen(str_DEMfile,"r");
-    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
     
     if(pFile_DEM)
     {
@@ -22745,7 +22746,7 @@ void GMA_double_printf(GMA_double *a)
     {
         for(cnt2=0;cnt2<a->ncols;cnt2++)
         {
-            printf("[%d,%d] %f\t",cnt1,cnt2,a->val[cnt1][cnt2]);
+            printf("[%ld,%ld] %Lf\t",cnt1,cnt2,a->val[cnt1][cnt2]);
         }
         printf("\n");
     }
@@ -22920,21 +22921,21 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
         {
             while(!feof(fp))
             {
-                fscanf(fp, "%s\n", &garbage);
-                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
-                fscanf(fp, "%s\t%d\t%d\n", &garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
-                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
+                fscanf(fp, "%s\n", garbage);
+                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
+                fscanf(fp, "%s\t%d\t%d\n", garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
+                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
                 proinfo->frameinfo.m_Camera.m_ppx = 0.0;
                 proinfo->frameinfo.m_Camera.m_ppy = 0.0;
                 
                 printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
                        proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
                 
-                fscanf(fp, "%s\n", &garbage);
-                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", &garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
+                fscanf(fp, "%s\n", garbage);
+                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
                 printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
                 
-                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\n", garbage);
                 
                 proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->frameinfo.NumberofPhotos);
                 proinfo->number_of_images = proinfo->frameinfo.NumberofPhotos;
@@ -22944,7 +22945,7 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
                 {
                     int image_number;
                     int strip_id;
-                    fscanf(fp, "%s\t%d\t%d\n", &garbage,&strip_id,&image_number);
+                    fscanf(fp, "%s\t%d\t%d\n", garbage,&strip_id,&image_number);
                     
                     for(int j=0;j<image_number;j++)
                     {
