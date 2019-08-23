@@ -3306,7 +3306,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         double minH_grid, maxH_grid;
                         double MPP;
                         double MPP_simgle_image;
-                        double MPP_stereo_angle;
+                        double MPP_stereo_angle = 1;
                         
                         uint8 iteration;
 
