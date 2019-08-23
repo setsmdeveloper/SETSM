@@ -24,7 +24,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 10
+#define MaxImages 3
 
 #ifndef bool
 //#define bool unsigned char
@@ -229,6 +229,9 @@ typedef struct ProjectInfo{
     int number_of_images;
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     uint8 pyramid_level;
+    uint8 SDM_SS;
+    double SDM_AS;
+    int SDM_days;
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -301,6 +304,9 @@ typedef struct ArgumentInfo{
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
     uint8 pyramid_level;
+    uint8 SDM_SS;
+    int SDM_days;
+    double SDM_AS;
     
     char Image[MaxImages][500];
 	char Outputpath[500];
