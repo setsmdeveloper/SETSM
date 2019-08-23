@@ -3181,7 +3181,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         double minH_grid, maxH_grid;
                         double MPP;
                         double MPP_simgle_image;
-                        double MPP_stereo_angle;
+                        double MPP_stereo_angle = 1;
                         
                         uint8 iteration;
 
@@ -14880,6 +14880,12 @@ void TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
 
     INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
     INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    //Check to ensure grid width/height fit in 16 bit integers
+    if(width > 32767 || height > 32767)
+    {
+        printf("ERROR: Grid is too large. width: %d height: %d\n", width, height);
+        exit(1);
+    }
     printf("\tTINCreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
 
     std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
