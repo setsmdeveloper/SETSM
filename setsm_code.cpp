@@ -19,6 +19,7 @@
 #include"grid_triangulation.hpp"
 
 #include "math.h"
+#include <cmath>
 #include <omp.h>
 #include <time.h>
 #include <dirent.h>
@@ -29,7 +30,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.0.1";
+const char setsm_version[] = "4.0.2";
 
 //const double RA_resolution = 16;
 
@@ -51,6 +52,9 @@ int main(int argc,char *argv[])
     
     args.sensor_type = SB; //1 = satellite, 2 = Aerial Photo
     args.pyramid_level = 4;
+    args.SDM_SS = 3;
+    args.SDM_AS = 20.0;
+    args.SDM_days = 1;
     args.number_of_images = 2;
     args.check_arg = 0;
     args.check_DEM_space = false;
@@ -465,7 +469,7 @@ int main(int argc,char *argv[])
             
             
             pFile_DEM = fopen(str_DEMfile,"r");
-            printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+            printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
             
             if(pFile_DEM)
             {
@@ -581,6 +585,11 @@ int main(int argc,char *argv[])
                     printf("Insufficient memory available\n");
                     exit(1);
                 }
+                for(int count_index = 0 ; count_index < data_length; count_index++)
+                {
+                    Grid_info[count_index].lsf_std = 0.0;
+                    Grid_info[count_index].lsf_kernel = 2;
+                }
                 
                 float *smooth_DEM = (float*)malloc(sizeof(float)*data_length);
                 if(smooth_DEM == NULL)
@@ -692,6 +701,45 @@ int main(int argc,char *argv[])
                     {
                         args.pyramid_level = atoi(argv[i+1]);
                         printf("Steps of pyramid level %d\n",args.pyramid_level);
+                    }
+                }
+                
+                if (strcmp("-SDM_SS",argv[i]) == 0 || strcmp("-sdm_ss",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input SDM search size (default is 3)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.SDM_SS = atoi(argv[i+1]);
+                        printf("SDM search size %d\n",args.SDM_SS);
+                    }
+                }
+                
+                if (strcmp("-SDM_DAYS",argv[i]) == 0 || strcmp("-sdm_days",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input time difference(day) between images (default is 1)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.SDM_days = atoi(argv[i+1]);
+                        printf("SDM time gap %d(days)\n",args.SDM_days);
+                    }
+                }
+                
+                if (strcmp("-SDM_AS",argv[i]) == 0 || strcmp("-sdm_as",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input average velocity per day(m/day) for SDM\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.SDM_AS = atof(argv[i+1]);
+                        printf("Average velocity %f(m/day)\n",args.SDM_AS);
                     }
                 }
                 
@@ -1523,7 +1571,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     total_ST = time(0);
     
     
-    ProInfo *proinfo = (ProInfo*)calloc(sizeof(ProInfo), 1);
+    ProInfo *proinfo = (ProInfo*)calloc(sizeof(ProInfo),1);
     proinfo->number_of_images = args.number_of_images;
     proinfo->sensor_type = args.sensor_type;
     proinfo->System_memory = args.System_memory;
@@ -2606,7 +2654,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     FILE* pFile_DEM = NULL;
                                     
                                     pFile_DEM = fopen(str_DEMfile,"r");
-                                    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                                    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                                     final_iteration = 3;
                                     //if(!pFile_DEM)
                                     {
@@ -2729,7 +2777,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 FILE* pFile_DEM = NULL;
                                 
                                 pFile_DEM = fopen(str_DEMfile,"r");
-                                printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+                                printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
                                 final_iteration = 3;
                                 
                                 //if(!pFile_DEM)
@@ -7106,6 +7154,15 @@ void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_ar
     subBoundary[1] =  (int)(floor(subBoundary[1]/8))*8 - 40;
     subBoundary[2] =  (int)(floor(subBoundary[2]/8))*8 + 40;
     subBoundary[3] =  (int)(floor(subBoundary[3]/8))*8 + 40;
+    
+    if(subBoundary[0] < Boundary[0])
+        subBoundary[0] = Boundary[0];
+    if(subBoundary[1] < Boundary[1])
+        subBoundary[1] = Boundary[1];
+    if(subBoundary[2] > Boundary[2])
+        subBoundary[2] = Boundary[2];
+    if(subBoundary[3] > Boundary[3])
+        subBoundary[3] = Boundary[3];
 }
 
 D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D)
@@ -11790,11 +11847,11 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         int row_iter[8] = { 1, 1, 1, -1,  1,  1, -1, -1};
         int col_iter[8] = { 1,-1, 1,  1,  1, -1,  1, -1};
         
-        int start_row[8]    = {                    0,                   0,                   0, Size_Grid2D.height-1,                   0,                   0,  Size_Grid2D.height-1 , Size_Grid2D.height-1};
-        int end_row[8]      = {Size_Grid2D.height   , Size_Grid2D.height , Size_Grid2D.height ,                    0, Size_Grid2D.height , Size_Grid2D.height ,                     0 ,                    0};
-        int start_col[8]    = {                    0, Size_Grid2D.width-1,                   0,                    0,                   0, Size_Grid2D.width-1,                     0 , Size_Grid2D.width-1 };
-        int end_col[8]      = {Size_Grid2D.width    ,                   0, Size_Grid2D.width  , Size_Grid2D.width   , Size_Grid2D.width  ,                   0,  Size_Grid2D.width    ,                    0};
-        
+        int start_row[8]    = {                         0,                        0,                        0, (int)Size_Grid2D.height-1,                        0,                        0, (int) Size_Grid2D.height-1 , (int)Size_Grid2D.height-1};
+        int end_row[8]      = {(int)Size_Grid2D.height   , (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                         0, (int)Size_Grid2D.height , (int)Size_Grid2D.height ,                          0 ,                         0};
+        int start_col[8]    = {                         0, (int)Size_Grid2D.width-1,                        0,                         0,                        0, (int)Size_Grid2D.width-1,                          0 , (int)Size_Grid2D.width-1 };
+        int end_col[8]      = {(int)Size_Grid2D.width    ,                        0, (int)Size_Grid2D.width  , (int)Size_Grid2D.width   , (int)Size_Grid2D.width  ,                        0, (int) Size_Grid2D.width    ,                         0};
+
         int direction_iter = 0;
         
         //4 directional
@@ -14257,7 +14314,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             //    minimum_Th = 0.1;
             //minimum_Th = 0.4;
             
-            printf("minimum TH %f\t%f\t%d\t%d\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
+            printf("minimum TH %f\t%f\t%d\t%ld\n",minimum_Th,sum_roh_rate,sum_roh_count,total_roh);
             free(hist);
             //exit(1);
             
@@ -15619,7 +15676,7 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                               
                             if((fabs(ddh_1) > height_th || fabs(ddh_2) > height_th || fabs(ddh_3) > height_th) && check_match)
                             {
-                                int order[3]    = {reference_index,target_index_0,target_index_1};
+                                int order[3]    = {(int)reference_index,target_index_0,target_index_1};
                                 double height[3] = {pt0.m_Z,pt1.m_Z,pt2.m_Z};
                                 double h1,h2,dh;
                                 int t_o_min,t_o_max,t_o_mid;
@@ -18861,7 +18918,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
                                 
                             }
                         }
-                        printf("read_done count_MPs %d\t%d\n",count_read,count_out);
+                        printf("read_done count_MPs %ld\t%ld\n",count_read,count_out);
                         
                         free(temp_pts);
                         fclose(p_hfile);
@@ -18956,7 +19013,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             value_pt[count] = 0;
     }
  */
-    printf("end interpolation\t%d\t%d\n",total_search_count,total_interpolated);
+    printf("end interpolation\t%ld\t%ld\n",total_search_count,total_interpolated);
     
     /*
     //DEM boundary filter
@@ -19367,7 +19424,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                     
                 }
             }
-            printf("%d\t%d\n",count_null_cell,count_highnull_cell);
+            printf("%ld\t%d\n",count_null_cell,count_highnull_cell);
             if(count_null_cell == 0)
                 check_while = 1;
             
@@ -21913,7 +21970,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 }
             }
             
-            if (interval >= row_interval || ((*numpts) > max_pts && count1 > 1 && count2 > 1 && count3 > 1 && count4 > 1))
+            if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
             {
                 check_stop = 1;
                 final_interval = interval;
@@ -21970,10 +22027,10 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
         
         double X_scaled = (col_pos*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
         double Y_scaled = (row_pos*grid - minY_ptslists)/distY_ptslists*Scale_ptslists;
-        double X_plane = (col_pos*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
+        double X_plane = (col_pos*grid - minX_ptslists);
         double Y_plane = (row_pos*grid - minY_ptslists);
         
-        if((*numpts) > 6)
+        if((*numpts) > 15)
         {
             GMA_double *A_matrix = GMA_double_create(*numpts, 3);
             GMA_double *L_matrix = GMA_double_create(*numpts, 1);
@@ -22063,10 +22120,10 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 double temp_fitted_Z;
                 double diff_Z;
                 long int selected_count = 0;
-                int hist[20] = {};
+                int hist[20] = {0};
                 for(row = 0; row < *numpts ; row++)
                 {
-                    int hist_index = (int)(fabs(V_matrix->val[row][0]));
+                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
                     if(hist_index > 19)
                         hist_index = 19;
                     if(hist_index >= 0 && hist_index <= 19)
@@ -22082,7 +22139,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 {
                     hist_sum += hist[row];
                     hist_rate = (double)hist_sum/(*numpts);
-                    if(hist_rate > hist_th && hist_sum > 6)
+                    if(hist_rate > hist_th)// && hist_sum > 6)
                     {
                         V_th = row;
                         check_V = false;
@@ -22092,7 +22149,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 
                 for(row = 0; row < *numpts ; row++)
                 {
-                    if(fabs(V_matrix->val[row][0]) > V_th+1)
+                    if(std::abs(V_matrix->val[row][0]) > V_th+1)
                         XY_save[row].flag = 0;
                     else
                         selected_count++;
@@ -22108,7 +22165,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 GMA_double_destroy(AX_matrix);
                 GMA_double_destroy(V_matrix);
                 
-                if(selected_count > 6)
+                if(selected_count > 15)
                 {
                     A_matrix = GMA_double_create(selected_count, 6);
                     L_matrix = GMA_double_create(selected_count, 1);
@@ -22167,13 +22224,13 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                             max_Z = temp_fitted_Z;
                     }
                     
-                    if(sum > 0 && *numpts > 0 && !isnan(sum))
+                    if(sum > 0 && *numpts > 15 && !isnan(sum))
                     {
                         sigma = sqrt(sum/(*numpts));
                     
                         if(isnan(sigma))
                         {
-                            printf("sum numpts %f\t%d\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
+                            printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
                             
                             for(row = 0; row < *numpts ; row++)
                             {
@@ -22183,7 +22240,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                                 temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
                                 X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
                                 
-                                printf("id %d\tt_sum %f\tV_matrix %f\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
+                                printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
                             }
                             
                             exit(1);
@@ -22404,7 +22461,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     
     
     pFile_DEM = fopen(str_DEMfile,"r");
-    printf("check exist %s %d\n",str_DEMfile,pFile_DEM);
+    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
     
     if(pFile_DEM)
     {
@@ -22507,6 +22564,13 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         printf("%f\n",grid_size);
         
         Grid_info = (LSFINFO*)calloc(sizeof(LSFINFO),DEM_length);
+        
+        for(int count_index = 0 ; count_index < DEM_length; count_index++)
+        {
+            Grid_info[count_index].lsf_std = 0.0;
+            Grid_info[count_index].lsf_kernel = 2;
+        }
+        
         float *smooth_DEM = (float*)calloc(sizeof(float),DEM_length);
         
         
@@ -22745,7 +22809,7 @@ void GMA_double_printf(GMA_double *a)
     {
         for(cnt2=0;cnt2<a->ncols;cnt2++)
         {
-            printf("[%d,%d] %f\t",cnt1,cnt2,a->val[cnt1][cnt2]);
+            printf("[%ld,%ld] %Lf\t",cnt1,cnt2,a->val[cnt1][cnt2]);
         }
         printf("\n");
     }
@@ -24509,6 +24573,10 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
         
         if(Maketmpfolders(&proinfo))
         {
+            proinfo.SDM_SS = args.SDM_SS;
+            proinfo.SDM_days = args.SDM_days;
+            proinfo.SDM_AS = args.SDM_AS;
+            
             time_t current_time;
             char*    c_time_string;
             
@@ -24560,7 +24628,23 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             printf("image resolution %f\n",proinfo.resolution);
             
             proinfo.pyramid_level = args.pyramid_level;
-            printf("pyramid level %d\n",proinfo.pyramid_level);
+            printf("pyramid level %d\tSDM_ss %d\n",proinfo.pyramid_level,proinfo.SDM_SS);
+            
+            int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+            if(sdm_kernal_size > 3)
+            {
+                proinfo.SDM_SS = sdm_kernal_size;
+            }
+            else
+                proinfo.SDM_SS = 3;
+            
+            printf("ks %d\t sdm_ss %d\n",sdm_kernal_size,proinfo.SDM_SS);
+            
+            if(proinfo.SDM_SS > 10 && proinfo.pyramid_level >= 2)
+            {
+                printf("search kernel size is too large to minimize procesing time at the pyramid level. Please increase pyramid level!!\n");
+                exit(1);
+            }
             
             if (!args.check_DEM_space)
             {
@@ -24945,6 +25029,98 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                     printf("template size =%d\n",Template_size);
                                     
                                     //echoprint_shift(Lstartpos, Rstartpos,subBoundary,LRPCs, RRPCs, t_Rimageparam, param,GridPT,proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
+                                    if(level < 2)
+                                    {
+                                        bool check_while = false;
+                                        int check_size = 3;
+                                        int total_size = (2*check_size+1)*(2*check_size+1);
+                                        int sm_iter = 0;
+                                        
+                                        int count_null_cell = 0;
+                                        
+                                        uint8* t_ncc_array = (uint8*)calloc(sizeof(uint*),(long)Size_Grid2D.width*(long)Size_Grid2D.height);
+                                        
+                                        while(check_while == 0 && sm_iter < 100)
+                                        {
+                                            
+                                            #pragma omp parallel for schedule(guided)
+                                            for (long index = 0; index < (long)Size_Grid2D.width*(long)Size_Grid2D.height; index++)
+                                            {
+                                                int row, col;
+                                                
+                                                row = (int)(floor(index/Size_Grid2D.width));
+                                                col = index%Size_Grid2D.width;
+                                                long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
+                                                
+                                                if (GridPT3[search_index].ortho_ncc < 0.5 && t_ncc_array[search_index] != 2)
+                                                {
+                                                    t_ncc_array[search_index] = 1;
+                                                }
+                                            }
+                                            
+                                            count_null_cell = 0;
+                                            sm_iter++;
+                                            
+                                            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+                                            for (long index = 0; index < (long)Size_Grid2D.width*(long)Size_Grid2D.height; index++)
+                                            {
+                                                int row, col;
+                                                
+                                                long count_cell;
+                                                int t_i, t_j;
+                                                
+                                                double sum_row_shift=0;
+                                                double sum_col_shift=0;
+                                                
+                                                row = (int)(floor(index/Size_Grid2D.width));
+                                                col = index%Size_Grid2D.width;
+                                                long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
+                                                
+                                                if (t_ncc_array[search_index] == 1)
+                                                {
+                                                    count_cell = 0;
+                                                    
+                                                    for (t_i = -check_size; t_i <= check_size;t_i++ )
+                                                    {
+                                                        for (t_j = -check_size; t_j <= check_size; t_j++)
+                                                        {
+                                                            int index_row = row + t_i;
+                                                            int index_col = col + t_j;
+                                                            long int t_index = (long)index_row*(long)Size_Grid2D.width + (long)index_col;
+                                                            
+                                                            if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width)
+                                                            {
+                                                                if(GridPT3[t_index].ortho_ncc > 0.5)
+                                                                {
+                                                                    sum_row_shift += GridPT3[t_index].row_shift;
+                                                                    sum_col_shift += GridPT3[t_index].col_shift;
+                                                                    count_cell++;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    if (count_cell >= total_size*0.3 )
+                                                    {
+                                                        GridPT3[search_index].row_shift = sum_row_shift/(double)count_cell;
+                                                        GridPT3[search_index].col_shift = sum_col_shift/(double)count_cell;
+                                                        t_ncc_array[search_index] = 2;
+                                                        count_null_cell ++;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            
+                                            if(count_null_cell == 0)
+                                                check_while = 1;
+                                            printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
+                                            
+                                            Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
+                                                             Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                        }
+                                        free(t_ncc_array);
+                                    }
+                                    
                                     
                                     VerticalLineLocus_SDM(proinfo, nccresult, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
                                                       Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
@@ -25176,13 +25352,16 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     if(level == 0)
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, Pre_GridPT3,blunder_param,ptslists,trilists,1);
+                                                        
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, Pre_GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
                                                         //if(level <= 4)
                                                         {
                                                             if(iteration < 2)
                                                             {
-                                                                average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
+                                                                //average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
                                                                 
-                                                                shift_filtering(Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
+                                                                shift_filtering(proinfo, Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
                                                             }
                                                         }
                                                     //echoprint_Gridinfo_SDM(proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,Pre_GridPT3,"final");
@@ -25195,13 +25374,16 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, GridPT3,blunder_param,ptslists,trilists,1);
                                                         
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                                        
                                                         //if(level <= 4)
                                                         {
                                                             if(level >= 2 || (level == 1 && iteration < 3))
                                                             {
-                                                                average_filter_colrowshift(Size_Grid2D, GridPT3,level);
+                                                                //average_filter_colrowshift(Size_Grid2D, GridPT3,level);
                                                                 
-                                                                shift_filtering(GridPT3, blunder_param, proinfo.DEM_resolution);
+                                                                shift_filtering(proinfo, GridPT3, blunder_param, proinfo.DEM_resolution);
                                                             }
                                                         }
                                                         
@@ -25213,13 +25395,15 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, Pre_GridPT3,blunder_param,ptslists,trilists,1);
                                                         
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, Pre_GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
                                                         //if(level <= 4)
                                                         {
                                                             if(level >= 2 || (level == 1 && iteration < 3))
                                                             {
-                                                                average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
+                                                                //average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
                                                                 
-                                                                shift_filtering(Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
+                                                                shift_filtering(proinfo, Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
                                                                 
                                                             }
                                                         }
@@ -26468,7 +26652,7 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
     
     double roh_next;
     int row,col;
-    double minimum_Th = 0.1;
+    double minimum_Th = 0.3;
     //if(Pyramid_step == 0)
     //    minimum_Th = 0.2;
     
@@ -27034,6 +27218,412 @@ void SetHeightRange_shift(int numOfPts, int numOfTri, UGRIDSDM *GridPT3,BL BL_pa
         free(m_bHeight);
 }
 
+bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param)
+{
+    if(Pyramid_step >= 1)
+    {
+        double template_area = 5.0;
+        int t_Template_size = (int)((template_area/(im_resolution*pow(2,Pyramid_step)))/2.0)*2+1;
+        if(Template_size < t_Template_size)
+            Template_size = t_Template_size;
+        
+        //printf("Update ortho NCC : t Template_size %d\t%d\n",t_Template_size,Template_size);
+    }
+    
+    int Half_template_size = (int)(Template_size/2);
+    
+    double subBoundary[4];
+    
+    D2DPOINT temp_p1, temp_p2;
+    D3DPOINT temp_GrP;
+    double temp_LIA[2] = {0,0};
+    
+    int numofpts;
+    
+    subBoundary[0]      = Boundary[0];
+    subBoundary[1]      = Boundary[1];
+    subBoundary[2]      = Boundary[2];
+    subBoundary[3]      = Boundary[3];
+    
+    numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    
+    int count_0_6 = 0;
+    int count_0_3 = 0;
+    int count_low = 0;
+    //printf("Update ortho NCC numofpts %d\t%d\t%d\tcoreg %f\t%f\n",numofpts,Size_Grid2D.height,Size_Grid2D.width,Coreg_param[0],Coreg_param[1]);
+#pragma omp parallel for schedule(guided) //reduction(+:count_0_6,count_0_3,count_low)
+    for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+    {
+        int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
+        int pts_col = iter_count % Size_Grid2D.width;
+        int pt_index = pts_row*Size_Grid2D.width + pts_col;
+        
+        if(pts_row >= 0 && pts_row < Size_Grid2D.height && pts_col >= 0 && pts_col < Size_Grid2D.width && pt_index >= 0 && pt_index < Size_Grid2D.height*Size_Grid2D.width)
+        {
+            double max_1stroh = -1.0;
+            
+            int i,j;
+            
+            char t_temp_path[500];
+            bool check_blunder_cell = false;
+            
+            bool check_false_h = false;
+            D2DPOINT temp_GP,temp_GP_R;
+            D2DPOINT Left_Imagecoord;
+            D2DPOINT Right_Imagecoord;
+            D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
+            
+            temp_GP.m_X = GridPts[pt_index].m_X;
+            temp_GP.m_Y = GridPts[pt_index].m_Y;
+            
+            temp_GP_R.m_X = GridPts[pt_index].m_X;
+            temp_GP_R.m_Y = GridPts[pt_index].m_Y;
+            
+            Left_Imagecoord        = GetObjectToImage_single_SDM(1,temp_GP,proinfo.LBoundary,proinfo.resolution);
+            Right_Imagecoord        = GetObjectToImage_single_SDM(1,temp_GP_R,proinfo.RBoundary,proinfo.resolution);
+            
+            Left_Imagecoord_py    = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
+            Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
+            
+            Right_Imagecoord_py.m_Y += (GridPT3[pt_index].row_shift + Coreg_param[0])/pow(2.0,Pyramid_step);
+            Right_Imagecoord_py.m_X += (GridPT3[pt_index].col_shift + Coreg_param[1])/pow(2.0,Pyramid_step);
+            
+            if( Right_Imagecoord_py.m_Y >= 0 && Right_Imagecoord_py.m_Y < RImagesize.height && Right_Imagecoord_py.m_X    >= 0 && Right_Imagecoord_py.m_X    < RImagesize.width &&
+               Left_Imagecoord_py.m_Y >= 0 && Left_Imagecoord_py.m_Y      < LImagesize.height && Left_Imagecoord_py.m_X    >= 0 && Left_Imagecoord_py.m_X    < LImagesize.width)
+            {
+                
+                double Left_CR, Left_CC, Right_CR, Right_CC;
+                
+                Left_CR        = Left_Imagecoord_py.m_Y;
+                Left_CC        = Left_Imagecoord_py.m_X;
+                Right_CR    = Right_Imagecoord_py.m_Y;
+                Right_CC    = Right_Imagecoord_py.m_X;
+                
+                double rot_theta = 0.0;
+                
+                double Sum_LR = 0;
+                double Sum_L = 0;
+                double Sum_R = 0;
+                double Sum_L2 = 0;
+                double Sum_R2 = 0;
+                double Sum_LR_2 = 0;
+                double Sum_L_2 = 0;
+                double Sum_R_2 = 0;
+                double Sum_L2_2 = 0;
+                double Sum_R2_2 = 0;
+                double Sum_LR_3 = 0;
+                double Sum_L_3 = 0;
+                double Sum_R_3 = 0;
+                double Sum_L2_3 = 0;
+                double Sum_R2_3 = 0;
+                int Count_N[3] = {0};
+                
+                double Sum_LR_mag = 0;
+                double Sum_L_mag = 0;
+                double Sum_R_mag = 0;
+                double Sum_L2_mag = 0;
+                double Sum_R2_mag = 0;
+                double Sum_LR_2_mag = 0;
+                double Sum_L_2_mag = 0;
+                double Sum_R_2_mag = 0;
+                double Sum_L2_2_mag = 0;
+                double Sum_R2_2_mag = 0;
+                double Sum_LR_3_mag = 0;
+                double Sum_L_3_mag = 0;
+                double Sum_R_3_mag = 0;
+                double Sum_L2_3_mag = 0;
+                double Sum_R2_3_mag = 0;
+                
+                int row, col;
+                int N;
+                
+                double val1, val2, de, de2, ncc_1, ncc_2, ncc_3;
+                double ncc_1_mag, ncc_2_mag, ncc_3_mag;
+                
+                double temp_rho;
+                double temp_INCC_roh = 0;
+                bool flag_value;
+                int grid_index;
+                double diff_rho;
+                int t_direction;
+                
+                
+                uint16 mag_center_l, mag_center_r;
+                
+                double im_resolution_mask = (gsd_image1.pro_GSD + gsd_image2.pro_GSD)/2.0;
+                
+                //printf("im resolution mask %f\n",im_resolution_mask);
+                
+                for(row = -Half_template_size; row <= Half_template_size ; row++)
+                {
+                    for(col = -Half_template_size; col <= Half_template_size ; col++)
+                    {
+                        double row_distance = row*im_resolution_mask*pow(2,Pyramid_step);
+                        double col_distance = col*im_resolution_mask*pow(2,Pyramid_step);
+                        
+                        double row_pixel_left = row_distance/(gsd_image1.row_GSD*pow(2,Pyramid_step));
+                        double col_pixel_left = col_distance/(gsd_image1.col_GSD*pow(2,Pyramid_step));
+                        
+                        double row_pixel_right = row_distance/(gsd_image2.row_GSD*pow(2,Pyramid_step));
+                        double col_pixel_right = col_distance/(gsd_image2.col_GSD*pow(2,Pyramid_step));
+                        
+                        
+                        //printf("row col %d\t%d\tleft %f\t%f\tright %f\t%f\n",row, col, row_pixel_left,col_pixel_left,row_pixel_right,col_pixel_right);
+                        
+                        double radius  = sqrt((double)(row*row + col*col));
+                        if(radius <= Half_template_size+1)
+                        {
+                            //double pos_row_left         = (Left_CR + row);
+                            //double pos_col_left         = (Left_CC + col);
+                            
+                            double pos_row_left         = (Left_CR + row_pixel_left);
+                            double pos_col_left         = (Left_CC + col_pixel_left);
+                            
+                            //double temp_col           = (cos(-rot_theta)*col - sin(-rot_theta)*row);
+                            //double temp_row           = (sin(-rot_theta)*col + cos(-rot_theta)*row);
+                            
+                            double temp_col           = (cos(-rot_theta)*col_pixel_right - sin(-rot_theta)*row_pixel_right);
+                            double temp_row           = (sin(-rot_theta)*col_pixel_right + cos(-rot_theta)*row_pixel_right);
+                            
+                            double pos_row_right     = (Right_CR + temp_row);
+                            double pos_col_right     = (Right_CC + temp_col);
+                            
+                            
+                            if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right    >= 0 && pos_col_right+1    < RImagesize.width &&
+                               pos_row_left >= 0 && pos_row_left+1      < LImagesize.height && pos_col_left    >= 0 && pos_col_left+1    < LImagesize.width)
+                            {
+                                //interpolate left_patch
+                                double dx           =  pos_col_left - (int)(pos_col_left);
+                                double dy           =  pos_row_left - (int)(pos_row_left);
+                                double dxdy = dx * dy;
+                                double left_patch;
+                                double right_patch;
+                                double left_mag_patch;
+                                double right_mag_patch;
+                                long int position = (long int) pos_col_left + ((long int) pos_row_left) * LImagesize.width;
+                                
+                                left_patch = (double) (LeftImage[position]) * (1 - dx - dy + dxdy) + (double) (LeftImage[position + 1]) * (dx - dxdy) +
+                                (double) (LeftImage[position + LImagesize.width]) * (dy - dxdy) +
+                                (double) (LeftImage[position + 1 + LImagesize.width]) * (dxdy);
+                                
+                                left_mag_patch =
+                                (double) (MagImages_L[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_L[position + 1]) * (dx - dxdy) +
+                                (double) (MagImages_L[position + LImagesize.width]) * (dy - dxdy) +
+                                (double) (MagImages_L[position + 1 + LImagesize.width]) * (dxdy);
+                                
+                                
+                                //interpolate right_patch
+                                dx            =  pos_col_right - (int)(pos_col_right);
+                                dy            =  pos_row_right - (int)(pos_row_right);
+                                dxdy = dx * dy;
+                                position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
+                                
+                                right_patch =
+                                (double) (RightImage[position]) * (1 - dx - dy + dxdy) + (double) (RightImage[position + 1]) * (dx - dxdy) +
+                                (double) (RightImage[position + RImagesize.width]) * (dy - dxdy) +
+                                (double) (RightImage[position + 1 + RImagesize.width]) * (dxdy);
+                                
+                                right_mag_patch =
+                                (double) (MagImages_R[position]) * (1 - dx - dy + dxdy) + (double) (MagImages_R[position + 1]) * (dx - dxdy) +
+                                (double) (MagImages_R[position + RImagesize.width]) * (dy - dxdy) +
+                                (double) (MagImages_R[position + 1 + RImagesize.width]) * (dxdy);
+                                
+                                //end
+                                Count_N[0]++;
+                                
+                                //*************
+                                //Precomputing LR, L2 and R2 etc as they are used in different reductions. (Perhaps compiler handles that by itself)
+                                double LR = left_patch * right_patch;
+                                double L2 = left_patch * left_patch;
+                                double R2 = right_patch * right_patch;
+                                double LR_mag = left_mag_patch * right_mag_patch;
+                                double L2_mag = left_mag_patch * left_mag_patch;
+                                double R2_mag = right_mag_patch * right_mag_patch;
+                                
+                                Sum_LR              = Sum_LR + LR;
+                                Sum_L              = Sum_L  + left_patch;
+                                Sum_R              = Sum_R  + right_patch;
+                                Sum_L2              = Sum_L2 + L2;
+                                Sum_R2              = Sum_R2 + R2;
+                                
+                                Sum_LR_mag              = Sum_LR_mag + LR_mag;
+                                Sum_L_mag              = Sum_L_mag  + left_mag_patch;
+                                Sum_R_mag              = Sum_R_mag  + right_mag_patch;
+                                Sum_L2_mag              = Sum_L2_mag + L2_mag;
+                                Sum_R2_mag              = Sum_R2_mag + R2_mag;
+                                
+                                int size_1, size_2;
+                                size_1          = (int)(Half_template_size/2);
+                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                {
+                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                    {
+                                        Sum_LR_2  = Sum_LR_2 + LR;
+                                        Sum_L_2      = Sum_L_2     + left_patch;
+                                        Sum_R_2      = Sum_R_2     + right_patch;
+                                        Sum_L2_2  = Sum_L2_2 + L2;
+                                        Sum_R2_2  = Sum_R2_2 + R2;
+                                        Count_N[1]++;
+                                        
+                                        Sum_LR_2_mag  = Sum_LR_2_mag + LR_mag;
+                                        Sum_L_2_mag      = Sum_L_2_mag     + left_mag_patch;
+                                        Sum_R_2_mag      = Sum_R_2_mag     + right_mag_patch;
+                                        Sum_L2_2_mag  = Sum_L2_2_mag + L2_mag;
+                                        Sum_R2_2_mag  = Sum_R2_2_mag + R2_mag;
+                                        
+                                    }
+                                }
+                                
+                                size_2          = size_1 + (int)((size_1/2.0) + 0.5);
+                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                                {
+                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                    {
+                                        Sum_LR_3  = Sum_LR_3 + LR;
+                                        Sum_L_3      = Sum_L_3     + left_patch;
+                                        Sum_R_3      = Sum_R_3     + right_patch;
+                                        Sum_L2_3  = Sum_L2_3 + L2;
+                                        Sum_R2_3  = Sum_R2_3 + R2;
+                                        Count_N[2]++;
+                                        
+                                        Sum_LR_3_mag  = Sum_LR_3_mag + LR_mag;
+                                        Sum_L_3_mag      = Sum_L_3_mag     + left_mag_patch;
+                                        Sum_R_3_mag      = Sum_R_3_mag     + right_mag_patch;
+                                        Sum_L2_3_mag  = Sum_L2_3_mag + L2_mag;
+                                        Sum_R2_3_mag  = Sum_R2_3_mag + R2_mag;
+                                        
+                                    }
+                                }
+                                
+                                if(row == 0 && col == 0)
+                                {
+                                    mag_center_l = left_patch;
+                                    mag_center_r = right_patch;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                N                = Count_N[0];
+                val1          = (double)(Sum_L2) - (double)(Sum_L*Sum_L)/N;
+                val2          = (double)(Sum_R2) - (double)(Sum_R*Sum_R)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de              = sqrt(val1*val2);
+                de2              = (double)(Sum_LR) - (double)(Sum_L*Sum_R)/N;
+                
+                if( val1*val2 > 0)
+                    ncc_1            = de2/de;
+                else
+                    ncc_1            = -1.0;
+                
+                val1          = (double)(Sum_L2_mag) - (double)(Sum_L_mag*Sum_L_mag)/N;
+                val2          = (double)(Sum_R2_mag) - (double)(Sum_R_mag*Sum_R_mag)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de              = sqrt(val1*val2);
+                de2              = (double)(Sum_LR_mag) - (double)(Sum_L_mag*Sum_R_mag)/N;
+                if( val1*val2 > 0)
+                    ncc_1_mag            = de2/de;
+                else
+                    ncc_1_mag            = -1.0;
+                
+                N                    = Count_N[1];
+                val1                = (double)(Sum_L2_2) - (double)(Sum_L_2*Sum_L_2)/N;
+                val2                = (double)(Sum_R2_2) - (double)(Sum_R_2*Sum_R_2)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de                    = sqrt(val1*val2);
+                de2                    = (double)(Sum_LR_2) - (double)(Sum_L_2*Sum_R_2)/N;
+                if( val1*val2 > 0)
+                    ncc_2          = de2/de;
+                else
+                    ncc_2            = -1.0;
+                
+                val1                = (double)(Sum_L2_2_mag) - (double)(Sum_L_2_mag*Sum_L_2_mag)/N;
+                val2                = (double)(Sum_R2_2_mag) - (double)(Sum_R_2_mag*Sum_R_2_mag)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de                    = sqrt(val1*val2);
+                de2                    = (double)(Sum_LR_2_mag) - (double)(Sum_L_2_mag*Sum_R_2_mag)/N;
+                if( val1*val2 > 0)
+                    ncc_2_mag          = de2/de;
+                else
+                    ncc_2_mag            = -1.0;
+                
+                
+                N                    = Count_N[2];
+                val1                = (double)(Sum_L2_3) - (double)(Sum_L_3*Sum_L_3)/N;
+                val2                = (double)(Sum_R2_3) - (double)(Sum_R_3*Sum_R_3)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de                    = sqrt(val1*val2);
+                de2                    = (double)(Sum_LR_3) - (double)(Sum_L_3*Sum_R_3)/N;
+                if( val1*val2 > 0)
+                    ncc_3          = de2/de;
+                else
+                    ncc_3            = -1.0;
+                
+                val1                = (double)(Sum_L2_3_mag) - (double)(Sum_L_3_mag*Sum_L_3_mag)/N;
+                val2                = (double)(Sum_R2_3_mag) - (double)(Sum_R_3_mag*Sum_R_3_mag)/N;
+                if(Pyramid_step <= 1)
+                {
+                    if(val1 == 0)
+                        val1 = 0.00001;
+                    if(val2 == 0)
+                        val2 = 0.00001;
+                }
+                
+                de                    = sqrt(val1*val2);
+                de2                    = (double)(Sum_LR_3_mag) - (double)(Sum_L_3_mag*Sum_R_3_mag)/N;
+                if( val1*val2 > 0)
+                    ncc_3_mag          = de2/de;
+                else
+                    ncc_3_mag            = -1.0;
+                
+                temp_INCC_roh = (double)(ncc_1 + ncc_2 + ncc_3 + ncc_1_mag + ncc_2_mag + ncc_3_mag)/6.0;
+                
+                GridPT3[pt_index].ortho_ncc = temp_INCC_roh;
+            }
+        }
+    }
+    
+    //printf("count %d\t%d\t%d\n",count_0_6,count_0_3,count_low);
+    
+    return true;
+}
+
 bool average_filter_colrowshift(CSize Size_Grid2D, UGRIDSDM *GridPT3,uint8 Pyramid_step)
 {
     int kernel_size = 40;
@@ -27097,7 +27687,7 @@ bool average_filter_colrowshift(CSize Size_Grid2D, UGRIDSDM *GridPT3,uint8 Pyram
     return true;
 }
 
-void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
+void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
 {
     CSize gridsize;
     uint8 pyramid_step, iteration;
@@ -27126,9 +27716,26 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
         }
     }
     
-    
+    int max_kernel_size = 40;
+    double max_min_ortho_th = 0.5;
+    /*if(pyramid_step >= 2)
+        min_ortho_th = 0.0;
+    else if(pyramid_step == 1)
+        min_ortho_th = 0.05;
+    /*
+    max_kernel_size = 3;
+    if(pyramid_step >= 5)
+        max_kernel_size = 11;
+    else if(pyramid_step == 4)
+        max_kernel_size = 9;
+    else if(pyramid_step == 3)
+        max_kernel_size = 7;
+    else if(pyramid_step == 2)
+        max_kernel_size = 5;
+    */
     //    if(b_dir/* && pyramid_step >= 5*/)
     {
+        /*
         int kernal_size = 1;
         if(DEM_resolution < 2)
             kernal_size = 1;
@@ -27151,7 +27758,7 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
          kernal_size = 7;
          }
          */
-        int total_kernal_size = kernal_size*2 + 1;
+        //int total_kernal_size = kernal_size*2 + 1;
         int da = 45;
         if(pyramid_step == 3)
             da = 30;
@@ -27160,7 +27767,7 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
         
         int slope_step = 360/da;
         
-        printf("angle step %d\tkernel size %d\t%d\t%d\t%d\n",slope_step,kernal_size,gridsize.width,gridsize.height,data_length);
+        printf("angle step %d\t%d\t%d\t%d\n",slope_step,gridsize.width,gridsize.height,data_length);
         
         //double* mean_colshift = (double*)calloc(sizeof(double), gridsize.height*gridsize.width);
         //double* mean_rowshift = (double*)calloc(sizeof(double), gridsize.height*gridsize.width);
@@ -27254,7 +27861,9 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
          
          }
          */
+        int shift_max_pixel = (int)(((double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution)) );
         
+        printf("level %d\tshift_max_pixel %d\n",proinfo.pyramid_level,shift_max_pixel);
 #pragma omp parallel for schedule(guided)
         for(int iter_count = 0 ; iter_count < gridsize.height*gridsize.width ; iter_count ++)
         {
@@ -27265,22 +27874,66 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
             //printf("id %d %d start hist allocation\n",iter_count,ori_index);
             if(ori_index >= 0 && r >= 0 && r < gridsize.height && c >= 0 && c < gridsize.width && ori_index < gridsize.height*gridsize.width)
             {
-                if( (GridPT3[ori_index].ortho_ncc < 0.5 && pyramid_step <= 1) || pyramid_step > 1)
+                double min_ortho_th = max_min_ortho_th;
+                int kernal_size = 1;
+                if(DEM_resolution == 1)
+                    kernal_size = 3;
+                if(pyramid_step >= 5)
+                    kernal_size = 9;
+                else if(pyramid_step == 4)
+                    kernal_size = 9;
+                else if(pyramid_step == 3)
+                    kernal_size = 7;
+                else if(pyramid_step == 2)
+                    kernal_size = 5;
+                /*
+                bool check_while = false;
+                int final_select_pixel = 0;
+                while(kernal_size < max_kernel_size && !check_while)
+                {
+                    while(min_ortho_th > 0.0 && !check_while)
+                    {
+                        int total_select_pixel = 0;
+                        for(int k = -kernal_size ; k <= kernal_size ; k++)
+                        {
+                            for(int j=-kernal_size ; j <= kernal_size ; j++)
+                            {
+                                int index = (r+k)*gridsize.width + (c+j);
+                                if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width && index >= 0 && index < gridsize.height*gridsize.width)
+                                {
+                                    if(GridPT3[index].ortho_ncc > min_ortho_th)
+                                        total_select_pixel++;
+                                }
+                            }
+                        }
+                        if(total_select_pixel > (2*kernal_size + 1)*(2*kernal_size + 1)*0.5)
+                            check_while = true;
+                        else
+                            min_ortho_th = min_ortho_th - 0.02;
+                    }
+                    
+                    if(!check_while)
+                        kernal_size++;
+                    //final_select_pixel = total_select_pixel;
+                    //printf("total_select %d\t%f\tkernel_size %d\n",total_select_pixel,kernal_size,(2*kernal_size + 1)*(2*kernal_size + 1)*0.5);
+                }
+                */
+                //if( (GridPT3[ori_index].ortho_ncc < 0.5 && pyramid_step <= 1) || pyramid_step > 1)
                 {
                     double sum_col = 0.;
                     double sum_row = 0.;
                     int sum_count = 0;
                     
-                    double save_col[1000] = {0.};
-                    double save_row[1000] = {0.};
-                    double save_diff[1000] = {0.};
+                    double save_col[10000] = {0.};
+                    double save_row[10000] = {0.};
+                    double save_diff[10000] = {0.};
                     double save_col_min = 10000.;
                     double save_col_max = -10000.;
                     double save_row_min = 10000.;
                     double save_row_max = -10000.;
                     
-                    double save_slope[1000] = {0.};
-                    double save_roh[1000] = {-1.};
+                    double save_slope[10000] = {0.};
+                    double save_roh[10000] = {-1.};
                     
                     int* hist_slope = (int*)calloc(sizeof(int),slope_step);
                     
@@ -27308,7 +27961,8 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                         for(int j=-kernal_size ; j <= kernal_size ; j++)
                         {
                             int index = (r+k)*gridsize.width + (c+j);
-                            if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width && index >= 0 && index < gridsize.height*gridsize.width)
+                            if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width && index >= 0 && index < gridsize.height*gridsize.width /*&&
+                               GridPT3[index].ortho_ncc > min_ortho_th*/)
                             {
                                 save_col[save_count] = GridPT3[index].col_shift;
                                 save_row[save_count] = GridPT3[index].row_shift;
@@ -27317,10 +27971,12 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                                 
                                 //if(pyramid_step <= 5)
                                 {
-                                    if(GridPT3[index].ortho_ncc > 0)
+                                    save_roh[save_count] = pow(3.0,GridPT3[index].ortho_ncc*10);
+                                    /*if(GridPT3[index].ortho_ncc > 0)
                                         save_roh[save_count] = GridPT3[index].ortho_ncc;
                                     else
                                         save_roh[save_count] = 0.001;
+                                     */
                                 }
                                 //else
                                 //    save_roh[save_count] = 1.0;
@@ -27351,14 +28007,18 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                                 
                                 
                                 t_hist = (int)(save_col[save_count]);
-                                if(abs(t_hist) < 3000)
-                                    hist_col[t_hist+3000]++;
+                                if(abs(t_hist) < shift_max_pixel)
+                                    hist_col[t_hist+shift_max_pixel]++;
+                                //if(abs(t_hist) < 3000)
+                                //    hist_col[t_hist+3000]++;
                                 //else
                                 //    printf("less than -2000 col shift\n");
                                 
                                 t_hist = (int)(save_row[save_count]);
-                                if(abs(t_hist) < 3000)
-                                    hist_row[t_hist+3000]++;
+                                if(abs(t_hist) < shift_max_pixel)
+                                    hist_row[t_hist+shift_max_pixel]++;
+                                //if(abs(t_hist) < 3000)
+                                //    hist_row[t_hist+3000]++;
                                 //else
                                 //    printf("less than -2000 col shift\n");
                                 
@@ -27440,11 +28100,11 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                         double row_sum = 0;
                         double checked_count = 0;
                         
-                        double selected_col[1000] = {0.};
-                        double selected_row[1000] = {0.};
-                        double selected_diff_col[1000] = {0.};
-                        double selected_diff_row[1000] = {0.};
-                        double selected_roh[1000] = {-1.0};
+                        double selected_col[10000] = {0.};
+                        double selected_row[10000] = {0.};
+                        double selected_diff_col[10000] = {0.};
+                        double selected_diff_row[10000] = {0.};
+                        double selected_roh[10000] = {-1.0};
                         
                         int total_seleted_count_col = 0;
                         int total_seleted_count_row = 0;
@@ -27456,7 +28116,7 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                             int t_hist_row = (int)(save_row[k]);
                             int t_hist_slope = (int)(save_slope[k]/da);
                             
-                            if(pyramid_step >= 3 )
+                            if(pyramid_step >= 0 )
                             {
                                 //column
                                 selected_col[total_seleted_count_col] = save_col[k];
@@ -27584,7 +28244,7 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 3)
+                            if(pyramid_step >= 0)
                             {
                                 if((max_hist_col > save_count*0.4))
                                 {
@@ -27631,7 +28291,7 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 3)
+                            if(pyramid_step >= 0)
                             {
                                 if((max_hist_row > save_count*0.4))
                                 {
@@ -27709,37 +28369,83 @@ void shift_filtering(UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution)
         
         
         printf("start assign\n");
-        for(int r = 0 ; r < gridsize.height ; r ++)
+#pragma omp parallel for schedule(guided)
+        for(int iter_count = 0 ; iter_count < gridsize.height*gridsize.width ; iter_count ++)
         {
-            for(int c = 0 ; c < gridsize.width; c++)
+            //printf("id %d start hist allocation\n",iter_count);
+            int r = (int)(floor(iter_count/gridsize.width));
+            int c = iter_count % gridsize.width;
+            int ori_index = r*gridsize.width + c;
+        
+            double sum_c = 0;
+            double sum_r = 0;
+            int count_cr = 0;
+        
+            
+            double min_ortho_th = max_min_ortho_th;
+            int kernal_size = 1;
+            if(DEM_resolution == 1)
+                kernal_size = 3;
+            if(pyramid_step >= 5)
+                kernal_size = 9;
+            else if(pyramid_step == 4)
+                kernal_size = 9;
+            else if(pyramid_step == 3)
+                kernal_size = 7;
+            else if(pyramid_step == 2)
+                kernal_size = 5;
+            /*
+            bool check_while = false;
+            int final_select_pixel = 0;
+            while(kernal_size < max_kernel_size && !check_while)
             {
-                double sum_c = 0;
-                double sum_r = 0;
-                int count_cr = 0;
-                int ori_index = r*gridsize.width + c;
-                
-                if( (GridPT3[ori_index].ortho_ncc < 0.5 && pyramid_step <= 1) || pyramid_step > 1)
+                while(min_ortho_th > 0.0 && !check_while)
                 {
+                    int total_select_pixel = 0;
                     for(int k = -kernal_size ; k <= kernal_size ; k++)
                     {
                         for(int j=-kernal_size ; j <= kernal_size ; j++)
                         {
                             int index = (r+k)*gridsize.width + (c+j);
-                            if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width  && index >= 0 && index < (gridsize.height)*(gridsize.width))
+                            if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width && index >= 0 && index < gridsize.height*gridsize.width)
                             {
-                                sum_c += temp_col_shift[index];
-                                sum_r += temp_row_shift[index];
-                                count_cr ++;
+                                if(GridPT3[index].ortho_ncc > min_ortho_th)
+                                    total_select_pixel++;
                             }
                         }
                     }
-                    GridPT3[ori_index].col_shift = sum_c/count_cr;
-                    GridPT3[ori_index].row_shift = sum_r/count_cr;
+                    if(total_select_pixel > (2*kernal_size + 1)*(2*kernal_size + 1)*0.5)
+                        check_while = true;
+                    else
+                        min_ortho_th = min_ortho_th - 0.02;
                 }
                 
+                if(!check_while)
+                    kernal_size++;
+                //final_select_pixel = total_select_pixel;
+                //printf("total_select %d\t%f\tkernel_size %d\n",total_select_pixel,kernal_size,(2*kernal_size + 1)*(2*kernal_size + 1)*0.5);
             }
+            */
+            //if( (GridPT3[ori_index].ortho_ncc < 0.5 && pyramid_step <= 1) || pyramid_step > 1)
+            {
+                for(int k = -kernal_size ; k <= kernal_size ; k++)
+                {
+                    for(int j=-kernal_size ; j <= kernal_size ; j++)
+                    {
+                        int index = (r+k)*gridsize.width + (c+j);
+                        if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width  && index >= 0 && index < (gridsize.height)*(gridsize.width) /*&& GridPT3[index].ortho_ncc > min_ortho_th*/)
+                        {
+                            sum_c += temp_col_shift[index];
+                            sum_r += temp_row_shift[index];
+                            count_cr ++;
+                        }
+                    }
+                }
+                GridPT3[ori_index].col_shift = sum_c/count_cr;
+                GridPT3[ori_index].row_shift = sum_r/count_cr;
+            }
+            
         }
-        
         //printf("end assign\n");
         //free(mean_colshift);
         //free(mean_rowshift);

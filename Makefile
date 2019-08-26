@@ -1,10 +1,14 @@
-TIFFPATH=$(HOME)/tiff-4.0.3-cray
-TIFFINC=-I$(TIFFPATH)/include
-TIFFLIB=-L$(TIFFPATH)/lib
+# If libtiff is installed in a nonstandard location you must edit
+# TIFFPATH and uncomment the following three lines.
+#TIFFPATH=$(HOME)/libtiff
+#TIFFINC=-I$(TIFFPATH)/include
+#TIFFLIB=-L$(TIFFPATH)/lib
 
-GEOTIFFPATH=$(HOME)/libgeotiff-1.4.2
-GEOTIFFINC=-I$(GEOTIFFPATH)/include
-GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
+# If libgeotiff is installed in a nonstandard location you must edit
+# GEOTIFFPATH and uncomment the following three lines.
+#GEOTIFFPATH=$(SETSMHOME)/libgeotiff-1.4.2
+#GEOTIFFINC=-I$(GEOTIFFPATH)/include
+#GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
 
 MPIFLAGS = -DBUILDMPI
 
@@ -66,4 +70,3 @@ $(OBJS) : $(HDRS)
 clean :
 	rm -f setsm setsm_mpi
 	rm -f *.o
-
