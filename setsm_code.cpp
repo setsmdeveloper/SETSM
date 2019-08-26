@@ -14658,7 +14658,6 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     
                     free(ortho_ncc);
                     free(INCC);
-                    free(trilists);
                     
                     printf("blunder detection end\tblunder_dh = %f\n",blunder_dh);
 
@@ -14693,16 +14692,16 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
                     FILE *pTri;
                     
-                    int t_blunder_counts=0;
+                    int new_blunder_cnt=0;
                     int t_tri_counts = 0;
                     for(i=0;i<count_MPs;i++)
                     {
 			//Check for newly found blunders, and save them to be removed from triangulation
                         if (detBlunders[i])
                         {
-                            input_blunder_pts[t_blunder_counts].m_X = ptslists[i].m_X;
-                            input_blunder_pts[t_blunder_counts].m_Y = ptslists[i].m_Y;
-                            t_blunder_counts++;
+                            input_blunder_pts[new_blunder_cnt].m_X = ptslists[i].m_X;
+                            input_blunder_pts[new_blunder_cnt].m_Y = ptslists[i].m_Y;
+                            new_blunder_cnt++;
                         }
                         if(flag)
                         {
@@ -14726,34 +14725,39 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         }
 
                     }
-                    UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
-                    //If we have more blunders than points in triangulations, almost certainly faster to ditch old triangulation
-					//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
-                    if(t_tri_counts<t_blunder_counts)
-                    {
-                        //Must delete old triangulation and create new one, should be faster
-                        delete origTri;
-                        printf("TINCreate resolution %f\n",grid_resolution);
-                        origTri = TINCreate(input_tri_pts,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
-                    }else
-                    {
-                    	printf("TINUpdate resolution %f\n",grid_resolution);
-                    	//Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                    	TINUpdate(input_tri_pts,t_blunder_counts,t_trilists,min_max,&count_tri, grid_resolution, origTri, t_tri_counts, input_blunder_pts);
-                    }
+
+					if (new_blunder_cnt > 0)
+					{
+                    	free(trilists);
+                    	UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
+                    	//If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
+						//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
+                    	if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
+                    	{
+                       		//Must delete old triangulation and create new one, should be faster
+                       		delete origTri;
+                       		printf("TINCreate resolution %f\n",grid_resolution);
+                       		origTri = TINCreate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution);
+                    	}else
+                    	{
+                    		printf("TINUpdate resolution %f\n",grid_resolution);
+                    		//Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
+                    		TINUpdate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
+                    	}
+
+                    	trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                   		for(i=0;i<count_tri;i++)
+                   		{
+                       		trilists[i].m_X = check_id[t_trilists[i].m_X];
+                       		trilists[i].m_Y = check_id[t_trilists[i].m_Y];
+                       		trilists[i].m_Z = check_id[t_trilists[i].m_Z];
+                   		}
+                   		free(t_trilists);
+					}
+
                     free(input_blunder_pts);
                     free(input_tri_pts);
                     free(detBlunders); 
-                    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                    i = 0;
-                    for(i=0;i<count_tri;i++)
-                    {
-                        trilists[i].m_X = check_id[t_trilists[i].m_X];
-                        trilists[i].m_Y = check_id[t_trilists[i].m_Y];
-                        trilists[i].m_Z = check_id[t_trilists[i].m_Z];
-                    }
-                    
-                    free(t_trilists);
                     free(check_id);
 
                     printf("end TIN\n");
@@ -14761,7 +14765,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     count_Results[0]    = count_MPs;
                     count_Results[1]    = count_tri;
                     
-                    printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\n",count,grid_resolution,blunder_count[0],count_blunders,count_tri);
+                    printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
                     
                     //blunder remove from TIN minmax height
                     int floor_ieration = 2;
@@ -14919,7 +14923,12 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
 
     FullTriangulation *triangulation = new FullTriangulation(width, height);
+	double begin = omp_get_wtime();
+
     triangulation->Triangulate(points_ptrs, numofpts);
+
+	double end = omp_get_wtime();
+	printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
 
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
@@ -14947,7 +14956,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
 }
 
 
-void TINUpdate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, int numofpts, D3DPOINT *blunderlist)
+void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
 {
 
     double minX_ptslists = min_max[0];
@@ -14977,7 +14986,13 @@ void TINUpdate(D3DPOINT *ptslists, int numblunders, UI3DPOINT* trilists, double 
     #pragma omp parallel for
     for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     
+	double begin = omp_get_wtime();
+
     oldTri->Retriangulate(blunder_ptrs, numblunders);
+
+	double end = omp_get_wtime();
+	printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(oldTri->GetAllTris(tris));

@@ -782,8 +782,9 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 		}
 		//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
 		#pragma omp taskwait
-		this->edge_list->MergeUnused(*(g_bottom->edge_list));
-		this->edge_list->MergeUnused(*(g_top->edge_list));
+		// No need to maintain unused edge list during retriangulation
+		//this->edge_list->MergeUnused(*(g_bottom->edge_list));
+		//this->edge_list->MergeUnused(*(g_top->edge_list));
 		g_bottom->grid = 0;
 		g_top->grid = 0;
 		delete g_bottom;
@@ -861,8 +862,9 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 			g_right->RetriangulateVertical(Unlinked2);
 		}
 		#pragma omp taskwait
-		this->edge_list->MergeUnused(*(g_left->edge_list));
-		this->edge_list->MergeUnused(*(g_right->edge_list));
+		// No need to maintain unused edge list during retriangulation
+		//this->edge_list->MergeUnused(*(g_left->edge_list));
+		//this->edge_list->MergeUnused(*(g_right->edge_list));
 		g_left->grid = 0;
 		g_right->grid = 0;
 		delete g_left;
