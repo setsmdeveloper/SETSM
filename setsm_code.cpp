@@ -725,8 +725,8 @@ int main(int argc,char *argv[])
                     }
                     else
                     {
-                        args.SDM_days = atoi(argv[i+1]);
-                        printf("SDM time gap %d(days)\n",args.SDM_days);
+                        args.SDM_days = atof(argv[i+1]);
+                        printf("SDM time gap %f(days)\n",args.SDM_days);
                     }
                 }
                 
@@ -26862,8 +26862,8 @@ void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, 
             long int l_index = pos_lr*LImagesize.width + pos_lc;
             long int r_index = pos_rr*RImagesize.width + pos_rc;
             
-            double DX = GridPT3[matlab_index].col_shift*proinfo.resolution;
-            double DY = -GridPT3[matlab_index].row_shift*proinfo.resolution;
+            double DX = GridPT3[matlab_index].col_shift*proinfo.resolution/proinfo.SDM_days;
+            double DY = -GridPT3[matlab_index].row_shift*proinfo.resolution/proinfo.SDM_days;
             
             if(d_date == 2)
             {

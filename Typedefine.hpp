@@ -231,7 +231,7 @@ typedef struct ProjectInfo{
     uint8 pyramid_level;
     uint8 SDM_SS;
     double SDM_AS;
-    int SDM_days;
+    double SDM_days;
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -305,7 +305,7 @@ typedef struct ArgumentInfo{
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
     uint8 pyramid_level;
     uint8 SDM_SS;
-    int SDM_days;
+    double SDM_days;
     double SDM_AS;
     
     char Image[MaxImages][500];
