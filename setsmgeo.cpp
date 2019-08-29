@@ -79,6 +79,27 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
     return 0;
 }
 
+uint8 ReadGeotiff_bits(char *filename)
+{
+    TIFF *tif;
+    uint8 bits;
+    
+    tif = XTIFFOpen(filename, "r");
+    if (tif)
+    {
+        size_t value = 0;
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &value);
+        
+        if(value == 16)
+            bits = 12;
+        else
+            bits = value;
+        
+        XTIFFClose(tif);
+    }
+    return bits;
+}
+
 CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_size)
 {
     TIFF *tif;
@@ -103,7 +124,11 @@ CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &value);
         image_size.height = value;
 
-        XTIFFClose(tif);
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &value);
+        
+        if(value == 16)
+            value = 12;
+       XTIFFClose(tif);
     }
     return image_size;
 }

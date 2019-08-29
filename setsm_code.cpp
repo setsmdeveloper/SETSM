@@ -15135,10 +15135,12 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
         #pragma omp for
         for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
     }
-
+    printf("triangulation memory\n");
     FullTriangulation *triangulation = new FullTriangulation(width, height);
+    printf("triangulation memory2\n");
     triangulation->Triangulate(points_ptrs, numofpts);
-
+    printf("triangulation done\n");
+    
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(triangulation->GetAllTris(tris));
@@ -23231,8 +23233,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         sprintf(proinfo->tmpdir,"%s/tmp",proinfo->save_filepath);
         mkdir(proinfo->tmpdir,0777);
         
-        
-        
+        uint8 *image_bits = (uint8*)malloc(sizeof(uint8)*proinfo->number_of_images);
         double *ortho_minX = (double*)malloc(sizeof(double)*proinfo->number_of_images);
         double *ortho_maxY = (double*)malloc(sizeof(double)*proinfo->number_of_images);
         double *ortho_dx = (double*)malloc(sizeof(double)*proinfo->number_of_images);
@@ -23253,12 +23254,14 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         
         for(int i=0;i<proinfo->number_of_images;i++)
         {
+            
             proinfo->check_selected_image[i] = true;
             
             ImageAdjust_coreg[i] = (double*)malloc(sizeof(double)*2);
             ImageAdjust_coreg[i][0] = 0.0;
             ImageAdjust_coreg[i][1] = 0.0;
             
+            image_bits[i] = ReadGeotiff_bits(args.Image[i]);
             OriImagesizes[i] = ReadGeotiff_info_dxy(args.Image[i],&ortho_minX[i],&ortho_maxY[i],&ortho_dx[i],&ortho_dy[i]);
             ImageBoundary[i] = (double*)malloc(sizeof(double)*4);
             ImageBoundary[i][0] = ortho_minX[i];
@@ -23293,7 +23296,32 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             rows[0] = 0;
             rows[1] = OriImagesizes[i].height;
             
-            OriImages[i] = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
+            switch(image_bits[i])
+            {
+                case 8:
+                    uint8* data8;
+                    data8 = Readtiff_BYTE(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i]);
+                    long int data_size8 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
+                    OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size8);
+                    #pragma omp parallel for schedule(guided)
+                    for(long int index = 0 ; index < data_size8 ; index++)
+                        OriImages[i][index] = data8[index];
+                    free(data8);
+                    break;
+                case 12:
+                    uint16* data16;
+                    data16 = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
+                    long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
+                    OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size16);
+                    #pragma omp parallel for schedule(guided)
+                    for(long int index = 0 ; index < data_size16 ; index++)
+                        OriImages[i][index] = data16[index];
+                    free(data16);
+                    
+                    
+                    //OriImages[i] = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
+                    break;
+            }
             //OriImages[i] = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &tmp_datasize, false);
             
             printf("ID %d\t %s\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",i,args.Image[i],OriImagesizes[i].width,OriImagesizes[i].height,ortho_minX[i],ortho_maxY[i],ortho_dx[i],ortho_dy[i],ImageBoundary[i][0],ImageBoundary[i][1],ImageBoundary[i][2],ImageBoundary[i][3]);
@@ -23425,7 +23453,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 fclose(p_GCP);
                 
                 CSize GCP_size;
-                double GCP_grid = 5;//(ortho_dx[ti] + ortho_dy[ti])/2.0;
+                double GCP_grid = (ortho_dx[ti] + ortho_dy[ti])/2.0*5;
                 GCP_size.width = floor(GridSize_width/GCP_grid);
                 GCP_size.height = floor(GridSize_height/GCP_grid);
                 
@@ -23433,6 +23461,10 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 
                 long int data_length = (long int)(GCP_size.width)*(long int)(GCP_size.height);
                 unsigned char* GCP_value = (unsigned char*)calloc(sizeof(unsigned char),data_length);
+                for(int count = 0 ; count < data_length ; count ++)
+                {
+                    GCP_value[count] = 255;
+                }
                 
                 int sel_count = 0;
                 for(int count = 0 ; count < i ;count++)
@@ -23444,7 +23476,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     //printf("id %d\t%d\t%d\n",count,pos_c,pos_r);
                     if(pos_c >= 0 && pos_c < GCP_size.width && pos_r >= 0 && pos_r < GCP_size.height)
                     {
-                        GCP_value[index] = 255;
+                        GCP_value[index] = 0;
                         sel_count ++;
                     }
                 }
@@ -24627,8 +24659,17 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             
             printf("image resolution %f\n",proinfo.resolution);
             
+            int end_level = floor(log10(proinfo.DEM_resolution/(proinfo.resolution*15))/log10(2));
+            int th_grid = proinfo.resolution*pow(2.0,end_level);
+            
+            if(end_level < 0)
+                end_level = 0;
+            if(end_level > 4)
+                end_level = 4;
+            
+            proinfo.end_level = end_level;
             proinfo.pyramid_level = args.pyramid_level;
-            printf("pyramid level %d\tSDM_ss %d\n",proinfo.pyramid_level,proinfo.SDM_SS);
+            printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
             
             int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
             if(sdm_kernal_size > 3)
@@ -24640,11 +24681,35 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             
             printf("ks %d\t sdm_ss %d\n",sdm_kernal_size,proinfo.SDM_SS);
             
-            if(proinfo.SDM_SS > 10 && proinfo.pyramid_level >= 2)
+            if(proinfo.SDM_SS > 5 && proinfo.pyramid_level >= 2)
             {
-                printf("search kernel size is too large to minimize procesing time at the pyramid level. Please increase pyramid level!!\n");
-                exit(1);
+                bool check_while = false;
+                while(!check_while)
+                {
+                    proinfo.pyramid_level++;
+                    sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+                    if(sdm_kernal_size > 3)
+                    {
+                        proinfo.SDM_SS = sdm_kernal_size;
+                    }
+                    else
+                        proinfo.SDM_SS = 3;
+                    
+                    if(proinfo.SDM_SS < 5)
+                        check_while = true;
+                }
+                //printf("search kernel size is too large to minimize procesing time at the pyramid level. Please increase pyramid level!!\n");
+                //exit(1);
             }
+            if(proinfo.pyramid_level <= proinfo.end_level)
+                proinfo.end_level = proinfo.pyramid_level - 1;
+            
+            if(proinfo.end_level < 0 || proinfo.DEM_resolution < 50)
+                proinfo.end_level = 0;
+            
+            printf("pyramid leve %d\tend level %d\n",proinfo.pyramid_level,proinfo.end_level);
+            
+            printf("ks %d\t sdm_ss %d\n",sdm_kernal_size,proinfo.SDM_SS);
             
             if (!args.check_DEM_space)
             {
@@ -24663,6 +24728,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             Image_res[0]= proinfo.resolution;                        Image_res[1]= proinfo.resolution;
             
             GetImageSize(proinfo.Imagefilename[0],&Limagesize);    GetImageSize(proinfo.Imagefilename[1],&Rimagesize);
+            proinfo.image_bits = ReadGeotiff_bits(proinfo.Imagefilename[0]);
             printf("Limagesize %d\t%d\t Rimagesize %d\t%d\n",Limagesize.width,Limagesize.height,Rimagesize.width,Rimagesize.height);
             
             if(args.check_boundary)
@@ -24887,7 +24953,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                             SetPySizes(data_size_r, Rsubsetsize, level);
                             
                             printf("Preprocessing start!!\n");
-                            Preprocessing_SDM(proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
+                            Preprocessing_SDM(proinfo, proinfo.tmpdir,Lsubsetfilename,Rsubsetfilename,level,&Lsubsetsize, &Rsubsetsize,data_size_l,data_size_r, fid);
                             printf("Preprocessing finish(time[m] )!!\n");
                             
                             //PreST = time(0);
@@ -24907,6 +24973,9 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                             
                             while(lower_level_match && level >= 0)
                             {
+                                int prc_level = level;
+                                if(prc_level <= proinfo.end_level)
+                                    prc_level = proinfo.end_level;
                                 
                                 if(level > 4)
                                 {
@@ -24930,13 +24999,13 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 
                                 uint16 *SubImages_L, *SubImages_R;
                                 uint16 *SubMagImages_L, *SubMagImages_R;
-                                
+                                uint8 *SubOriImages_L,  *SubOriImages_R;
                                 SetThs_SDM(level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,pyramid_step);
                                 
-                                Lstartpos.m_X        = (double)(Lstartpos_ori.m_X/pow(2,level));        Lstartpos.m_Y        = (double)(Lstartpos_ori.m_Y/pow(2,level));
-                                Rstartpos.m_X        = (double)(Rstartpos_ori.m_X/pow(2,level));        Rstartpos.m_Y        = (double)(Rstartpos_ori.m_Y/pow(2,level));
+                                Lstartpos.m_X        = (double)(Lstartpos_ori.m_X/pow(2,prc_level));        Lstartpos.m_Y        = (double)(Lstartpos_ori.m_Y/pow(2,prc_level));
+                                Rstartpos.m_X        = (double)(Rstartpos_ori.m_X/pow(2,prc_level));        Rstartpos.m_Y        = (double)(Rstartpos_ori.m_Y/pow(2,prc_level));
                                 
-                                GridPT    = SetGrids_SDM(level, final_level_iteration, proinfo.resolution, &Size_Grid2D, proinfo.DEM_resolution, &py_resolution, &grid_resolution, subBoundary);
+                                GridPT    = SetGrids_SDM(proinfo,prc_level,level, final_level_iteration, proinfo.resolution, &Size_Grid2D, proinfo.DEM_resolution, &py_resolution, &grid_resolution, subBoundary);
                                 
                                 if(!flag_start)
                                 {
@@ -24964,10 +25033,13 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 
                                 printf("load subimages\n");
                                 
-                                SubImages_L        = LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level);
-                                SubImages_R        = LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level);
-                                SubMagImages_L    = LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[level],level,&left_mag_var,&left_mag_avg);
-                                SubMagImages_R    = LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[level],level,&right_mag_var,&right_mag_avg);
+                                SubImages_L        = LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
+                                SubImages_R        = LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
+                                SubMagImages_L    = LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level,&left_mag_var,&left_mag_avg);
+                                SubMagImages_R    = LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level,&right_mag_var,&right_mag_avg);
+                                
+                                SubOriImages_L  = LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
+                                SubOriImages_R  = LoadPyramidOriImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
                                 
                                 printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
                                 
@@ -25029,7 +25101,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                     printf("template size =%d\n",Template_size);
                                     
                                     //echoprint_shift(Lstartpos, Rstartpos,subBoundary,LRPCs, RRPCs, t_Rimageparam, param,GridPT,proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
-                                    if(level < 2)
+                                    if(level < 2 /*&& proinfo.resolution > 5*/)
                                     {
                                         bool check_while = false;
                                         int check_size = 3;
@@ -25038,7 +25110,9 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         
                                         int count_null_cell = 0;
                                         
-                                        uint8* t_ncc_array = (uint8*)calloc(sizeof(uint*),(long)Size_Grid2D.width*(long)Size_Grid2D.height);
+                                        uint8* t_ncc_array = (uint8*)calloc(sizeof(uint8),(long)Size_Grid2D.width*(long)Size_Grid2D.height);
+                                        float* temp_col_shift = (float*)calloc(sizeof(float),(long)Size_Grid2D.width*(long)Size_Grid2D.height);
+                                        float* temp_row_shift = (float*)calloc(sizeof(float),(long)Size_Grid2D.width*(long)Size_Grid2D.height);
                                         
                                         while(check_while == 0 && sm_iter < 100)
                                         {
@@ -25052,7 +25126,13 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                 col = index%Size_Grid2D.width;
                                                 long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
                                                 
-                                                if (GridPT3[search_index].ortho_ncc < 0.5 && t_ncc_array[search_index] != 2)
+                                                if(sm_iter > 0)
+                                                {
+                                                    GridPT3[search_index].row_shift = temp_row_shift[search_index];
+                                                    GridPT3[search_index].col_shift = temp_col_shift[search_index];
+                                                }
+                                                
+                                                if (/*GridPT3[search_index].ortho_ncc < 0.5 &&*/ t_ncc_array[search_index] != 2)
                                                 {
                                                     t_ncc_array[search_index] = 1;
                                                 }
@@ -25071,11 +25151,12 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                 
                                                 double sum_row_shift=0;
                                                 double sum_col_shift=0;
+                                                double sum_roh = 0;
                                                 
                                                 row = (int)(floor(index/Size_Grid2D.width));
                                                 col = index%Size_Grid2D.width;
                                                 long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
-                                                
+                                                double p = 1.5;
                                                 if (t_ncc_array[search_index] == 1)
                                                 {
                                                     count_cell = 0;
@@ -25088,12 +25169,14 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                             int index_col = col + t_j;
                                                             long int t_index = (long)index_row*(long)Size_Grid2D.width + (long)index_col;
                                                             
-                                                            if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width)
+                                                            if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width && t_i != 0 && t_j != 0)
                                                             {
-                                                                if(GridPT3[t_index].ortho_ncc > 0.5)
+                                                                if(GridPT3[t_index].ortho_ncc > 0.0)
                                                                 {
-                                                                    sum_row_shift += GridPT3[t_index].row_shift;
-                                                                    sum_col_shift += GridPT3[t_index].col_shift;
+                                                                    double dist = sqrt((double)(t_i*t_i + t_j*t_j));
+                                                                    sum_row_shift += (GridPT3[t_index].row_shift/pow(dist,p)*GridPT3[t_index].ortho_ncc);
+                                                                    sum_col_shift += (GridPT3[t_index].col_shift/pow(dist,p)*GridPT3[t_index].ortho_ncc);
+                                                                    sum_roh += ((1.0/pow(dist,p))*GridPT3[t_index].ortho_ncc);
                                                                     count_cell++;
                                                                 }
                                                             }
@@ -25102,11 +25185,22 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     
                                                     if (count_cell >= total_size*0.3 )
                                                     {
-                                                        GridPT3[search_index].row_shift = sum_row_shift/(double)count_cell;
-                                                        GridPT3[search_index].col_shift = sum_col_shift/(double)count_cell;
+                                                        //GridPT3[search_index].row_shift = sum_row_shift/(double)count_cell;
+                                                        //GridPT3[search_index].col_shift = sum_col_shift/(double)count_cell;
+                                                        //GridPT3[search_index].row_shift = sum_row_shift/sum_roh;
+                                                        //GridPT3[search_index].col_shift = sum_col_shift/sum_roh;
+                                                        
+                                                        temp_col_shift[search_index] = sum_col_shift/sum_roh;
+                                                        temp_row_shift[search_index] = sum_row_shift/sum_roh;
+                                                        
                                                         t_ncc_array[search_index] = 2;
                                                         count_null_cell ++;
                                                     }
+                                                }
+                                                else
+                                                {
+                                                    temp_row_shift[search_index] = GridPT3[search_index].row_shift;
+                                                    temp_col_shift[search_index] = GridPT3[search_index].col_shift;
                                                 }
                                             }
                                             
@@ -25115,18 +25209,22 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                 check_while = 1;
                                             printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
                                             
-                                            Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
-                                                             Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                            Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[prc_level], SubImages_L, Rimagesize,data_size_r[prc_level],SubImages_R, Template_size,
+                                                             Size_Grid2D, GridPT, GridPT3, prc_level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam,SubOriImages_L,SubOriImages_R);
                                         }
                                         free(t_ncc_array);
+                                        free(temp_col_shift);
+                                        free(temp_row_shift);
                                     }
                                     
+                                    if(level < pyramid_step)
+                                        proinfo.SDM_SS = 3;
+                                    printf("kernel size %d\n",proinfo.SDM_SS);
+                                    VerticalLineLocus_SDM(proinfo, nccresult, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[prc_level], SubImages_L, Rimagesize,data_size_r[prc_level],SubImages_R, Template_size,
+                                                      Size_Grid2D, GridPT, GridPT3, prc_level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam,SubOriImages_L,SubOriImages_R);
                                     
-                                    VerticalLineLocus_SDM(proinfo, nccresult, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
-                                                      Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
-                                    
-                                    count_MPs = SelectMPs_SDM(proinfo, nccresult,Size_Grid2D,GridPT,GridPT3,level,
-                                                          iteration,filename_mps,1,1);
+                                    count_MPs = SelectMPs_SDM(proinfo, nccresult,Size_Grid2D,GridPT,GridPT3,level,prc_level,
+                                                          iteration,filename_mps,1,1,subBoundary);
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",1,1,level,iteration,count_MPs);
                                     
                                     //echo_print_nccresults(proinfo.save_filepath,row,col,level, iteration, nccresult, &Size_Grid2D, "final");
@@ -25145,7 +25243,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         blunder_param.gridspace    = grid_resolution;
                                         blunder_param.height_check_flag = true;
                                         blunder_param.iteration = iteration;
-                                        blunder_param.Pyramid_step = level;
+                                        blunder_param.Pyramid_step = prc_level;
                                         
                                         blunder_param.Size_Grid2D.width = Size_Grid2D.width;
                                         blunder_param.Size_Grid2D.height = Size_Grid2D.height;
@@ -25154,9 +25252,9 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         {
                                             //echo_print_nccresults_SDM(proinfo.save_filepath,1,1,level, iteration, nccresult, &Size_Grid2D, "final");
                                             
-                                            echoprint_Gridinfo_SDM(LBoundary,RBoundary, data_size_l[level], SubImages_L, data_size_r[level], SubImages_R,subBoundary,proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final");
+                                            echoprint_Gridinfo_SDM(prc_level,proinfo,LBoundary,RBoundary, data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final");
                                             
-                                            echoprint_adjustXYZ(LBoundary,RBoundary,data_size_l[level], SubImages_L, data_size_r[level], SubImages_R,subBoundary,proinfo, proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final",grid_resolution,1);
+                                            echoprint_adjustXYZ(prc_level, LBoundary,RBoundary,data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo, proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final",grid_resolution,1);
                                         }
                                         else
                                         {
@@ -25244,7 +25342,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                 printf("Size_Grid2D %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,count_shift);
                                                 
                                                 printf("TIN interpolation for col row shift %d\n",count_shift);
-                                                
+                                               
                                                 if(count_shift > 5)
                                                 {
                                                     
@@ -25276,7 +25374,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     
                                                     sprintf(bufstr,"%s/txt/col_shift_%d_%d_%d_%d.txt",proinfo.save_filepath,level,iteration,1,1);
                                                     TINCreate(ptslists,bufstr,count_shift,t_trilists,min_max,&count_tri,grid_resolution);
-                                                    
+                                                    printf("end tingeneration %d\n",count_tri);
                                                     trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                                     i = 0;
                                                     for(i=0;i<count_tri;i++)
@@ -25353,14 +25451,14 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, Pre_GridPT3,blunder_param,ptslists,trilists,1);
                                                         
-                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
-                                                                              Size_Grid2D, GridPT, Pre_GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[prc_level], SubImages_L, Rimagesize,data_size_r[prc_level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, Pre_GridPT3, prc_level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam,SubOriImages_L,SubOriImages_R);
                                                         //if(level <= 4)
                                                         {
                                                             if(iteration < 2)
                                                             {
                                                                 //average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
-                                                                
+                                                                blunder_param.Pyramid_step = level;
                                                                 shift_filtering(proinfo, Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
                                                             }
                                                         }
@@ -25374,15 +25472,15 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, GridPT3,blunder_param,ptslists,trilists,1);
                                                         
-                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
-                                                                              Size_Grid2D, GridPT, GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[prc_level], SubImages_L, Rimagesize,data_size_r[prc_level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, GridPT3, prc_level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam,SubOriImages_L,SubOriImages_R);
                                                         
                                                         //if(level <= 4)
                                                         {
                                                             if(level >= 2 || (level == 1 && iteration < 3))
                                                             {
                                                                 //average_filter_colrowshift(Size_Grid2D, GridPT3,level);
-                                                                
+                                                                blunder_param.Pyramid_step = level;
                                                                 shift_filtering(proinfo, GridPT3, blunder_param, proinfo.DEM_resolution);
                                                             }
                                                         }
@@ -25395,14 +25493,14 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     {
                                                         SetHeightRange_shift(count_shift, count_tri, Pre_GridPT3,blunder_param,ptslists,trilists,1);
                                                         
-                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[level], SubImages_L, Rimagesize,data_size_r[level],SubImages_R, Template_size,
-                                                                              Size_Grid2D, GridPT, Pre_GridPT3, level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam);
+                                                        Update_ortho_NCC(proinfo, SubMagImages_L,SubMagImages_R,grid_resolution, Image_res[0], Limagesize, data_size_l[prc_level], SubImages_L, Rimagesize,data_size_r[prc_level],SubImages_R, Template_size,
+                                                                              Size_Grid2D, GridPT, Pre_GridPT3, prc_level, Lstartpos, Rstartpos, iteration, subBoundary, gsd_image1, gsd_image2,Rimageparam,SubOriImages_L,SubOriImages_R);
                                                         //if(level <= 4)
                                                         {
                                                             if(level >= 2 || (level == 1 && iteration < 3))
                                                             {
                                                                 //average_filter_colrowshift(Size_Grid2D, Pre_GridPT3,level);
-                                                                
+                                                                blunder_param.Pyramid_step = level;
                                                                 shift_filtering(proinfo, Pre_GridPT3, blunder_param, proinfo.DEM_resolution);
                                                                 
                                                             }
@@ -25561,6 +25659,9 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 printf("release subimage Mag\n\n\n");
                                 free(SubMagImages_L);
                                 free(SubMagImages_R);
+                                
+                                free(SubOriImages_L);
+                                free(SubOriImages_R);
                             }
                             printf("relese data size\n");
                             free(data_size_l);
@@ -25601,59 +25702,141 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
         if(GetsubareaImage_SDM(proinfo,LImageFilename,LImagesize,proinfo.LBoundary,Lcols,Lrows) &&
            GetsubareaImage_SDM(proinfo,RImageFilename,RImagesize,proinfo.RBoundary,Rcols,Rrows) )
         {
-            uint16 *leftimage, *rightimage;
+            printf("image bits %d\n",proinfo.image_bits);
             
-            printf("read leftimage\n");
-            leftimage    = Readtiff(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize,false);
+            switch(proinfo.image_bits)
+            {
+                /*case 32:
+                    float *t_data32;
+                    t_data32    = Readtiff_DEM(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize);
+                    if(t_data32)
+                    {
+                        FILE *pFile = fopen(LsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Lsubsetsize->width;
+                        result_size.height    = Lsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data32,sizeof(float),data_length,pFile);
+                        
+                        fclose(pFile);
+                        free(t_data32);
+                    }
+                    break;*/
+                case 8:
+                    uint8 *t_data8;
+                    t_data8    = Readtiff_BYTE(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize);
+                    if(t_data8)
+                    {
+                        FILE *pFile = fopen(LsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Lsubsetsize->width;
+                        result_size.height    = Lsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data8,sizeof(uint8),data_length,pFile);
+                      
+                        fclose(pFile);
+                        free(t_data8);
+                    }
+                    break;
+                case 12:
+                    uint16 *t_data16;
+                    t_data16    = Readtiff(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize,false);
+                    if(t_data16)
+                    {
+                        FILE *pFile = fopen(LsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Lsubsetsize->width;
+                        result_size.height    = Lsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data16,sizeof(uint16),data_length,pFile);
+                        
+                        fclose(pFile);
+                        free(t_data16);
+                    }
+                    break;
+            }
+            printf("write subimage left\n");
+            
             if(check_checktiff)
                 exit(1);
             
-            printf("read rightimage\n");
-            rightimage    = Readtiff(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize,false);
-            
-            
+            switch(proinfo.image_bits)
+            {
+                /*case 32:
+                    float *t_data32;
+                    t_data32    = Readtiff_DEM(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize);
+                    if(t_data32)
+                    {
+                        FILE *pFile = fopen(RsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Rsubsetsize->width;
+                        result_size.height    = Rsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data32,sizeof(float),data_length,pFile);
+                        
+                        fclose(pFile);
+                        free(t_data32);
+                    }
+                    break;*/
+                case 8:
+                    uint8 *t_data8;
+                    t_data8    = Readtiff_BYTE(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize);
+                    if(t_data8)
+                    {
+                        FILE *pFile = fopen(RsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Rsubsetsize->width;
+                        result_size.height    = Rsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data8,sizeof(uint8),data_length,pFile);
+                        
+                        fclose(pFile);
+                        free(t_data8);
+                    }
+                    break;
+                case 12:
+                    uint16 *t_data16;
+                    t_data16    = Readtiff(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize,false);
+                    if(t_data16)
+                    {
+                        FILE *pFile = fopen(RsubsetImage,"wb");
+                        
+                        CSize result_size;
+                        
+                        result_size.width    = Rsubsetsize->width;
+                        result_size.height    = Rsubsetsize->height;
+                        
+                        long int data_length = result_size.height*result_size.width;
+                        fwrite(t_data16,sizeof(uint16),data_length,pFile);
+                        
+                        fclose(pFile);
+                        free(t_data16);
+                    }
+                    break;
+            }
             
             Lstartpos->m_X    = (double)(Lcols[0]);
             Lstartpos->m_Y    = (double)(Lrows[0]);
             Rstartpos->m_X    = (double)(Rcols[0]);
             Rstartpos->m_Y    = (double)(Rrows[0]);
             
-            
-            printf("write subimage left\n");
-            if(leftimage)
-            {
-                FILE *pFile = fopen(LsubsetImage,"wb");
-                
-                CSize result_size;
-                
-                result_size.width    = Lsubsetsize->width;
-                result_size.height    = Lsubsetsize->height;
-                
-                long int data_length = result_size.height*result_size.width;
-                fwrite(leftimage,sizeof(uint16),data_length,pFile);
-                fclose(pFile);
-                
-                free(leftimage);
-            }
-            
             printf("write subimage right\n");
-            if(rightimage)
-            {
-                FILE *pFile = fopen(RsubsetImage,"wb");
-                
-                CSize result_size;
-                
-                
-                result_size.width  = Rsubsetsize->width;
-                result_size.height = Rsubsetsize->height;
-                
-                long int data_length = result_size.height*result_size.width;
-                fwrite(rightimage,sizeof(uint16),data_length,pFile);
-                fclose(pFile);
-                
-                free(rightimage);
-            }
-            
+    
             ret        = true;
         }
     }
@@ -25766,12 +25949,12 @@ D2DPOINT* GetObjectToImage(uint16 _numofpts, D2DPOINT *_GP, double *boundary, do
     return IP;
 }
 
-void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 py_level, CSize *Lsubsetsize, CSize *Rsubsetsize, CSize *data_size_l, CSize *data_size_r, FILE *fid)
+void Preprocessing_SDM(ProInfo proinfo, char *save_path,char *Lsubsetfile, char *Rsubsetfile, uint8 py_level, CSize *Lsubsetsize, CSize *Rsubsetsize, CSize *data_size_l, CSize *data_size_r, FILE *fid)
 {
     uint16 **pyimg;
     uint16 **magimg;
     int16  **dirimg;
-    //uint8  **oriimg;
+    uint8  **oriimg;
     CSize *data_size;
     FILE *pFile_raw, *pFile_check_file;
     char* filename_py;
@@ -25804,7 +25987,7 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
             pyimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
             magimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
             dirimg = (int16**)malloc(sizeof(int16*)*(py_level+1));
-            //oriimg = (uint8**)malloc(sizeof(uint8*)*(py_level+1));
+            oriimg = (uint8**)malloc(sizeof(uint8*)*(py_level+1));
             data_size = (CSize*)malloc(sizeof(CSize)*(py_level+1));
             
             if(count == 0)
@@ -25829,12 +26012,30 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
             pyimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
             magimg[0] = (uint16*)malloc(sizeof(uint16)*data_length);
             dirimg[0] = (int16*)malloc(sizeof(int16)*data_length);
-            //oriimg[0] = (uint8*)malloc(sizeof(uint8)*data_length);
+            oriimg[0] = (uint8*)malloc(sizeof(uint8)*data_length);
             
-            fread(pyimg[0],sizeof(uint16),data_length,pFile_raw);
+            switch(proinfo.image_bits)
+            {
+                case 8:
+                    uint8* data8 = (uint8*)malloc(sizeof(uint8)*data_length);
+                    fread(data8,sizeof(uint8),data_length,pFile_raw);
+                    #pragma omp parallel for schedule(guided)
+                    for(long int index = 0 ; index < data_length ; index++)
+                        pyimg[0][index] = data8[index];
+                    free(data8);
+                    break;
+                case 12:
+                    uint16* data16 = (uint16*)malloc(sizeof(uint16)*data_length);
+                    fread(data16,sizeof(uint16),data_length,pFile_raw);
+#pragma omp parallel for schedule(guided)
+                    for(long int index = 0 ; index < data_length ; index++)
+                        pyimg[0][index] = data16[index];
+                    free(data16);
+                    break;
+            }
             
             MakeSobelMagnitudeImage(data_size[0],pyimg[0],magimg[0],dirimg[0]);
-            //Orientation(data_size[0],magimg[0],dirimg[0],15,oriimg[0]);
+            Orientation(data_size[0],magimg[0],dirimg[0],15,oriimg[0]);
             
             sprintf(t_str,"%s/%s_py_0.raw",save_path,filename_py);
             pFile    = fopen(t_str,"wb");
@@ -25851,9 +26052,9 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
             
             sprintf(t_str,"%s/%s_py_0_ori.raw",save_path,filename_py);
             pFile    = fopen(t_str,"wb");
-            //fwrite(oriimg[0],sizeof(uint8),data_length,pFile);
+            fwrite(oriimg[0],sizeof(uint8),data_length,pFile);
             fclose(pFile);
-            //free(oriimg[0]);
+            free(oriimg[0]);
             
             for(i=0;i<py_level;i++)
             {
@@ -25875,9 +26076,9 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
                 data_length_array[i] = (long int)data_size[i+1].height*(long int)data_size[i+1].width;
                 magimg[i+1] = (uint16*)malloc(sizeof(uint16)*data_length_array[i]);
                 dirimg[i+1] = (int16*)malloc(sizeof(int16)*data_length_array[i]);
-                //oriimg[i+1] = (uint8*)malloc(sizeof(uint8)*data_length_array[i]);
+                oriimg[i+1] = (uint8*)malloc(sizeof(uint8)*data_length_array[i]);
                 MakeSobelMagnitudeImage(data_size[i+1],pyimg[i+1],magimg[i+1],dirimg[i+1]);
-                //Orientation(data_size[i+1],magimg[i+1],dirimg[i+1],15,oriimg[i+1]);
+                Orientation(data_size[i+1],magimg[i+1],dirimg[i+1],15,oriimg[i+1]);
                 
                 sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,i+1);
                 pFile    = fopen(t_str,"wb");
@@ -25896,9 +26097,9 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
                 
                 sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,i+1);
                 pFile    = fopen(t_str,"wb");
-                //fwrite(oriimg[i+1],sizeof(uint8),data_length_array[i],pFile);
+                fwrite(oriimg[i+1],sizeof(uint8),data_length_array[i],pFile);
                 fclose(pFile);
-                //free(oriimg[i+1]);
+                free(oriimg[i+1]);
             }
             if(pyimg)
                 free(pyimg);
@@ -25906,8 +26107,8 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
                 free(magimg);
             if(dirimg)
                 free(dirimg);
-            //if(oriimg)
-            //    free(oriimg);
+            if(oriimg)
+                free(oriimg);
             if(data_size)
                 free(data_size);
         }
@@ -25918,6 +26119,7 @@ void Preprocessing_SDM(char *save_path,char *Lsubsetfile, char *Rsubsetfile, uin
             fclose(pFile_check_file);
     }
 }
+
 
 void SetThs_SDM(int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, uint8 pyramid_step)
 {
@@ -25964,12 +26166,15 @@ void SetThs_SDM(int level, int final_level_iteration, double *Th_roh, double *Th
 }
 
 
-D2DPOINT *SetGrids_SDM(int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, double DEM_resolution, double *py_resolution, double *grid_resolution, double *subBoundary)
+D2DPOINT *SetGrids_SDM(ProInfo proinfo, int prc_level,int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, double DEM_resolution, double *py_resolution, double *grid_resolution, double *subBoundary)
 {
-    if(level > 0)
-        *py_resolution     = (double)(resolution*pow(2,level + 1));
+    if(level >= proinfo.end_level)
+        *py_resolution     = (double)(resolution*pow(2,prc_level + 1));
     else
-        *py_resolution     = (double)(resolution*pow(2,level));
+        *py_resolution     = (double)(resolution*pow(2,prc_level));
+    
+    //if(level < prc_level)
+    //    *py_resolution     = (double)(resolution*pow(2,prc_level));
     
     *grid_resolution = *py_resolution;
     
@@ -25977,11 +26182,11 @@ D2DPOINT *SetGrids_SDM(int level, int final_level_iteration, double resolution, 
     
     
     {
-        if(*py_resolution > 32)//low-res original imagery
+        if(*py_resolution > 32 && level > 2)//low-res original imagery
         {
             *py_resolution = (int)(*py_resolution/2.0);
-            if(*py_resolution < DEM_resolution/3.0)
-                *py_resolution = (floor)(DEM_resolution/3.0);
+            if(*py_resolution < DEM_resolution/2.0)
+                *py_resolution = (floor)(DEM_resolution/2.0);
             
             *grid_resolution = *py_resolution;
         }
@@ -25996,8 +26201,8 @@ D2DPOINT *SetGrids_SDM(int level, int final_level_iteration, double resolution, 
                         *py_resolution = 2;
                     }
                     
-                    if(*py_resolution < DEM_resolution/3.0)
-                        *py_resolution = (floor)(DEM_resolution/3.0);
+                    if(*py_resolution < DEM_resolution/2.0)
+                        *py_resolution = (floor)(DEM_resolution/2.0);
                 }
                 else if(level == 1)
                 {
@@ -26084,6 +26289,11 @@ D2DPOINT *SetGrids_SDM(int level, int final_level_iteration, double resolution, 
         
         //if(*py_resolution < DEM_resolution)
         //    *py_resolution     = DEM_resolution;
+        
+        if(*py_resolution > 100)
+        {
+            *py_resolution = (int)((*py_resolution)/50.0)*50.0;
+        }
         
         *grid_resolution = *py_resolution;
         
@@ -26185,7 +26395,7 @@ UGRIDSDM* ResizeGirdPT3_SDM(CSize preSize, CSize resize_Size, double* Boundary, 
     return resize_GridPT3;
 }
 
-bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param)
+bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param,uint8* SubOriImages_L,uint8* SubOriImages_R)
 {
     if(Pyramid_step >= 1)
     {
@@ -26235,21 +26445,21 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
             {
                 char t_temp_path[500];
                 bool check_blunder_cell = false;
-                int kernel_size = 3;
+                int kernel_size = proinfo.SDM_SS;
                 
                 if(GridPT3[pt_index].ortho_ncc > 0.6)
                 {
-                    kernel_size = 2;
+                    kernel_size = kernel_size - 1;
                     //count_0_6++;
                 }
                 else if(GridPT3[pt_index].ortho_ncc > 0.2)
                 {
-                    kernel_size = 3;
+                    //kernel_size = 3;
                     //count_0_3++;
                 }
                 else
                 {
-                    kernel_size = 4;
+                    kernel_size = kernel_size + 1;
                     //count_low++;
                 }
                 
@@ -26286,10 +26496,14 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                             Right_Imagecoord_py.m_Y += (kernel_row + (GridPT3[pt_index].row_shift + Coreg_param[0])/pow(2.0,Pyramid_step));
                             Right_Imagecoord_py.m_X += (kernel_col + (GridPT3[pt_index].col_shift + Coreg_param[1])/pow(2.0,Pyramid_step));
                             
+                            long int ori_left = (long int)Left_Imagecoord_py.m_Y * LImagesize.width + (long int)Left_Imagecoord_py.m_X;
+                            long int ori_right = (long int)Right_Imagecoord_py.m_Y * RImagesize.width + (long int)Right_Imagecoord_py.m_X;
+                            
                             if( Right_Imagecoord_py.m_Y >= 0 && Right_Imagecoord_py.m_Y < RImagesize.height && Right_Imagecoord_py.m_X    >= 0 && Right_Imagecoord_py.m_X    < RImagesize.width &&
                                Left_Imagecoord_py.m_Y >= 0 && Left_Imagecoord_py.m_Y      < LImagesize.height && Left_Imagecoord_py.m_X    >= 0 && Left_Imagecoord_py.m_X    < LImagesize.width)
                             {
-                                
+                                int ori_diff = SubOriImages_L[ori_left] - SubOriImages_R[ori_right];
+                                double bin_angle            = 360.0/18.0;
                                 double Left_CR, Left_CC, Right_CR, Right_CC;
                                 
                                 Left_CR        = Left_Imagecoord_py.m_Y;
@@ -26299,7 +26513,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                                 
                                 //if(check_orientation)
                                 {
-                                    double rot_theta = 0.0;
+                                    double rot_theta = 0;//(double)((double)ori_diff*bin_angle*PI/180.0);
                                     
                                     double Sum_LR = 0;
                                     double Sum_L = 0;
@@ -26646,7 +26860,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
     return true;
 }
 
-int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRIDSDM *GridPT3, uint8 Pyramid_step, uint8 iteration, char *filename_mps,uint8 tile_row,uint8 tile_col)
+int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRIDSDM *GridPT3, uint8 Pyramid_step, uint8 prc_level,uint8 iteration, char *filename_mps,uint8 tile_row,uint8 tile_col,double *Boundary)
 {
     int count_MPs = 0;
     
@@ -26654,7 +26868,7 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
     int row,col;
     double minimum_Th = 0.3;
     //if(Pyramid_step == 0)
-    //    minimum_Th = 0.2;
+    //    minimum_Th = 0.1;
     
     printf("minimum TH %f\n",minimum_Th);
     FILE* temp_fid;
@@ -26697,14 +26911,14 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
             
             {
                 //Set the matched pts and information
-                if(roh_index)
+                if(roh_index && GridPts_XY[grid_index].m_X > Boundary[0] && GridPts_XY[grid_index].m_X < Boundary[2] && GridPts_XY[grid_index].m_Y > Boundary[1] && GridPts_XY[grid_index].m_Y < Boundary[3])
                 {
                     count_MPs++;
                     
                     fprintf(temp_fid,"%lf %lf %lf %lf %lf %lf\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
                     
-                    fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pow(2.0,Pyramid_step));
-                    fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pow(2.0,Pyramid_step));
+                    fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pow(2.0,prc_level));
+                    fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pow(2.0,prc_level));
                     
                     // update max_roh value
                     GridPT3[grid_index].roh        = roh_height[grid_index].result0;
@@ -26753,7 +26967,7 @@ void echo_print_nccresults_SDM(char *save_path,int row,int col,int level, int it
     fclose(outfile_min);
 }
 
-void echoprint_Gridinfo_SDM(double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary,char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str)
+void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary,char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str)
 {
     FILE *outfile_h,*outfile_hr, *outfile_min, *outfile_max,     *outfile_roh, *outfile_flag;
     CSize temp_S;
@@ -26789,37 +27003,42 @@ void echoprint_Gridinfo_SDM(double* LBoundary,double* RBoundary, CSize LImagesiz
         {
             int matlab_index    = k*temp_S.width + j;
             
-            /*if(strcmp(add_str,"final") == 0)
+            double coord_x = boundary[0] + j*proinfo.DEM_resolution;
+            double coord_y = boundary[1] + k*proinfo.DEM_resolution;
+            
+            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            
+            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            
+            //printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n",j,k,pos_lc,pos_lr,pos_rc,pos_rr,proinfo.DEM_resolution,proinfo.resolution);
+            long int l_index = pos_lr*LImagesize.width + pos_lc;
+            long int r_index = pos_rr*RImagesize.width + pos_rc;
+            
+            if(pos_lc >= 0 && pos_lc < LImagesize.width && pos_lr >= 0 && pos_lr < LImagesize.height &&
+               pos_rc >= 0 && pos_rc < RImagesize.width && pos_rr >= 0 && pos_rr < RImagesize.height)
             {
-                fprintf(outfile_min,"%f\t",GridPT3[matlab_index].col_shift);
-                fprintf(outfile_max,"%f\t",GridPT3[matlab_index].row_shift);
-                fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].ortho_ncc);
+                int l_value = LeftImage[l_index];
+                int r_value = RightImage[r_index];
+                
+                if(l_value > 0 && r_value > 0)
+                {
+                    fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].ortho_ncc);
+                }
+                else
+                    fprintf(outfile_roh,"-1.0\t");
             }
-            else*/ if(level == 0 && iteration == 3)
-                fprintf(outfile_roh,"%f\t",GridPT3[matlab_index].ortho_ncc);
+            else
+                fprintf(outfile_roh,"-1.0\t");
         }
-        /*if(strcmp(add_str,"final") == 0)
-        {
-            fprintf(outfile_min,"\n");
-            fprintf(outfile_max,"\n");
-            fprintf(outfile_roh,"\n");
-        }
-        else*/ if(level == 0 && iteration == 3)
-            fprintf(outfile_roh,"\n");
+        fprintf(outfile_roh,"\n");
     }
-    
-    /*if(strcmp(add_str,"final") == 0)
-    {
-        fclose(outfile_min);
-        fclose(outfile_max);
-        fclose(outfile_roh);
-    }
-    else*/ if(level == 0 && iteration == 3)
-        fclose(outfile_roh);
+    fclose(outfile_roh);
 
 }
 
-void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary, ProInfo proinfo, char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str, double gridsize, int d_date)
+void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary, ProInfo proinfo, char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str, double gridsize, int d_date)
 {
     FILE *outfile_XYZ, *outfile_Xshift, *outfile_Yshift;
     CSize temp_S;
@@ -26836,8 +27055,8 @@ void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, 
     
     UGRIDSDM* temp_GridPT3;
     long int data_length = (long int)(Size_Grid2D->width)*(long int)(Size_Grid2D->height);
-    temp_GridPT3 = (UGRIDSDM*)malloc(sizeof(UGRIDSDM)*data_length);
-    memcpy(temp_GridPT3,GridPT3,sizeof(UGRIDSDM)*data_length);
+    //temp_GridPT3 = (UGRIDSDM*)malloc(sizeof(UGRIDSDM)*data_length);
+    //memcpy(temp_GridPT3,GridPT3,sizeof(UGRIDSDM)*data_length);
     
     printf("Size_Grid2D %d\t%d\tres = %f\n",Size_Grid2D->width,Size_Grid2D->height,proinfo.resolution);
 
@@ -26852,11 +27071,11 @@ void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, 
             double coord_x = boundary[0] + j*proinfo.DEM_resolution;
             double coord_y = boundary[1] + k*proinfo.DEM_resolution;
             
-            int pos_lc = (int)((coord_x - LBoundary[0])/proinfo.resolution);
-            int pos_lr = (int)((LBoundary[3] - coord_y)/proinfo.resolution);
+            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
             
-            int pos_rc = (int)((coord_x - RBoundary[0])/proinfo.resolution);
-            int pos_rr = (int)((RBoundary[3] - coord_y)/proinfo.resolution);
+            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
             
             //printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n",j,k,pos_lc,pos_lr,pos_rc,pos_rr,proinfo.DEM_resolution,proinfo.resolution);
             long int l_index = pos_lr*LImagesize.width + pos_lc;
@@ -26893,6 +27112,7 @@ void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, 
                 fprintf(outfile_Xshift,"0\t");
                 fprintf(outfile_Yshift,"0\t");
             }
+            
         }
         //if(strcmp(add_str,"final") == 0)
         {
@@ -26907,7 +27127,7 @@ void echoprint_adjustXYZ(double* LBoundary,double* RBoundary, CSize LImagesize, 
         fclose(outfile_Yshift);
     }
     
-    free(temp_GridPT3);
+    //free(temp_GridPT3);
 }
 
 UGRIDSDM* SetHeightRange_SDM(UGRIDSDM *GridPT3, BL BL_param)
@@ -27218,7 +27438,7 @@ void SetHeightRange_shift(int numOfPts, int numOfTri, UGRIDSDM *GridPT3,BL BL_pa
         free(m_bHeight);
 }
 
-bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param)
+bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param,uint8* SubOriImages_L,uint8* SubOriImages_R)
 {
     if(Pyramid_step >= 1)
     {
@@ -27288,10 +27508,14 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
             Right_Imagecoord_py.m_Y += (GridPT3[pt_index].row_shift + Coreg_param[0])/pow(2.0,Pyramid_step);
             Right_Imagecoord_py.m_X += (GridPT3[pt_index].col_shift + Coreg_param[1])/pow(2.0,Pyramid_step);
             
+            long int ori_left = (long int)Left_Imagecoord_py.m_Y * LImagesize.width + (long int)Left_Imagecoord_py.m_X;
+            long int ori_right = (long int)Right_Imagecoord_py.m_Y * RImagesize.width + (long int)Right_Imagecoord_py.m_X;
+            
             if( Right_Imagecoord_py.m_Y >= 0 && Right_Imagecoord_py.m_Y < RImagesize.height && Right_Imagecoord_py.m_X    >= 0 && Right_Imagecoord_py.m_X    < RImagesize.width &&
                Left_Imagecoord_py.m_Y >= 0 && Left_Imagecoord_py.m_Y      < LImagesize.height && Left_Imagecoord_py.m_X    >= 0 && Left_Imagecoord_py.m_X    < LImagesize.width)
             {
-                
+                int ori_diff = SubOriImages_L[ori_left] - SubOriImages_R[ori_right];
+                double bin_angle            = 360.0/18.0;
                 double Left_CR, Left_CC, Right_CR, Right_CC;
                 
                 Left_CR        = Left_Imagecoord_py.m_Y;
@@ -27299,7 +27523,7 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
                 Right_CR    = Right_Imagecoord_py.m_Y;
                 Right_CC    = Right_Imagecoord_py.m_X;
                 
-                double rot_theta = 0.0;
+                double rot_theta = 0;//(double)((double)ori_diff*bin_angle*PI/180.0);
                 
                 double Sum_LR = 0;
                 double Sum_L = 0;

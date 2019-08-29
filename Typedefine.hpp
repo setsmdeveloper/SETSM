@@ -229,9 +229,11 @@ typedef struct ProjectInfo{
     int number_of_images;
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     uint8 pyramid_level;
+    uint8 end_level;
     uint8 SDM_SS;
     double SDM_AS;
     double SDM_days;
+    uint8 image_bits;
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
