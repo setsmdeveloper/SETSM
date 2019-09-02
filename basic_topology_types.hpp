@@ -13,9 +13,9 @@
  **************************/
 #define THREADED_CUTOFF 100	// Number of points after which the algorithm should switch to a serial triangulation
 #define RETRI_CUTOFF 50	// Number of points after which the algorithm should switch to a serial triangulation
-#define TINUPD_THRSHLD 20 // Used to decide update vs. new triangulation; larger means less likely to update
+#define TINUPD_THRSHLD 100 // Used to decide update vs. new triangulation; larger means less likely to use TINUpdate
 
-// TODO
+// We don't really need 128-bit integers but here's the code in case it's ever wanted
 typedef int64_t INT64;
 //#ifdef __SIZEOF_INT128__ // __int128_t is a compiler extension
 //	typedef __int128_t INT128; 

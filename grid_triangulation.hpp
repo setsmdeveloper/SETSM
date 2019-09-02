@@ -39,8 +39,8 @@ class GridTriangulation
 		Edge *FindFaceRepresentative(Edge *edge);
 		void RemoveAllPoints(GridPoint **blunders, size_t num_blunders);
 		void Retriangulate(GridPoint **blunders, size_t num_blunders);
-		void RetriangulateVertical(std::vector<GridPoint*> blunders);
-		void RetriangulateHorizontal(std::vector<GridPoint*> blunders);
+		void RetriangulateVertical(std::vector<GridPoint*> blunders, bool nosplit);
+		void RetriangulateHorizontal(std::vector<GridPoint*> blunders, bool nosplit);
 		void SetEdgeOut(const GridPoint &p, Edge *e) { this->grid->SetElem(p, e); }
 		Edge *GetEdgeOut(const GridPoint &p) { return this->grid->GetElem(p); }
 		void RemovePoint(const GridPoint &p)

@@ -707,7 +707,7 @@ void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[],
 		#pragma omp single
 		{
 			std::vector<GridPoint*> blunder_vector(blunders, blunders+num_blunders);
-			this->RetriangulateHorizontal(blunder_vector);	
+			this->RetriangulateHorizontal(blunder_vector,false);	
 		}
 	}
 	this->grid->ReduceNumOfElems(num_blunders);
@@ -715,7 +715,7 @@ void GridTriangulation<GridType, IterType>::Retriangulate(GridPoint *blunders[],
 
 
 template <typename GridType, typename IterType>
-void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<GridPoint*> blunders)
+void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<GridPoint*> blunders, bool nosplit)
 {
 	if(blunders.size() > RETRI_CUTOFF)
 	{
@@ -764,32 +764,47 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 				}
 			}
 		}
-		//Spawn two tasks to remove unlinked blunders on each side
-		GridTriangulation *g_bottom = new GridTriangulation(this->width, this->height);
-		GridTriangulation *g_top = new GridTriangulation(this->width, this->height);
-		g_bottom->edge_list = this->edge_list->MakeLocalCopy();
-		g_top->edge_list = this->edge_list->MakeLocalCopy();
-		g_bottom->grid = this->grid;
-		g_top->grid = this->grid;
-		#pragma omp task
+		bool center_only = Unlinked1.size()==0 && Unlinked2.size()==0;
+		if (!center_only)
 		{
-			g_bottom->RetriangulateHorizontal(Unlinked1);
-		}
+			//Spawn two tasks to remove unlinked blunders on each side
+			GridTriangulation *g_bottom = new GridTriangulation(this->width, this->height);
+			GridTriangulation *g_top = new GridTriangulation(this->width, this->height);
+			g_bottom->edge_list = this->edge_list->MakeLocalCopy();
+			g_top->edge_list = this->edge_list->MakeLocalCopy();
+			g_bottom->grid = this->grid;
+			g_top->grid = this->grid;
+			#pragma omp task
+			{
+				g_bottom->RetriangulateHorizontal(Unlinked1,false);
+			}
 		
-		#pragma omp task
-		{
-			g_top->RetriangulateHorizontal(Unlinked2);
+			#pragma omp task
+			{
+				g_top->RetriangulateHorizontal(Unlinked2,false);
+			}
+			//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
+			#pragma omp taskwait
+			// No need to maintain unused edge list during retriangulation
+			//this->edge_list->MergeUnused(*(g_bottom->edge_list));
+			//this->edge_list->MergeUnused(*(g_top->edge_list));
+			g_bottom->grid = 0;
+			g_top->grid = 0;
+			delete g_bottom;
+			delete g_top;
 		}
-		//Wait for both sides to finish before eliminating linked blunders. We can Recurse on the linked blunders as well but this is unlikely to provide much of an increase in performance
-		#pragma omp taskwait
-		// No need to maintain unused edge list during retriangulation
-		//this->edge_list->MergeUnused(*(g_bottom->edge_list));
-		//this->edge_list->MergeUnused(*(g_top->edge_list));
-		g_bottom->grid = 0;
-		g_top->grid = 0;
-		delete g_bottom;
-		delete g_top;
-		this->RetriangulateHorizontal(Linked);
+		// Handle center strip specially to avoid infinite recursion
+		if (!(center_only&&nosplit))
+		{
+			this->RetriangulateHorizontal(Linked,center_only);
+		}
+		else
+		{
+			for(auto it = blunders.begin(); it!=blunders.end(); it++)
+			{
+				this->RemovePointAndRetriangulate(**it);
+			}
+		}
 	}else
 	{
 		//Remove blunders and retriangulate. This is base case
@@ -802,7 +817,7 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 
 
 template <typename GridType, typename IterType>
-void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<GridPoint*> blunders)
+void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<GridPoint*> blunders, bool nosplit)
 {
 	if(blunders.size() > RETRI_CUTOFF)
 	{
@@ -846,30 +861,45 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 				}
 			}
 		}
-		GridTriangulation *g_left = new GridTriangulation(this->width, this->height);
-		GridTriangulation *g_right = new GridTriangulation(this->width, this->height);
-		g_left->edge_list = this->edge_list->MakeLocalCopy();
-		g_right->edge_list = this->edge_list->MakeLocalCopy();
-		g_left->grid = this->grid;
-		g_right->grid = this->grid;
-		#pragma omp task
+		bool center_only = Unlinked1.size()==0 && Unlinked2.size()==0;
+		if (!center_only)
 		{
-			g_left->RetriangulateVertical(Unlinked1);
-		}
+			GridTriangulation *g_left = new GridTriangulation(this->width, this->height);
+			GridTriangulation *g_right = new GridTriangulation(this->width, this->height);
+			g_left->edge_list = this->edge_list->MakeLocalCopy();
+			g_right->edge_list = this->edge_list->MakeLocalCopy();
+			g_left->grid = this->grid;
+			g_right->grid = this->grid;
+			#pragma omp task
+			{
+				g_left->RetriangulateVertical(Unlinked1,false);
+			}
 		
-		#pragma omp task
-		{
-			g_right->RetriangulateVertical(Unlinked2);
+			#pragma omp task
+			{
+				g_right->RetriangulateVertical(Unlinked2,false);
+			}
+			#pragma omp taskwait
+			// No need to maintain unused edge list during retriangulation
+			//this->edge_list->MergeUnused(*(g_left->edge_list));
+			//this->edge_list->MergeUnused(*(g_right->edge_list));
+			g_left->grid = 0;
+			g_right->grid = 0;
+			delete g_left;
+			delete g_right;
 		}
-		#pragma omp taskwait
-		// No need to maintain unused edge list during retriangulation
-		//this->edge_list->MergeUnused(*(g_left->edge_list));
-		//this->edge_list->MergeUnused(*(g_right->edge_list));
-		g_left->grid = 0;
-		g_right->grid = 0;
-		delete g_left;
-		delete g_right;
-		this->RetriangulateVertical(Linked);
+		// Handle center strip specially to avoid infinite recursion
+		if (!(center_only&&nosplit))
+		{
+			this->RetriangulateVertical(Linked,center_only);
+		}
+		else
+		{
+			for(auto it = blunders.begin(); it!=blunders.end(); it++)
+			{
+				this->RemovePointAndRetriangulate(**it);
+			}
+		}
 	}else
 	{
 		for(auto it = blunders.begin(); it!=blunders.end(); it++)
