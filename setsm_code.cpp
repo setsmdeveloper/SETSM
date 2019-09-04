@@ -10413,31 +10413,24 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                	{
 									double temp_roh = 0;
                                     double count_roh = 0;
+									temp_GNCC_roh = 0;
 									for (int k=0; k<3; k++)
 									{
 										double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
 										if (ncc != -99)
 										{
-                                            if (ncc > 1)
-                                                ncc = 1;
-                            
                                             count_roh++;
-                                            
                                             temp_roh += ncc;
                                         }
 							
 										double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
 										if (ncc_mag != -99)
 										{
-                                            if (ncc_mag > 1)
-                                                ncc_mag = 1;
-                                
                                             count_roh++;
-                                            
                                             temp_roh += ncc_mag;
                                         }
                                     }
-                                    temp_GNCC_roh = temp_roh / count_roh;
+                                    if (count_roh>0) temp_GNCC_roh = temp_roh/count_roh;
                                     sum_GNCC_multi += temp_GNCC_roh;
                                     count_GNCC ++;
                                     //check_ortho_com = true;
@@ -10450,30 +10443,24 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 	{
 										double temp_roh = 0;
                                         double count_roh = 0;
+										temp_GNCC_roh = 0;
 										for (int k=0; k<3; k++)
 										{
 											double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
 											if (ncc != -99)
 											{
-                                                if (ncc > 1)
-                                                    ncc = 1;
                                                 count_roh++;
-                                                
                                                 temp_roh += ncc;
                                             }
 
 											double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
 											if (ncc_mag != -99)
 											{
-                                                if (ncc_mag > 1)
-                                                    ncc_mag = 1;
-                                    
                                                 count_roh++;
-                                                
                                                 temp_roh += ncc_mag;
                                             }
 										}
-                                    	temp_GNCC_roh = temp_roh / count_roh;
+                                    	if (count_roh>0) temp_GNCC_roh = temp_roh/count_roh;
                                     	sum_GNCC_multi += temp_GNCC_roh;
                                     	count_GNCC ++;
                                     	//check_ortho_com = true;
@@ -10887,32 +10874,25 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 					{
 														double temp_roh = 0;
                                                         double count_roh = 0;
+														temp_INCC_roh = 0;
 														for (int k=0; k<3; k++)
 														{
 															double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
 															if (ncc != -99)
 															{
-                                                                if(ncc > 1)
-                                                                    ncc = 1;
-                                                                
                                                                 count_roh++;
-                                                                
                                                                 temp_roh += ncc;
 															}
 
 															double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
 															if (ncc_mag != -99)
 															{
-                                                                if(ncc_mag > 1)
-                                                                    ncc_mag = 1;
-                                                                
                                                                 count_roh++;
-                                                                
                                                                 temp_roh += ncc_mag;
                                                             }
 														}
 
-                                                     	temp_INCC_roh = temp_roh / count_roh;
+                                                     	if (count_roh > 0) temp_INCC_roh = temp_roh/count_roh;
                                                      	sum_INCC_multi += temp_INCC_roh;
 			
                                                      	t_intensity_diff = sqrt(t_intensity_diff/Count_N[0]);
@@ -10933,32 +10913,25 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                         {
 															double temp_roh = 0;
                                                             double count_roh = 0;
+															temp_INCC_roh = 0;
 															for (int k=0; k<3; k++)
 															{
 																double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
 																if (ncc != -99)
 																{
-                                                                    if(ncc > 1)
-                                                                        ncc = 1;
-                                                                    
                                                                     count_roh++;
-                                                                    
                                                                     temp_roh += ncc;
                                                                 }
 
 																double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
 																if (ncc_mag != -99)
 																{
-                                                                    if(ncc_mag > 1)
-                                                                        ncc_mag = 1;
-                                                                    
                                                                     count_roh++;
-                                                                    
                                                                     temp_roh += ncc_mag;
                                                                 }
                                                             }
 
-                                                        	temp_INCC_roh = temp_roh / count_roh;
+                                                        	if (count_roh > 0) temp_INCC_roh = temp_roh/count_roh;
                                                         	sum_INCC_multi += temp_INCC_roh;
 
                                                             //t_intensity_diff = sqrt(t_intensity_diff/Count_N_next[0]);
@@ -13009,26 +12982,18 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
 							if (ncc != -99)
                             {
-                                if (ncc > 1)
-                                    ncc = 1;
-                                
                                 count_roh++;
-                                
                                 temp_roh += ncc;
                             }
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
 							if (ncc_mag != -99)
                             {
-                                if (ncc_mag > 1)
-                                    ncc_mag = 1;
-                                
                                 count_roh++;
-                                
                                 temp_roh += ncc_mag;
                             }
                         }
-                		nccresult = temp_roh / count_roh;
+                		if (count_roh > 0) nccresult = temp_roh/count_roh;
             		}
             		else 
             		{
@@ -13445,31 +13410,24 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             		{
 						double temp_roh = 0;
                         double count_roh = 0;
+						t_nccresult = 0;
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
 							if (ncc != -99)
 							{
-                                if (ncc > 1)
-                                    ncc = 1;
-                                
                                 count_roh++;
-                                
                                 temp_roh += ncc;
                             }
 
 							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
 							if (ncc_mag != -99)
 							{
-                                if (ncc_mag > 1)
-                                    ncc_mag = 1;
-                                
                                 count_roh++;
-                                
                                 temp_roh += ncc_mag;
                             }
 						}
-                		t_nccresult = temp_roh / count_roh;
+                		if (count_roh > 0) t_nccresult = temp_roh/count_roh;
                     }
                     else 
                     {
@@ -13862,8 +13820,6 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
 					double ncc_1 = Correlate(left_patch_vec, right_patch_vec, Count_N);
 					if (ncc_1 != -99)
 					{
-                        if(ncc_1 > 1)
-                            ncc_1 = 1;
                         count_roh++;
                         temp_roh += ncc_1;
                     }
@@ -13871,13 +13827,12 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
 					double ncc_2 = Correlate(left_mag_patch_vec, right_mag_patch_vec, Count_N);
 					if (ncc_2 != -99)
                     {
-                        if(ncc_2 > 1)
-                            ncc_2 = 1;
                         count_roh++;
                         temp_roh += ncc_2;
                     }
 					
-					double ncc = temp_roh/count_roh;
+					double ncc = 0;
+					if (count_roh > 0) ncc = temp_roh/count_roh;
 
 					sum_count_N += Count_N;
 					sum_NCC += ncc;
@@ -17711,42 +17666,24 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 
             if(Count_N[0] > 0)
             {
-				ncc_1 = Correlate(left_patch_vecs[0],right_patch_vecs[0],Count_N[0]);
-                if (ncc_1 ==-99)
-                    ncc_1           = -1.0;
-
-                if(multi_flag == 1)
-                {
-                    if(Count_N[1] > 0)
-                    {
-						ncc_2 = Correlate(left_patch_vecs[1],right_patch_vecs[1],Count_N[1]);
-                		if (ncc_2 ==-99)
-                    		ncc_2           = -1.0;
-                    }
-
-                    if(Count_N[2] > 0)
-                    {
-						ncc_3 = Correlate(left_patch_vecs[2],right_patch_vecs[2],Count_N[2]);
-                		if (ncc_3 ==-99)
-                    		ncc_3           = -1.0;
+				temp_rho = 0;
+				double count_rho = 0;
+				int klim = 1;
+                if(multi_flag == 1) klim = 3;
+				for (int k=0; k<klim; k++)
+				{
+					if (Count_N[k] > 0)
+					{
+						double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
+                		if (ncc != -99)
+						{
+							count_rho++;
+							temp_rho += ncc;
+						}
                     }
                 }
 
-                if(multi_flag == 1)
-                {
-                    if(Count_N[1] > 0 && Count_N[2] > 0)
-                        temp_rho      = ((ncc_1 + ncc_2 + ncc_3)/3.0);
-                    else if(Count_N[1] > 0)
-                        temp_rho      = ((ncc_1 + ncc_2)/2.0);
-                    else if(Count_N[2] > 0)
-                        temp_rho      = ((ncc_1 + ncc_3)/2.0);
-                    else
-                        temp_rho        = ncc_1;
-                }
-                else
-                {
-                    temp_rho      = ncc_1;
-                }
+                if (count_rho > 0) temp_rho = temp_rho/count_rho;
                 
 
                 grid_index           = (mask_row+1)*3 + (mask_col+1);
