@@ -29,8 +29,9 @@ class FullGrid
 		Edge *GetElem(const GridPoint& p) { return this->elems[Convert(p, this->width)]; }
 		// No longer consider point in triangulation
 		//   p - point to be removed from grid's consideration
-		void IgnorePoint(const GridPoint& p) { this->num_points--; this->SetElem(p, 0); }
+		void IgnorePoint(const GridPoint& p) { /*this->num_points--;*/ this->SetElem(p, 0); } // Reduce num_points in bulk later
 		std::size_t NumOfElems() { return this->num_points; }
+		void ReduceNumOfElems(std::size_t points_removed) { this->num_points-=points_removed; }
 
 		// Start and finish iterators over the points in the grid
 		FullPointIter PointBegin() { return FullPointIter(this->elems, this->width, this->height, 0); }
@@ -71,6 +72,7 @@ class SparseGrid
 		//   p - point to be removed from grid's consideration
 		void IgnorePoint(const GridPoint &p) { this->coord_2_index.erase(Convert(p, this->width)); }
 		std::size_t NumOfElems() { return this->coord_2_index.size(); }
+		void ReduceNumOfElems(std::size_t points_removed) { } // TODO fix this if sparse grid ever used
 
 		// Start and finish iterators over the points in the grid
 		SparsePointIter PointBegin() { return SparsePointIter(this->width, coord_2_index.begin()); }
@@ -103,6 +105,8 @@ class Grid
 		// No longer consider point in triangulation
 		//   p - point to be removed from grid's consideration
 		void IgnorePoint(const GridPoint &p) { this->grid->IgnorePoint(p); }
+		// For parallel processing, reduce number of points in bulk after removing them
+		void ReduceNumOfElems(std::size_t points_removed) { this->grid->ReduceNumOfElems(points_removed); }
 		// Fills list with triangles of current triangulation
 		//   tris - already created list to store tris. should be
 		//     at least 2*num_points long

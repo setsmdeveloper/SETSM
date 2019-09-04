@@ -17,6 +17,7 @@ EdgeList::EdgeList(std::size_t num_points)
 		this->unused_edges[t] = this->edges + t;
 	}
 	this->is_part_of_split = false;
+	this->is_local_copy = false;
 }
 
 EdgeList::EdgeList(Edge *edges, Edge **unused_edges, size_t num_points)
@@ -28,17 +29,29 @@ EdgeList::EdgeList(Edge *edges, Edge **unused_edges, size_t num_points)
 	this->edges = edges;
 	this->unused_edges = unused_edges;
 	this->is_part_of_split = true;
+	this->is_local_copy = false;
+}
+
+EdgeList::EdgeList(Edge *edges, size_t size)
+{
+	// Constructor used to make local copy of EdgeList
+	// with its own empty unused_edges and idx
+	this->size = size;
+	this->idx = 0;
+	this->edges = edges;
+	this->unused_edges = new Edge*[this->size];
+	this->is_part_of_split = false;
+	this->is_local_copy = true;
 }
 
 EdgeList::~EdgeList()
 {
-	// In case this is not part of a
-	// split EdgeList, free edge memory
-	if (!this->is_part_of_split)
-	{
-		delete [] this->edges;
-		delete [] this->unused_edges;
-	}
+	// If this is part of a split EdgeList, do not free any edge memory
+	if (this->is_part_of_split) return;
+	delete [] this->unused_edges;
+	// If this is part of a local copy, do not free main edge memory
+	if (this->is_local_copy) return;
+	delete [] this->edges;
 }
 
 Edge *EdgeList::GetNewEdge()
@@ -73,3 +86,21 @@ void EdgeList::MergeEdgeLists(EdgeList &left_list, EdgeList &right_list)
 	}
 	this->idx += right_list.idx;
 }
+
+void EdgeList::MergeUnused(EdgeList &local_list)
+{
+	// Combine lists of unused edges, updating
+	// this->idx appropriately
+	for (size_t t = 0; t < local_list.idx; t++)
+	{
+		this->unused_edges[this->idx + t] = local_list.unused_edges[t];
+	}
+	this->idx += local_list.idx;
+}
+
+EdgeList *EdgeList::MakeLocalCopy()
+{
+	EdgeList *local = new EdgeList(this->edges, this->size);
+	return local;
+}
+
