@@ -24,7 +24,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 3
+#define MaxImages 5
 
 #ifndef bool
 //#define bool unsigned char
