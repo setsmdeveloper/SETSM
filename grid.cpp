@@ -19,6 +19,8 @@ std::size_t Grid<GridType, IterType>::GetAllTris(GridPoint tris[][3])
 	
 	// Loop over all points in triangulation, collecting adjacent triangles
 	// To prevent 'over-counting' only collect triangle from its smallest vertex
+	// Should be able to be parallelized, but haven't yet found a good one. 
+	// Be wary, list order does matter
 	for (auto p_it = this->PointBegin(); p_it != this->PointEnd(); p_it++)
 	{
 		Edge *e = this->GetElem(*p_it);
