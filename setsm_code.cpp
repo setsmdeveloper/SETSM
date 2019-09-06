@@ -10872,7 +10872,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                	{
 									double temp_roh = 0;
                                     double count_roh = 0;
-									temp_GNCC_roh = 0;
 									for (int k=0; k<3; k++)
 									{
 										double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
@@ -10889,7 +10888,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                             temp_roh += ncc_mag;
                                         }
                                     }
-                                    if (count_roh>0) temp_GNCC_roh = temp_roh/count_roh;
+									if (count_roh>0)
+										temp_GNCC_roh = temp_roh/count_roh;
+									else
+										temp_GNCC_roh = -1;
                                     sum_GNCC_multi += temp_GNCC_roh;
                                     count_GNCC ++;
                                     //check_ortho_com = true;
@@ -10902,7 +10904,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 	{
 										double temp_roh = 0;
                                         double count_roh = 0;
-										temp_GNCC_roh = 0;
 										for (int k=0; k<3; k++)
 										{
 											double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
@@ -10919,7 +10920,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                 temp_roh += ncc_mag;
                                             }
 										}
-                                    	if (count_roh>0) temp_GNCC_roh = temp_roh/count_roh;
+										if (count_roh>0)
+											temp_GNCC_roh = temp_roh/count_roh;
+										else
+											temp_GNCC_roh = -1;
                                     	sum_GNCC_multi += temp_GNCC_roh;
                                     	count_GNCC ++;
                                     	//check_ortho_com = true;
@@ -11333,7 +11337,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 					{
 														double temp_roh = 0;
                                                         double count_roh = 0;
-														temp_INCC_roh = 0;
 														for (int k=0; k<3; k++)
 														{
 															double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
@@ -11351,7 +11354,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                             }
 														}
 
-                                                     	if (count_roh > 0) temp_INCC_roh = temp_roh/count_roh;
+														if (count_roh > 0)
+															temp_INCC_roh = temp_roh/count_roh;
+														else
+															temp_INCC_roh = -1;
                                                      	sum_INCC_multi += temp_INCC_roh;
 			
                                                      	t_intensity_diff = sqrt(t_intensity_diff/Count_N[0]);
@@ -11372,7 +11378,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                         {
 															double temp_roh = 0;
                                                             double count_roh = 0;
-															temp_INCC_roh = 0;
 															for (int k=0; k<3; k++)
 															{
 																double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
@@ -11390,7 +11395,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                 }
                                                             }
 
-                                                        	if (count_roh > 0) temp_INCC_roh = temp_roh/count_roh;
+															if (count_roh > 0)
+																temp_INCC_roh = temp_roh/count_roh;
+															else
+																temp_INCC_roh = -1;
                                                         	sum_INCC_multi += temp_INCC_roh;
 
                                                             //t_intensity_diff = sqrt(t_intensity_diff/Count_N_next[0]);
@@ -13452,7 +13460,10 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                                 temp_roh += ncc_mag;
                             }
                         }
-                		if (count_roh > 0) nccresult = temp_roh/count_roh;
+						if (count_roh > 0)
+							nccresult = temp_roh/count_roh;
+						else
+							nccresult = -1;
             		}
             		else 
             		{
@@ -13869,7 +13880,6 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             		{
 						double temp_roh = 0;
                         double count_roh = 0;
-						t_nccresult = 0;
 						for (int k=0; k<3; k++)
 						{
 							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
@@ -13886,7 +13896,10 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                                 temp_roh += ncc_mag;
                             }
 						}
-                		if (count_roh > 0) t_nccresult = temp_roh/count_roh;
+						if (count_roh > 0)
+							t_nccresult = temp_roh/count_roh;
+						else
+							t_nccresult = -1;
                     }
                     else 
                     {
@@ -14290,8 +14303,11 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                         temp_roh += ncc_2;
                     }
 					
-					double ncc = 0;
-					if (count_roh > 0) ncc = temp_roh/count_roh;
+					double ncc;
+					if (count_roh > 0)
+						ncc = temp_roh/count_roh;
+					else
+						ncc = -1;
 
 					sum_count_N += Count_N;
 					sum_NCC += ncc;
@@ -18119,8 +18135,6 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
             int Count_N[3] = {0};          
             int row, col;
             int N;
-            double ncc_1, ncc_2, ncc_3;
-            double temp_rho;
             int grid_index;
 
             if(rotate_flag == 1)
@@ -18212,8 +18226,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 
             if(Count_N[0] > 0)
             {
-				temp_rho = 0;
 				double count_rho = 0;
+				double temp_rho = 0;
 				int klim = 1;
                 if(multi_flag == 1) klim = 3;
 				for (int k=0; k<klim; k++)
@@ -18229,8 +18243,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                     }
                 }
 
-                if (count_rho > 0) temp_rho = temp_rho/count_rho;
-                
+                if (count_rho > 0)
+					temp_rho = temp_rho/count_rho;
+				else
+					temp_rho = -1;
 
                 grid_index           = (mask_row+1)*3 + (mask_col+1);
                 if(grid_index < 9)
