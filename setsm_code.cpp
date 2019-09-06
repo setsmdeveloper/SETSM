@@ -15415,12 +15415,12 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     #pragma omp parallel for
     for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     
-	double begin = omp_get_wtime();
+	//double begin = omp_get_wtime();
 
     oldTri->Retriangulate(blunder_ptrs, numblunders);
 
-	double end = omp_get_wtime();
-	printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+	//double end = omp_get_wtime();
+	//printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
 
     std::size_t max_num_tris = 2 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
