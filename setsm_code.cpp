@@ -17891,7 +17891,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 uint8   Half_template_size;
                 double b_factor;
                 bool flag_boundary = false;
-                int i;
+				int i;
                 int count_pts = 0;
                 double sum_weight_X     = 0;
                 double sum_weight_Y     = 0;
@@ -17904,8 +17904,21 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 //calculation image coord from object coord by RFM in left and right image
                 b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
                 Half_template_size   = (int)(Template_size/2.0);
+				int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                #pragma omp parallel for shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh)
+				{
+				// Make patch vectors thread private rather than private to each loop iteration
+				// These are used by postNCC but allocated here for efficiency
+				double *left_patch_vecs[3];
+				double *right_patch_vecs[3];
+				for (int k=0; k<3; k++)
+				{
+					left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+					right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+				}
+
+#pragma omp for schedule(guided) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
                 for(i = 0; i<NumofPts ; i++)
                 {
                     D2DPOINT Left_Imagecoord,Left_Imagecoord_p;
@@ -17939,7 +17952,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                             ori_diff = ori_images[reference_id][index_l] - ori_images[ti][index_r];
                             
                             if(postNCC(Pyramid_step, ori_diff, Left_Y,  Left_X, Right_Y, Right_X,
-                                       subA,TsubA,InverseSubA,Template_size,_flag,bin_angle,LImagesize,RImagesize,Images[reference_id],Images[ti],&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh))
+                                       subA,TsubA,InverseSubA,Half_template_size,_flag,bin_angle,LImagesize,RImagesize,Images[reference_id],Images[ti],&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh,left_patch_vecs,right_patch_vecs))
                             {
                                 //#pragma omp critical
                                 {
@@ -17952,7 +17965,16 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                             }
                         }
                     }
-                }
+				} // end omp for
+
+				// free thread-private vectors
+				for (int k=0; k<3; k++)
+				{
+					free(left_patch_vecs[k]);
+					free(right_patch_vecs[k]);
+				}
+				} // end omp parallel
+
                 
 
                 if(count_pts > 10)
@@ -18004,8 +18026,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
 }
 
 
-bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
-             NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh)
+bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Half_template_size, 
+             NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
 {
 
     // input order: NumOfPt, LeftImage, RightImage, Template_size, center_row_left, center_col_left, center_row_right, center_col_right, ncc_weight
@@ -18027,10 +18049,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
     double diff_theta;
     int mask_row, mask_col;
 
-    int Half_template_size,half_mask_size;
+    int half_mask_size;
     int count = 0;
 
-    Half_template_size  = (int)(Template_size/2);
+    //Half_template_size  = (int)(Template_size/2);
     half_mask_size      = 1;
     
     rotate_flag = _flag.rotate_flag;
@@ -18050,16 +18072,6 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 
     for(j=0;j<9;j++)
         result_rho[j]       = -1.00;
-
-	// Allocate vectors for correlation
-	double *left_patch_vecs[3];
-	double *right_patch_vecs[3];
-	int patch_size = (2*Half_template_size+1)*(2*Half_template_size+1);
-	for (int k=0; k<3; k++)
-	{
-		left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-	}
 
     for(mask_row = - half_mask_size ; mask_row <= half_mask_size ; mask_row++)
     {
@@ -18208,12 +18220,6 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 
         }  // end mask_col loop
     }  // end mask_row loop
-
-	for (int k=0; k<3; k++)
-	{
-		free(left_patch_vecs[k]);
-		free(right_patch_vecs[k]);
-	}
 
     if(cell_count == 9)
     {

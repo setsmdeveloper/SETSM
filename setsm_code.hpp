@@ -176,8 +176,8 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
 int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
 				uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
 				double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir);
-bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size, 
-			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
+bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Half_template_size, 
+			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh,double **left_patch_vecs,double **right_patch_vecs);
 
 void TINCreate(D3DPOINT *ptslists,char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution);
 bool blunder_detection_TIN(int pre_DEMtif, double* ortho_ncc, double* INCC,bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
