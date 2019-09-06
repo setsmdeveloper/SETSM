@@ -38,6 +38,7 @@ char *dirname(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
+#define pwrtwo(x) (1 << (x))
 
 int main(int argc,char *argv[])
 {
@@ -2577,7 +2578,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 t_col_end       = t_col_start + 1;
                                 
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
-                                proinfo->DEM_resolution = Image_res[0]*pow(2,pyramid_step+1);
+                                proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
                                                                  subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
                                                                  RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
@@ -3624,26 +3625,26 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
-                            Startpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pow(2,level));
-                            Startpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pow(2,level));
+                            Startpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level));
+                            Startpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(level));
  
-                            BStartpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pow(2,blunder_selected_level));
-                            BStartpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pow(2,blunder_selected_level));
+                            BStartpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(blunder_selected_level));
+                            BStartpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(blunder_selected_level));
                             
                             printf("Startpos %f\t%f\t%f\t%f\t%f\t%f\n",Startpos_ori[ti].m_X,Startpos_ori[ti].m_Y,Startpos[ti].m_X,Startpos[ti].m_Y,BStartpos[ti].m_X,BStartpos[ti].m_Y);
                             
                             if(level > Py_combined_level)
                             {
-                                Startpos_next[ti].m_X       = (double)(Startpos_ori[ti].m_X/pow(2,level-1));
-                                Startpos_next[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pow(2,level-1));
+                                Startpos_next[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level-1));
+                                Startpos_next[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(level-1));
                             }
                         }
                         
                         if(proinfo->IsRA)
                         {
                             dem_update_flag         = false;
-                            py_resolution           = Image_res[0]*pow(2,pyramid_step+1);
-                            grid_resolution         = Image_res[0]*pow(2,pyramid_step+1);
+                            py_resolution           = Image_res[0]*pwrtwo(pyramid_step+1);
+                            grid_resolution         = Image_res[0]*pwrtwo(pyramid_step+1);
                                
                             printf("RA grid size %f\n",py_resolution);
                                
@@ -4840,7 +4841,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         if(flag_start)
                         {
                             double min_after, max_after;
-                            min_after   = (double)(minH_mps - pow(2, level)*10*MPP);     max_after   = (double)(maxH_mps + pow(2, level)*10*MPP);
+                            min_after   = (double)(minH_mps - pwrtwo(level)*10*MPP);     max_after   = (double)(maxH_mps + pwrtwo(level)*10*MPP);
                             printf("minmax MP %f\t%f\n",min_after, max_after);
                             if(level <= 2)
                             {
@@ -5080,12 +5081,12 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
         int sub_imagesize_w_next, sub_imagesize_h_next;
         double all_im_cd = 0;
         double all_im_cd_next = 0;
-        im_resolution = im_resolution*pow(2,level);
+        im_resolution = im_resolution*pwrtwo(level);
         double im_resolution_next;
         long int sub_imagesize_total_next;
         
         if(level > 0)
-            im_resolution_next = im_resolution*pow(2,level-1);
+            im_resolution_next = im_resolution*pwrtwo(level-1);
         
         sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
         sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
@@ -6162,7 +6163,7 @@ void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_
 D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
                    double *py_resolution, double *grid_resolution, double *subBoundary)
 {
-    *py_resolution   = (double)(resolution*pow(2,level));
+    *py_resolution   = (double)(resolution*pwrtwo(level));
     *grid_resolution = *py_resolution;
     
     double R_resolution = 4*(*py_resolution);
@@ -6296,7 +6297,7 @@ D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int le
         //full computation
         if(info->check_full_cal)
         {
-            *py_resolution   = (double)(resolution*pow(2,level));
+            *py_resolution   = (double)(resolution*pwrtwo(level));
             *grid_resolution = *py_resolution;
         }
         
@@ -9949,7 +9950,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
         h_divide = 2;
     }
     
-    im_resolution = im_resolution*pow(2,Pyramid_step);
+    im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     HS = (double)(im_resolution/h_divide);
     
@@ -10163,7 +10164,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pow(2,Pyramid_step)))/2.0)*2+1;
+        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
         if(Template_size < t_Template_size)
             Template_size = t_Template_size;
         
@@ -10222,9 +10223,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
     
     if(check_combined_WNCC)
-        im_resolution_next = im_resolution*pow(2,Pyramid_step-1);
+        im_resolution_next = im_resolution*pwrtwo(Pyramid_step-1);
     
-    im_resolution = im_resolution*pow(2,Pyramid_step);
+    im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     
     if((Pyramid_step == 4 && iteration == 1) || IsRA == true)
@@ -13191,7 +13192,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     //if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pow(2,Pyramid_step)))/2.0)*2+1;
+        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
         if(Template_size < t_Template_size)
             Template_size = t_Template_size;
         
@@ -13229,7 +13230,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     //nccresult1 = (double*)calloc(sizeof(double),numofpts);
     //orthoheight    = (double*)calloc(sizeof(double),numofpts);
     
-    im_resolution = im_resolution*pow(2,Pyramid_step);
+    im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
     sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
@@ -13576,7 +13577,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
     //if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pow(2,blunder_selected_level)))/2.0)*2+1;
+        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(blunder_selected_level)))/2.0)*2+1;
         if(Template_size < t_Template_size)
             Template_size = t_Template_size;
         
@@ -13636,7 +13637,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
     
     //orthoheight    = (double*)calloc(sizeof(double),numofpts);
     
-    im_resolution = im_resolution*pow(2,blunder_selected_level);
+    im_resolution = im_resolution*pwrtwo(blunder_selected_level);
     
     printf("im_resolution = %f\n",im_resolution);
     
@@ -14403,8 +14404,8 @@ D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
     out = (D2DPOINT*)malloc(sizeof(D2DPOINT)*numofpts);
     for(i=0;i<numofpts;i++)
     {
-        out[i].m_X      = (InCoord[i].m_X/pow(2,Pyramid_step)) - Startpos.m_X;
-        out[i].m_Y      = (InCoord[i].m_Y/pow(2,Pyramid_step)) - Startpos.m_Y;
+        out[i].m_X      = (InCoord[i].m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+        out[i].m_Y      = (InCoord[i].m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
     }
 
     return out;
@@ -14415,8 +14416,8 @@ D2DPOINT OriginalToPyramid_single(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyr
 {
     D2DPOINT out;
 
-    out.m_X      = (InCoord.m_X/pow(2,Pyramid_step)) - Startpos.m_X;
-    out.m_Y      = (InCoord.m_Y/pow(2,Pyramid_step)) - Startpos.m_Y;
+    out.m_X      = (InCoord.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+    out.m_Y      = (InCoord.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
 
     return out;
     
@@ -14432,8 +14433,8 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
     {
         for(i=0;i<numofpts;i++)
         {
-            out[i].m_X      = (InCoord[i].m_X +  Startpos.m_X)*pow(2,Pyramid_step) + pow(2,Pyramid_step)/2.0;
-            out[i].m_Y      = (InCoord[i].m_Y +  Startpos.m_Y)*pow(2,Pyramid_step) + pow(2,Pyramid_step)/2.0;
+            out[i].m_X      = (InCoord[i].m_X +  Startpos.m_X)*pwrtwo(Pyramid_step) + pwrtwo(Pyramid_step)/2.0;
+            out[i].m_Y      = (InCoord[i].m_Y +  Startpos.m_Y)*pwrtwo(Pyramid_step) + pwrtwo(Pyramid_step)/2.0;
         }
     }
     else
@@ -14620,7 +14621,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
         }
     }
 
-    im_resolution = im_resolution*pow(2,Pyramid_step);
+    im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     //#pragma omp parallel for shared(Size_Grid2D,GridPT3,GridPts_XY,Th_roh,roh_height,Pyramid_step,peak_level,PPM,temp_fid,check_iter_end,roh_next,Th_roh_start,Th_roh_next,total_pyramid,iteration) private(row,col) reduction(+:count_MPs)
     for(int iter_index = 0 ; iter_index < Size_Grid2D.height*Size_Grid2D.width ; iter_index++)
@@ -14845,13 +14846,13 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                             index_3     = true;
                         
                         
-                        if(fabs(pre_H - temp_mp.m_Z) <= PPM*2*pow(2,Pyramid_step))
+                        if(fabs(pre_H - temp_mp.m_Z) <= PPM*2*pwrtwo(Pyramid_step))
                             index_4     = true;
                         if(fabs(pre_H - temp_mp.m_Z) <= pre_range/2.0)
                             index_5     = true;
-                        if(fabs(temp_mp.m_Z - GridPT3[grid_index].minHeight) <= PPM*3*pow(2,Pyramid_step))
+                        if(fabs(temp_mp.m_Z - GridPT3[grid_index].minHeight) <= PPM*3*pwrtwo(Pyramid_step))
                             index_41    = true;
-                        if(fabs(temp_mp.m_Z - GridPT3[grid_index].maxHeight) <= PPM*3*pow(2,Pyramid_step))
+                        if(fabs(temp_mp.m_Z - GridPT3[grid_index].maxHeight) <= PPM*3*pwrtwo(Pyramid_step))
                             index_42    = true;
                         
                         index_6         = (index_4 | index_5 | index_41 | index_42) & index_3; // inside triangle by matched grid
@@ -18328,7 +18329,7 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
     int count_image = 0;
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
-        if(Subsetsize[ti].height > Template_size/2*pow(2,pyramid_step) && Subsetsize[ti].width > Template_size/2*pow(2,pyramid_step))
+        if(Subsetsize[ti].height > Template_size/2*pwrtwo(pyramid_step) && Subsetsize[ti].width > Template_size/2*pwrtwo(pyramid_step))
         {
             proinfo->check_selected_image[ti] = true;
             count_image++;
@@ -20532,7 +20533,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                 
                 
                 SetPySizes_ortho(data_size, subsetsize, impyramid_step);
-                startpos.m_X       = (double)(startpos_ori.m_X/pow(2,impyramid_step));      startpos.m_Y       = (double)(startpos_ori.m_Y/pow(2,impyramid_step));
+                startpos.m_X       = (double)(startpos_ori.m_X/pwrtwo(impyramid_step));      startpos.m_Y       = (double)(startpos_ori.m_Y/pwrtwo(impyramid_step));
                 
                 uint16 *pyimg;
                 
@@ -20693,8 +20694,8 @@ D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uin
 {
     D2DPOINT out;
     
-    out.m_X      = (InCoord.m_X/pow(2,Pyramid_step)) - Startpos.m_X;
-    out.m_Y      = (InCoord.m_Y/pow(2,Pyramid_step)) - Startpos.m_Y;
+    out.m_X      = (InCoord.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+    out.m_Y      = (InCoord.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
     
     return out;
     
@@ -20703,7 +20704,7 @@ D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uin
 uint16 *Preprocessing_ortho(uint8 py_level, CSize *data_size, uint16 *subimg)
 {
     uint16 *pyimg;
-    int filter_size = pow(2,py_level)-1;
+    int filter_size = pwrtwo(py_level)-1;
     if(filter_size < 3)
         filter_size = 3;
     
@@ -23564,7 +23565,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         GridSize_width = Boundary[2] - Boundary[0];
         GridSize_height = Boundary[3] - Boundary[1];
         
-        double Grid_space = ceil(Sum_grid/(double)(proinfo->number_of_images))*pow(2,py_level);
+        double Grid_space = ceil(Sum_grid/(double)(proinfo->number_of_images))*pwrtwo(py_level);
         
         CSize Grid_size;
         Grid_size.width = floor(GridSize_width/Grid_space);
@@ -25155,8 +25156,8 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                     {
                         printf("Completion of subsetImage!!\n");
                         
-                        if( Lsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Lsubsetsize.width > Template_size/2*pow(2,pyramid_step) &&
-                           Rsubsetsize.height > Template_size/2*pow(2,pyramid_step) && Rsubsetsize.width > Template_size/2*pow(2,pyramid_step) )
+                        if( Lsubsetsize.height > Template_size/2*pwrtwo(pyramid_step) && Lsubsetsize.width > Template_size/2*pwrtwo(pyramid_step) &&
+                           Rsubsetsize.height > Template_size/2*pwrtwo(pyramid_step) && Rsubsetsize.width > Template_size/2*pwrtwo(pyramid_step) )
                         {
                             double py_resolution = 0;
                             double grid_resolution = 0;
@@ -25235,8 +25236,8 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 uint8 *SubOriImages_L,  *SubOriImages_R;
                                 SetThs_SDM(level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,pyramid_step);
                                 
-                                Lstartpos.m_X        = (double)(Lstartpos_ori.m_X/pow(2,prc_level));        Lstartpos.m_Y        = (double)(Lstartpos_ori.m_Y/pow(2,prc_level));
-                                Rstartpos.m_X        = (double)(Rstartpos_ori.m_X/pow(2,prc_level));        Rstartpos.m_Y        = (double)(Rstartpos_ori.m_Y/pow(2,prc_level));
+                                Lstartpos.m_X        = (double)(Lstartpos_ori.m_X/pwrtwo(prc_level));        Lstartpos.m_Y        = (double)(Lstartpos_ori.m_Y/pwrtwo(prc_level));
+                                Rstartpos.m_X        = (double)(Rstartpos_ori.m_X/pwrtwo(prc_level));        Rstartpos.m_Y        = (double)(Rstartpos_ori.m_Y/pwrtwo(prc_level));
                                 
                                 GridPT    = SetGrids_SDM(proinfo,prc_level,level,pyramid_step, final_level_iteration, proinfo.resolution, &Size_Grid2D, proinfo.DEM_resolution, &py_resolution, &grid_resolution, subBoundary);
                                 
@@ -26425,9 +26426,9 @@ void SetThs_SDM(int level, int final_level_iteration, double *Th_roh, double *Th
 D2DPOINT *SetGrids_SDM(ProInfo proinfo, int prc_level,int level, int start_py, int final_level_iteration, double resolution, CSize *Size_Grid2D, double DEM_resolution, double *py_resolution, double *grid_resolution, double *subBoundary)
 {
     if(level >= proinfo.end_level)
-        *py_resolution     = (double)(resolution*pow(2,prc_level + 1));
+        *py_resolution     = (double)(resolution*pwrtwo(prc_level + 1));
     else
-        *py_resolution     = (double)(resolution*pow(2,prc_level));
+        *py_resolution     = (double)(resolution*pwrtwo(prc_level));
     
     //if(level < prc_level)
     //    *py_resolution     = (double)(resolution*pow(2,prc_level));
@@ -26668,7 +26669,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
     if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pow(2,Pyramid_step)))/2.0)*2+1;
+        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
         if(Template_size < t_Template_size)
             Template_size = t_Template_size;
         
@@ -26840,14 +26841,14 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                                     {
                                         for(col = -Half_template_size; col <= Half_template_size ; col++)
                                         {
-                                            double row_distance = row*im_resolution_mask*pow(2,Pyramid_step);
-                                            double col_distance = col*im_resolution_mask*pow(2,Pyramid_step);
+                                            double row_distance = row*im_resolution_mask*pwrtwo(Pyramid_step);
+                                            double col_distance = col*im_resolution_mask*pwrtwo(Pyramid_step);
                                             
-                                            double row_pixel_left = row_distance/(gsd_image1.row_GSD*pow(2,Pyramid_step));
-                                            double col_pixel_left = col_distance/(gsd_image1.col_GSD*pow(2,Pyramid_step));
+                                            double row_pixel_left = row_distance/(gsd_image1.row_GSD*pwrtwo(Pyramid_step));
+                                            double col_pixel_left = col_distance/(gsd_image1.col_GSD*pwrtwo(Pyramid_step));
                                             
-                                            double row_pixel_right = row_distance/(gsd_image2.row_GSD*pow(2,Pyramid_step));
-                                            double col_pixel_right = col_distance/(gsd_image2.col_GSD*pow(2,Pyramid_step));
+                                            double row_pixel_right = row_distance/(gsd_image2.row_GSD*pwrtwo(Pyramid_step));
+                                            double col_pixel_right = col_distance/(gsd_image2.col_GSD*pwrtwo(Pyramid_step));
                                             
                                             
                                             //printf("row col %d\t%d\tleft %f\t%f\tright %f\t%f\n",row, col, row_pixel_left,col_pixel_left,row_pixel_right,col_pixel_right);
@@ -27733,7 +27734,7 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
     if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pow(2,Pyramid_step)))/2.0)*2+1;
+        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
         if(Template_size < t_Template_size)
             Template_size = t_Template_size;
         
@@ -27872,14 +27873,14 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
                 {
                     for(col = -Half_template_size; col <= Half_template_size ; col++)
                     {
-                        double row_distance = row*im_resolution_mask*pow(2,Pyramid_step);
-                        double col_distance = col*im_resolution_mask*pow(2,Pyramid_step);
+                        double row_distance = row*im_resolution_mask*pwrtwo(Pyramid_step);
+                        double col_distance = col*im_resolution_mask*pwrtwo(Pyramid_step);
                         
-                        double row_pixel_left = row_distance/(gsd_image1.row_GSD*pow(2,Pyramid_step));
-                        double col_pixel_left = col_distance/(gsd_image1.col_GSD*pow(2,Pyramid_step));
+                        double row_pixel_left = row_distance/(gsd_image1.row_GSD*pwrtwo(Pyramid_step));
+                        double col_pixel_left = col_distance/(gsd_image1.col_GSD*pwrtwo(Pyramid_step));
                         
-                        double row_pixel_right = row_distance/(gsd_image2.row_GSD*pow(2,Pyramid_step));
-                        double col_pixel_right = col_distance/(gsd_image2.col_GSD*pow(2,Pyramid_step));
+                        double row_pixel_right = row_distance/(gsd_image2.row_GSD*pwrtwo(Pyramid_step));
+                        double col_pixel_right = col_distance/(gsd_image2.col_GSD*pwrtwo(Pyramid_step));
                         
                         
                         //printf("row col %d\t%d\tleft %f\t%f\tright %f\t%f\n",row, col, row_pixel_left,col_pixel_left,row_pixel_right,col_pixel_right);
