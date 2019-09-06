@@ -3582,7 +3582,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         double minH_grid, maxH_grid;
                         double MPP;
                         double MPP_simgle_image;
-                        double MPP_stereo_angle;
+                        double MPP_stereo_angle = 1;
                         
                         uint8 iteration;
 
@@ -4183,9 +4183,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                            TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -4271,9 +4271,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         {
                                             UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                             
-                                            sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                            //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                             printf("TINCreate resolution %f\n",grid_resolution);
-                                            TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
+                                            TINCreate(ptslists,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
                                             
                                             trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                             i = 0;
@@ -4479,9 +4479,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
-                                        sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
+                                        //sprintf(bufstr,"%s/txt/tri_ortho.txt",proinfo->save_filepath);
                                         printf("TINCreate resolution %f\n",grid_resolution);
-                                        TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                        TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                         
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -15080,9 +15080,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 
                 UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                 
-                sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
+                //sprintf(bufstr,"%s/txt/tri_%d_%d.txt",filename_tri,flag_blunder,count);
                 printf("TINCreate resolution %f\n",grid_resolution);
-                TINCreate(ptslists,bufstr,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 i = 0;
@@ -15188,9 +15188,9 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     
                     UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*t_tri_counts*4);
                     
-                    sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
+                    //sprintf(bufstr,"%s/txt/tri_aft_%d_%d.txt",filename_tri,flag_blunder,count);
                     printf("TINCreate resolution %f\n",grid_resolution);
-                    TINCreate(input_tri_pts,bufstr,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
+                    TINCreate(input_tri_pts,t_tri_counts,t_trilists,min_max,&count_tri, grid_resolution);
                     
                     free(input_tri_pts);
                     
@@ -15330,7 +15330,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     return count;
 }
 
-void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* trilists,double min_max[],int *count_tri, double resolution)
+void TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -15358,12 +15358,9 @@ void TINCreate(D3DPOINT *ptslists, char *filename_tri,int numofpts,UI3DPOINT* tr
     }
 
     GridPoint **points_ptrs = new GridPoint*[numofpts];
-    #pragma omp parallel
-    {
-        #pragma omp for
-        for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
-    }
-    printf("triangulation memory\n");
+    #pragma omp parallel for
+    for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
+
     FullTriangulation *triangulation = new FullTriangulation(width, height);
     printf("triangulation memory2\n");
     triangulation->Triangulate(points_ptrs, numofpts);
@@ -25606,7 +25603,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     UI3DPOINT* t_trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_shift*4);
                                                     
                                                     sprintf(bufstr,"%s/txt/col_shift_%d_%d_%d_%d.txt",proinfo.save_filepath,level,iteration,1,1);
-                                                    TINCreate(ptslists,bufstr,count_shift,t_trilists,min_max,&count_tri,grid_resolution);
+                                                    TINCreate(ptslists,count_shift,t_trilists,min_max,&count_tri,grid_resolution);
                                                     printf("end tingeneration %d\n",count_tri);
                                                     trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                                     i = 0;
@@ -25662,7 +25659,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     t_trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_shift*4);
                                                     
                                                     sprintf(bufstr,"%s/txt/row_shift_%d_%d_%d_%d.txt",proinfo.save_filepath,level,iteration,1,1);
-                                                    TINCreate(ptslists,bufstr,count_shift,t_trilists,min_max,&count_tri,grid_resolution);
+                                                    TINCreate(ptslists,count_shift,t_trilists,min_max,&count_tri,grid_resolution);
                                                     
                                                     trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                                     i = 0;
