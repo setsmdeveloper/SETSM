@@ -39,6 +39,7 @@ char *dirname(char *path);
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
 #define pwrtwo(x) (1 << (x))
+#define sq(x) ((x)*(x))
 
 int main(int argc,char *argv[])
 {
@@ -5611,7 +5612,7 @@ void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *p
         param->pm       = 1;
     
     param->t_c  = tan(PI/4.0 - param->phi_c/2.0)/(pow((1.0-param->e*sin(param->phi_c)) / (1.0+param->e*sin(param->phi_c)) ,(param->e/2.0)));
-    param->m_c  = cos(param->phi_c)/sqrt(1.0-pow(param->e,2)*pow(sin(param->phi_c),2));
+    param->m_c  = cos(param->phi_c)/sqrt(1.0-sq(param->e)*sq(sin(param->phi_c)));
     
     //UTM param
     param->sa   = 6378137.000000;
@@ -5713,7 +5714,7 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
         param->pm       = 1;
     
     param->t_c  = tan(PI/4.0 - param->phi_c/2.0)/(pow((1.0-param->e*sin(param->phi_c)) / (1.0+param->e*sin(param->phi_c)) ,(param->e/2.0)));
-    param->m_c  = cos(param->phi_c)/sqrt(1.0-pow(param->e,2)*pow(sin(param->phi_c),2));
+    param->m_c  = cos(param->phi_c)/sqrt(1.0-sq(param->e)*sq(sin(param->phi_c)));
     
     //UTM param
     param->sa   = 6378137.000000;
@@ -8537,7 +8538,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
             double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
             double rho = a * m_c * t / t_c;
             
-            double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
+            double m = cos(phi) / sqrt(1.0 - sq(e) * sq(sin(phi)));
             m_sPS[i].m_X = (double) (pm * rho * sin(lambda - lambda_0));
             m_sPS[i].m_Y = (double) (-pm * rho * cos(lambda - lambda_0));
         }
@@ -8622,7 +8623,7 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs) {
             double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
             double rho = a * m_c * t / t_c;
             
-            double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
+            double m = cos(phi) / sqrt(1.0 - sq(e) * sq(sin(phi)));
             m_sPS.m_X = pm * rho * sin(lambda - lambda_0);
             m_sPS.m_Y = -pm * rho * cos(lambda - lambda_0);
         }
@@ -8708,7 +8709,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
             double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
             double rho = a * m_c * t / t_c;
             
-            double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
+            double m = cos(phi) / sqrt(1.0 - sq(e) * sq(sin(phi)));
             m_sPS[i].m_X = pm * rho * sin(lambda - lambda_0);
             m_sPS[i].m_Y = -pm * rho * cos(lambda - lambda_0);
             m_sPS[i].m_Z = _wgs[i].m_Z;
@@ -8808,7 +8809,7 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
           double x = _ps[i].m_X * pm;
           double y = _ps[i].m_Y * pm;
             
-          double rho = sqrt(pow(x, 2) + pow(y, 2));
+          double rho = sqrt(sq(x) + sq(y));
             double t = rho * t_c / (a * m_c);
             
             double chi = PI / 2 - 2 * atan(t);
@@ -8919,7 +8920,7 @@ D2DPOINT ps2wgs_single(TransParam _param, D2DPOINT _ps) {
             m_sPS.m_X = m_sPS.m_X * pm;
             m_sPS.m_Y = m_sPS.m_Y * pm;
             
-            double rho = sqrt(pow(m_sPS.m_X, 2) + pow(m_sPS.m_Y, 2));
+            double rho = sqrt(sq(m_sPS.m_X) + sq(m_sPS.m_Y));
             double t = rho * t_c / (a * m_c);
             
             double chi = PI / 2 - 2 * atan(t);
@@ -9028,7 +9029,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
           double x = _ps[i].m_X * pm;
           double y = _ps[i].m_Y * pm;
             
-            double rho = sqrt(pow(x, 2) + pow(y, 2));
+            double rho = sqrt(sq(x) + sq(y));
             double t = rho * t_c / (a * m_c);
             
             double chi = PI / 2 - 2 * atan(t);
@@ -9806,7 +9807,7 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
-    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( sq(temp_p1.m_X - temp_p2.m_X) + sq(temp_p1.m_Y - temp_p2.m_Y));
     
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
@@ -9815,7 +9816,7 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
-    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( sq(temp_p1.m_X - temp_p2.m_X) + sq(temp_p1.m_Y - temp_p2.m_Y));
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
@@ -9880,7 +9881,7 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
-    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( sq(temp_p1.m_X - temp_p2.m_X) + sq(temp_p1.m_Y - temp_p2.m_Y));
     
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
@@ -9889,7 +9890,7 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
-    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( sq(temp_p1.m_X - temp_p2.m_X) + sq(temp_p1.m_Y - temp_p2.m_Y));
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
@@ -13987,7 +13988,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
     if(meters_per_pixel > 3)
         meters_per_pixel = 3;
     
-    height_step = (double)(pow(2.0,(double)Pyramid_step)*meters_per_pixel/h_divide);
+    height_step = (double)(pwrtwo(Pyramid_step)*meters_per_pixel/h_divide);
     
     //if(height_step > 10)
     //    height_step = 10;
@@ -15530,11 +15531,11 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
         if(pyramid_step >= 1)
         {
             GSD = gridspace;
-            if(pyramid_step >= 3 && gridspace < 0.5*pow(2.0,pyramid_step))
-                GSD = 0.5*pow(2.0,pyramid_step);
+            if(pyramid_step >= 3 && gridspace < 0.5*pwrtwo(pyramid_step))
+                GSD = 0.5*pwrtwo(pyramid_step);
         }
         else
-            GSD = 0.5*pow(2.0,pyramid_step);
+            GSD = 0.5*pwrtwo(pyramid_step);
 
         height_th_1= BL_param.Hinterval;
         height_th_2= GSD*10;
@@ -16702,7 +16703,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
     
     double DEM_error        = meters_per_pixel*4;
     
-    double BufferOfHeight   = DEM_error*pow(2.0,pyramid_step);
+    double BufferOfHeight   = DEM_error*pwrtwo(pyramid_step);
 
     
     if (pyramid_step == 1)
@@ -17216,8 +17217,8 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                         else
                             BF = BufferOfHeight;
                         
-                        if(BF < pow(2.0,pyramid_step)*0.5)
-                            BF = pow(2.0,pyramid_step)*0.5;
+                        if(BF < pwrtwo(pyramid_step)*0.5)
+                            BF = pwrtwo(pyramid_step)*0.5;
                         
                         if(GridPT3[Index].minHeight < Total_Min_Z - BF)
                             GridPT3[Index].minHeight   =  floor(Total_Min_Z - BF);
@@ -17957,7 +17958,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 double shift_X, shift_Y;
 
                 //calculation image coord from object coord by RFM in left and right image
-                b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
+                b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 Half_template_size   = (int)(Template_size/2.0);
 				int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
@@ -18034,8 +18035,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
 
                 if(count_pts > 10)
                 {
-                    shift_X             = sum_weight_X/sum_max_roh*pow(2.0,Pyramid_step);
-                    shift_Y             = sum_weight_Y/sum_max_roh*pow(2.0,Pyramid_step);
+                    shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
+                    shift_Y             = sum_weight_Y/sum_max_roh*pwrtwo(Pyramid_step);
                     if(fabs(shift_Y) < 0.1 && fabs(shift_X) < 0.1)
                         check_stop = true;
          
@@ -18290,7 +18291,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
             }
         }
 
-        demnum      = -pow(XX[4],2.0) + 4*XX[3]*XX[5];
+        demnum      = -sq(XX[4]) + 4*XX[3]*XX[5];
         if(demnum > 0 && XX[3] < 0)
         {
             max_X = (- 2*XX[5]*XX[1] + XX[2]*XX[4])/demnum;
@@ -20460,7 +20461,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         }
     }
     
-    double subfactor                      = pow(4-impyramid_step,2.0);
+    double subfactor                      = sq(4-impyramid_step);
     if(subfactor <= 1)
         subfactor                       = 1;
     int sub_height                  = ceil(Orthoimagesize.height/subfactor);
@@ -24333,6 +24334,7 @@ int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, int *NumofPts, double
                 double shift_X, shift_Y;
                 
                 //calculation image coord from object coord by RFM in left and right image
+                printf("EXPONENT=%d\n", 2-Pyramid_step);
                 b_factor             = pow(2.0,(2-Pyramid_step))*2;
                 Half_template_size   = (int)(Template_size/2.0);
                 
@@ -24402,8 +24404,8 @@ int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, int *NumofPts, double
                 
                 if(count_pts > 10)
                 {
-                    shift_X             = sum_weight_X/sum_max_roh*pow(2.0,Pyramid_step);
-                    shift_Y             = sum_weight_Y/sum_max_roh*pow(2.0,Pyramid_step);
+                    shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
+                    shift_Y             = sum_weight_Y/sum_max_roh*pwrtwo(Pyramid_step);
                     if(fabs(shift_Y) < 0.01 && fabs(shift_X) < 0.01)
                         check_stop = true;
                     
@@ -24762,7 +24764,7 @@ bool postNCC_ortho(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double 
             }
         }
         
-        demnum      = -pow(XX[4],2.0) + 4*XX[3]*XX[5];
+        demnum      = -sq(XX[4]) + 4*XX[3]*XX[5];
         if(demnum > 0 && XX[3] < 0)
         {
             max_X = (- 2*XX[5]*XX[1] + XX[2]*XX[4])/demnum;
@@ -24907,6 +24909,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             printf("image resolution %f\n",proinfo.resolution);
             
             int end_level = floor(log10(proinfo.DEM_resolution/(proinfo.resolution*15))/log10(2));
+            printf("END LEVEL=%d\n", end_level);
             int th_grid = proinfo.resolution*pow(2.0,end_level);
             
             if(end_level < 0)
@@ -24918,7 +24921,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             proinfo.pyramid_level = args.pyramid_level;
             printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
             
-            int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+            int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
             if(sdm_kernal_size > 3)
             {
                 proinfo.SDM_SS = sdm_kernal_size;
@@ -24934,7 +24937,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                 while(!check_while)
                 {
                     proinfo.pyramid_level++;
-                    sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+                    sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
                     if(sdm_kernal_size > 3)
                     {
                         proinfo.SDM_SS = sdm_kernal_size;
@@ -26775,8 +26778,8 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                             Left_Imagecoord_py    = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
                             Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
                             
-                            Right_Imagecoord_py.m_Y += (kernel_row + (GridPT3[pt_index].row_shift + Coreg_param[0])/pow(2.0,Pyramid_step));
-                            Right_Imagecoord_py.m_X += (kernel_col + (GridPT3[pt_index].col_shift + Coreg_param[1])/pow(2.0,Pyramid_step));
+                            Right_Imagecoord_py.m_Y += (kernel_row + (GridPT3[pt_index].row_shift + Coreg_param[0])/pwrtwo(Pyramid_step));
+                            Right_Imagecoord_py.m_X += (kernel_col + (GridPT3[pt_index].col_shift + Coreg_param[1])/pwrtwo(Pyramid_step));
                             
                             long int ori_left = (long int)Left_Imagecoord_py.m_Y * LImagesize.width + (long int)Left_Imagecoord_py.m_X;
                             long int ori_right = (long int)Right_Imagecoord_py.m_Y * RImagesize.width + (long int)Right_Imagecoord_py.m_X;
@@ -27124,8 +27127,8 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                                         
                                         nccresult[grid_index].result2.m_X = Left_Imagecoord_py.m_X;
                                         nccresult[grid_index].result2.m_Y = Left_Imagecoord_py.m_Y;
-                                        nccresult[grid_index].result3.m_X = kernel_col + GridPT3[pt_index].col_shift/pow(2.0,Pyramid_step);
-                                        nccresult[grid_index].result3.m_Y = kernel_row + GridPT3[pt_index].row_shift/pow(2.0,Pyramid_step);
+                                        nccresult[grid_index].result3.m_X = kernel_col + GridPT3[pt_index].col_shift/pwrtwo(Pyramid_step);
+                                        nccresult[grid_index].result3.m_Y = kernel_row + GridPT3[pt_index].row_shift/pwrtwo(Pyramid_step);
                                     }
                                     
                                 }
@@ -27152,8 +27155,8 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                     nccresult[pt_index].result0 = GridPT3[pt_index].ortho_ncc;
                     nccresult[pt_index].result2.m_X = Left_Imagecoord_py.m_X;
                     nccresult[pt_index].result2.m_Y = Left_Imagecoord_py.m_Y;
-                    nccresult[pt_index].result3.m_X = GridPT3[pt_index].col_shift/pow(2.0,Pyramid_step);
-                    nccresult[pt_index].result3.m_Y = GridPT3[pt_index].row_shift/pow(2.0,Pyramid_step);
+                    nccresult[pt_index].result3.m_X = GridPT3[pt_index].col_shift/pwrtwo(Pyramid_step);
+                    nccresult[pt_index].result3.m_Y = GridPT3[pt_index].row_shift/pwrtwo(Pyramid_step);
                 }
             }
         }
@@ -27221,8 +27224,8 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
                     
                     fprintf(temp_fid,"%lf %lf %lf %lf %lf %lf\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
                     
-                    fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pow(2.0,prc_level));
-                    fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pow(2.0,prc_level));
+                    fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pwrtwo(prc_level));
+                    fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pwrtwo(prc_level));
                     
                     // update max_roh value
                     GridPT3[grid_index].roh        = roh_height[grid_index].result0;
@@ -27310,11 +27313,11 @@ void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,
             double coord_x = boundary[0] + j*proinfo.DEM_resolution;
             double coord_y = boundary[1] + k*proinfo.DEM_resolution;
             
-            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
-            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
             //printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n",j,k,pos_lc,pos_lr,pos_rc,pos_rr,proinfo.DEM_resolution,proinfo.resolution);
             long int l_index = pos_lr*LImagesize.width + pos_lc;
@@ -27375,11 +27378,11 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
             double coord_x = boundary[0] + j*proinfo.DEM_resolution;
             double coord_y = boundary[1] + k*proinfo.DEM_resolution;
             
-            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lc = (int)((coord_x - LBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_lr = (int)((LBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
-            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rc = (int)((coord_x - RBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_rr = (int)((RBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
             //printf("%d\t%d\t%d\t%d\t%d\t%d\t%f\t%f\n",j,k,pos_lc,pos_lr,pos_rc,pos_rr,proinfo.DEM_resolution,proinfo.resolution);
             long int l_index = pos_lr*LImagesize.width + pos_lc;
@@ -27809,8 +27812,8 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
             Left_Imagecoord_py    = OriginalToPyramid_single(Left_Imagecoord,Lstartpos,Pyramid_step);
             Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,Rstartpos,Pyramid_step);
             
-            Right_Imagecoord_py.m_Y += (GridPT3[pt_index].row_shift + Coreg_param[0])/pow(2.0,Pyramid_step);
-            Right_Imagecoord_py.m_X += (GridPT3[pt_index].col_shift + Coreg_param[1])/pow(2.0,Pyramid_step);
+            Right_Imagecoord_py.m_Y += (GridPT3[pt_index].row_shift + Coreg_param[0])/pwrtwo(Pyramid_step);
+            Right_Imagecoord_py.m_X += (GridPT3[pt_index].col_shift + Coreg_param[1])/pwrtwo(Pyramid_step);
             
             long int ori_left = (long int)Left_Imagecoord_py.m_Y * LImagesize.width + (long int)Left_Imagecoord_py.m_X;
             long int ori_right = (long int)Right_Imagecoord_py.m_Y * RImagesize.width + (long int)Right_Imagecoord_py.m_X;
