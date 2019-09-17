@@ -297,11 +297,11 @@ double InterpolatePatch(uint16 *Image, long int position, CSize ImageSize, doubl
 
 
 //Image Coregistration
-double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt);
+double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std);
 void Preprocessing_Coreg(ProInfo *proinfo, char *save_path,uint16 **Oriimage,char **Subsetfile, uint8 py_level, CSize *Subsetsize, CSize **data_size_lr);
-int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, int *NumofPts, double **ImageAdjust, NCCflag _flag,
+int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, double **ImageAdjust, NCCflag _flag,
                       uint8 Template_size, uint16 **Images, CSize **Imagesizes, double **Boundary, double *grid_dx, double *grid_dy,
-                      D2DPOINT* MPs, char* save_path, double* avg_rho, int* iter_count);
+                      int* grid_space,double** over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std);
 bool postNCC_ortho(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size,
                    NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
 double *Readtiff_Coreg(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
@@ -337,4 +337,5 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
 D2DPOINT GetObjectToImage_single_SDM(uint16 _numofpts, D2DPOINT _GP, double *boundary, double imageres);
 void SetTransParam_param(TransParam *param, bool Hemisphere);
 bool SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere);
+float median(int n, float* x,float min, float max);
 #endif // SETSM_CODE_H
