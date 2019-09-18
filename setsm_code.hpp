@@ -299,7 +299,7 @@ double InterpolatePatch(uint16 *Image, long int position, CSize ImageSize, doubl
 //Image Coregistration
 double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std);
 void Preprocessing_Coreg(ProInfo *proinfo, char *save_path,uint16 **Oriimage,char **Subsetfile, uint8 py_level, CSize *Subsetsize, CSize **data_size_lr);
-int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, double **ImageAdjust, NCCflag _flag,
+int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double **ImageAdjust, NCCflag _flag,
                       uint8 Template_size, uint16 **Images, CSize **Imagesizes, double **Boundary, double *grid_dx, double *grid_dy,
                       int* grid_space,double** over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std);
 bool postNCC_ortho(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size,
@@ -308,6 +308,12 @@ double *Readtiff_Coreg(char *filename, CSize *Imagesize, int *cols, int *rows, C
 double* LoadPyramidImages_double(char *save_path,char *subsetfile, CSize data_size, uint8 py_level);
 double* CreateImagePyramid_double(double* _input, CSize _img_size, int _filter_size, double _sigma);
 //End Image Coregistration
+double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std );
+uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size);
+D2DPOINT** CoregParam_Image_MPs(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double **ImageAdjust, NCCflag _flag,
+                                uint8 Template_size, uint16 **Images, CSize **Imagesizes, double **Boundary, double *grid_dx, double *grid_dy,
+                                int* grid_space,double** over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, int*mp_iter_count);
+
 
 
 //SDM ortho
