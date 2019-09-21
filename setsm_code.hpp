@@ -31,6 +31,7 @@
 #define	 MAXDIM		 10
 #define	 MAXSTR		 48
 #define	 SQ(x)		 (x) * (x)
+#define SWAP(a,b) temp=a;a=b;b=temp;
 
 typedef struct nnXY
 {
@@ -309,12 +310,17 @@ double* LoadPyramidImages_double(char *save_path,char *subsetfile, CSize data_si
 double* CreateImagePyramid_double(double* _input, CSize _img_size, int _filter_size, double _sigma);
 //End Image Coregistration
 double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std );
+void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt);
 uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size);
+unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, int _filter_size, double _sigma);
+unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size);
 D2DPOINT** CoregParam_Image_MPs(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double **ImageAdjust, NCCflag _flag,
                                 uint8 Template_size, uint16 **Images, CSize **Imagesizes, double **Boundary, double *grid_dx, double *grid_dy,
                                 int* grid_space,double** over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, int*mp_iter_count);
-
-
+D2DPOINT* CoregParam_Image_MPs_stereo(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double *ImageAdjust, NCCflag _flag,
+                                      uint8 Template_size, unsigned char *Images_ref, unsigned char *Images_tar, CSize *Imagesizes_ref, CSize *Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, double grid_dx_ref, double grid_dy_ref, double grid_dx_tar, double grid_dy_tar, int grid_space,double* over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, int *mp_iter_count);
+bool postNCC_ortho_BYTE(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size,
+                        NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, unsigned char* _leftimage, unsigned char* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
 
 //SDM ortho
 bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, double** Coreg_param);
@@ -344,4 +350,6 @@ D2DPOINT GetObjectToImage_single_SDM(uint16 _numofpts, D2DPOINT _GP, double *bou
 void SetTransParam_param(TransParam *param, bool Hemisphere);
 bool SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere);
 float median(int n, float* x,float min, float max);
+float binmedian(int n, float *x);
+float quickselect(float *arr, int n, int k);
 #endif // SETSM_CODE_H
