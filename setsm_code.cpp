@@ -10289,18 +10289,17 @@ unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size)
 {
     CSize result_size;
     unsigned char* result_img;
-    
     result_img = (unsigned char*)calloc(sizeof(unsigned char),(long)_img_size.height*(long)_img_size.width);
     
     double SobleFilter_X[3][3] = { {-1, 0 , 1} , {-2, 0 , 2}, {-1, 0 , 1} };
-    double SobleFilter_Y[3][3] = { {-1, -2 , -1} , {0, 0 , 0}, {1, 2 , 1} };
+    double SobleFilter_Y[3][3] = { {1, 2 , 1} , {0, 0 , 0}, {-1, -2 , -1} };
     double a = 0;
     double b = 1.0/sqrt(2.0);
     double alpha = 45.0;
     double beta = 315.0;
     
     //printf("hillshade %d\t%d\t%f\n",_img_size.height,_img_size.width,grid_size);
-    
+     
 #pragma omp parallel for schedule(guided)
     //for(long int ori_index=0 ; ori_index<(long)_img_size.height*(long)_img_size.width ; ori_index++)
     for(long int r=0;r<_img_size.height;r++)
@@ -10342,12 +10341,13 @@ unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size)
                     
                     double p  = (p0*maxdx + q0*maxdy)/sqrt(p0*p0 + q0*q0);
                     int V  = (int)( ((0.5 + 0.5* ((p+a)/b)) ) * 255 );
+                     
                     if(V > 255)
                         V = 255;
                     if(V < 0)
                         V = 0;
-                    
                     result_img[ori_index] = V;
+                     
                 }
                 else
                     result_img[ori_index] = 0;
@@ -10357,6 +10357,56 @@ unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size)
         }
     }
     
+    /*
+    unsigned char* result_img_edge;
+
+    result_img_edge = (unsigned char*)calloc(sizeof(unsigned char),(long)_img_size.height*(long)_img_size.width);
+    double SharpFilter[3][3] = { {-1, -1 , -1} , {-1, 16 , -1}, {-1, -1 , -1} };
+
+    
+    for(long int r=0;r<_img_size.height;r++)
+    {
+        for(long int c=0;c<_img_size.width;c++)
+        {
+            long ori_index = r*_img_size.width + c;
+            if(result_img[ori_index] > 0)
+            {
+                float sum = 0;
+                bool check_null = false;
+                for(int row = -1; row <= 1; row++)
+                {
+                    for(int col = -1 ; col <= 1 ;col++)
+                    {
+                        long row_index = r + row;
+                        long col_index = c + col;
+                        if(col_index >= 0 && col_index < _img_size.width && row_index >= 0 && row_index < _img_size.height)
+                        {
+                            long index = row_index*_img_size.width + col_index;
+                            sum += SharpFilter[row+1][col+1]*(float)(result_img[index]);
+                            //printf("row col %d\t%d\t%f\t%d\t%f\t%f\n",row,col,SharpFilter[row+1][col+1],result_img[index],SharpFilter[row+1][col+1]*result_img[index],sum);
+                            if(result_img[index] == 0)
+                                check_null = true;
+                        }
+                    }
+                }
+            
+                //printf("sum %f\n",sum);
+                if(!check_null)
+                {
+                    int V = int(sum/8.0);
+                    if(V > 255)
+                        V = 255;
+                    if(V < 0)
+                        V = 0;
+                    
+                    result_img_edge[ori_index] = V;
+                }
+            }
+        }
+    }
+            
+    free(result_img);
+    */
     return result_img;
 }
 
@@ -25562,7 +25612,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
     FILE *time_fid;
     
     total_ST = time(0);
-    
+    int py_kernel_size = 3;
     
     if(OpenProject(_filename,proinfo,args))
     {
@@ -25652,7 +25702,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         ref_hill = CreateHillshade(DEM,ref_dem_size,ref_dx);
         
         
-        printf("hillshade %d\t%d\n",ref_dem_size.width,ref_dem_size.height);
+        //printf("hillshade %d\t%d\n",ref_dem_size.width,ref_dem_size.height);
         
         total_ET = time(0);
         total_gap = difftime(total_ET,total_ST);
@@ -25684,9 +25734,9 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 data_length = (long int)data_size.height*(long int)data_size.width;
                 SubImages_ref[level] = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
                 
-                SubImages_ref[level]= CreateImagePyramid_BYTE(SubImages_ref[level-1],data_size,5,(double)1.6);
+                SubImages_ref[level]= CreateImagePyramid_BYTE(SubImages_ref[level-1],data_size,py_kernel_size,(double)1.6);
             }
-            printf("preprocessing size level ID %d\t%d\t%d\n",level,data_size.width,data_size.height);
+            //printf("preprocessing size level ID %d\t%d\t%d\n",level,data_size.width,data_size.height);
         }
         
         total_ET = time(0);
@@ -25703,8 +25753,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         sprintf(out_file,"%s/DEM_coreg_result.txt",args.Outputpath);
         FILE* fid_out         = fopen(out_file,"w");
         fprintf(fid_out,"ref DEM name\t%s\n",DEM_name_refoutfile);
-        printf("ref dem %s\n",DEM_name_refoutfile);
-        fprintf(fid_out,"DEM name\t\t\t\t\t\t\tTx[meter]\tTy[meter]\tTz(average)\tTz(median)\tTx_std[meter]\tTy_std[meter]\tTz_std(average)\tTz_std(median)\tControls_rho\tMean_all(avg)\tMedian_all(avg)\tdz_std(avg)\tMean_all(med)\tMedian_all(med)\tdz_std(med)\tNumberOfCPs\n");
+        //printf("ref dem %s\n",DEM_name_refoutfile);
+        fprintf(fid_out,"DEM name\t\t\t\t\t\t\tTx[meter]\tTy[meter]\tTz(average)\tTz(median)\tTx_std[meter]\tTy_std[meter]\tTz_std(average)\tTz_std(median)\tControls_rho\tMean_all(avg)\tMedian_all(avg)\tdz_std(avg)\tMean_all(med)\tMedian_all(med)\tdz_std(med)\tNumberOfCPs\tprocessing time\n");
         
         for(int ti = 1; ti < proinfo->number_of_images ; ti++)
         {
@@ -25758,11 +25808,15 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             char copoly_dems_name[500];
             char co_dems_name_diff[500];
             char copoly_dems_name_diff[500];
-            
+            char ref_hill_name[500];
+            char tar_hill_name[500];
+
             sprintf(co_dems_name,"%s/%s_coreg_avg.tif",args.Outputpath,DEM_name_outfile);
             sprintf(copoly_dems_name,"%s/%s_coreg_med.tif",args.Outputpath,DEM_name_outfile);
             sprintf(co_dems_name_diff,"%s/%s_coreg_avag_diff.tif",args.Outputpath,DEM_name_outfile);
             sprintf(copoly_dems_name_diff,"%s/%s_coreg_med_diff.tif",args.Outputpath,DEM_name_outfile);
+            sprintf(ref_hill_name,"%s/%s_ref_hill.tif",args.Outputpath,DEM_name_outfile);
+            sprintf(tar_hill_name,"%s/%s_tar_hill.tif",args.Outputpath,DEM_name_outfile);
             
             //create hillshadeimage
             tar_hill = CreateHillshade(DEM_tar,tar_dem_size,tar_dx);
@@ -25771,13 +25825,16 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             total_gap = difftime(total_ET,total_ST);
             printf("\nTar hillshade time %f\n\n",total_gap);
             total_ST = time(0);
-            
-            /*WriteGeotiff(co_dems_name, tar_hill, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 1);
-            WriteGeotiff(copoly_dems_name, ref_hill, ref_dem_size.width, ref_dem_size.height, ref_dx, ref_minX, ref_maxY, param.projection, param.zone, Hemisphere, 1);
-             */
-            printf("co_dems_name %s\n",copoly_dems_name);
-            printf("copoly_dems_name %s\n",co_dems_name);
-            
+            /*
+            if(ti == 1)
+            {
+                WriteGeotiff(tar_hill_name, tar_hill, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 1);
+                WriteGeotiff(ref_hill_name, ref_hill, ref_dem_size.width, ref_dem_size.height, ref_dx, ref_minX, ref_maxY, param.projection, param.zone, Hemisphere, 1);
+                
+                printf("co_dems_name %s\n",ref_hill_name);
+                printf("copoly_dems_name %s\n",tar_hill_name);
+            }
+            */
             //create pyramidimage
             SetPySizes(data_size_tar, tar_dem_size, py_level);
             
@@ -25803,7 +25860,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                     data_length = (long int)data_size.height*(long int)data_size.width;
                     SubImages_tar[level] = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
                     
-                    SubImages_tar[level]= CreateImagePyramid_BYTE(SubImages_tar[level-1],data_size,5,(double)1.6);
+                    SubImages_tar[level]= CreateImagePyramid_BYTE(SubImages_tar[level-1],data_size,py_kernel_size,(double)1.6);
                 }
                 //printf("preprocessing size level ID %d\t%d\t%d\t%d\n",level,ti,data_size.width,data_size.height);
             }
@@ -26173,7 +26230,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             total_ET = time(0);
             total_gap = difftime(total_ET,total_ST);
             printf("\nselect vertical CPs time %f\n\n",total_gap);
-            total_ST = time(0);
+            //total_ST = time(0);
             
             double average = sum_diff/diff_count;
             
@@ -26358,19 +26415,21 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             free(co_dem);
             free(copoly_dem);
             
-            fprintf(fid_out,"%s.tif\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\n",DEM_name_outfile,Coreg_param[1],Coreg_param[0],average,MED_z,adjust_std.m_Y,adjust_std.m_X,SD_z,SD_z_med,avg_roh,
-                    all_average,all_med,all_std,all_average_med,all_med_med,all_std_med,diff_count);
+            total_ET_a = time(0);
+            total_gap = difftime(total_ET_a,total_ST_a);
+            printf("\nTotal Tz computation time ID %d\t%f\n\n",ti,total_gap);
+            total_ET_iter = time(0);
+            total_gap = difftime(total_ET_iter,total_ST_iter);
+            printf("\nTotal computation time ID %d\t%f\n\n",ti,total_gap);
+             fprintf(fid_out,"%s.tif\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%f\n",DEM_name_outfile,Coreg_param[1],Coreg_param[0],average,MED_z,adjust_std.m_Y,adjust_std.m_X,SD_z,SD_z_med,avg_roh,
+                    all_average,all_med,all_std,all_average_med,all_med_med,all_std_med,diff_count,total_gap);
             
             free(MPs_2D);
             free(DEM_tar);
             
-            total_ET_a = time(0);
-            total_gap = difftime(total_ET_a,total_ST_a);
-            printf("\nTotal Tz computation time ID %d\t%f\n\n",ti,total_gap);
             
-            total_ET_iter = time(0);
-            total_gap = difftime(total_ET_iter,total_ST_iter);
-            printf("\nTotal computation time ID %d\t%f\n\n",ti,total_gap);
+            
+            
             
         }
         
