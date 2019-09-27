@@ -348,6 +348,7 @@ typedef struct ArgumentInfo{
     bool check_full_cal;
     int check_coreg;
     int check_sdm_ortho;
+    int check_DEM_coreg_output;
     
     //SGM test flag
     bool check_SNCC;

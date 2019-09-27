@@ -311,9 +311,13 @@ double* CreateImagePyramid_double(double* _input, CSize _img_size, int _filter_s
 //End Image Coregistration
 double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std );
 void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt);
+void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt);
 uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size);
 unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, int _filter_size, double _sigma);
 unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size);
+F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *boundary, uint8 pyramid_level, CSize _img_size, int _filter_size, double _sigma, float* result_img, uint16* result_slope, uint16* result_aspect, long *tin_point_num, bool check_pts);
+void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI3DPOINT *tris, double *boundary, CSize input_size, uint16* result_slope, uint16* result_aspect);
+FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution);
 D2DPOINT** CoregParam_Image_MPs(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double **ImageAdjust, NCCflag _flag,
                                 uint8 Template_size, uint16 **Images, CSize **Imagesizes, double **Boundary, double *grid_dx, double *grid_dy,
                                 int* grid_space,double** over_Boundary, char* save_path, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, int*mp_iter_count);
