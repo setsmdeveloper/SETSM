@@ -3548,6 +3548,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         double matching_change_rate = 100;
                         double rate_th = 0.00999999;
                         int max_iteration = 9;
+                        float mem_th = 5;
+                        if(level <= 1)
+                            mem_th = 10;
                         
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
@@ -3572,7 +3575,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         if(!check_matching_rate)
                         {
-                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - 5  /*|| (level == 0 && proinfo->DEM_resolution < 2)*/))
+                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - mem_th  /*|| (level == 0 && proinfo->DEM_resolution < 2)*/))
                             {
                                 check_matching_rate = true;
                             }
@@ -4884,6 +4887,7 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     if(!info->IsRA)
     {
         long int grid_voxel = (double)(sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
+        grid_voxel += (double)(sizeof(float)*Size_Grid2D.width*Size_Grid2D.height);
         for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
         {
         if(check_image_boundary(info,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
@@ -4922,7 +4926,10 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
                     int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
                     
                     if(NumberofHeightVoxel > 0 )
+                    {
                         grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+                        grid_voxel += (double)(sizeof(float)*NumberofHeightVoxel);
+                    }
                 }
             }
         }
