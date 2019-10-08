@@ -9762,11 +9762,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                         else
                         {
                             if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                     }
                     
@@ -9774,6 +9778,8 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     {
                         if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                             check_blunder_cell = false;
+                        else
+                            check_blunder_cell = true;
                     }
                     
                     if(pyramid_step == 0)
@@ -9782,11 +9788,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if((abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height) && (abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                         else
                         {
                             if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                     }
                 }
