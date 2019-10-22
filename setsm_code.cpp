@@ -30,7 +30,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.0.2";
+const char setsm_version[] = "4.0.3";
 
 //const double RA_resolution = 16;
 
@@ -9755,7 +9755,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             bool check_blunder_cell = true;
             double th_height = 1000;
             if(DEM_resolution <= 4)
-                th_height = 1000;
+                th_height = 500;
             
             if ( pyramid_step >= 2)
                 check_blunder_cell = false;
@@ -9819,6 +9819,17 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     check_blunder_cell = true;
                 }
             }
+            else
+            {
+                if(nccresult[t_i].NumOfHeight > 0)
+                {
+                    if(grid_voxel[t_i])
+                        free(grid_voxel[t_i]);
+                }
+                
+                nccresult[t_i].NumOfHeight = 0;
+                check_blunder_cell = true;
+            }
             
             if(!check_blunder_cell)
             {
@@ -9857,6 +9868,8 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             
                             if(abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
                                 nccresult[t_i].check_height_change = true;
+                            else
+                                nccresult[t_i].check_height_change = false;
                         }
                         else
                             nccresult[t_i].check_height_change = false;
@@ -9932,7 +9945,28 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             
             nccresult[t_i].NumOfHeight = 0;
         }
+
+    	if(nccresult[t_i].minHeight == 0 || nccresult[t_i].maxHeight == 0)
+        {
+            if(nccresult[t_i].NumOfHeight > 0)
+            {
+                if(grid_voxel[t_i])
+                    free(grid_voxel[t_i]);
+            }
+            
+            nccresult[t_i].NumOfHeight = 0;
+        }
         
+        if(pyramid_step == 0 && nccresult[t_i].NumOfHeight > 1000)
+        {
+            if(nccresult[t_i].NumOfHeight > 0)
+            {
+                if(grid_voxel[t_i])
+                    free(grid_voxel[t_i]);
+            }
+            
+            nccresult[t_i].NumOfHeight = 0;
+        }
     }
 
 }
@@ -11849,7 +11883,9 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             for(int j=0;j<Size_Grid2D.width;j++)
             {
                 long t_index = (long)(i*Size_Grid2D.width) + (long)j;
-                
+               
+                //if(Pyramid_step == 0 && iteration == 3)
+                //    printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight); 
                 if(nccresult[t_index].NumOfHeight > 0)
                 {
                     SumCost[t_index] = (float*)calloc(sizeof(float),nccresult[t_index].NumOfHeight);
@@ -17042,6 +17078,10 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
             if(m_bHeight[matlab_index] == 0)
                 result[matlab_index].Height = -1000.0;
             
+            if(result[matlab_index].minHeight == 0)
+                result[matlab_index].minHeight = -1;
+            if(result[matlab_index].maxHeight == 0)
+                result[matlab_index].maxHeight = 1;
         }
     }
     
