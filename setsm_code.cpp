@@ -89,6 +89,7 @@ int main(int argc,char *argv[])
     args.check_coreg = 0;     //image coreg = 1, DEM coreg = 2, image + DEM = 3
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
+    args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1;
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
@@ -300,6 +301,24 @@ int main(int argc,char *argv[])
                 {
                     args.check_coreg = atoi(argv[i+1]);
                     printf("Coregistration %d\n",args.check_coreg);
+                }
+            }
+            
+            if (strcmp("-txt_input",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input image txt file\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_txt_input = 1;
+                    printf("txt input %d\n",args.check_txt_input);
+                    if(args.check_txt_input == 1)
+                    {
+                        sprintf(args.DEM_input_file,"%s",argv[i+1]);
+                        printf("txt input %s\n",args.DEM_input_file);
+                    }
                 }
             }
             
@@ -1443,78 +1462,93 @@ int main(int argc,char *argv[])
                 
                 bool check_frame_info = true;
                 
-                if(image_count > 1 || args.check_ortho)
+                if(args.check_txt_input == 0)
                 {
-                    args.number_of_images = image_count;
-                    
+                    if(image_count > 1 || args.check_ortho)
+                    {
+                        args.number_of_images = image_count;
+                        
+                        char *Outputpath_name  = SetOutpathName(args.Outputpath);
+                        sprintf(args.Outputpath_name,"%s",Outputpath_name);
+                        printf("after pathname %s\n",args.Outputpath_name);
+                        
+                        printf("%s\n",args.Outputpath);
+                        printf("%s\n", args.Outputpath_name);
+
+                        Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+                        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+                            Imageparams[ti] = (double*)calloc(sizeof(double),2);
+                        
+                        if(args.check_checktiff)
+                        {
+                            DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
+                        }
+                        else if( strcmp(args.Image[0],args.Image[1]) != 0)
+                        {
+                            DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
+
+                            char DEMFilename[500];
+                            char Outputpath[500];
+                            
+                            sprintf(Outputpath, "%s", save_filepath);
+                            
+                            printf("param %s %d\n", param.direction,param.zone);
+                            param.projection = args.projection;
+                            
+                            printf("imageparams %f\t%f\t%f\t%f\n",Imageparams[0][0],Imageparams[0][1],Imageparams[1][0],Imageparams[1][1]);
+                            
+                            if(DEM_divide == 0)
+                            {
+                                //if(!args.check_ortho)
+                                    sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
+                                //else
+                                //    sprintf(DEMFilename, "%s", args.seedDEMfilename);
+                                
+                                orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+                                //if(!args.check_ortho)
+                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                //else if(args.ortho_count == 2)
+                                //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                
+                                if(args.check_LSF2 == 2)
+                                    remove(DEMFilename);
+                            }
+                            else
+                            {
+                                for(int iter = 1 ; iter <= DEM_divide ; iter++)
+                                {
+                                    sprintf(DEMFilename, "%s/%s_%d_dem.tif", save_filepath,args.Outputpath_name,iter);
+                                    orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
+                                    //if(!args.check_ortho)
+                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                    //else if(args.ortho_count == 2)
+                                    //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                    
+                                    if(args.check_LSF2 == 2)
+                                        remove(DEMFilename);
+                                }
+                            }
+                        }
+                        else
+                            printf("Please check input 1 and input 2. Both is same\n");
+                    }
+                    else
+                    {
+                        printf("Plese check input images\n");
+                    }
+                }
+                else if(args.check_txt_input == 1)
+                {
                     char *Outputpath_name  = SetOutpathName(args.Outputpath);
                     sprintf(args.Outputpath_name,"%s",Outputpath_name);
                     printf("after pathname %s\n",args.Outputpath_name);
                     
                     printf("%s\n",args.Outputpath);
                     printf("%s\n", args.Outputpath_name);
-
-                    Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
-                    for(int ti = 0 ; ti < args.number_of_images ; ti++)
-                        Imageparams[ti] = (double*)calloc(sizeof(double),2);
                     
-                    if(args.check_checktiff)
-                    {
-                        DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
-                    }
-                    else if( strcmp(args.Image[0],args.Image[1]) != 0)
-                    {
-                        DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
-
-                        char DEMFilename[500];
-                        char Outputpath[500];
-                        
-                        sprintf(Outputpath, "%s", save_filepath);
-                        
-                        printf("param %s %d\n", param.direction,param.zone);
-                        param.projection = args.projection;
-                        
-                        printf("imageparams %f\t%f\t%f\t%f\n",Imageparams[0][0],Imageparams[0][1],Imageparams[1][0],Imageparams[1][1]);
-                        
-                        if(DEM_divide == 0)
-                        {
-                            //if(!args.check_ortho)
-                                sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
-                            //else
-                            //    sprintf(DEMFilename, "%s", args.seedDEMfilename);
-                            
-                            orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
-                            //if(!args.check_ortho)
-                                orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
-                            //else if(args.ortho_count == 2)
-                            //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
-                            
-                            if(args.check_LSF2 == 2)
-                                remove(DEMFilename);
-                        }
-                        else
-                        {
-                            for(int iter = 1 ; iter <= DEM_divide ; iter++)
-                            {
-                                sprintf(DEMFilename, "%s/%s_%d_dem.tif", save_filepath,args.Outputpath_name,iter);
-                                orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
-                                //if(!args.check_ortho)
-                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
-                                //else if(args.ortho_count == 2)
-                                //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
-                                
-                                if(args.check_LSF2 == 2)
-                                    remove(DEMFilename);
-                            }
-                        }
-                    }
-                    else
-                        printf("Please check input 1 and input 2. Both is same\n");
+                    SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
                 }
-                else
-                {
-                    printf("Plese check input images\n");
-                }
+                    
             }
         }
     }
@@ -1664,7 +1698,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         //double** Coreg_param;
         //D2DPOINT *adjust_sdt = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
         //Coreg_param = DEM_ImageCoregistration(return_param, _filename, args, _save_filepath, 2,adjust_sdt);
-        
         DEM_ImageCoregistration_GeomatricConstraint(return_param, _filename, args, _save_filepath, 2);
         
         total_ET_t = time(0);
@@ -1681,7 +1714,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         //double** Coreg_param;
         //D2DPOINT *adjust_sdt = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
         //Coreg_param = DEM_ImageCoregistration(return_param, _filename, args, _save_filepath, 2,adjust_sdt);
-        
         DEM_ImageCoregistration_hillshade(return_param, _filename, args, _save_filepath, 2);
         
         total_ET_t = time(0);
@@ -4363,6 +4395,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         double matching_change_rate = 100;
                         double rate_th = 0.00999999;
                         int max_iteration = 9;
+                        float mem_th = 5;
+                        if(level <= 1)
+                            mem_th = 10;
                         
                         NCCresult *nccresult;
                         nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
@@ -4387,7 +4422,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         
                         if(!check_matching_rate)
                         {
-                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - 5  /*|| (level == 0 && proinfo->DEM_resolution < 2)*/))
+                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - mem_th  /*|| (level == 0 && proinfo->DEM_resolution < 2)*/))
                             {
                                 check_matching_rate = true;
                             }
@@ -5694,6 +5729,7 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     if(!info->IsRA)
     {
         long int grid_voxel = (double)(sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
+        grid_voxel += (double)(sizeof(float)*Size_Grid2D.width*Size_Grid2D.height);
         for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
         {
         if(check_image_boundary(info,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
@@ -5732,7 +5768,10 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
                     int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
                     
                     if(NumberofHeightVoxel > 0 )
+                    {
                         grid_voxel += (double)(sizeof(VOXEL)*NumberofHeightVoxel);
+                        grid_voxel += (double)(sizeof(float)*NumberofHeightVoxel);
+                    }
                 }
             }
         }
@@ -6916,7 +6955,7 @@ UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool 
             GridPT3[i].roh              = Th_roh;
             GridPT3[i].anchor_flag      = 0;
             //GridPT3[i].Matched_height   = -1000.0;
-            for(int ti=0;ti<MaxImages;ti++)
+            for(int ti=0;ti<10;ti++)
                 GridPT3[i].ortho_ncc[ti]        = 0;
             GridPT3[i].Mean_ortho_ncc   = 0;
             //GridPT3[i].angle            = 0;
@@ -10676,7 +10715,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             bool check_blunder_cell = true;
             double th_height = 1000;
             if(DEM_resolution <= 4)
-                th_height = 1000;
+                th_height = 500;
             
             if ( pyramid_step >= 2)
                 check_blunder_cell = false;
@@ -10690,11 +10729,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
                                 check_blunder_cell = false;
+                            else
+                                  check_blunder_cell = true;
                         }
                         else
                         {
                             if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                     }
                     
@@ -10702,6 +10745,8 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     {
                         if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                             check_blunder_cell = false;
+                        else
+                            check_blunder_cell = true;
                     }
                     
                     if(pyramid_step == 0)
@@ -10710,11 +10755,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if((abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height) && (abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                                 check_blunder_cell = false;
+                            else
+                                check_blunder_cell = true;
                         }
                         else
                         {
                             if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
                                 check_blunder_cell = false;
+                            else
+                                nccresult[t_i].NumOfHeight = 0;
                         }
                     }
                 }
@@ -10729,6 +10778,17 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     nccresult[t_i].NumOfHeight = 0;
                     check_blunder_cell = true;
                 }
+            }
+            else
+            {
+                if(nccresult[t_i].NumOfHeight > 0)
+                {
+                    if(grid_voxel[t_i])
+                        free(grid_voxel[t_i]);
+                }
+                
+                nccresult[t_i].NumOfHeight = 0;
+                check_blunder_cell = true;
             }
             
             if(!check_blunder_cell)
@@ -10766,11 +10826,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
                             nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
                             
-                            if(abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
+                            if(pyramid_step == 0 && abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
                                 nccresult[t_i].check_height_change = true;
+                            else
+                                nccresult[t_i].check_height_change = false;
                         }
                         else
+                        {
                             nccresult[t_i].check_height_change = false;
+                        }
                     }
                 }
                 
@@ -10811,10 +10875,9 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         }
                         
                         nccresult[t_i].NumOfHeight = 0;
-                        //printf("NumOfHeight %d\tmaxHeight %f\tminHeight %f\n",nccresult[t_i].NumOfHeight,nccresult[t_i].maxHeight,nccresult[t_i].minHeight);
                     }
                 }
-                /*
+               /*
                 if(nccresult[t_i].NumOfHeight == 0)
                 {
                     if(grid_voxel[t_i])
@@ -10844,6 +10907,27 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             nccresult[t_i].NumOfHeight = 0;
         }
         
+        if((nccresult[t_i].minHeight == 0 || nccresult[t_i].maxHeight == 0))
+        {
+            if(nccresult[t_i].NumOfHeight > 0)
+            {
+                if(grid_voxel[t_i])
+                    free(grid_voxel[t_i]);
+            }
+            
+            nccresult[t_i].NumOfHeight = 0;
+        }
+        
+        if(pyramid_step == 0 && nccresult[t_i].NumOfHeight > 1000)
+        {
+            if(nccresult[t_i].NumOfHeight > 0)
+            {
+                if(grid_voxel[t_i])
+                    free(grid_voxel[t_i]);
+            }
+            
+            nccresult[t_i].NumOfHeight = 0;
+        }
     }
 
 }
@@ -12741,7 +12825,8 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             for(int j=0;j<Size_Grid2D.width;j++)
             {
                 long t_index = (long)(i*Size_Grid2D.width) + (long)j;
-                
+                if(Pyramid_step == 0 && iteration == 3 && nccresult[t_index].NumOfHeight > 2000)
+                    printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
                 if(nccresult[t_index].NumOfHeight > 0)
                 {
                     SumCost[t_index] = (float*)calloc(sizeof(float),nccresult[t_index].NumOfHeight);
@@ -18088,6 +18173,10 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
             if(m_bHeight[matlab_index] == 0)
                 result[matlab_index].Height = -1000.0;
             
+            if(result[matlab_index].minHeight == 0)
+                result[matlab_index].minHeight = -1;
+            if(result[matlab_index].maxHeight == 0)
+                result[matlab_index].maxHeight = 1;
         }
     }
     
@@ -18120,6 +18209,7 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double*
             long int index = row*resize_Size.width + col;
             double X = resize_Grid[index].m_X;
             double Y = resize_Grid[index].m_Y;
+            
             //if(resize_Size.height > 8000 || resize_Size.width > 8000)
             //printf("row col\t%d\t%d\n",row,col);
             int pos_c = (int)((X - Boundary[0])/pre_gridsize);
@@ -23823,6 +23913,20 @@ void GMA_double_sub(GMA_double *a, GMA_double *b, GMA_double *out)
     }
 }
 
+void GMA_double_sum(GMA_double *a, GMA_double *b, GMA_double *out)
+{
+    long int cnt1,cnt2;
+    for(cnt1=0;cnt1<a->nrows;cnt1++)  //TODO: consider loop unrolling
+    {
+        for(cnt2=0;cnt2<a->ncols;cnt2++)
+        {
+            out->val[cnt1][cnt2]=0;
+            out->val[cnt1][cnt2] = a->val[cnt1][cnt2] + b->val[cnt1][cnt2];
+        }
+    }
+}
+
+
 void GMA_double_printf(GMA_double *a)
 {
     long int cnt1,cnt2;
@@ -24205,6 +24309,52 @@ double Correlate(double *L, double *R, int N)
 	return rho;
 }
 
+float Correlate_float(float *L, float *R, int N)
+{
+    double Lmean = 0;
+    double Rmean = 0;
+    double rho;
+    
+    if(N > 0)
+    {
+        for (int i=0; i<N; i++)
+        {
+            Lmean += L[i];
+            Rmean += R[i];
+        }
+        Lmean = Lmean / N;
+        Rmean = Rmean / N;
+
+        double SumLR = 0;
+        double SumL2 = 0;
+        double SumR2 = 0;
+
+        for (int i=0; i<N; i++)
+        {
+            SumLR += (L[i]-Lmean)*(R[i]-Rmean);
+            SumL2 += (L[i]-Lmean)*(L[i]-Lmean);
+            SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
+        }
+
+        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
+        {
+            rho = SumLR / (sqrt(SumL2*SumR2));
+            int rI = (int)round(rho*1000);
+            rho = (float)rI / 1000.0;
+        }
+        else
+        {
+            rho = (float) -99;
+        }
+    }
+    else
+    {
+        rho = (float) -99;
+    }
+ 
+    return rho;
+}
+
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
 double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, double dx, double dy)
@@ -24371,6 +24521,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             switch(image_bits[i])
             {
                 case 8:
+                {
                     uint8* data8;
                     data8 = Readtiff_BYTE(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i]);
                     long int data_size8 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
@@ -24379,8 +24530,10 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     for(long int index = 0 ; index < data_size8 ; index++)
                         OriImages[i][index] = data8[index];
                     free(data8);
+                }
                     break;
                 case 12:
+                {
                     uint16* data16;
                     data16 = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
                     long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
@@ -24389,6 +24542,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     for(long int index = 0 ; index < data_size16 ; index++)
                         OriImages[i][index] = data16[index];
                     free(data16);
+                }
                     
                     
                     //OriImages[i] = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
@@ -24795,6 +24949,7 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
             switch(image_bits[i])
             {
                 case 8:
+                {
                     uint8* data8;
                     data8 = Readtiff_BYTE(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i]);
                     long int data_size8 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
@@ -24803,8 +24958,10 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
                     for(long int index = 0 ; index < data_size8 ; index++)
                         OriImages[i][index] = data8[index];
                     free(data8);
+                }
                     break;
                 case 12:
+                {
                     uint16* data16;
                     data16 = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
                     long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
@@ -24813,6 +24970,7 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
                     for(long int index = 0 ; index < data_size16 ; index++)
                         OriImages[i][index] = data16[index];
                     free(data16);
+                }
                     
                     
                     //OriImages[i] = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
@@ -25595,7 +25753,28 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
     total_ST = time(0);
     int py_kernel_size = 3;
     
-    if(OpenProject(_filename,proinfo,args))
+    bool check_start = true;
+    if(args.check_txt_input == 0)
+    {
+        check_start = OpenProject(_filename,proinfo,args);
+    }
+    else if(args.check_txt_input == 1)
+    {
+        FILE *fid_read = fopen(args.DEM_input_file,"r");
+        
+        args.number_of_images = 0;
+        while( (fscanf(fid_read,"%s\n",args.Image[args.number_of_images])) != EOF )
+        {
+            printf("input DEM %s\n",args.Image[args.number_of_images]);
+            sprintf(proinfo->Imagefilename[args.number_of_images],"%s",args.Image[args.number_of_images]);
+            args.number_of_images++;
+        }
+        fclose(fid_read);
+        proinfo->number_of_images = args.number_of_images;
+        printf("image num %d\n",args.number_of_images);
+    }
+    
+    if(check_start)
     {
         char temp_filepath[500];
         
@@ -25696,7 +25875,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         //create hillshadeimage
         FILE *checktif = NULL;
         checktif = fopen(ref_hill_inputname,"r");
-        if(checktif)
+        /*if(checktif)
         {
             TIFF *refhilltif = NULL;
             refhilltif  = TIFFOpen(ref_hill_inputname,"r");
@@ -25705,7 +25884,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             fclose(checktif);
             printf("loading existing hillshade image %s\n",ref_hill_inputname);
         }
-        else
+        else*/
         {
             ref_hill = CreateHillshade(DEM,ref_dem_size,ref_dx);
         }
@@ -25841,7 +26020,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             //create hillshadeimage
             FILE *checktif_tar = NULL;
             checktif_tar = fopen(tar_hill_inputfile,"r");
-            if(checktif)
+            /*if(checktif)
             {
                 TIFF *tarhilltif = NULL;
                 tarhilltif  = TIFFOpen(tar_hill_inputfile,"r");
@@ -25850,7 +26029,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 fclose(checktif_tar);
                 printf("loading existing hillshade image %s\n",tar_hill_inputfile);
             }
-            else
+            else*/
                 tar_hill = CreateHillshade(DEM_tar,tar_dem_size,tar_dx);
             
             total_ET = time(0);
@@ -26003,7 +26182,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             total_ST_a = time(0);
             
             double Coreg_param[2];
-            F3DPOINT *save_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),RA_iter_counts);
+            
             CSize ref_data_size = ref_dem_size;
             CSize tar_data_size = tar_dem_size;
             
@@ -26016,299 +26195,334 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             //printf("ref size %d\t%d\ttar size %d\t%d\n",ref_data_size.width,ref_data_size.height,tar_data_size.width,tar_data_size.height);
             //printf("ref coord %f\t%f\ttar coord %f\t%f\n",ref_minX,ref_maxY,tar_minX,tar_maxY);
             int diff_count = 0;
-            double sum_diff = 0;
-            double W_th = 95;
+            
+            double W_th = 80;
             double dH_th = 30;
             
-#pragma omp parallel for reduction(+:sum_diff,diff_count) schedule(guided)
-            for(long int gcp_index = 0 ; gcp_index < RA_iter_counts ; gcp_index ++)
+            double average;
+            float MED_z;
+            double SD_z;
+            double SD_z_med;
+            
+            bool check_stop = false;
+            int while_iter = 0;
+            double pre_std = 10000.0;
+            double change_std_ratio = 1000;
+            while(!check_stop && while_iter < 10)
             {
-                D2DPOINT gcp_coord,ref_img,tar_img;
-                gcp_coord.m_X = MPs_2D[gcp_index].m_X;
-                gcp_coord.m_Y = MPs_2D[gcp_index].m_Y;
-                
-                //printf("ID %d\tMPs %f\t%f\n",gcp_index,gcp_coord.m_X,gcp_coord.m_Y);
-                
-                ref_img.m_X = (gcp_coord.m_X - ref_minX)/ref_grid_size;
-                ref_img.m_Y = (ref_maxY - gcp_coord.m_Y)/ref_grid_size;
-                
-                tar_img.m_X = ( (gcp_coord.m_X + Coreg_param[1]) - tar_minX )/tar_grid_size;
-                tar_img.m_Y = ( tar_maxY - (gcp_coord.m_Y + Coreg_param[0]) )/tar_grid_size;
-                
-                bool check_b = true;
-                if(args.check_boundary)
+                double sum_diff = 0;
+                F3DPOINT *save_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),RA_iter_counts);
+                diff_count = 0;
+#pragma omp parallel for reduction(+:sum_diff,diff_count) schedule(guided)
+                for(long int gcp_index = 0 ; gcp_index < RA_iter_counts ; gcp_index ++)
                 {
-                    if(gcp_coord.m_X >= args.Min_X && gcp_coord.m_X <= args.Max_X && gcp_coord.m_Y >= args.Min_Y && gcp_coord.m_Y <= args.Max_Y)
-                        check_b = true;
-                    else
-                        check_b = false;
-                }
-                
-                if(ref_img.m_X - 2 >= 0 && ref_img.m_X + 2 < ref_data_size.width && ref_img.m_Y - 2 >= 0 && ref_img.m_Y + 2 < ref_data_size.height &&
-                   tar_img.m_X - 2 >= 0 && tar_img.m_X + 2 < tar_data_size.width && tar_img.m_Y - 2 >= 0 && tar_img.m_Y + 2 < tar_data_size.height && check_b)
-                {
-                    long ref_index = (int)(ref_img.m_Y)*ref_data_size.width + (int)(ref_img.m_X);
-                    long tar_index = (int)(tar_img.m_Y)*tar_data_size.width + (int)(tar_img.m_X);
+                    D2DPOINT gcp_coord,ref_img,tar_img;
+                    gcp_coord.m_X = MPs_2D[gcp_index].m_X;
+                    gcp_coord.m_Y = MPs_2D[gcp_index].m_Y;
                     
-                    if(DEM[ref_index] > -100 && DEM[ref_index] < 10000 && DEM_tar[tar_index] > -100 && DEM_tar[tar_index] < 10000)
+                    //printf("ID %d\tMPs %f\t%f\n",gcp_index,gcp_coord.m_X,gcp_coord.m_Y);
+                    
+                    ref_img.m_X = (gcp_coord.m_X - ref_minX)/ref_grid_size;
+                    ref_img.m_Y = (ref_maxY - gcp_coord.m_Y)/ref_grid_size;
+                    
+                    tar_img.m_X = ( (gcp_coord.m_X + Coreg_param[1]) - tar_minX )/tar_grid_size;
+                    tar_img.m_Y = ( tar_maxY - (gcp_coord.m_Y + Coreg_param[0]) )/tar_grid_size;
+                    
+                    bool check_b = true;
+                    if(args.check_boundary)
                     {
-                        double sum_zr = 0;
-                        double sum_zt = 0;
-                        int kernel_count = 0;
-                        for(int kr = -2 ; kr <= 2 ; kr++ )
-                        {
-                            for(int kc = -2 ; kc <= 2 ; kc++ )
-                            {
-                                int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
-                                int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
-                                
-                                if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
-                                {
-                                    kernel_count++;
-                                    //printf("DEM value %f\t%f\n",DEM[0][k_refindex],DEM[ti][k_tarindex]);
-                                }
-                            }
-                        }
-                        
-                        double* ref_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
-                        double* tar_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
-                        
-                        GMA_double *A_matrix = GMA_double_create(kernel_count, 3);
-                        GMA_double *L_matrix = GMA_double_create(kernel_count, 1);
-                        GMA_double *AT_matrix = GMA_double_create(3,kernel_count);
-                        GMA_double *ATA_matrix = GMA_double_create(3,3);
-                        
-                        GMA_double *ATAI_matrix = GMA_double_create(3,3);
-                        GMA_double *ATL_matrix = GMA_double_create(3,1);
-                        
-                        GMA_double *X_matrix = GMA_double_create(3,1);
-                        GMA_double *AX_matrix = GMA_double_create(kernel_count,1);
-                        GMA_double *V_matrix = GMA_double_create(kernel_count,1);
-                        
-                        GMA_double *tA_matrix = GMA_double_create(kernel_count, 3);
-                        GMA_double *tL_matrix = GMA_double_create(kernel_count, 1);
-                        GMA_double *tAT_matrix = GMA_double_create(3,kernel_count);
-                        GMA_double *tATA_matrix = GMA_double_create(3,3);
-                        
-                        GMA_double *tATAI_matrix = GMA_double_create(3,3);
-                        GMA_double *tATL_matrix = GMA_double_create(3,1);
-                        
-                        GMA_double *tX_matrix = GMA_double_create(3,1);
-                        GMA_double *tAX_matrix = GMA_double_create(kernel_count,1);
-                        GMA_double *tV_matrix = GMA_double_create(kernel_count,1);
-                        
-                        kernel_count = 0;
-                        
-                        sum_zr = 0;
-                        sum_zt = 0;
-                        
-                        for(int kr = -2 ; kr <= 2 ; kr++ )
-                        {
-                            for(int kc = -2 ; kc <= 2 ; kc++ )
-                            {
-                                int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
-                                int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
-                                if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
-                                {
-                                    ref_patch_vecs[kernel_count] = DEM[k_refindex];
-                                    tar_patch_vecs[kernel_count] = DEM_tar[k_tarindex];
-                                    
-                                    A_matrix->val[kernel_count][0] = kc*ref_grid_size;
-                                    A_matrix->val[kernel_count][1] = kr*ref_grid_size;
-                                    A_matrix->val[kernel_count][2] = 1.0;
-                                    L_matrix->val[kernel_count][0] = DEM[k_refindex];
-                                    
-                                    tA_matrix->val[kernel_count][0] = kc*tar_grid_size;
-                                    tA_matrix->val[kernel_count][1] = kr*tar_grid_size;
-                                    tA_matrix->val[kernel_count][2] = 1.0;
-                                    tL_matrix->val[kernel_count][0] = DEM_tar[k_tarindex];
-                                    
-                                    kernel_count++;
-                                }
-                            }
-                        }
-                        //double var_diff = fabs(sqrt(sum_zr/(double)kernel_count) - sqrt(sum_zt/(double)kernel_count));
-                        
-                        double k_ncc = Correlate(ref_patch_vecs, tar_patch_vecs, kernel_count);
-                        if (k_ncc != -99)
-                            k_ncc = (k_ncc + 1)/2.0;
+                        if(gcp_coord.m_X >= args.Min_X && gcp_coord.m_X <= args.Max_X && gcp_coord.m_Y >= args.Min_Y && gcp_coord.m_Y <= args.Max_Y)
+                            check_b = true;
                         else
-                            k_ncc = 0.0;
+                            check_b = false;
+                    }
+                    
+                    if(ref_img.m_X - 2 >= 0 && ref_img.m_X + 2 < ref_data_size.width && ref_img.m_Y - 2 >= 0 && ref_img.m_Y + 2 < ref_data_size.height &&
+                       tar_img.m_X - 2 >= 0 && tar_img.m_X + 2 < tar_data_size.width && tar_img.m_Y - 2 >= 0 && tar_img.m_Y + 2 < tar_data_size.height && check_b)
+                    {
+                        long ref_index = (int)(ref_img.m_Y)*ref_data_size.width + (int)(ref_img.m_X);
+                        long tar_index = (int)(tar_img.m_Y)*tar_data_size.width + (int)(tar_img.m_X);
                         
-                        GMA_double_Tran(A_matrix,AT_matrix);
-                        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                        GMA_double_inv(ATA_matrix,ATAI_matrix);
-                        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                        
-                        GMA_double_Tran(tA_matrix,tAT_matrix);
-                        GMA_double_mul(tAT_matrix,tA_matrix,tATA_matrix);
-                        GMA_double_inv(tATA_matrix,tATAI_matrix);
-                        GMA_double_mul(tAT_matrix,tL_matrix,tATL_matrix);
-                        GMA_double_mul(tATAI_matrix,tATL_matrix,tX_matrix);
-                        GMA_double_mul(tA_matrix,tX_matrix,tAX_matrix);
-                        GMA_double_sub(tAX_matrix,tL_matrix,tV_matrix);
-                        
-                        double N1 = X_matrix->val[0][0];
-                        double N2 = X_matrix->val[1][0];
-                        double N3 = 1.0;
-                        
-                        double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-                        double angle = acos(fabs(N3)/norm)*180/3.141592;
-                        
-                        if(angle <= 0 && angle >= -90)
-                            angle = fabs(angle);
-                        else if(angle <= -270 && angle >= -360)
-                            angle = 360 + angle;
-                        else if(angle >= 270 && angle <= 360)
-                            angle = 360 - angle;
-                        
-                        double aspect = 90 - atan2(N2,N1)*180/3.141592;
-                        
-                        N1 = tX_matrix->val[0][0];
-                        N2 = tX_matrix->val[1][0];
-                        N3 = 1.0;
-                        
-                        norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-                        double angle_tar = acos(fabs(N3)/norm)*180/3.141592;
-                        
-                        if(angle_tar <= 0 && angle_tar >= -90)
-                            angle_tar = fabs(angle_tar);
-                        else if(angle_tar <= -270 && angle_tar >= -360)
-                            angle_tar = 360 + angle_tar;
-                        else if(angle_tar >= 270 && angle_tar <= 360)
-                            angle_tar = 360 - angle_tar;
-                        
-                        double aspect_tar = 90 - atan2(N2,N1)*180/3.141592;
-                        
-                        double SS = 1 - fabs(angle - angle_tar)/90;
-                        double SA = 1 - fabs(aspect - aspect_tar)/360;
-                        
-                        double W = 40*k_ncc + 40*SS + 20*SA;
-                        
-                        if(W > W_th && fabs(DEM[ref_index] - DEM_tar[tar_index]) < dH_th)
+                        if(DEM[ref_index] > -100 && DEM[ref_index] < 10000 && DEM_tar[tar_index] > -100 && DEM_tar[tar_index] < 10000)
                         {
-                            long t_col_int   = (long)(tar_img.m_X + 0.01);
-                            long t_row_int   = (long)(tar_img.m_Y + 0.01);
-                            
-                            double dcol        = tar_img.m_X - t_col_int;
-                            double drow        = tar_img.m_Y - t_row_int;
-                            
-                            long index1,index2,index3, index4;
-                            double value1, value2, value3, value4, value;
-                            
-                            index1  = (t_col_int   ) + (t_row_int   )*(long)tar_data_size.width;
-                            index2  = (t_col_int +1) + (t_row_int   )*(long)tar_data_size.width;
-                            index3  = (t_col_int   ) + (t_row_int +1)*(long)tar_data_size.width;
-                            index4  = (t_col_int +1) + (t_row_int +1)*(long)tar_data_size.width;
-                            
-                            value1      = DEM_tar[index1];
-                            value2      = DEM_tar[index2];
-                            value3      = DEM_tar[index3];
-                            value4      = DEM_tar[index4];
-                            
-                            if(value1 > -100 && value1 < 10000 && value2 > -100 && value2 < 10000 && value3 > -100 && value3 < 10000 && value4 > -100 && value4 < 10000)
+                            double sum_zr = 0;
+                            double sum_zt = 0;
+                            int kernel_count = 0;
+                            for(int kr = -2 ; kr <= 2 ; kr++ )
                             {
-                                value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-                                + value3*(1-dcol)*drow + value4*dcol*drow;
-                                
-                                if(fabs(DEM[ref_index] - value) < 30)
+                                for(int kc = -2 ; kc <= 2 ; kc++ )
                                 {
-                                    sum_diff += (DEM[ref_index] - value);
-                                    diff_count++;
+                                    int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
+                                    int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
                                     
-                                    save_pts[gcp_index].m_X = gcp_coord.m_X + Coreg_param[1];
-                                    save_pts[gcp_index].m_Y = gcp_coord.m_Y + Coreg_param[0];
-                                    save_pts[gcp_index].m_Z = (DEM[ref_index] - value);
-                                    save_pts[gcp_index].flag = 1;
-                                    //printf("W kncc ss sa %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,angle,angle_tar,aspect,aspect_tar,save_pts[gcp_index].m_Z);
+                                    if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
+                                    {
+                                        kernel_count++;
+                                        //printf("DEM value %f\t%f\n",DEM[0][k_refindex],DEM[ti][k_tarindex]);
+                                    }
                                 }
                             }
+                            
+                            double* ref_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
+                            double* tar_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
+                            
+                            GMA_double *A_matrix = GMA_double_create(kernel_count, 3);
+                            GMA_double *L_matrix = GMA_double_create(kernel_count, 1);
+                            GMA_double *AT_matrix = GMA_double_create(3,kernel_count);
+                            GMA_double *ATA_matrix = GMA_double_create(3,3);
+                            
+                            GMA_double *ATAI_matrix = GMA_double_create(3,3);
+                            GMA_double *ATL_matrix = GMA_double_create(3,1);
+                            
+                            GMA_double *X_matrix = GMA_double_create(3,1);
+                            GMA_double *AX_matrix = GMA_double_create(kernel_count,1);
+                            GMA_double *V_matrix = GMA_double_create(kernel_count,1);
+                            
+                            GMA_double *tA_matrix = GMA_double_create(kernel_count, 3);
+                            GMA_double *tL_matrix = GMA_double_create(kernel_count, 1);
+                            GMA_double *tAT_matrix = GMA_double_create(3,kernel_count);
+                            GMA_double *tATA_matrix = GMA_double_create(3,3);
+                            
+                            GMA_double *tATAI_matrix = GMA_double_create(3,3);
+                            GMA_double *tATL_matrix = GMA_double_create(3,1);
+                            
+                            GMA_double *tX_matrix = GMA_double_create(3,1);
+                            GMA_double *tAX_matrix = GMA_double_create(kernel_count,1);
+                            GMA_double *tV_matrix = GMA_double_create(kernel_count,1);
+                            
+                            kernel_count = 0;
+                            
+                            sum_zr = 0;
+                            sum_zt = 0;
+                            
+                            for(int kr = -2 ; kr <= 2 ; kr++ )
+                            {
+                                for(int kc = -2 ; kc <= 2 ; kc++ )
+                                {
+                                    int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
+                                    int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
+                                    if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
+                                    {
+                                        ref_patch_vecs[kernel_count] = DEM[k_refindex];
+                                        tar_patch_vecs[kernel_count] = DEM_tar[k_tarindex];
+                                        
+                                        A_matrix->val[kernel_count][0] = kc*ref_grid_size;
+                                        A_matrix->val[kernel_count][1] = kr*ref_grid_size;
+                                        A_matrix->val[kernel_count][2] = 1.0;
+                                        L_matrix->val[kernel_count][0] = DEM[k_refindex];
+                                        
+                                        tA_matrix->val[kernel_count][0] = kc*tar_grid_size;
+                                        tA_matrix->val[kernel_count][1] = kr*tar_grid_size;
+                                        tA_matrix->val[kernel_count][2] = 1.0;
+                                        tL_matrix->val[kernel_count][0] = DEM_tar[k_tarindex];
+                                        
+                                        kernel_count++;
+                                    }
+                                }
+                            }
+                            //double var_diff = fabs(sqrt(sum_zr/(double)kernel_count) - sqrt(sum_zt/(double)kernel_count));
+                            
+                            double k_ncc = Correlate(ref_patch_vecs, tar_patch_vecs, kernel_count);
+                            if (k_ncc != -99)
+                                k_ncc = (k_ncc + 1)/2.0;
+                            else
+                                k_ncc = 0.0;
+                            
+                            GMA_double_Tran(A_matrix,AT_matrix);
+                            GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                            GMA_double_inv(ATA_matrix,ATAI_matrix);
+                            GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                            GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                            GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                            GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                            
+                            GMA_double_Tran(tA_matrix,tAT_matrix);
+                            GMA_double_mul(tAT_matrix,tA_matrix,tATA_matrix);
+                            GMA_double_inv(tATA_matrix,tATAI_matrix);
+                            GMA_double_mul(tAT_matrix,tL_matrix,tATL_matrix);
+                            GMA_double_mul(tATAI_matrix,tATL_matrix,tX_matrix);
+                            GMA_double_mul(tA_matrix,tX_matrix,tAX_matrix);
+                            GMA_double_sub(tAX_matrix,tL_matrix,tV_matrix);
+                            
+                            double N1 = X_matrix->val[0][0];
+                            double N2 = X_matrix->val[1][0];
+                            double N3 = 1.0;
+                            
+                            double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+                            double angle = acos(fabs(N3)/norm)*180/3.141592;
+                            
+                            if(angle <= 0 && angle >= -90)
+                                angle = fabs(angle);
+                            else if(angle <= -270 && angle >= -360)
+                                angle = 360 + angle;
+                            else if(angle >= 270 && angle <= 360)
+                                angle = 360 - angle;
+                            
+                            double aspect = 90 - atan2(N2,N1)*180/3.141592;
+                            
+                            N1 = tX_matrix->val[0][0];
+                            N2 = tX_matrix->val[1][0];
+                            N3 = 1.0;
+                            
+                            norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+                            double angle_tar = acos(fabs(N3)/norm)*180/3.141592;
+                            
+                            if(angle_tar <= 0 && angle_tar >= -90)
+                                angle_tar = fabs(angle_tar);
+                            else if(angle_tar <= -270 && angle_tar >= -360)
+                                angle_tar = 360 + angle_tar;
+                            else if(angle_tar >= 270 && angle_tar <= 360)
+                                angle_tar = 360 - angle_tar;
+                            
+                            double aspect_tar = 90 - atan2(N2,N1)*180/3.141592;
+                            
+                            double SS = 1 - fabs(angle - angle_tar)/90;
+                            double SA = 1 - fabs(aspect - aspect_tar)/360;
+                            
+                            double W = 40*k_ncc + 40*SS + 20*SA;
+                            
+                            if(W > W_th && (DEM[ref_index] - DEM_tar[tar_index]) < dH_th + average && (DEM[ref_index] - DEM_tar[tar_index]) > - dH_th + average)
+                            {
+                                long t_col_int   = (long)(tar_img.m_X + 0.01);
+                                long t_row_int   = (long)(tar_img.m_Y + 0.01);
+                                
+                                double dcol        = tar_img.m_X - t_col_int;
+                                double drow        = tar_img.m_Y - t_row_int;
+                                
+                                long index1,index2,index3, index4;
+                                double value1, value2, value3, value4, value;
+                                
+                                index1  = (t_col_int   ) + (t_row_int   )*(long)tar_data_size.width;
+                                index2  = (t_col_int +1) + (t_row_int   )*(long)tar_data_size.width;
+                                index3  = (t_col_int   ) + (t_row_int +1)*(long)tar_data_size.width;
+                                index4  = (t_col_int +1) + (t_row_int +1)*(long)tar_data_size.width;
+                                
+                                value1      = DEM_tar[index1];
+                                value2      = DEM_tar[index2];
+                                value3      = DEM_tar[index3];
+                                value4      = DEM_tar[index4];
+                                
+                                if(value1 > -100 && value1 < 10000 && value2 > -100 && value2 < 10000 && value3 > -100 && value3 < 10000 && value4 > -100 && value4 < 10000)
+                                {
+                                    value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
+                                    + value3*(1-dcol)*drow + value4*dcol*drow;
+                                    
+                                    if((DEM[ref_index] - value) < dH_th + average && (DEM[ref_index] - value) > -dH_th + average)
+                                    {
+                                        sum_diff += (DEM[ref_index] - value);
+                                        diff_count++;
+                                        
+                                        save_pts[gcp_index].m_X = gcp_coord.m_X + Coreg_param[1];
+                                        save_pts[gcp_index].m_Y = gcp_coord.m_Y + Coreg_param[0];
+                                        save_pts[gcp_index].m_Z = (DEM[ref_index] - value);
+                                        save_pts[gcp_index].flag = true;
+                                        //printf("W kncc ss sa %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,angle,angle_tar,aspect,aspect_tar,save_pts[gcp_index].m_Z);
+                                    }
+                                    else
+                                    {
+                                        save_pts[gcp_index].flag = false;
+                                    }
+                                }
+                            }
+                            
+                            //if(W > 90 && fabs(ref_dem[ref_index] - tar_dem[tar_index]) >= 30)
+                            //    printf("W dz %f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,ref_dem[ref_index] - tar_dem[tar_index]);
+                            
+                            GMA_double_destroy(A_matrix);
+                            GMA_double_destroy(L_matrix);
+                            GMA_double_destroy(AT_matrix);
+                            GMA_double_destroy(ATA_matrix);
+                            GMA_double_destroy(ATAI_matrix);
+                            GMA_double_destroy(ATL_matrix);
+                            GMA_double_destroy(X_matrix);
+                            GMA_double_destroy(AX_matrix);
+                            GMA_double_destroy(V_matrix);
+                            
+                            GMA_double_destroy(tA_matrix);
+                            GMA_double_destroy(tL_matrix);
+                            GMA_double_destroy(tAT_matrix);
+                            GMA_double_destroy(tATA_matrix);
+                            GMA_double_destroy(tATAI_matrix);
+                            GMA_double_destroy(tATL_matrix);
+                            GMA_double_destroy(tX_matrix);
+                            GMA_double_destroy(tAX_matrix);
+                            GMA_double_destroy(tV_matrix);
+                            
+                            free(ref_patch_vecs);
+                            free(tar_patch_vecs);
                         }
-                        
-                        //if(W > 90 && fabs(ref_dem[ref_index] - tar_dem[tar_index]) >= 30)
-                        //    printf("W dz %f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,ref_dem[ref_index] - tar_dem[tar_index]);
-                        
-                        GMA_double_destroy(A_matrix);
-                        GMA_double_destroy(L_matrix);
-                        GMA_double_destroy(AT_matrix);
-                        GMA_double_destroy(ATA_matrix);
-                        GMA_double_destroy(ATAI_matrix);
-                        GMA_double_destroy(ATL_matrix);
-                        GMA_double_destroy(X_matrix);
-                        GMA_double_destroy(AX_matrix);
-                        GMA_double_destroy(V_matrix);
-                        
-                        GMA_double_destroy(tA_matrix);
-                        GMA_double_destroy(tL_matrix);
-                        GMA_double_destroy(tAT_matrix);
-                        GMA_double_destroy(tATA_matrix);
-                        GMA_double_destroy(tATAI_matrix);
-                        GMA_double_destroy(tATL_matrix);
-                        GMA_double_destroy(tX_matrix);
-                        GMA_double_destroy(tAX_matrix);
-                        GMA_double_destroy(tV_matrix);
-                        
-                        free(ref_patch_vecs);
-                        free(tar_patch_vecs);
                     }
                 }
+                
+                total_ET = time(0);
+                total_gap = difftime(total_ET,total_ST);
+                printf("\nselect vertical CPs time %f\t%d\n\n",total_gap,diff_count);
+                //total_ST = time(0);
+                
+                average = sum_diff/diff_count;
+                
+                float* save_Z = (float*)calloc(sizeof(float),diff_count);
+                float sum_var = 0;
+                
+                long count = 0;
+                
+                char dem_gcp_filename[500];
+                sprintf(dem_gcp_filename,"%s/DEM_gcps_%d.txt",args.Outputpath,ti);
+                FILE *fid_dem_gcp = fopen(dem_gcp_filename,"w");
+                
+                for(long row = 0; row < RA_iter_counts ; row++)
+                {
+                    if(save_pts[row].flag == true)
+                    {
+                        save_Z[count] = save_pts[row].m_Z;
+                        
+                        sum_var += (average - save_pts[row].m_Z)*(average - save_pts[row].m_Z);
+                        fprintf(fid_dem_gcp,"%f\t%f\t%f\n",save_pts[row].m_X,save_pts[row].m_Y,save_pts[row].m_Z);
+                        count++;
+                    }
+                }
+                fclose(fid_dem_gcp);
+            
+                MED_z = quickselect(save_Z, diff_count, (int)(diff_count/2.0));
+                //float MED_z = median(diff_count,save_Z,-(dH_th+5),dH_th+5);
+                
+                SD_z = sqrt(sum_var/diff_count);
+                
+                
+                float iter_dH_th = SD_z*3.29;
+                
+                change_std_ratio = fabs(pre_std - SD_z)/pre_std;
+                
+                if(change_std_ratio < 0.01 || dH_th < iter_dH_th)
+                    check_stop = true;
+                
+                pre_std = SD_z;
+                dH_th = iter_dH_th;
+                
+                while_iter++;
+                
+                double sum_var_med = 0;
+                
+    #pragma omp parallel for reduction(+:sum_var_med) schedule(guided)
+                for(int i=0;i<diff_count;i++)
+                {
+                    sum_var_med += (MED_z -save_Z[i])*(MED_z -save_Z[i]);
+                }
+                
+                SD_z_med = sqrt(sum_var_med/diff_count);
+                
+                free(save_Z);
+                free(save_pts);
+                
+                total_ET = time(0);
+                total_gap = difftime(total_ET,total_ST);
+                printf("\nTz average and variation cal time %d\t%f\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\n\n",while_iter, total_gap,count,diff_count,average,MED_z,SD_z,SD_z_med,change_std_ratio,dH_th);
+                total_ST = time(0);
             }
             
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nselect vertical CPs time %f\n\n",total_gap);
-            //total_ST = time(0);
             
-            double average = sum_diff/diff_count;
-            
-            float* save_Z = (float*)calloc(sizeof(float),diff_count);
-            float sum_var = 0;
             float min_save_Z = 100000;
             float max_save_Z = -100000;
-            long count = 0;
-            
-            char dem_gcp_filename[500];
-            sprintf(dem_gcp_filename,"%s/DEM_gcps_%d.txt",args.Outputpath,ti);
-            FILE *fid_dem_gcp = fopen(dem_gcp_filename,"w");
-            
-            for(long row = 0; row < RA_iter_counts ; row++)
-            {
-                if(save_pts[row].flag == 1)
-                {
-                    save_Z[count] = save_pts[row].m_Z;
-                    
-                    sum_var += (average - save_pts[row].m_Z)*(average - save_pts[row].m_Z);
-                    fprintf(fid_dem_gcp,"%f\t%f\t%f\n",save_pts[row].m_X,save_pts[row].m_Y,save_pts[row].m_Z);
-                    count++;
-                }
-            }
-            fclose(fid_dem_gcp);
-            
-            float MED_z = quickselect(save_Z, diff_count, (int)(diff_count/2.0));
-            //float MED_z = median(diff_count,save_Z,-(dH_th+5),dH_th+5);
-            
-            double SD_z = sqrt(sum_var/diff_count);
-            
-            double sum_var_med = 0;
-            
-#pragma omp parallel for reduction(+:sum_var_med) schedule(guided)
-            for(int i=0;i<diff_count;i++)
-            {
-                sum_var_med += (MED_z -save_Z[i])*(MED_z -save_Z[i]);
-            }
-            
-            double SD_z_med = sqrt(sum_var_med/diff_count);
-            
-            free(save_Z);
-            free(save_pts);
-            
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nTz average and variation cal time %f\t%d\t%d\t%f\t%f\t%f\t%f\n\n",total_gap,count,diff_count,average,MED_z,SD_z,SD_z_med);
-            total_ST = time(0);
             
             float* co_dem = NULL;
             float* copoly_dem = NULL;
@@ -26513,7 +26727,28 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
     total_ST = time(0);
     int py_kernel_size = 3;
     
-    if(OpenProject(_filename,proinfo,args))
+    bool check_start = true;
+    if(args.check_txt_input == 0)
+    {
+        check_start = OpenProject(_filename,proinfo,args);
+    }
+    else if(args.check_txt_input == 1)
+    {
+        FILE *fid_read = fopen(args.DEM_input_file,"r");
+        
+        args.number_of_images = 0;
+        while( (fscanf(fid_read,"%s\n",args.Image[args.number_of_images])) != EOF )
+        {
+            printf("input DEM %s\n",args.Image[args.number_of_images]);
+            sprintf(proinfo->Imagefilename[args.number_of_images],"%s",args.Image[args.number_of_images]);
+            args.number_of_images++;
+        }
+        fclose(fid_read);
+        proinfo->number_of_images = args.number_of_images;
+        printf("image num %d\n",args.number_of_images);
+    }
+    
+    if(check_start)
     {
         char temp_filepath[500];
         
@@ -26598,133 +26833,67 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
         free(ref_fchar);
         free(reffilename);
         
-        total_ET = time(0);
-        total_gap = difftime(total_ET,total_ST);
-        printf("\nRef DEM loading time %f\n\n",total_gap);
-        total_ST = time(0);
-        
         //create pyramidimage
         SetPySizes(data_size_ref, ref_dem_size, py_level);
         
-        float **SubImages_ref = (float**)malloc(sizeof(float*)*(py_level+1));
-        uint16 **DEM_slope = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
-        uint16 **DEM_aspect = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
+        //float **SubImages_ref = (float**)malloc(sizeof(float*)*(py_level+1));
+        //TINinfo tininfo_ref;
+        F3DPOINT *select_pts = NULL;
+        long ref_tin_point_num = 0;
         
-        bool check_slope_aspect = false;
-        for(int level = 0 ; level <= py_level ; level++)
+        //for(int level = 0 ; level <= py_level ; level++)
         {
             CSize data_size;
             long int data_length;
-            long Py_data_length = (long)data_size_ref[level].width*(long)data_size_ref[level].height;
             char pyimage[500];
             char pyslope[500];
             char pyascpect[500];
-            sprintf(pyimage,"%s/%spyimage_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
-            sprintf(pyslope,"%s/%sslope_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
-            sprintf(pyascpect,"%s/%saspect_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
+            //sprintf(pyimage,"%s/%spyimage_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
+            //sprintf(pyslope,"%s/%sslope_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
+            //sprintf(pyascpect,"%s/%saspect_lv_%d.tif",args.Outputpath,DEM_name_refoutfile,level);
             
-            printf("%s\n%s\n%s\n",pyimage,pyslope,pyascpect);
+            //printf("%s\n%s\n%s\n",pyimage,pyslope,pyascpect);
             
-            DEM_slope[level] = (uint16*)calloc(sizeof(uint16),Py_data_length);
-            DEM_aspect[level] = (uint16*)calloc(sizeof(uint16),Py_data_length);
-            
+            bool check_slope_aspect = false;
             long tin_point_num = 0;
             long tri_count = 0;
-            F3DPOINT *select_pts = NULL;
             
-            if(level == py_level)
-                check_slope_aspect = true;
             
-            if(level == 0)
+            check_slope_aspect = false;
+            
+            /*if(level == 0)
             {
                 data_size = data_size_ref[level];
                 data_length = (long int)data_size.height*(long int)data_size.width;
                 SubImages_ref[level] = (float*)calloc(sizeof(float),data_length);
-                select_pts = CreateImagePyramid_DEM(DEM, ref_dx, ImageBoundary_ref, level, data_size, 5, (double)1.6, SubImages_ref[level], DEM_slope[level], DEM_aspect[level],&tin_point_num,check_slope_aspect);
+                select_pts = CreateImagePyramid_DEM(DEM, ref_dx, ImageBoundary_ref, ImageBoundary_ref,level, data_size, 5, (double)1.6, SubImages_ref[level], &tin_point_num,check_slope_aspect);
             }
-            else
+            /*else
             {
                 data_size = data_size_ref[level-1];
                 data_length = (long int)data_size.height*(long int)data_size.width;
                 SubImages_ref[level] = (float*)calloc(sizeof(float),data_length);
-                select_pts = CreateImagePyramid_DEM(SubImages_ref[level-1], ref_dx*pwrtwo(level), ImageBoundary_ref, level, data_size, 5, (double)1.6, SubImages_ref[level], DEM_slope[level], DEM_aspect[level],&tin_point_num,check_slope_aspect);
-            }
+                select_pts = CreateImagePyramid_DEM(SubImages_ref[level-1], ref_dx*pwrtwo(level), ImageBoundary_ref, ImageBoundary_ref,level, data_size, 5, (double)1.6, SubImages_ref[level], &tin_point_num,check_slope_aspect);
+            }*/
             
-            printf("select point %d\n",tin_point_num);
+            //if(!check_slope_aspect)
+            //    free(select_pts);
+            //else
+            //    ref_tin_point_num = tin_point_num;
             
-            if(check_slope_aspect)
-            {
-                UI3DPOINT *trilists;
-                
-                double min_max[4] = {0, 0, (data_size_ref[level].width-1), (data_size_ref[level].height-1)};
-                
-                UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*tin_point_num*4);
-                
-                //Save triangulation and delete it since we will not use it
-                FullTriangulation *origTri = TINCreate_float(select_pts, tin_point_num, t_trilists, min_max,&tri_count, 1);
-                delete origTri;
-                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(tri_count));
-                
-                printf("tri_count %d\n",tri_count);
-                
-                long i = 0;
-                for(i=0;i<tri_count;i++)
-                {
-                    trilists[i].m_X = t_trilists[i].m_X;
-                    trilists[i].m_Y = t_trilists[i].m_Y;
-                    trilists[i].m_Z = t_trilists[i].m_Z;
-                }
-                
-                free(t_trilists);
-                
-                SetHeightRange_slope_aspect(tin_point_num, tri_count, select_pts, trilists, min_max, data_size_ref[level], DEM_slope[level], DEM_aspect[level]);
-                
-                printf("done slope_aspect\n");
-                //free(select_pts);
-                free(trilists);
-                free(select_pts);
-                /*
-                total_ET = time(0);
-                total_gap = difftime(total_ET,total_ST);
-                printf("\n level %d\tpy and slope, aspect time %f\n\n",level,total_gap);
-                total_ST = time(0);
-                */
-                WriteGeotiff(pyimage, SubImages_ref[level], data_size_ref[level].width, data_size_ref[level].height, ref_dx*pwrtwo(level), ref_minX, ref_maxY, param.projection, param.zone, Hemisphere, 4);
-                WriteGeotiff(pyslope, DEM_slope[level], data_size_ref[level].width, data_size_ref[level].height, ref_dx*pwrtwo(level), ref_minX, ref_maxY, param.projection, param.zone, Hemisphere, 12);
-                WriteGeotiff(pyascpect, DEM_aspect[level], data_size_ref[level].width, data_size_ref[level].height, ref_dx*pwrtwo(level), ref_minX, ref_maxY, param.projection, param.zone, Hemisphere, 12);
-                //printf("preprocessing size level ID %d\t%d\t%d\n",level,data_size.width,data_size.height);
-            }
-            
-            
-            free(DEM_slope[level]);
-            free(DEM_aspect[level]);
+            printf("select point %d\n",ref_tin_point_num);
         }
-        for(int level = 0 ; level <= py_level ; level++)
-            free(SubImages_ref[level]);
-        
-        free(SubImages_ref);
-        free(DEM_slope);
-        free(DEM_aspect);
-        free(DEM);
         
         total_ET = time(0);
         total_gap = difftime(total_ET,total_ST);
-        printf("\nRef pyramid time %f\n\n",total_gap);
+        printf("\nRef preparation time %f\n\n",total_gap);
         total_ST = time(0);
-        
-        exit(1);
-        /*
-        double ImageBoundary_ref[4] = {0.0};
-        ImageBoundary_ref[0] = ref_minX;
-        ImageBoundary_ref[1] = ref_maxY - ref_dy*ref_dem_size.height;
-        ImageBoundary_ref[2] = ref_minX + ref_dx*ref_dem_size.width;
-        ImageBoundary_ref[3] = ref_maxY;
         
         sprintf(out_file,"%s/DEM_coreg_result.txt",args.Outputpath);
         FILE* fid_out         = fopen(out_file,"w");
         fprintf(fid_out,"ref DEM name\t%s\n",DEM_name_refoutfile);
         //printf("ref dem %s\n",DEM_name_refoutfile);
-        fprintf(fid_out,"DEM name\t\t\t\t\t\t\tTx[meter]\tTy[meter]\tTz(average)\tTz(median)\tTx_std[meter]\tTy_std[meter]\tTz_std(average)\tTz_std(median)\tControls_rho\tMean_all(avg)\tMedian_all(avg)\tdz_std(avg)\tMean_all(med)\tMedian_all(med)\tdz_std(med)\tNumberOfCPs\tprocessing time\n");
+        fprintf(fid_out,"DEM name\t\t\t\t\t\t\tSigma0[meter]\tTx[meter]\tTy[meter]\tTz[meter]\tTx_std[meter]\tTy_std[meter]\tTz_std\tDistance(average)\tDistance_std(average)\tDistance(mean)\tDistance_std(mean)\tMean_all(avg)\tMedian_all(avg)\tdz_std(avg)\tMean_all(med)\tMedian_all(med)\tdz_std(med)\tNumberOfCPs\tprocessing time\n");
         
         for(int ti = 1; ti < proinfo->number_of_images ; ti++)
         {
@@ -26747,6 +26916,12 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
             
             tar_dem_size = ReadGeotiff_info_dxy(tar_dem_name,&tar_minX,&tar_maxY,&tar_dx,&tar_dy);
             
+            double ImageBoundary_tar[4] = {0.0};
+            ImageBoundary_tar[0] = tar_minX;
+            ImageBoundary_tar[1] = tar_maxY - tar_dy*tar_dem_size.height;
+            ImageBoundary_tar[2] = tar_minX + tar_dx*tar_dem_size.width;
+            ImageBoundary_tar[3] = tar_maxY;
+            
             cols[0] = 0;
             cols[1] = tar_dem_size.width;
             
@@ -26764,7 +26939,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                 ref_fchar[c] = ref_no_ext[c];
             }
             ref_fchar[char_size-3] = '\0';
-            sprintf(DEM_name_outfile,"%sdem",ref_fchar);
+            sprintf(DEM_name_outfile,"%s",ref_fchar);
             free(ref_no_ext);
             free(ref_fchar);
             free(reffilename);
@@ -26788,56 +26963,16 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
             sprintf(ref_hill_name,"%s/%s_ref_hill.tif",args.Outputpath,DEM_name_outfile);
             sprintf(tar_hill_name,"%s/%s_tar_hill.tif",args.Outputpath,DEM_name_outfile);
             
-            //create pyramidimage
-            SetPySizes(data_size_tar, tar_dem_size, py_level);
-            
-            unsigned char **SubImages_tar = (unsigned char**)malloc(sizeof(unsigned char*)*(py_level+1));
-            
-            for(int level = 0 ; level <= py_level ; level++)
-            {
-                CSize data_size;
-                long int data_length;
-                
-                if(level == 0)
-                {
-                    data_size = data_size_tar[level];
-                    
-                    data_length = (long int)data_size.height*(long int)data_size.width;
-                    SubImages_tar[level] = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
-                    memcpy(SubImages_tar[level],tar_hill,sizeof(unsigned char)*(long)data_length);
-                }
-                else
-                {
-                    data_size = data_size_tar[level-1];
-                    
-                    data_length = (long int)data_size.height*(long int)data_size.width;
-                    SubImages_tar[level] = (unsigned char*)malloc(sizeof(unsigned char)*data_length);
-                    
-                    SubImages_tar[level]= CreateImagePyramid_BYTE(SubImages_tar[level-1],data_size,py_kernel_size,(double)1.6);
-                }
-                //printf("preprocessing size level ID %d\t%d\t%d\t%d\n",level,ti,data_size.width,data_size.height);
-            }
-            free(tar_hill);
-            
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nTar pyramid time %f\n\n",total_gap);
-            total_ST = time(0);
-            
-            double ImageBoundary_tar[4] = {0.0};
+            //overlapped boudnary
             double Boundary[4] = {0.0};
-            double GridSize_width, GridSize_height;
-            
+            CSize GridSize;
             Boundary[0] = ImageBoundary_ref[0];
             Boundary[1] = ImageBoundary_ref[1];
             Boundary[2] = ImageBoundary_ref[2];
             Boundary[3] = ImageBoundary_ref[3];
             
-            ImageBoundary_tar[0] = tar_minX;
-            ImageBoundary_tar[1] = tar_maxY - tar_dy*tar_dem_size.height;
-            ImageBoundary_tar[2] = tar_minX + tar_dx*tar_dem_size.width;
-            ImageBoundary_tar[3] = tar_maxY;
-            
+            printf("ref boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            printf("tar boundary %f\t%f\t%f\t%f\n",ImageBoundary_tar[0],ImageBoundary_tar[1],ImageBoundary_tar[2],ImageBoundary_tar[3]);
             if(Boundary[0] < ImageBoundary_tar[0])
                 Boundary[0] = ImageBoundary_tar[0];
             else
@@ -26874,539 +27009,1462 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                 Boundary[2] = args.Max_X;
                 Boundary[3] = args.Max_Y;
             }
+            printf("overlapped boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
             
-            GridSize_width = Boundary[2] - Boundary[0];
-            GridSize_height = Boundary[3] - Boundary[1];
+            //create pyramidimage
+            SetPySizes(data_size_tar, tar_dem_size, py_level);
             
+            //float **SubImages_tar = (float**)malloc(sizeof(float*)*(py_level+1));
+            F3DPOINT *select_pts_tar = (F3DPOINT*)malloc(sizeof(F3DPOINT));
+            long tin_point_num = 0;
             
-            int iter_counts;
-            int RA_iter_counts;
-            D2DPOINT adjust_std;
-            D2DPOINT *MPs_2D = NULL;
-            double avg_roh;
-            double ImageAdjust_coreg[2] = {0.0};
+            //TINinfo tininfo_tar;
+            float min_H = 1000000;
+            float max_H = -1000000;
             
-            for(int level = py_level ; level >= 0 ; level --)
+            //for(int level = 0 ; level <= py_level ; level++)
             {
-                double Grid_space = ceil((ref_dx + ref_dy)/2.0)*pwrtwo(py_level+2);
-                if(Grid_space < 50)
-                    Grid_space = 50;
-                //printf("image coregistration gridspace %d\t%d\n",level,Grid_space[level]);
+                CSize data_size;
+                long int data_length;
+                char pyimage[500];
+                char pyslope[500];
+                char pyascpect[500];
+                char pyncc[500];
                 
-                //printf("Processing level %d\n",level);
-                printf("level\t\trow(pixel)\tcolumn(pixel)\tTy(meter)\tTx(meter)\tGCPS #\tavg_roh\t# of iteration\n");
+                select_pts_tar = SettingControls(DEM, DEM_tar, ref_dx, tar_dx, ImageBoundary_ref, ImageBoundary_tar, Boundary, ref_dem_size, tar_dem_size, &tin_point_num);
+                
+                /*if(level == 0)
+                {
+                    data_size = data_size_tar[level];
+                    data_length = (long int)data_size.height*(long int)data_size.width;
+                    SubImages_tar[level] = (float*)calloc(sizeof(float),data_length);
+                    select_pts_tar[level] = CreateImagePyramid_DEM(DEM_tar, tar_dx, ImageBoundary_tar, Boundary, level, data_size, 5, (double)1.6, SubImages_tar[level], &tin_point_num[level],check_slope_aspect);
+                }
+                else
+                {
+                    data_size = data_size_tar[level-1];
+                    data_length = (long int)data_size.height*(long int)data_size.width;
+                    SubImages_tar[level] = (float*)calloc(sizeof(float),data_length);
+                    select_pts_tar[level] = CreateImagePyramid_DEM(SubImages_tar[level-1], tar_dx*pwrtwo(level), ImageBoundary_tar,Boundary, level, data_size, 5, (double)1.6, SubImages_tar[level], &tin_point_num[level],check_slope_aspect);
+                }
+                */
+                printf("select point %d\n",tin_point_num);
+            }
+            
+            total_ET = time(0);
+            total_gap = difftime(total_ET,total_ST);
+            printf("\nTar pyramid time %f\n\n",total_gap);
+            total_ST = time(0);
+            
+            //for(int level = py_level ; level >= py_level ; level --)
+            {
+                for(int index = 0 ; index < tin_point_num ; index ++)
+                {
+                    if(select_pts_tar[index].flag)
+                    {
+                        if(min_H > select_pts_tar[index].m_Z)
+                            min_H = select_pts_tar[index].m_Z;
+                        if(max_H < select_pts_tar[index].m_Z)
+                            max_H = select_pts_tar[index].m_Z;
+                        
+                    }
+                }
+                
+                F3DPOINT coord_center, coord_scale;
+                coord_center.m_X = (Boundary[2] - Boundary[0])/2.0 + Boundary[0];
+                coord_center.m_Y = (Boundary[3] - Boundary[1])/2.0 + Boundary[1];
+                coord_center.m_Z = (max_H - min_H)/2.0 + min_H;
+                coord_scale.m_X = (Boundary[2] - Boundary[0])/2.0;
+                coord_scale.m_Y = (Boundary[3] - Boundary[1])/2.0;
+                coord_scale.m_Z = (max_H - min_H)/2.0;
+                
+                //coord_scale.m_Y = coord_scale.m_Z;
+                //coord_scale.m_X = coord_scale.m_Z;
+                
+                //coord_scale.m_Y = coord_scale.m_X;
+                //coord_scale.m_Z = coord_scale.m_X;
+                
+                F3DPOINT min_nor_coord,max_nor_coord;
+                min_nor_coord.m_X = (Boundary[0] - coord_center.m_X)/coord_scale.m_X;
+                min_nor_coord.m_Y = (Boundary[1] - coord_center.m_Y)/coord_scale.m_Y;
+                min_nor_coord.m_Z = (min_H - coord_center.m_Z)/coord_scale.m_Z;
+                
+                max_nor_coord.m_X = 1;//(Boundary[2] - coord_center.m_X)/coord_scale.m_X;
+                max_nor_coord.m_Y = 1;//(Boundary[3] - coord_center.m_Y)/coord_scale.m_Y;
+                max_nor_coord.m_Z = 1;//(max_H - coord_center.m_Z)/coord_scale.m_Z;
+                
+                char pyimage[500];
+                char pyslope[500];
+                char pyascpect[500];
+                char pyncc[500];
+                
+                printf("total pts %d\n",tin_point_num);
+                F3DPOINT *control_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                F3DPOINT *transformed_coord = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                float* SDistance = (float*)calloc(sizeof(float),tin_point_num);
+                float* weight = (float*)calloc(sizeof(float),tin_point_num);
+                F3DPOINT *tar_normal = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                F3DPOINT *tar_normal_ori = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                
+                F3DPOINT* normalized_pt = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                F3DPOINT *ref_normal = (F3DPOINT*)calloc(sizeof(F3DPOINT),tin_point_num);
+                
+                float *ref_iter_height = (float*)calloc(sizeof(float),tin_point_num);
+                float **ref_array = (float**)calloc(sizeof(float*),tin_point_num);
+                for(int index = 0 ; index < tin_point_num ; index ++)
+                {
+                    if(select_pts_tar[index].flag)
+                    {
+                        ref_array[index] = (float*)calloc(sizeof(float),9);
+                        transformed_coord[index].flag = true;
+                    }
+                }
+                
+                double level_ref_dx = ref_dx;
+                double level_tar_dx = tar_dx;
+                
+                GridSize.width = ceil((Boundary[2] - Boundary[0])/level_ref_dx);
+                GridSize.height = ceil((Boundary[3] - Boundary[1])/level_ref_dx);
+                
+                printf("GridSize %d\t%d\n",GridSize.width,GridSize.height);
+                /*TINinfo tininfo_ref;
+                TINinfo tininfo_tar;
+                
+                tininfo_ref.slope = (uint16*)calloc(sizeof(uint16),GridSize.width*GridSize.height);
+                tininfo_ref.aspect = (uint16*)calloc(sizeof(uint16),GridSize.width*GridSize.height);
+                
+                tininfo_tar.slope = (uint16*)calloc(sizeof(uint16),GridSize.width*GridSize.height);
+                tininfo_tar.aspect = (uint16*)calloc(sizeof(uint16),GridSize.width*GridSize.height);
+                tininfo_tar.ncc = (float*)calloc(sizeof(float),GridSize.width*GridSize.height);
+                */
+                //select candidata pts and compute surface distance
+                
+                Conformalparam conparam;
+                
+                conparam.scale = 1.0;
+                conparam.omega = 0.0;
+                conparam.phi = 0.0;
+                conparam.kappa = 0.0;
+                conparam.Tx = 0.0;
+                conparam.Ty = 0.0;
+                conparam.Tz = 0.0;
+                
+                float* dX = NULL;
+                float* sigmaX = (float*)calloc(sizeof(float),7);
+                float sigma0;
+                int while_iter = 0;
+                bool check_stop = false;
+                float W_th = 95;
+                time_t total_ST_ad = 0, total_ET_ad = 0;
+                total_ST_ad = time(0);
+                
+                float sum_distance = 0;
+                long final_number_of_selected = 0;
+                float average_distance, MED_distance;
+                double SD_distance=0;
+                double SD_z_med = 0;
+                double th_dH = 30;
+                double pre_sigma = 10000.0;
+                while(!check_stop && while_iter < 20)
+                {
+                    long number_of_selected = 0;
+                    sum_distance = 0;
+                    for(int index = 0 ; index < tin_point_num ; index ++)
+                    {
+                        //printf("pts %f\t%f\t%f\n",select_pts_tar[level][index].m_X,select_pts_tar[level][index].m_Y,select_pts_tar[level][index].m_Z);
+                        if(select_pts_tar[index].flag && transformed_coord[index].flag)
+                        {
+                            long tininfo_col = (long)((select_pts_tar[index].m_X - Boundary[0])/level_ref_dx + 0.5);
+                            long tininfo_row = (long)((Boundary[3] - select_pts_tar[index].m_Y)/level_ref_dx + 0.5);
+                            long tininfo_pos = tininfo_row*GridSize.width + tininfo_col;
+                            
+                            long ref_col = (long)((select_pts_tar[index].m_X - ImageBoundary_ref[0])/level_ref_dx + 0.5);
+                            long ref_row = (long)((ImageBoundary_ref[3] - select_pts_tar[index].m_Y)/level_ref_dx + 0.5);
+                            long ref_pos = ref_row*ref_dem_size.width + ref_col;
+                            
+                            long tar_col = (long)((select_pts_tar[index].m_X - ImageBoundary_tar[0])/level_ref_dx + 0.5);
+                            long tar_row = (long)((ImageBoundary_tar[3] - select_pts_tar[index].m_Y)/level_ref_dx + 0.5);
+                            long tar_pos = tar_row*tar_dem_size.width + tar_col;
+                            
+                            if(ref_col >= 0 && ref_col < ref_dem_size.width && ref_row >= 0 && ref_row < ref_dem_size.height &&
+                               tar_col >= 0 && tar_col < tar_dem_size.width && tar_row >= 0 && tar_row < tar_dem_size.height)
+                            {
+                                if(DEM[ref_pos] > -100 && DEM_tar[tar_pos] > -100 &&
+                                   tininfo_col >= 0 && tininfo_col < GridSize.width && tininfo_row >= 0 && tininfo_row < GridSize.height)
+                                {
+                                    if(while_iter == 0)
+                                        normalized_pt[index] = Normalize_coord(select_pts_tar[index],coord_center,coord_scale);
+                                    
+                                    transformed_coord[index] = ConformalTransform(normalized_pt[index],conparam);
+                                    
+                                    
+                                    if(while_iter == 0)
+                                    {
+                                        F3DPOINT ref_normal_ori;
+                                        ref_normal[index] = FindNormal(&ref_normal_ori,DEM, normalized_pt[index],coord_center,coord_scale, ImageBoundary_ref, conparam, ref_dem_size, level_ref_dx, ref_array[index], &ref_iter_height[index], 0);
+                                    }
+                                    if(ref_normal[index].m_X > -999)
+                                    {
+                                        float* tar_array = (float*)calloc(sizeof(float),9);
+                                        float tar_iter_height;
+                                        
+                                        tar_normal[index] = FindNormal(&tar_normal_ori[index],DEM_tar, transformed_coord[index],coord_center,coord_scale, ImageBoundary_tar, conparam, tar_dem_size, level_ref_dx, tar_array, &tar_iter_height, 1);
+                                        
+                                        if(tar_normal[index].m_X > -999)
+                                        {
+                                            float ref_slope, ref_aspect, tar_slope, tar_aspect;
+                                            SlopeAspect(ref_normal[index],coord_scale,&ref_slope,&ref_aspect);
+                                            SlopeAspect(tar_normal[index],coord_scale,&tar_slope,&tar_aspect);
+                                            float ncc = Correlate_float(ref_array[index],tar_array,9);
+                                            
+                                            if (ncc != -99)
+                                                ncc = (ncc + 1)/2.0;
+                                            else
+                                                ncc = 0.0;
+                                            
+                                            float ration_slope = 1 - fabs(ref_slope - tar_slope)/90.0;
+                                            float ration_aspect = 1 - fabs(ref_aspect - tar_aspect)/360.0;
+                                            
+                                            float W = (40*ncc + 40*ration_slope + 20*ration_aspect)/100.0;
+                                            if(while_iter < 4)
+                                                weight[index] = W;
+                                            
+                                            float W_iter = 98 - while_iter;
+                                            if(while_iter > 3)
+                                                W_iter = 0;
+                                            bool check_W_pos = false;
+                                            if(while_iter < 4 && W > 0.80 && ref_slope > 0 && tar_slope > 0 /*&& ref_aspect > 0 && tar_aspect > 0*/ &&
+                                            tar_iter_height > min_nor_coord.m_Z && tar_iter_height < max_nor_coord.m_Z &&
+                                            transformed_coord[index].m_X > min_nor_coord.m_X && transformed_coord[index].m_X < max_nor_coord.m_X &&
+                                            transformed_coord[index].m_Y > min_nor_coord.m_Y && transformed_coord[index].m_Y < max_nor_coord.m_Y &&
+                                            transformed_coord[index].m_Z > min_nor_coord.m_Z && transformed_coord[index].m_Z < max_nor_coord.m_Z)
+                                                check_W_pos = true;
+                                            
+                                            if(while_iter >= 4)
+                                                check_W_pos = true;
+                                            
+                                            if(check_W_pos)
+                                            {
+                                                F3DPOINT t_coord = normalized_pt[index];
+                                                t_coord.m_Z = tar_iter_height;
+                                                
+                                                F3DPOINT ref_pts = SurfaceDistance_ori(tar_normal_ori[index],DEM,tar_normal[index], t_coord, ImageBoundary_ref,ref_dem_size, level_ref_dx, conparam, coord_center,coord_scale, ref_iter_height[index]);
+                                                
+                                                float D = -(tar_normal[index].m_X*t_coord.m_X + tar_normal[index].m_Y*t_coord.m_Y + tar_normal[index].m_Z*t_coord.m_Z);
+                                                float diff_distance = -(tar_normal[index].m_X*ref_pts.m_X + tar_normal[index].m_Y*ref_pts.m_Y + tar_normal[index].m_Z*ref_pts.m_Z + D);
+                                                
+                                                if(fabs(diff_distance) < th_dH/coord_scale.m_Z)
+                                                {
+                                                    //printf("ID %d\tW %f\tnormal %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",index,W,ref_normal.m_X,ref_normal.m_Y,ref_normal.m_Z,tar_normal[index].m_X,tar_normal[index].m_Y,tar_normal[index].m_Z,ref_slope,ref_aspect,tar_slope,tar_aspect,ncc);
+                                                    //printf("ref pts %f\t%f\t%f\tD %f\tdiff %f\t",ref_pts.m_X,ref_pts.m_Y,ref_pts.m_Z,D,diff_distance);
+                                                    
+                                                    SDistance[index] = diff_distance;
+                                                    number_of_selected++;
+                                                    
+                                                    sum_distance += diff_distance*coord_scale.m_Z;
+                                                    control_pts[index] = ref_pts;
+                                                    //if(while_iter < 4)
+                                                    {
+                                                        select_pts_tar[index].flag = true;
+                                                        transformed_coord[index].flag = true;
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if(while_iter < 4)
+                                                {
+                                                    select_pts_tar[index].flag = false;
+                                                    transformed_coord[index].flag = false;
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if(while_iter < 4)
+                                            {
+                                                select_pts_tar[index].flag = false;
+                                                transformed_coord[index].flag = false;
+                                            }
+                                        }
+                                        free(tar_array);
+                                    }
+                                    else
+                                    {
+                                        if(while_iter < 4)
+                                        {
+                                            select_pts_tar[index].flag = false;
+                                            transformed_coord[index].flag = false;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if(while_iter < 4)
+                                    {
+                                        select_pts_tar[index].flag = false;
+                                        transformed_coord[index].flag = false;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if(while_iter < 4)
+                                {
+                                    select_pts_tar[index].flag = false;
+                                    transformed_coord[index].flag = false;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if(while_iter < 4)
+                            {
+                                select_pts_tar[index].flag = false;
+                                transformed_coord[index].flag = false;
+                            }
+                        }
+                    }
+                    
+                    //dX = AdjustmentConformal3D(tin_point_num, number_of_selected, normalized_pts, select_pts_tar, coord_center, coord_scale, SDistance, param, tininfo_tar, GridSize, Boundary, level_tar_dx, weight);
+                    total_ET_ad = time(0);
+                    total_gap = difftime(total_ET_ad,total_ST_ad);
+                    printf("\npre matrix adjustment time %f\n\n",total_gap);
+                    total_ST_ad = time(0);
+                    
+                    dX = CoeffMatrix_25D(coord_center,coord_scale, tin_point_num, number_of_selected, transformed_coord, SDistance, conparam, tar_normal,weight,sigmaX,&sigma0);
+                    
+                    total_ET_ad = time(0);
+                    total_gap = difftime(total_ET_ad,total_ST_ad);
+                    printf("\nmatrix adjustment time %f\n\n",total_gap);
+                    total_ST_ad = time(0);
+                    
+                    conparam.Tx += dX[4];
+                    conparam.Ty += dX[5];
+                    conparam.Tz += dX[6];
+                    
+                    double change_ratio_sigma = fabs(pre_sigma - sigma0*coord_scale.m_Z)/pre_sigma;
+                    
+                    if((fabs(dX[4]*coord_scale.m_X) < 0.01 && fabs(dX[5]*coord_scale.m_Y) < 0.01 && fabs(dX[6]*coord_scale.m_Z) < 0.01) || change_ratio_sigma < 0.01)
+                        check_stop = true;
+                    printf("pre sigma %f\t%f\t%f\n",pre_sigma,sigma0*coord_scale.m_Z,change_ratio_sigma);
+                    pre_sigma = sigma0*coord_scale.m_Z;
+                    //free(dX);
+                    
+                    final_number_of_selected = number_of_selected;
+                    
+                    average_distance = sum_distance/final_number_of_selected;
+                    
+                    float* save_Z = (float*)calloc(sizeof(float),final_number_of_selected);
+                    float sum_var = 0;
+                    long count = 0;
+                    
+                    char dem_gcp_filename[500];
+                    sprintf(dem_gcp_filename,"%s/DEM_gcps_%d.txt",args.Outputpath,ti);
+                    FILE *fid_dem_gcp = fopen(dem_gcp_filename,"w");
+                    
+                    for(long i=0;i<tin_point_num;i++)
+                    {
+                        if(select_pts_tar[i].flag && transformed_coord[i].flag)
+                        {
+                            save_Z[count] = SDistance[i]*coord_scale.m_Z;
+                            
+                            sum_var += (average_distance - save_Z[count])*(average_distance - save_Z[count]);
+                            fprintf(fid_dem_gcp,"%f\t%f\t%f\n",control_pts[i].m_X*coord_scale.m_X + coord_center.m_X,
+                                    control_pts[i].m_Y*coord_scale.m_Y + coord_center.m_Y,
+                                    control_pts[i].m_Z*coord_scale.m_Z + coord_center.m_Z);
+                            count++;
+                        }
+                            
+                    }
+                    fclose(fid_dem_gcp);
+                    
+                    MED_distance = quickselect(save_Z, number_of_selected, (int)(number_of_selected/2.0));
+                    
+                    SD_distance = sqrt(sum_var/number_of_selected);
+                    
+                    th_dH = SD_distance*3.29;
+                    
+                    double sum_var_med = 0;
+                    
+                    for(int i=0;i<number_of_selected;i++)
+                    {
+                        sum_var_med += (MED_distance -save_Z[i])*(MED_distance -save_Z[i]);
+                    }
+                    printf("iter %d\tparam %f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\n",while_iter,conparam.Tx*coord_scale.m_X,conparam.Ty*coord_scale.m_Y,conparam.Tz*coord_scale.m_Z,sigmaX[4]*sigma0*coord_scale.m_X,sigmaX[5]*sigma0*coord_scale.m_Y,sigmaX[6]*sigma0*coord_scale.m_Z, number_of_selected,sigma0*coord_scale.m_Z,change_ratio_sigma,th_dH);
+                    while_iter++;
+                    
+                    SD_z_med = sqrt(sum_var_med/number_of_selected);
+                    printf("\nTz average and variation  %d\t%d\t%f\t%f\t%f\t%f\n\n",count,number_of_selected,average_distance,MED_distance,SD_distance,SD_z_med);
+                    free(save_Z);
+ 
+                    total_ET = time(0);
+                    total_gap = difftime(total_ET,total_ST);
+                    printf("\nadjustment time %f\n\n",total_gap);
+                    total_ST = time(0);
+                }
+               
+                total_ET_iter = time(0);
+                total_gap = difftime(total_ET_iter,total_ST_iter);
+                printf("\npair time %f\n\n",total_gap);
+                total_ET_iter = time(0);
+                fprintf(fid_out,"%s\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f\n",DEM_name_outfile,sigma0*coord_scale.m_Z,conparam.Tx*coord_scale.m_X,conparam.Ty*coord_scale.m_Y,conparam.Tz*coord_scale.m_Z,sigmaX[4]*coord_scale.m_X*sigma0,sigmaX[5]*coord_scale.m_Y*sigma0,sigmaX[6]*coord_scale.m_Z*sigma0,average_distance,SD_distance, MED_distance,SD_z_med,final_number_of_selected,total_gap);
+                free(dX);
+                free(sigmaX);
                 
                 
-                MPs_2D = CoregParam_Image_MPs_stereo(proinfo, level,py_level, ImageAdjust_coreg, ncc_flag,
-                                              5, SubImages_ref[level],SubImages_tar[level], data_size_ref,data_size_tar, ImageBoundary_ref, ImageBoundary_tar, ref_dx, ref_dy, tar_dx, tar_dy, Grid_space,Boundary,proinfo->save_filepath,&avg_roh,&iter_counts,&adjust_std,&RA_iter_counts);
+                free(control_pts);
+                free(transformed_coord);
+                free(SDistance);
+                free(weight);
+                free(tar_normal);
+                free(tar_normal_ori);
                 
-                //printf("2 std %f\t%f\n",adjust_std[ti].m_X,adjust_std[ti].m_Y);
-                printf("%d\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%4.2f\t%d\t%4.2f\t%4.2f\n",level,ImageAdjust_coreg[0], ImageAdjust_coreg[1],
-                       -ImageAdjust_coreg[0]*tar_dy, ImageAdjust_coreg[1]*tar_dx,RA_iter_counts,avg_roh,iter_counts,adjust_std.m_X,adjust_std.m_Y);
-                free(SubImages_tar[level]);
-             }
-            free(SubImages_tar);
+                free(normalized_pt);
+                free(ref_normal);
+                free(ref_iter_height);
+                for(int index = 0 ; index < tin_point_num ; index ++)
+                {
+                    if(select_pts_tar[index].flag)
+                    {
+                        free(ref_array[index]);
+                    }
+                }
+                free(ref_array);
+                
+                //free(tininfo_tar.normal);
+                /*free(tininfo_tar.slope);
+                free(tininfo_tar.aspect);
+                free(tininfo_tar.ncc);
+                
+                free(tininfo_ref.slope);
+                free(tininfo_ref.aspect);
+                */
+                //free(select_pts_tar);
+           }
+            
+            
+            printf("done\n");
+            
+            //free(select_pts_tar);
+            
+            free(DEM_tar);
             free(data_size_tar);
             
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nCoregParam_Image time %f\n\n",total_gap);
-            total_ST = time(0);
             
-            time_t total_ST_a = 0, total_ET_a = 0;
-            total_ST_a = time(0);
-            
-            double Coreg_param[2];
-            F3DPOINT *save_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),RA_iter_counts);
-            CSize ref_data_size = ref_dem_size;
-            CSize tar_data_size = tar_dem_size;
-            
-            Coreg_param[1] = ImageAdjust_coreg[1]*tar_dx;
-            Coreg_param[0] = - ImageAdjust_coreg[0]*tar_dy;
-            double ref_grid_size = ref_dx;
-            double tar_grid_size = tar_dx;
-            
-            //printf("image ID %d\tcoreg y=%f\tx=%f\t%d\n",ti,Coreg_param[0],Coreg_param[1],RA_iter_counts[ti]);
-            //printf("ref size %d\t%d\ttar size %d\t%d\n",ref_data_size.width,ref_data_size.height,tar_data_size.width,tar_data_size.height);
-            //printf("ref coord %f\t%f\ttar coord %f\t%f\n",ref_minX,ref_maxY,tar_minX,tar_maxY);
-            int diff_count = 0;
-            double sum_diff = 0;
-            double W_th = 95;
-            double dH_th = 30;
-            
-#pragma omp parallel for reduction(+:sum_diff,diff_count) schedule(guided)
-            for(long int gcp_index = 0 ; gcp_index < RA_iter_counts ; gcp_index ++)
-            {
-                D2DPOINT gcp_coord,ref_img,tar_img;
-                gcp_coord.m_X = MPs_2D[gcp_index].m_X;
-                gcp_coord.m_Y = MPs_2D[gcp_index].m_Y;
-                
-                //printf("ID %d\tMPs %f\t%f\n",gcp_index,gcp_coord.m_X,gcp_coord.m_Y);
-                
-                ref_img.m_X = (gcp_coord.m_X - ref_minX)/ref_grid_size;
-                ref_img.m_Y = (ref_maxY - gcp_coord.m_Y)/ref_grid_size;
-                
-                tar_img.m_X = ( (gcp_coord.m_X + Coreg_param[1]) - tar_minX )/tar_grid_size;
-                tar_img.m_Y = ( tar_maxY - (gcp_coord.m_Y + Coreg_param[0]) )/tar_grid_size;
-                
-                bool check_b = true;
-                if(args.check_boundary)
-                {
-                    if(gcp_coord.m_X >= args.Min_X && gcp_coord.m_X <= args.Max_X && gcp_coord.m_Y >= args.Min_Y && gcp_coord.m_Y <= args.Max_Y)
-                        check_b = true;
-                    else
-                        check_b = false;
-                }
-                
-                if(ref_img.m_X - 2 >= 0 && ref_img.m_X + 2 < ref_data_size.width && ref_img.m_Y - 2 >= 0 && ref_img.m_Y + 2 < ref_data_size.height &&
-                   tar_img.m_X - 2 >= 0 && tar_img.m_X + 2 < tar_data_size.width && tar_img.m_Y - 2 >= 0 && tar_img.m_Y + 2 < tar_data_size.height && check_b)
-                {
-                    long ref_index = (int)(ref_img.m_Y)*ref_data_size.width + (int)(ref_img.m_X);
-                    long tar_index = (int)(tar_img.m_Y)*tar_data_size.width + (int)(tar_img.m_X);
-                    
-                    if(DEM[ref_index] > -100 && DEM[ref_index] < 10000 && DEM_tar[tar_index] > -100 && DEM_tar[tar_index] < 10000)
-                    {
-                        double sum_zr = 0;
-                        double sum_zt = 0;
-                        int kernel_count = 0;
-                        for(int kr = -2 ; kr <= 2 ; kr++ )
-                        {
-                            for(int kc = -2 ; kc <= 2 ; kc++ )
-                            {
-                                int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
-                                int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
-                                
-                                if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
-                                {
-                                    kernel_count++;
-                                    //printf("DEM value %f\t%f\n",DEM[0][k_refindex],DEM[ti][k_tarindex]);
-                                }
-                            }
-                        }
-                        
-                        double* ref_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
-                        double* tar_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
-                        
-                        GMA_double *A_matrix = GMA_double_create(kernel_count, 3);
-                        GMA_double *L_matrix = GMA_double_create(kernel_count, 1);
-                        GMA_double *AT_matrix = GMA_double_create(3,kernel_count);
-                        GMA_double *ATA_matrix = GMA_double_create(3,3);
-                        
-                        GMA_double *ATAI_matrix = GMA_double_create(3,3);
-                        GMA_double *ATL_matrix = GMA_double_create(3,1);
-                        
-                        GMA_double *X_matrix = GMA_double_create(3,1);
-                        GMA_double *AX_matrix = GMA_double_create(kernel_count,1);
-                        GMA_double *V_matrix = GMA_double_create(kernel_count,1);
-                        
-                        GMA_double *tA_matrix = GMA_double_create(kernel_count, 3);
-                        GMA_double *tL_matrix = GMA_double_create(kernel_count, 1);
-                        GMA_double *tAT_matrix = GMA_double_create(3,kernel_count);
-                        GMA_double *tATA_matrix = GMA_double_create(3,3);
-                        
-                        GMA_double *tATAI_matrix = GMA_double_create(3,3);
-                        GMA_double *tATL_matrix = GMA_double_create(3,1);
-                        
-                        GMA_double *tX_matrix = GMA_double_create(3,1);
-                        GMA_double *tAX_matrix = GMA_double_create(kernel_count,1);
-                        GMA_double *tV_matrix = GMA_double_create(kernel_count,1);
-                        
-                        kernel_count = 0;
-                        
-                        sum_zr = 0;
-                        sum_zt = 0;
-                        
-                        for(int kr = -2 ; kr <= 2 ; kr++ )
-                        {
-                            for(int kc = -2 ; kc <= 2 ; kc++ )
-                            {
-                                int k_refindex = (int)(ref_img.m_Y + kr)*ref_data_size.width + (int)(ref_img.m_X + kc);
-                                int k_tarindex = (int)(tar_img.m_Y + kr)*tar_data_size.width + (int)(tar_img.m_X + kc);
-                                if(DEM[k_refindex] > -100 && DEM[k_refindex] < 10000 && DEM_tar[k_tarindex] > -100 && DEM_tar[k_tarindex] < 10000)
-                                {
-                                    ref_patch_vecs[kernel_count] = DEM[k_refindex];
-                                    tar_patch_vecs[kernel_count] = DEM_tar[k_tarindex];
-                                    
-                                    A_matrix->val[kernel_count][0] = kc*ref_grid_size;
-                                    A_matrix->val[kernel_count][1] = kr*ref_grid_size;
-                                    A_matrix->val[kernel_count][2] = 1.0;
-                                    L_matrix->val[kernel_count][0] = DEM[k_refindex];
-                                    
-                                    tA_matrix->val[kernel_count][0] = kc*tar_grid_size;
-                                    tA_matrix->val[kernel_count][1] = kr*tar_grid_size;
-                                    tA_matrix->val[kernel_count][2] = 1.0;
-                                    tL_matrix->val[kernel_count][0] = DEM_tar[k_tarindex];
-                                    
-                                    kernel_count++;
-                                }
-                            }
-                        }
-                        //double var_diff = fabs(sqrt(sum_zr/(double)kernel_count) - sqrt(sum_zt/(double)kernel_count));
-                        
-                        double k_ncc = Correlate(ref_patch_vecs, tar_patch_vecs, kernel_count);
-                        if (k_ncc != -99)
-                            k_ncc = (k_ncc + 1)/2.0;
-                        else
-                            k_ncc = 0.0;
-                        
-                        GMA_double_Tran(A_matrix,AT_matrix);
-                        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                        GMA_double_inv(ATA_matrix,ATAI_matrix);
-                        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                        
-                        GMA_double_Tran(tA_matrix,tAT_matrix);
-                        GMA_double_mul(tAT_matrix,tA_matrix,tATA_matrix);
-                        GMA_double_inv(tATA_matrix,tATAI_matrix);
-                        GMA_double_mul(tAT_matrix,tL_matrix,tATL_matrix);
-                        GMA_double_mul(tATAI_matrix,tATL_matrix,tX_matrix);
-                        GMA_double_mul(tA_matrix,tX_matrix,tAX_matrix);
-                        GMA_double_sub(tAX_matrix,tL_matrix,tV_matrix);
-                        
-                        double N1 = X_matrix->val[0][0];
-                        double N2 = X_matrix->val[1][0];
-                        double N3 = 1.0;
-                        
-                        double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-                        double angle = acos(fabs(N3)/norm)*180/3.141592;
-                        
-                        if(angle <= 0 && angle >= -90)
-                            angle = fabs(angle);
-                        else if(angle <= -270 && angle >= -360)
-                            angle = 360 + angle;
-                        else if(angle >= 270 && angle <= 360)
-                            angle = 360 - angle;
-                        
-                        double aspect = 90 - atan2(N2,N1)*180/3.141592;
-                        
-                        N1 = tX_matrix->val[0][0];
-                        N2 = tX_matrix->val[1][0];
-                        N3 = 1.0;
-                        
-                        norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-                        double angle_tar = acos(fabs(N3)/norm)*180/3.141592;
-                        
-                        if(angle_tar <= 0 && angle_tar >= -90)
-                            angle_tar = fabs(angle_tar);
-                        else if(angle_tar <= -270 && angle_tar >= -360)
-                            angle_tar = 360 + angle_tar;
-                        else if(angle_tar >= 270 && angle_tar <= 360)
-                            angle_tar = 360 - angle_tar;
-                        
-                        double aspect_tar = 90 - atan2(N2,N1)*180/3.141592;
-                        
-                        double SS = 1 - fabs(angle - angle_tar)/90;
-                        double SA = 1 - fabs(aspect - aspect_tar)/360;
-                        
-                        double W = 40*k_ncc + 40*SS + 20*SA;
-                        
-                        if(W > W_th && fabs(DEM[ref_index] - DEM_tar[tar_index]) < dH_th)
-                        {
-                            long t_col_int   = (long)(tar_img.m_X + 0.01);
-                            long t_row_int   = (long)(tar_img.m_Y + 0.01);
-                            
-                            double dcol        = tar_img.m_X - t_col_int;
-                            double drow        = tar_img.m_Y - t_row_int;
-                            
-                            long index1,index2,index3, index4;
-                            double value1, value2, value3, value4, value;
-                            
-                            index1  = (t_col_int   ) + (t_row_int   )*(long)tar_data_size.width;
-                            index2  = (t_col_int +1) + (t_row_int   )*(long)tar_data_size.width;
-                            index3  = (t_col_int   ) + (t_row_int +1)*(long)tar_data_size.width;
-                            index4  = (t_col_int +1) + (t_row_int +1)*(long)tar_data_size.width;
-                            
-                            value1      = DEM_tar[index1];
-                            value2      = DEM_tar[index2];
-                            value3      = DEM_tar[index3];
-                            value4      = DEM_tar[index4];
-                            
-                            if(value1 > -100 && value1 < 10000 && value2 > -100 && value2 < 10000 && value3 > -100 && value3 < 10000 && value4 > -100 && value4 < 10000)
-                            {
-                                value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-                                + value3*(1-dcol)*drow + value4*dcol*drow;
-                                
-                                if(fabs(DEM[ref_index] - value) < 30)
-                                {
-                                    sum_diff += (DEM[ref_index] - value);
-                                    diff_count++;
-                                    
-                                    save_pts[gcp_index].m_X = gcp_coord.m_X + Coreg_param[1];
-                                    save_pts[gcp_index].m_Y = gcp_coord.m_Y + Coreg_param[0];
-                                    save_pts[gcp_index].m_Z = (DEM[ref_index] - value);
-                                    save_pts[gcp_index].flag = 1;
-                                    //printf("W kncc ss sa %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,angle,angle_tar,aspect,aspect_tar,save_pts[gcp_index].m_Z);
-                                }
-                            }
-                        }
-                        
-                        //if(W > 90 && fabs(ref_dem[ref_index] - tar_dem[tar_index]) >= 30)
-                        //    printf("W dz %f\t%f\t%f\t%f\t%f\n",W,k_ncc,SS,SA,ref_dem[ref_index] - tar_dem[tar_index]);
-                        
-                        GMA_double_destroy(A_matrix);
-                        GMA_double_destroy(L_matrix);
-                        GMA_double_destroy(AT_matrix);
-                        GMA_double_destroy(ATA_matrix);
-                        GMA_double_destroy(ATAI_matrix);
-                        GMA_double_destroy(ATL_matrix);
-                        GMA_double_destroy(X_matrix);
-                        GMA_double_destroy(AX_matrix);
-                        GMA_double_destroy(V_matrix);
-                        
-                        GMA_double_destroy(tA_matrix);
-                        GMA_double_destroy(tL_matrix);
-                        GMA_double_destroy(tAT_matrix);
-                        GMA_double_destroy(tATA_matrix);
-                        GMA_double_destroy(tATAI_matrix);
-                        GMA_double_destroy(tATL_matrix);
-                        GMA_double_destroy(tX_matrix);
-                        GMA_double_destroy(tAX_matrix);
-                        GMA_double_destroy(tV_matrix);
-                        
-                        free(ref_patch_vecs);
-                        free(tar_patch_vecs);
-                    }
-                }
-            }
-            
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nselect vertical CPs time %f\n\n",total_gap);
-            //total_ST = time(0);
-            
-            double average = sum_diff/diff_count;
-            
-            float* save_Z = (float*)calloc(sizeof(float),diff_count);
-            float sum_var = 0;
-            float min_save_Z = 100000;
-            float max_save_Z = -100000;
-            long count = 0;
-            
-            char dem_gcp_filename[500];
-            sprintf(dem_gcp_filename,"%s/DEM_gcps_%d.txt",args.Outputpath,ti);
-            FILE *fid_dem_gcp = fopen(dem_gcp_filename,"w");
-            
-            for(long row = 0; row < RA_iter_counts ; row++)
-            {
-                if(save_pts[row].flag == 1)
-                {
-                    save_Z[count] = save_pts[row].m_Z;
-                    
-                    sum_var += (average - save_pts[row].m_Z)*(average - save_pts[row].m_Z);
-                    fprintf(fid_dem_gcp,"%f\t%f\t%f\n",save_pts[row].m_X,save_pts[row].m_Y,save_pts[row].m_Z);
-                    count++;
-                }
-            }
-            fclose(fid_dem_gcp);
-            
-            float MED_z = quickselect(save_Z, diff_count, (int)(diff_count/2.0));
-            //float MED_z = median(diff_count,save_Z,-(dH_th+5),dH_th+5);
-            
-            double SD_z = sqrt(sum_var/diff_count);
-            
-            double sum_var_med = 0;
-            
-#pragma omp parallel for reduction(+:sum_var_med) schedule(guided)
-            for(int i=0;i<diff_count;i++)
-            {
-                sum_var_med += (MED_z -save_Z[i])*(MED_z -save_Z[i]);
-            }
-            
-            double SD_z_med = sqrt(sum_var_med/diff_count);
-            
-            free(save_Z);
-            free(save_pts);
-            
-            total_ET = time(0);
-            total_gap = difftime(total_ET,total_ST);
-            printf("\nTz average and variation cal time %f\t%d\t%d\t%f\t%f\t%f\t%f\n\n",total_gap,count,diff_count,average,MED_z,SD_z,SD_z_med);
-            total_ST = time(0);
-            
-            float* co_dem = NULL;
-            float* copoly_dem = NULL;
-            float* save_dz = NULL;
-            float* save_dz_med = NULL;
-            
-            float all_average = 0.0;
-            float all_med = 0.0;
-            float all_std = 0.0;
-            float all_average_med = 0.0;
-            float all_med_med = 0.0;
-            float all_std_med = 0.0;
-            
-            if(args.check_DEM_coreg_output == 2)
-            {
-                co_dem = (float*)calloc(sizeof(float),tar_data_size.width*tar_data_size.height);
-                copoly_dem = (float*)calloc(sizeof(float),tar_data_size.width*tar_data_size.height);
-            }
-            
-            if(args.check_DEM_coreg_output == 1 || args.check_DEM_coreg_output == 2)
-            {
-                save_dz = (float*)calloc(sizeof(float),tar_data_size.width*tar_data_size.height);
-                save_dz_med = (float*)calloc(sizeof(float),tar_data_size.width*tar_data_size.height);
-            
-                float dz_sum = 0;
-                float dz_sum_med = 0;
-                long dz_count = 0;
-                min_save_Z = 100000;
-                max_save_Z = -100000;
-                for(long int co_index = 0 ; co_index < (long)(tar_data_size.width)*(long)(tar_data_size.height) ; co_index++)
-                {
-                    int pts_row = (int)(floor(co_index/tar_data_size.width));
-                    int pts_col = co_index % tar_data_size.width;
-                    
-                    D2DPOINT gcp_coord,tar_img, ref_img,gcp_coord_ref;
-                    gcp_coord.m_X = pts_col*tar_grid_size + tar_minX + Coreg_param[1];
-                    gcp_coord.m_Y = tar_maxY - pts_row*tar_grid_size + Coreg_param[0];
-                    
-                    tar_img.m_X = ( gcp_coord.m_X - tar_minX )/tar_grid_size;
-                    tar_img.m_Y = ( tar_maxY - gcp_coord.m_Y )/tar_grid_size;
-                    
-                    gcp_coord_ref.m_X = pts_col*tar_grid_size + tar_minX;
-                    gcp_coord_ref.m_Y = tar_maxY - pts_row*tar_grid_size;
-                    
-                    ref_img.m_X = ( gcp_coord_ref.m_X - ref_minX )/ref_grid_size;
-                    ref_img.m_Y = ( ref_maxY - gcp_coord_ref.m_Y )/ref_grid_size;
-                    
-                    if(tar_img.m_X - 2 >= 0 && tar_img.m_X + 2 < tar_data_size.width && tar_img.m_Y - 2 >= 0 && tar_img.m_Y + 2 < tar_data_size.height &&
-                       ref_img.m_X >= 0 && ref_img.m_X < ref_data_size.width && ref_img.m_Y >= 0 && ref_img.m_Y < ref_data_size.height)
-                    {
-                        long tar_index = (int)(tar_img.m_Y)*tar_data_size.width + (int)(tar_img.m_X);
-                        long ref_index = (int)(ref_img.m_Y)*ref_data_size.width + (int)(ref_img.m_X);
-                        
-                        if(DEM[ref_index] > -100 && DEM[ref_index] < 10000 && DEM_tar[tar_index] > -100 && DEM_tar[tar_index] < 10000)
-                        {
-                            long t_col_int   = (long)(tar_img.m_X + 0.01);
-                            long t_row_int   = (long)(tar_img.m_Y + 0.01);
-                            
-                            double dcol        = tar_img.m_X - t_col_int;
-                            double drow        = tar_img.m_Y - t_row_int;
-                            
-                            long index1,index2,index3, index4;
-                            double value1, value2, value3, value4, value;
-                            
-                            index1  = (t_col_int   ) + (t_row_int   )*(long)tar_data_size.width;
-                            index2  = (t_col_int +1) + (t_row_int   )*(long)tar_data_size.width;
-                            index3  = (t_col_int   ) + (t_row_int +1)*(long)tar_data_size.width;
-                            index4  = (t_col_int +1) + (t_row_int +1)*(long)tar_data_size.width;
-                            
-                            value1      = DEM_tar[index1];
-                            value2      = DEM_tar[index2];
-                            value3      = DEM_tar[index3];
-                            value4      = DEM_tar[index4];
-                            
-                            value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-                            + value3*(1-dcol)*drow + value4*dcol*drow;
-                            
-                            //double value       = DEM[ti][tar_index];
-                            float co_dem_t = value + average;
-                            float copoly_dem_t = value + MED_z;
-                            float co_dem_diff = (DEM[ref_index] - co_dem_t);
-                            float copoly_dem_diff = (DEM[ref_index] - copoly_dem_t);
-                            
-                            if(args.check_DEM_coreg_output == 2)
-                            {
-                                co_dem[tar_index] = co_dem_t;
-                                copoly_dem[tar_index] = copoly_dem_t;
-                            }
-                            //co_dem_diff[tar_index] = (DEM[0][ref_index] - co_dem[tar_index]);
-                            //copoly_dem_diff[tar_index] = (DEM[0][ref_index] - copoly_dem[tar_index]);
-                            
-                            if(fabs(co_dem_diff) < dH_th && fabs(copoly_dem_diff) < dH_th)
-                            {
-                                dz_sum += co_dem_diff;
-                                dz_sum_med += copoly_dem_diff;
-                                
-                                save_dz[dz_count] = co_dem_diff;
-                                save_dz_med[dz_count] = copoly_dem_diff;
-                                
-                                dz_count++;
-                            }
-                        }
-                    }
-                }
-                
-                total_ET = time(0);
-                total_gap = difftime(total_ET,total_ST);
-                printf("\nWhole image stat %f\n\n",total_gap);
-                total_ST = time(0);
-                
-                all_average = dz_sum/dz_count;
-                all_med = quickselect(save_dz, dz_count, (int)(dz_count/2.0));
-                //float all_med = binmedian(dz_count, save_dz);
-                //float all_med = median(dz_count,save_dz,-(dH_th + 5),dH_th + 5);
-                float all_sum_var = 0;
-                
-                all_average_med = dz_sum_med/dz_count;
-                all_med_med = quickselect(save_dz_med, dz_count, (int)(dz_count/2.0));
-                //float all_med_med = binmedian(dz_count,save_dz_med);
-                //float all_med_med = median(dz_count,save_dz_med,-(dH_th + 5),dH_th + 5);
-                float all_sum_var_med = 0;
-                
-    #pragma omp parallel for reduction(+:all_sum_var,all_sum_var_med) schedule(guided)
-                for(long index = 0 ; index < dz_count ; index++)
-                {
-                    all_sum_var += (save_dz[index] - all_average)*(save_dz[index] - all_average);
-                    all_sum_var_med += (save_dz_med[index] - all_average_med)*(save_dz_med[index] - all_average_med);
-                }
-                //printf("done allsum\n");
-                free(save_dz);
-                free(save_dz_med);
-                
-                all_std = sqrt(all_sum_var/dz_count);
-                all_std_med = sqrt(all_sum_var_med/dz_count);
-                
-                total_ET = time(0);
-                total_gap = difftime(total_ET,total_ST);
-                printf("\nall median median time %f\n\n",total_gap);
-                total_ST = time(0);
-                
-                printf("all stat %f\t%f\t%f\t%f\t%f\t%f\n",all_average,all_med,all_std,all_average_med,all_med_med,all_std_med);
-                
-                if(args.check_DEM_coreg_output == 2)
-                {
-                    WriteGeotiff(co_dems_name, co_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-                    WriteGeotiff(copoly_dems_name, copoly_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-                    
-                    free(co_dem);
-                    free(copoly_dem);
-                }
-                
-                total_ET = time(0);
-                total_gap = difftime(total_ET,total_ST);
-                printf("\noutput save time %f\n\n",total_gap);
-                total_ST = time(0);
-               }
-          
-            
-            total_ET_a = time(0);
-            total_gap = difftime(total_ET_a,total_ST_a);
-            printf("\nTotal Tz computation time ID %d\t%f\n\n",ti,total_gap);
-            total_ET_iter = time(0);
-            total_gap = difftime(total_ET_iter,total_ST_iter);
-            printf("\nTotal computation time ID %d\t%f\n\n",ti,total_gap);
-            
-            fprintf(fid_out,"%s.tif\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%f\n",DEM_name_outfile,Coreg_param[1],Coreg_param[0],average,MED_z,adjust_std.m_Y,adjust_std.m_X,SD_z,SD_z_med,avg_roh,
-                    all_average,all_med,all_std,all_average_med,all_med_med,all_std_med,diff_count,total_gap);
-            printf("%s.tif\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%f\n",DEM_name_outfile,Coreg_param[1],Coreg_param[0],average,MED_z,adjust_std.m_Y,adjust_std.m_X,SD_z,SD_z_med,avg_roh,
-                   all_average,all_med,all_std,all_average_med,all_med_med,all_std_med,diff_count,total_gap);
-            
-            free(MPs_2D);
-            free(DEM_tar);
         }
         
-        for(int level = py_level ; level >= 0 ; level --)
+        fclose(fid_out);
+        
+        /*for(int level = 0 ; level <= py_level ; level++)
         {
             free(SubImages_ref[level]);
         }
-        free(SubImages_ref);
+        */
+        //free(SubImages_ref);
         free(DEM);
         free(data_size_ref);
-        free(ref_hill);
-         */
+        
+        total_ET = time(0);
+        total_gap = difftime(total_ET,total_ST);
+        printf("\nRef pyramid time %f\n\n",total_gap);
+        total_ST = time(0);
+        
+        exit(1);
+        
     }
+}
+
+F3DPOINT FindNormal(F3DPOINT *normal_ori, float* dem, F3DPOINT Pos,F3DPOINT Mean, F3DPOINT Scale, double* Boundary, Conformalparam X, CSize tinsize, double Gridspace, float *roh_array, float *Z, bool check_tar)
+{
+    F3DPOINT normal_vector;
+    
+    float geo_X = Pos.m_X*Scale.m_X + Mean.m_X;
+    float geo_Y = Pos.m_Y*Scale.m_Y + Mean.m_Y;
+    //printf("findnormal %f\t%f\n",geo_X,geo_Y);
+    float col_float = (geo_X- Boundary[0])/Gridspace;
+    float row_float = (Boundary[3]-geo_Y)/Gridspace;
+    
+    int col = floor(col_float);
+    int row = floor(row_float);
+    
+    float X_diff = col_float - col;
+    float Y_diff = row_float - row;
+    
+    //normalized height setting
+    long index11 =  row   *tinsize.width + (col    );
+    long index12 =  row   *tinsize.width + (col + 1);
+    long index21 = (row+1)*tinsize.width + (col    );
+    long index22 = (row+1)*tinsize.width + (col + 1);
+    
+    long index31 = (row-1)*tinsize.width + (col - 1);
+    long index32 = (row-1)*tinsize.width + (col    );
+    long index33 = (row-1)*tinsize.width + (col + 1);
+    
+    long index41 =  row   *tinsize.width + (col - 1);
+    long index51 = (row+1)*tinsize.width + (col - 1);
+    
+    if(index11 >= 0 && index11 < tinsize.width*tinsize.height &&
+       index12 >= 0 && index12 < tinsize.width*tinsize.height &&
+       index21 >= 0 && index21 < tinsize.width*tinsize.height &&
+       index22 >= 0 && index22 < tinsize.width*tinsize.height &&
+       index31 >= 0 && index31 < tinsize.width*tinsize.height &&
+       index32 >= 0 && index32 < tinsize.width*tinsize.height &&
+       index33 >= 0 && index33 < tinsize.width*tinsize.height &&
+       index41 >= 0 && index41 < tinsize.width*tinsize.height &&
+       index51 >= 0 && index51 < tinsize.width*tinsize.height && row + 1 < tinsize.height && row - 1 >= 0 && col + 1 < tinsize.width && col -1 >= 0)
+    {
+        float Patch11,Patch12,Patch21,Patch22,Patch31,Patch32,Patch33,Patch41,Patch51;
+        F3DPOINT P1,P2,P3,P4,P5,P6,P7,P8,P9;
+        
+        Patch11 = (dem[index11] - Mean.m_Z)/Scale.m_Z;
+        Patch12 = (dem[index12] - Mean.m_Z)/Scale.m_Z;
+        Patch21 = (dem[index21] - Mean.m_Z)/Scale.m_Z;
+        Patch22 = (dem[index22] - Mean.m_Z)/Scale.m_Z;
+        Patch31 = (dem[index31] - Mean.m_Z)/Scale.m_Z;
+        Patch32 = (dem[index32] - Mean.m_Z)/Scale.m_Z;
+        Patch33 = (dem[index33] - Mean.m_Z)/Scale.m_Z;
+        Patch41 = (dem[index41] - Mean.m_Z)/Scale.m_Z;
+        Patch51 = (dem[index51] - Mean.m_Z)/Scale.m_Z;
+        
+        if(dem[index11] > -100 && dem[index12] > -100 && dem[index21] > -100 && dem[index22] > -100 &&
+           dem[index31] > -100 && dem[index32] > -100 && dem[index33] > -100 && dem[index41] > -100 && dem[index51] > -100)
+        {
+            P1.m_X =(    (col  )*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P1.m_Y =( - ((row  )*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P1.m_Z = Patch11;
+             
+            P2.m_X =(    (col+1)*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P2.m_Y =( - ((row  )*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P2.m_Z = Patch12;
+             
+            P3.m_X =(    (col+1)*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P3.m_Y =( - ((row+1)*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P3.m_Z = Patch22;
+             
+            P4.m_X =(    (col  )*Gridspace + Boundary[0]  - Mean.m_X)/Scale.m_X;
+            P4.m_Y =( - ((row+1)*Gridspace - Boundary[3]) - Mean.m_Y)/Scale.m_Y;
+            P4.m_Z = Patch21;
+            
+            P5.m_X =(    (col-1)*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P5.m_Y =( - ((row-1)*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P5.m_Z = Patch31;
+        
+            P6.m_X =(    (col  )*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P6.m_Y =( - ((row-1)*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P6.m_Z = Patch32;
+        
+            P8.m_X =(    (col+1)*Gridspace + Boundary[0]  - Mean.m_X)/Scale.m_X;
+            P8.m_Y =( - ((row-1)*Gridspace - Boundary[3]) - Mean.m_Y)/Scale.m_Y;
+            P8.m_Z = Patch33;
+            
+            P7.m_X =(    (col-1)*Gridspace + Boundary[0]   - Mean.m_X)/Scale.m_X;
+            P7.m_Y =( - ((row  )*Gridspace - Boundary[3])  - Mean.m_Y)/Scale.m_Y;
+            P7.m_Z = Patch41;
+        
+            P9.m_X =(    (col-1)*Gridspace + Boundary[0]  - Mean.m_X)/Scale.m_X;
+            P9.m_Y =( - ((row+1)*Gridspace - Boundary[3]) - Mean.m_Y)/Scale.m_Y;
+            P9.m_Z = Patch51;
+            
+            if(check_tar)
+            {
+                RM R = MakeRotationMatrix(X.omega, X.phi, X.kappa);
+                
+                float R11 = R.m11;
+                float R12 = R.m12;
+                float R13 = R.m13;
+                
+                float R21 = R.m21;
+                float R22 = R.m22;
+                float R23 = R.m23;
+                
+                float R31 = R.m31;
+                float R32 = R.m32;
+                float R33 = R.m33;
+                
+                P1.m_Z = X.scale*( R13*P1.m_X + R23*P1.m_Y + R33*P1.m_Z ) + X.Tz;
+                P2.m_Z = X.scale*( R13*P2.m_X + R23*P2.m_Y + R33*P2.m_Z ) + X.Tz;
+                P3.m_Z = X.scale*( R13*P3.m_X + R23*P3.m_Y + R33*P3.m_Z ) + X.Tz;
+                P4.m_Z = X.scale*( R13*P4.m_X + R23*P4.m_Y + R33*P4.m_Z ) + X.Tz;
+                P5.m_Z = X.scale*( R13*P5.m_X + R23*P5.m_Y + R33*P5.m_Z ) + X.Tz;
+                P6.m_Z = X.scale*( R13*P6.m_X + R23*P6.m_Y + R33*P6.m_Z ) + X.Tz;
+                P7.m_Z = X.scale*( R13*P7.m_X + R23*P7.m_Y + R33*P7.m_Z ) + X.Tz;
+                P8.m_Z = X.scale*( R13*P8.m_X + R23*P8.m_Y + R33*P8.m_Z ) + X.Tz;
+                P9.m_Z = X.scale*( R13*P9.m_X + R23*P9.m_Y + R33*P9.m_Z ) + X.Tz;
+            }
+            
+            roh_array[0] = P1.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[1] = P2.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[2] = P3.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[3] = P4.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[4] = P5.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[5] = P6.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[6] = P7.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[7] = P8.m_Z*Scale.m_Z + Mean.m_Z;
+            roh_array[8] = P9.m_Z*Scale.m_Z + Mean.m_Z;
+            
+            //for(int i = 0 ; i< 9 ; i++)
+            //    printf("id %d\tdem val %f\n",i,roh_array[i]);
+            
+            //vector calculation
+            F3DPOINT v1,v2,n1,n2;
+            v1.m_X = P3.m_X - P1.m_X;
+            v1.m_Y = P3.m_Y - P1.m_Y;
+            v1.m_Z = P3.m_Z - P1.m_Z;
+            
+            v2.m_X = P2.m_X - P1.m_X;
+            v2.m_Y = P2.m_Y - P1.m_Y;
+            v2.m_Z = P2.m_Z - P1.m_Z;
+            
+            n1.m_X =    v1.m_Y*v2.m_Z  - v2.m_Y*v1.m_Z;
+            n1.m_Y = - (v1.m_X*v2.m_Z  - v2.m_X*v1.m_Z);
+            n1.m_Z =    v1.m_X*v2.m_Y  - v2.m_X*v1.m_Y;
+            
+            v1.m_X = P4.m_X - P1.m_X;
+            v1.m_Y = P4.m_Y - P1.m_Y;
+            v1.m_Z = P4.m_Z - P1.m_Z;
+            
+            v2.m_X = P3.m_X - P1.m_X;
+            v2.m_Y = P3.m_Y - P1.m_Y;
+            v2.m_Z = P3.m_Z - P1.m_Z;
+            
+            n2.m_X =    v1.m_Y*v2.m_Z  - v2.m_Y*v1.m_Z;
+            n2.m_Y = - (v1.m_X*v2.m_Z  - v2.m_X*v1.m_Z);
+            n2.m_Z =    v1.m_X*v2.m_Y  - v2.m_X*v1.m_Y;
+            
+            //plane vector decide
+            F3DPOINT n;
+            if( (X_diff == 0 && Y_diff == 0) || (X_diff != 0 & Y_diff == 0) || ( X_diff > 0 & Y_diff > 0 & (X_diff > Y_diff)) )
+                n = n1;
+            else
+                n = n2;
+               
+            float mag = sqrt(n.m_X*n.m_X + n.m_Y*n.m_Y + n.m_Z*n.m_Z);
+            n.m_X /= mag;
+            n.m_Y /= mag;
+            n.m_Z /= mag;
+            
+            float d = - P1.m_X*n.m_X - P1.m_Y*n.m_Y - P1.m_Z*n.m_Z;
+            *Z = - (Pos.m_X*n.m_X + Pos.m_Y*n.m_Y + d)/n.m_Z;
+            
+            normal_vector = n;
+            
+            //denormailzed vector
+            F3DPOINT P1_ori,P2_ori,P3_ori,P4_ori;
+            P1_ori = Denormalize_coord(P1,Mean,Scale);
+            P2_ori = Denormalize_coord(P2,Mean,Scale);
+            P3_ori = Denormalize_coord(P3,Mean,Scale);
+            P4_ori = Denormalize_coord(P4,Mean,Scale);
+            
+            P1 = P1_ori;
+            P2 = P2_ori;
+            P3 = P3_ori;
+            P4 = P4_ori;
+            
+            v1.m_X = P3.m_X - P1.m_X;
+            v1.m_Y = P3.m_Y - P1.m_Y;
+            v1.m_Z = P3.m_Z - P1.m_Z;
+            
+            v2.m_X = P2.m_X - P1.m_X;
+            v2.m_Y = P2.m_Y - P1.m_Y;
+            v2.m_Z = P2.m_Z - P1.m_Z;
+            
+            n1.m_X =    v1.m_Y*v2.m_Z  - v2.m_Y*v1.m_Z;
+            n1.m_Y = - (v1.m_X*v2.m_Z  - v2.m_X*v1.m_Z);
+            n1.m_Z =    v1.m_X*v2.m_Y  - v2.m_X*v1.m_Y;
+            
+            v1.m_X = P4.m_X - P1.m_X;
+            v1.m_Y = P4.m_Y - P1.m_Y;
+            v1.m_Z = P4.m_Z - P1.m_Z;
+            
+            v2.m_X = P3.m_X - P1.m_X;
+            v2.m_Y = P3.m_Y - P1.m_Y;
+            v2.m_Z = P3.m_Z - P1.m_Z;
+            
+            n2.m_X =    v1.m_Y*v2.m_Z  - v2.m_Y*v1.m_Z;
+            n2.m_Y = - (v1.m_X*v2.m_Z  - v2.m_X*v1.m_Z);
+            n2.m_Z =    v1.m_X*v2.m_Y  - v2.m_X*v1.m_Y;
+            
+            //plane vector decide
+            if( (X_diff == 0 && Y_diff == 0) || (X_diff != 0 & Y_diff == 0) || ( X_diff > 0 & Y_diff > 0 & (X_diff > Y_diff)) )
+                n = n1;
+            else
+                n = n2;
+               
+            mag = sqrt(n.m_X*n.m_X + n.m_Y*n.m_Y + n.m_Z*n.m_Z);
+            n.m_X /= mag;
+            n.m_Y /= mag;
+            n.m_Z /= mag;
+            
+            //float d = - P1.m_X*n.m_X - P1.m_Y*n.m_Y - P1.m_Z*n.m_Z;
+            //*Z = - (Pos.m_X*n.m_X + Pos.m_Y*n.m_Y + d)/n.m_Z;
+            
+            normal_ori->m_X = n.m_X;
+            normal_ori->m_Y = n.m_Y;
+            normal_ori->m_Z = n.m_Z;
+        }
+        else
+        {
+            normal_vector.m_X = -9999;
+            normal_vector.m_Y = -9999;
+            normal_vector.m_Z = -9999;
+        }
+    }
+    else
+    {
+        normal_vector.m_X = -9999;
+        normal_vector.m_Y = -9999;
+        normal_vector.m_Z = -9999;
+    }
+    
+    return normal_vector;
+}
+
+F3DPOINT SurfaceDistance_ori(F3DPOINT tar_normal_ori, float* ref_dem, F3DPOINT tar_normal, F3DPOINT tar_pts, double *tin_boundary,CSize tinsize, double Gridspace, Conformalparam param, F3DPOINT Mean, F3DPOINT Scale, float p_ref_z)
+{
+    F3DPOINT ref_pts;
+    
+    //denomalizing normal vector
+    F3DPOINT tar_normal_denor;
+    tar_normal_denor.m_X    = tar_normal_ori.m_X;//tar_normal.m_X/Scale.m_X;
+    tar_normal_denor.m_Y    = tar_normal_ori.m_Y;//tar_normal.m_Y/Scale.m_Y;
+    tar_normal_denor.m_Z    = tar_normal_ori.m_Z;//tar_normal.m_Z/Scale.m_Z;
+    
+    float mag              = sqrt(tar_normal_denor.m_X*tar_normal_denor.m_X + tar_normal_denor.m_Y*tar_normal_denor.m_Y + tar_normal_denor.m_Z*tar_normal_denor.m_Z);
+    tar_normal_denor.m_X = tar_normal_denor.m_X/mag;
+    tar_normal_denor.m_Y = tar_normal_denor.m_Y/mag;
+    tar_normal_denor.m_Z = tar_normal_denor.m_Z/mag;
+    
+    //vector slope about x and y directions
+    float vector_slope_x      = atan2(fabs(tar_normal_denor.m_Z),fabs(tar_normal_denor.m_X));
+    float vector_slope_y      = atan2(fabs(tar_normal_denor.m_Z),fabs(tar_normal_denor.m_Y));
+        
+    //set up for start points
+    F3DPOINT line_node_pt = Denormalize_coord(tar_pts,Mean,Scale);
+    F3DPOINT pre_pt_on_surface   = line_node_pt;
+    pre_pt_on_surface.m_Z = p_ref_z*Scale.m_Z + Mean.m_Z;
+    
+    F3DPOINT after_pt_on_surface = pre_pt_on_surface;
+    int max_iter            = 10;
+    int count = 1;
+    bool check_stop = false;
+    while(count < max_iter && !check_stop)
+    {
+        F3DPOINT line_node_pt_after;
+        line_node_pt_after.m_X = line_node_pt.m_X + (pre_pt_on_surface.m_Z - line_node_pt.m_Z)*(tar_normal_denor.m_X/tar_normal_denor.m_Z);
+        line_node_pt_after.m_Y = line_node_pt.m_Y + (pre_pt_on_surface.m_Z - line_node_pt.m_Z)*(tar_normal_denor.m_Y/tar_normal_denor.m_Z);
+        line_node_pt_after.m_Z = pre_pt_on_surface.m_Z;
+        
+        F3DPOINT find_pt    = Normalize_coord(line_node_pt_after,Mean,Scale);
+        Conformalparam temp_X;
+        temp_X.scale = 1.0;
+        temp_X.omega = 0.0;
+        temp_X.phi = 0.0;
+        temp_X.kappa = 0.0;
+        temp_X.Tx = 0.0;
+        temp_X.Ty = 0.0;
+        temp_X.Tz = 0.0;
+        
+        float temp_array[9];
+        float Z_ref;
+        F3DPOINT normal_ori;
+        F3DPOINT temp = FindNormal(&normal_ori,ref_dem, find_pt, Mean, Scale, tin_boundary, temp_X, tinsize, Gridspace, temp_array, &Z_ref, false);
+        
+        Z_ref                           = Z_ref*Scale.m_Z + Mean.m_Z;
+    
+        F3DPOINT after_pt_on_surface;
+        after_pt_on_surface.m_X  = line_node_pt_after.m_X;
+        after_pt_on_surface.m_Y  = line_node_pt_after.m_Y;
+        after_pt_on_surface.m_Z  = Z_ref;
+        
+        float dx                        = pre_pt_on_surface.m_X - after_pt_on_surface.m_X;
+        float dy                        = pre_pt_on_surface.m_Y - after_pt_on_surface.m_Y;
+        float dz                        = pre_pt_on_surface.m_Z - after_pt_on_surface.m_Z;
+        float diff                      = sqrt(dx*dx + dy*dy + dz*dz);
+        
+        if(diff < 0.1)
+        {
+            ref_pts.m_X                 = (after_pt_on_surface.m_X - Mean.m_X) / Scale.m_X;
+            ref_pts.m_Y                 = (after_pt_on_surface.m_Y - Mean.m_Y) / Scale.m_Y;
+            ref_pts.m_Z                 = (after_pt_on_surface.m_Z - Mean.m_Z) / Scale.m_Z;
+            check_stop = true;
+        }
+        else
+        {
+            float pre_angle_x               = atan2(fabs(dz),fabs(dx));
+            float pre_angle_y               = atan2(fabs(dz),fabs(dy));
+            bool divergent_index_x          = (pre_angle_x >= vector_slope_x & tar_normal_denor.m_X != 0 & dx != 0);
+            bool divergent_index_y          = (pre_angle_y >= vector_slope_y & tar_normal_denor.m_Y != 0 & dy != 0);
+            if( divergent_index_x || divergent_index_y)
+            {
+                F3DPOINT temp_pt;
+                temp_pt.m_X                  = pre_pt_on_surface.m_X + (after_pt_on_surface.m_X - pre_pt_on_surface.m_X)/2.0;
+                temp_pt.m_Y                  = pre_pt_on_surface.m_Y + (after_pt_on_surface.m_Y - pre_pt_on_surface.m_Y)/2.0;
+                
+                find_pt                     = Normalize_coord(temp_pt,Mean,Scale);
+                float temp_Z;
+                temp = FindNormal(&normal_ori,ref_dem, find_pt, Mean, Scale, tin_boundary, temp_X, tinsize, Gridspace, temp_array, &temp_Z, false);
+                temp_Z                   = temp_Z*Scale.m_Z + Mean.m_Z;
+                after_pt_on_surface.m_X  = temp_pt.m_X;
+                after_pt_on_surface.m_Y  = temp_pt.m_Y;
+                after_pt_on_surface.m_Z  = temp_Z;
+            }
+        }
+        
+        pre_pt_on_surface               = after_pt_on_surface;
+        
+        count++;
+    }
+    
+    if(!check_stop)
+    {
+        ref_pts.m_X = -9999;
+        ref_pts.m_Y = -9999;
+        ref_pts.m_Z = -9999;
+    }
+    
+    return ref_pts;
+}
+
+void SlopeAspect(F3DPOINT normal, F3DPOINT scale, float *slope, float *aspect)
+{
+    normal.m_X = normal.m_X/(scale.m_X);
+    normal.m_Y = normal.m_Y/(scale.m_Y);
+    normal.m_Z = normal.m_Z/(scale.m_Z);
+    
+    float denominator = sqrt(normal.m_X*normal.m_X + normal.m_Y*normal.m_Y + normal.m_Z*normal.m_Z);
+    float value = normal.m_Z/denominator;
+    
+    *slope = acos(value)*(180.0/PI);
+    
+    *aspect = 90 - atan2(normal.m_Y,normal.m_X)*(180.0/PI);
+    if(*aspect < 0)
+        *aspect = *aspect + 360;
+}
+
+F3DPOINT ConformalTransform(F3DPOINT input, Conformalparam param)
+{
+    F3DPOINT out;
+    
+    RM R = MakeRotationMatrix(param.omega, param.phi, param.kappa);
+       
+    float S = param.scale;
+    //3D conformal transformation
+    out.m_X = S*(R.m11*input.m_X + R.m21*input.m_Y + R.m31*input.m_Z) + param.Tx;
+    out.m_Y = S*(R.m12*input.m_X + R.m22*input.m_Y + R.m32*input.m_Z) + param.Ty;
+    out.m_Z = S*(R.m13*input.m_X + R.m23*input.m_Y + R.m33*input.m_Z) + param.Tz;
+    
+    return out;
+}
+
+F3DPOINT Normalize_coord(F3DPOINT input, F3DPOINT Mean, F3DPOINT Scale)
+{
+    F3DPOINT out;
+    
+    out.m_X = (input.m_X - Mean.m_X) / Scale.m_X;
+    out.m_Y = (input.m_Y - Mean.m_Y) / Scale.m_Y;
+    out.m_Z = (input.m_Z - Mean.m_Z) / Scale.m_Z;
+    
+    return out;
+}
+
+F3DPOINT Denormalize_coord(F3DPOINT input, F3DPOINT Mean, F3DPOINT Scale)
+{
+    F3DPOINT out;
+    
+    out.m_X = input.m_X * Scale.m_X + Mean.m_X;
+    out.m_Y = input.m_Y * Scale.m_Y + Mean.m_Y;
+    out.m_Z = input.m_Z * Scale.m_Z + Mean.m_Z;
+    
+    return out;
+}
+
+float SurfaceDistance(TINinfo tininfo_ref, TINinfo tininfo_tar, F3DPOINT tar_pts, F3DPOINT tar_normal, CSize tinsize, double *tin_boundary, double gridsize,Conformalparam param, int *f_iter)
+{
+    float SurfaceDist;
+    
+    float th = 0.10;
+    bool check_stop = false;
+    
+    float dh = -9999;
+    
+    RM R = MakeRotationMatrix(param.omega, param.phi, param.kappa);
+
+    //tar_pts.m_Z += param.Tz;
+    
+    //3D conformal transformation
+    //float P1 = param.scale*(R.m11*tar_pts.m_X + R.m21*tar_pts.m_Y + R.m31*tar_pts.m_Z) + param.Tx;
+    //float P2 = param.scale*(R.m12*tar_pts.m_X + R.m22*tar_pts.m_Y + R.m32*tar_pts.m_Z) + param.Ty;
+    //float P3 = param.scale*(R.m13*tar_pts.m_X + R.m23*tar_pts.m_Y + R.m33*tar_pts.m_Z) + param.Tz;
+
+    tar_pts.m_X = tar_pts.m_X + param.Tx;
+    tar_pts.m_Y = tar_pts.m_Y + param.Ty;
+    
+    
+    long ref_col = (long)((tar_pts.m_X - tin_boundary[0])/gridsize + 0.5);
+    long ref_row = (long)((tin_boundary[3] - tar_pts.m_Y)/gridsize + 0.5);
+    long ref_index = ref_row*tinsize.width + ref_col;
+    
+    tar_normal = tininfo_tar.normal[ref_index];
+    tar_pts.m_Z = tininfo_tar.dem[ref_index] + param.Tz;
+    
+    float Znext = tininfo_ref.dem[ref_index];
+    float angleX = atan2(fabs(tar_normal.m_Z),fabs(tar_normal.m_X));
+    float angleY = atan2(fabs(tar_normal.m_Z),fabs(tar_normal.m_Y));
+    
+    int max_iter = 20;
+    int iteration = 0;
+    
+    //printf("pts %f\t%f\t%f\tnormal %f\t%f\t%f\n",tar_pts.m_X,tar_pts.m_Y,tar_pts.m_Z,tar_normal.m_X,tar_normal.m_Y,tar_normal.m_Z);
+    
+    float Xpre = tar_pts.m_X;
+    float Ypre = tar_pts.m_Y;
+    while(!check_stop && iteration < max_iter)
+    {
+        //printf("iteration %d\n",iteration);
+        float Xnext = tar_pts.m_X + (Znext - tar_pts.m_Z)*tar_normal.m_X/tar_normal.m_Z;
+        float Ynext = tar_pts.m_Y + (Znext - tar_pts.m_Z)*tar_normal.m_Y/tar_normal.m_Z;
+        
+        long col = (long)((Xnext - tin_boundary[0])/gridsize + 0.5);
+        long row = (long)((tin_boundary[3] - Ynext)/gridsize + 0.5);
+        long index = row*tinsize.width + col;
+        
+        if(col >= 0 && col < tinsize.width && row >= 0 && row < tinsize.height)
+        {
+            float Znew = tininfo_ref.dem[index];
+            //printf("next pts %f\t%f\t%f\n",Xnext,Ynext,Znew);
+            float deltadx = Xpre - Xnext;
+            float deltady = Ypre - Ynext;
+            float deltadz = Znext - Znew;
+            float deltaL  = sqrt(deltadx*deltadx + deltady*deltady + deltadz*deltadz);
+            
+            float delta_angleX = atan2(fabs(deltadz),fabs(deltadx));
+            float delta_angleY = atan2(fabs(deltadz),fabs(deltady));
+            
+            if(deltaL < th)
+            {
+                check_stop = true;
+                double d = -(tar_normal.m_X*tar_pts.m_X + tar_normal.m_Y*tar_pts.m_Y + tar_normal.m_Z*tar_pts.m_Z);
+                double normal_mag = tar_normal.m_X*tar_normal.m_X + tar_normal.m_Y*tar_normal.m_Y + tar_normal.m_Z*tar_normal.m_Z;
+                dh = (tar_normal.m_X*Xnext + tar_normal.m_Y*Ynext + tar_normal.m_Z*Znew + d) / (sqrt(normal_mag));
+                
+                //printf("done deltaL %f\t dh %f\n",deltaL,dh);
+            }
+            else if( (fabs(deltadx) > 0 && delta_angleX >= angleX) || (fabs(deltady) > 0 && delta_angleY >= angleY) )
+            {
+                Xnext = tar_pts.m_X + (Xnext - tar_pts.m_X)/2.0;
+                Ynext = tar_pts.m_Y + (Ynext - tar_pts.m_Y)/2.0;
+                
+                col = (long)((Xnext - tin_boundary[0])/gridsize + 0.5);
+                row = (long)((tin_boundary[3] - Ynext)/gridsize + 0.5);
+                index = row*tinsize.width + col;
+                
+                //printf("angle compare %f\t%f\t%f\t%f\n",angleX,angleY,delta_angleX,delta_angleY);
+                if(col >= 0 && col < tinsize.width && row >= 0 && row < tinsize.height)
+                {
+                    Znew = tininfo_ref.dem[index];
+                    
+                    //printf("divergenc next pts %f\t%f\t%f\n",Xnext,Ynext,Znew);
+                }
+                else
+                    check_stop = true;
+            }
+                    
+            Znext = Znew;
+            Xpre = Xnext;
+            Ypre = Ynext;
+        }
+        else
+            check_stop = true;
+        
+        iteration++;
+    }
+    
+    *f_iter = iteration;
+    
+    return dh;
+}
+
+float* CoeffMatrix_25D(F3DPOINT coord_center, F3DPOINT coord_scale,long pts_nums, long selected_pts, F3DPOINT* transformed_coord, float* dH, Conformalparam param, F3DPOINT* tar_normal,float *weight,float* sigmaX, float *sigma0)
+{
+    float* C = (float*)calloc(sizeof(float),21);
+    
+    RM R = MakeRotationMatrix(param.omega, param.phi, param.kappa);
+    
+    float A1 = param.omega*DegToRad;
+    float A2 = param.phi*DegToRad;
+    float A3 = param.kappa*DegToRad;
+    float S = param.scale;
+    
+    float R11 = R.m11;
+    float R12 = R.m12;
+    float R13 = R.m13;
+    
+    float R21 = R.m21;
+    float R22 = R.m22;
+    float R23 = R.m23;
+    
+    float R31 = R.m31;
+    float R32 = R.m32;
+    float R33 = R.m33;
+    
+    GMA_double *A_matrix = GMA_double_create(selected_pts, 7);
+    GMA_double *AW_matrix = GMA_double_create(selected_pts, 7);
+    GMA_double *AWT_matrix = GMA_double_create(7,selected_pts);
+    GMA_double *AWTA_matrix = GMA_double_create(7,7);
+    GMA_double *AWTAWb_matrix = GMA_double_create(7,7);
+    
+    GMA_double *Wb_matrix = GMA_double_create(7,7);
+    GMA_double *Qxx_matrix = GMA_double_create(7,7);
+    
+    GMA_double *L_matrix = GMA_double_create(selected_pts, 1);
+    GMA_double *AWTL_matrix = GMA_double_create(7,1);
+    
+    GMA_double *Lb_matrix = GMA_double_create(7,1);
+    GMA_double *WbLb_matrix = GMA_double_create(7,1);
+    GMA_double *AWTLWbLb_matrix = GMA_double_create(7,1);
+    
+    GMA_double *X_matrix = GMA_double_create(7,1);
+    GMA_double *AX_matrix = GMA_double_create(selected_pts,1);
+    GMA_double *V_matrix = GMA_double_create(selected_pts,1);
+    GMA_double *VT_matrix = GMA_double_create(1,selected_pts);
+    GMA_double *VTV_matrix = GMA_double_create(1,1);
+    
+    /*
+    GMA_double *A_matrix_ori = GMA_double_create(selected_pts, 7);
+    GMA_double *AW_matrix_ori = GMA_double_create(selected_pts, 7);
+    GMA_double *AWT_matrix_ori = GMA_double_create(7,selected_pts);
+    GMA_double *AWTA_matrix_ori = GMA_double_create(7,7);
+    GMA_double *Qxx_matrix_ori = GMA_double_create(7,7);
+    */
+    for(int i=0;i<7;i++)
+    {
+        for(int j=0;j<7;j++)
+        {
+            Wb_matrix->val[i][j] = 0.0;
+        }
+        Lb_matrix->val[i][0] = 0.000000001;
+    }
+    
+    Wb_matrix->val[0][0] = 100000000000;
+    Wb_matrix->val[1][1] = 100000000000;
+    Wb_matrix->val[2][2] = 100000000000;
+    Wb_matrix->val[3][3] = 100000000000;
+    Wb_matrix->val[4][4] = 1.0;
+    Wb_matrix->val[5][5] = 1.0;
+    Wb_matrix->val[6][6] = 1.0;
+    
+    
+    long count = 0;
+    
+    for(long i = 0 ; i < pts_nums ; i++)
+    {
+        if(transformed_coord[i].flag)
+        {
+            float P1 = transformed_coord[i].m_X;
+            float P2 = transformed_coord[i].m_Y;
+            float P3 = transformed_coord[i].m_Z;
+            
+            float Gx = tar_normal[i].m_X;///coord_scale.m_X;
+            float Gy = tar_normal[i].m_Y;///coord_scale.m_Y;
+            float Gz = -tar_normal[i].m_Z;///coord_scale.m_Z;
+            
+            //printf("pt.z %f\t%f\t%f\tG %f\t%f\t%f\tDh %f\n",P1,P2,P3,Gx,Gy,Gz,dH[i]);
+            //X equation
+            C[0] = R11*P1 + R21*P2 + R31*P3; //d_scale
+            C[1] = 0.0; //d_omega
+            C[2] = ( -sin(A2)*cos(A3)*P1 + sin(A2)*sin(A3)*P2 + cos(A2)*P3 )*S; //d_phi
+            C[3] = ( R21*P1 - R11*P2 )*S; //d_kappa
+            C[4] = 1.0;
+            C[5] = 0.0;
+            C[6] = 0.0;
+            
+            //Y equation
+            C[7] = R12*P1 + R22*P2 + R32*P3;
+            C[8] = (-R13*P1 - R23*P2 - R33*P3)*S;
+            C[9] =( sin(A1)*cos(A2)*cos(A3)*P1 - sin(A1)*cos(A2)*sin(A3)*P2 + sin(A1)*sin(A2)*P3 )*S;
+            C[10] = ( R22*P1 - R12*P2 )*S;
+            C[11] = 0.0;
+            C[12] = 1.0;
+            C[13] = 0.0;
+            
+            //Z equation
+            C[14] = R13*P1 + R23*P2 + R33*P3;
+            C[15] = ( R12*P1 + R22*P2 + R32*P3 )*S;
+            C[16] = ( -cos(A1)*cos(A2)*cos(A3)*P1 + cos(A1)*cos(A2)*sin(A3)*P2 - cos(A1)*sin(A2)*P3 )*S;
+            C[17] = ( R23*P1 - R13*P2 )*S;
+            C[18] = 0.0;
+            C[19] = 0.0;
+            C[20] = 1.0;
+            
+            A_matrix->val[count][0] = (Gx*C[0] + Gy*C[7]  + Gz*C[14]); //Scale
+            A_matrix->val[count][1] = (Gx*C[1] + Gy*C[8]  + Gz*C[15]); //omega
+            A_matrix->val[count][2] = (Gx*C[2] + Gy*C[9]  + Gz*C[16]); //phi
+            A_matrix->val[count][3] = (Gx*C[3] + Gy*C[10] + Gz*C[17]); //kappa
+            A_matrix->val[count][4] = (Gx*C[4] + Gy*C[11] + Gz*C[18]); //tx
+            A_matrix->val[count][5] = (Gx*C[5] + Gy*C[12] + Gz*C[19]); //ty
+            A_matrix->val[count][6] = (Gx*C[6] + Gy*C[13] + Gz*C[20]); //tz
+            
+            AW_matrix->val[count][0] = A_matrix->val[count][0]*weight[i];
+            AW_matrix->val[count][1] = A_matrix->val[count][1]*weight[i];
+            AW_matrix->val[count][2] = A_matrix->val[count][2]*weight[i];
+            AW_matrix->val[count][3] = A_matrix->val[count][3]*weight[i];
+            AW_matrix->val[count][4] = A_matrix->val[count][4]*weight[i];
+            AW_matrix->val[count][5] = A_matrix->val[count][5]*weight[i];
+            AW_matrix->val[count][6] = A_matrix->val[count][6]*weight[i];
+            
+            L_matrix->val[count][0] = dH[i];
+            
+            /*
+            //sigmaX cal with original coords
+            P1 = transformed_coord[i].m_X*coord_scale.m_X;// + coord_center.m_X;
+            P2 = transformed_coord[i].m_Y*coord_scale.m_Y;// + coord_center.m_Y;
+            P3 = transformed_coord[i].m_Z*coord_scale.m_Z;// + coord_center.m_Z;
+            
+            Gx = tar_normal[i].m_X*coord_scale.m_X;///coord_scale.m_X;
+            Gy = tar_normal[i].m_Y*coord_scale.m_Y;///coord_scale.m_Y;
+            Gz = -tar_normal[i].m_Z*coord_scale.m_Z;///coord_scale.m_Z;
+            
+            float mag = sqrt(Gx*Gx + Gy*Gy + Gz*Gz);
+            Gx /= mag;
+            Gy /= mag;
+            Gz /= mag;
+            //printf("pt.z %f\t%f\t%f\tG %f\t%f\t%f\tDh %f\n",P1,P2,P3,Gx,Gy,Gz,dH[i]);
+            //X equation
+            C[0] = R11*P1 + R21*P2 + R31*P3; //d_scale
+            C[1] = 0.0; //d_omega
+            C[2] = ( -sin(A2)*cos(A3)*P1 + sin(A2)*sin(A3)*P2 + cos(A2)*P3 )*S; //d_phi
+            C[3] = ( R21*P1 - R11*P2 )*S; //d_kappa
+            C[4] = 1.0;
+            C[5] = 0.0;
+            C[6] = 0.0;
+            
+            //Y equation
+            C[7] = R12*P1 + R22*P2 + R32*P3;
+            C[8] = (-R13*P1 - R23*P2 - R33*P3)*S;
+            C[9] =( sin(A1)*cos(A2)*cos(A3)*P1 - sin(A1)*cos(A2)*sin(A3)*P2 + sin(A1)*sin(A2)*P3 )*S;
+            C[10] = ( R22*P1 - R12*P2 )*S;
+            C[11] = 0.0;
+            C[12] = 1.0;
+            C[13] = 0.0;
+            
+            //Z equation
+            C[14] = R13*P1 + R23*P2 + R33*P3;
+            C[15] = ( R12*P1 + R22*P2 + R32*P3 )*S;
+            C[16] = ( -cos(A1)*cos(A2)*cos(A3)*P1 + cos(A1)*cos(A2)*sin(A3)*P2 - cos(A1)*sin(A2)*P3 )*S;
+            C[17] = ( R23*P1 - R13*P2 )*S;
+            C[18] = 0.0;
+            C[19] = 0.0;
+            C[20] = 1.0;
+            
+            A_matrix_ori->val[count][0] = (Gx*C[0] + Gy*C[7]  + Gz*C[14]); //Scale
+            A_matrix_ori->val[count][1] = (Gx*C[1] + Gy*C[8]  + Gz*C[15]); //omega
+            A_matrix_ori->val[count][2] = (Gx*C[2] + Gy*C[9]  + Gz*C[16]); //phi
+            A_matrix_ori->val[count][3] = (Gx*C[3] + Gy*C[10] + Gz*C[17]); //kappa
+            A_matrix_ori->val[count][4] = (Gx*C[4] + Gy*C[11] + Gz*C[18]); //tx
+            A_matrix_ori->val[count][5] = (Gx*C[5] + Gy*C[12] + Gz*C[19]); //ty
+            A_matrix_ori->val[count][6] = (Gx*C[6] + Gy*C[13] + Gz*C[20]); //tz
+            
+            AW_matrix_ori->val[count][0] = A_matrix->val[count][0]*weight[i];
+            AW_matrix_ori->val[count][1] = A_matrix->val[count][1]*weight[i];
+            AW_matrix_ori->val[count][2] = A_matrix->val[count][2]*weight[i];
+            AW_matrix_ori->val[count][3] = A_matrix->val[count][3]*weight[i];
+            AW_matrix_ori->val[count][4] = A_matrix->val[count][4]*weight[i];
+            AW_matrix_ori->val[count][5] = A_matrix->val[count][5]*weight[i];
+            AW_matrix_ori->val[count][6] = A_matrix->val[count][6]*weight[i];
+            */
+            
+            count++;
+        }
+    }
+    
+    free(C);
+    
+    GMA_double_Tran(AW_matrix,AWT_matrix);
+    GMA_double_mul(AWT_matrix,A_matrix,AWTA_matrix);
+    GMA_double_sum(AWTA_matrix,Wb_matrix,AWTAWb_matrix);
+        
+    GMA_double_inv(AWTAWb_matrix,Qxx_matrix);
+    
+    GMA_double_mul(AWT_matrix,L_matrix,AWTL_matrix);
+    GMA_double_mul(Wb_matrix,Lb_matrix,WbLb_matrix);
+    
+    GMA_double_sum(AWTL_matrix,WbLb_matrix,AWTLWbLb_matrix);
+        
+    
+    GMA_double_mul(Qxx_matrix,AWTLWbLb_matrix,X_matrix);
+    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+    
+    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+    GMA_double_Tran(V_matrix,VT_matrix);
+    GMA_double_mul(VT_matrix,V_matrix,VTV_matrix);
+    
+    
+    /*
+    GMA_double_Tran(AW_matrix_ori,AWT_matrix_ori);
+    GMA_double_mul(AWT_matrix_ori,A_matrix_ori,AWTA_matrix_ori);
+    GMA_double_inv(AWTA_matrix_ori,Qxx_matrix_ori);
+    */
+    *sigma0 = sqrt((VTV_matrix->val[0][0])/(selected_pts - 7));
+    float* dx = (float*)calloc(sizeof(float),7);
+    
+    for(int i = 0 ; i < 7 ; i++)
+    {
+        sigmaX[i] = sqrt(Qxx_matrix->val[i][i]);
+        dx[i] = X_matrix->val[i][0];
+        
+        printf("dx %d\t%f\tsigmaX %f\n",i,dx[i],sigmaX[i]);
+    }
+    /*
+    printf("dx %f\tsigmaX %f\n",dx[4]*coord_scale.m_X,sigmaX[4]*coord_scale.m_X);
+    printf("dy %f\tsigmaX %f\n",dx[5]*coord_scale.m_Y,sigmaX[5]*coord_scale.m_Y);
+    printf("dz %f\tsigmaX %f\n",dx[6]*coord_scale.m_Z,sigmaX[6]*coord_scale.m_Z);
+    */
+    GMA_double_destroy(A_matrix);
+    GMA_double_destroy(AW_matrix);
+    GMA_double_destroy(AWT_matrix);
+    GMA_double_destroy(AWTA_matrix);
+    GMA_double_destroy(AWTAWb_matrix);
+    
+    GMA_double_destroy(Wb_matrix);
+    GMA_double_destroy(Qxx_matrix);
+    
+    GMA_double_destroy(L_matrix);
+    GMA_double_destroy(AWTL_matrix);
+    
+    GMA_double_destroy(Lb_matrix);
+    GMA_double_destroy(WbLb_matrix);
+    GMA_double_destroy(AWTLWbLb_matrix);
+    
+    GMA_double_destroy(X_matrix);
+    GMA_double_destroy(AX_matrix);
+    GMA_double_destroy(V_matrix);
+    GMA_double_destroy(VT_matrix);
+    GMA_double_destroy(VTV_matrix);
+    /*
+    GMA_double_destroy(A_matrix_ori);
+    GMA_double_destroy(AW_matrix_ori);
+    GMA_double_destroy(AWT_matrix_ori);
+    GMA_double_destroy(AWTA_matrix_ori);
+    GMA_double_destroy(Qxx_matrix_ori);
+    */
+    return dx;
+}
+
+float* AdjustmentConformal3D(long pts_nums, long selected_pts, F3DPOINT* normalized_input, F3DPOINT* input,F3DPOINT coord_center, F3DPOINT coord_scale, float* dH, Conformalparam param, TINinfo tininfo_tar, CSize tinsize, double *tin_boundary, double gridsize, float *weight)
+{
+    float* C = (float*)calloc(sizeof(float),21);
+    
+    RM R = MakeRotationMatrix(param.omega, param.phi, param.kappa);
+    
+    float A1 = param.omega*DegToRad;
+    float A2 = param.phi*DegToRad;
+    float A3 = param.kappa*DegToRad;
+    float S = param.scale;
+    
+    float R11 = R.m11;
+    float R12 = R.m12;
+    float R13 = R.m13;
+    
+    float R21 = R.m21;
+    float R22 = R.m22;
+    float R23 = R.m23;
+    
+    float R31 = R.m31;
+    float R32 = R.m32;
+    float R33 = R.m33;
+    
+    GMA_double *A_matrix = GMA_double_create(selected_pts, 7);
+    GMA_double *AW_matrix = GMA_double_create(selected_pts, 7);
+    GMA_double *AWT_matrix = GMA_double_create(7,selected_pts);
+    GMA_double *AWTA_matrix = GMA_double_create(7,7);
+    GMA_double *AWTAWb_matrix = GMA_double_create(7,7);
+    
+    GMA_double *Wb_matrix = GMA_double_create(7,7);
+    GMA_double *Qxx_matrix = GMA_double_create(7,7);
+    
+    GMA_double *L_matrix = GMA_double_create(selected_pts, 1);
+    GMA_double *AWTL_matrix = GMA_double_create(7,1);
+    
+    GMA_double *Lb_matrix = GMA_double_create(7,1);
+    GMA_double *WbLb_matrix = GMA_double_create(7,1);
+    GMA_double *AWTLWbLb_matrix = GMA_double_create(7,1);
+    
+    GMA_double *X_matrix = GMA_double_create(7,1);
+    GMA_double *AX_matrix = GMA_double_create(selected_pts,1);
+    GMA_double *V_matrix = GMA_double_create(selected_pts,1);
+    GMA_double *VT_matrix = GMA_double_create(1,selected_pts);
+    GMA_double *VTV_matrix = GMA_double_create(1,1);
+    
+    for(int i=0;i<7;i++)
+    {
+        for(int j=0;j<7;j++)
+        {
+            Wb_matrix->val[i][j] = 0.0;
+        }
+        Lb_matrix->val[i][0] = 0.000000001;
+    }
+    
+    Wb_matrix->val[0][0] = 100000000000;
+    Wb_matrix->val[1][1] = 100000000000;
+    Wb_matrix->val[2][2] = 100000000000;
+    Wb_matrix->val[3][3] = 100000000000;
+    Wb_matrix->val[4][4] = 1.0;
+    Wb_matrix->val[5][5] = 1.0;
+    Wb_matrix->val[6][6] = 1.0;
+    
+    
+    long count = 0;
+    
+    for(long i = 0 ; i < pts_nums ; i++)
+    {
+        if(input[i].flag)
+        {
+            //3D conformal transformation
+            //float P1 = S*(R.m11*normalized_input[i].m_X + R.m21*normalized_input[i].m_Y + R.m31*normalized_input[i].m_Z) + param.Tx;
+            //float P2 = S*(R.m12*normalized_input[i].m_X + R.m22*normalized_input[i].m_Y + R.m32*normalized_input[i].m_Z) + param.Ty;
+            //float P3 = S*(R.m13*normalized_input[i].m_X + R.m23*normalized_input[i].m_Y + R.m33*normalized_input[i].m_Z) + param.Tz;
+            
+            float P1 = (input[i].m_X + param.Tx - coord_center.m_X);
+            float P2 = (input[i].m_Y + param.Ty - coord_center.m_Y);
+            
+            long col = (long)(((input[i].m_X + param.Tx) - tin_boundary[0])/gridsize + 0.5);
+            long row = (long)((tin_boundary[3] - (input[i].m_Y + param.Ty))/gridsize + 0.5);
+            long index = row*tinsize.width + col;
+            
+            float Gx = tininfo_tar.normal[index].m_X;///coord_scale.m_X;
+            float Gy = tininfo_tar.normal[index].m_Y;///coord_scale.m_Y;
+            float Gz = tininfo_tar.normal[index].m_Z;///coord_scale.m_Z;
+            
+            col = (long)(((input[i].m_X) - tin_boundary[0])/gridsize + 0.5);
+            row = (long)((tin_boundary[3] - (input[i].m_Y))/gridsize + 0.5);
+            index = row*tinsize.width + col;
+            
+            float P3 = tininfo_tar.dem[index] + param.Tz - coord_center.m_Z;
+            
+            //printf("pt.z %f\t%f\n",input[i].m_Z, tininfo_tar.dem[index]);
+            //X equation
+            C[0] = R11*P1 + R21*P2 + R31*P3; //d_scale
+            C[1] = 0.0; //d_omega
+            C[2] = ( -sin(A2)*cos(A3)*P1 + sin(A2)*sin(A3)*P2 + cos(A2)*P3 )*S; //d_phi
+            C[3] = ( R21*P1 - R11*P2 )*S; //d_kappa
+            C[4] = 1.0;
+            C[5] = 0.0;
+            C[6] = 0.0;
+            
+            //Y equation
+            C[7] = R12*P1 + R22*P2 + R32*P3;
+            C[8] = (-R13*P1 - R23*P2 - R33*P3)*S;
+            C[9] =( sin(A1)*cos(A2)*cos(A3)*P1 - sin(A1)*cos(A2)*sin(A3)*P2 + sin(A1)*sin(A2)*P3 )*S;
+            C[10] = ( R22*P1 - R12*P2 )*S;
+            C[11] = 0.0;
+            C[12] = 1.0;
+            C[13] = 0.0;
+            
+            //Z equation
+            C[14] = R13*P1 + R23*P2 + R33*P3;
+            C[15] = ( R12*P1 + R22*P2 + R32*P3 )*S;
+            C[16] = ( -cos(A1)*cos(A2)*cos(A3)*P1 + cos(A1)*cos(A2)*sin(A3)*P2 - cos(A1)*sin(A2)*P3 )*S;
+            C[17] = ( R23*P1 - R13*P2 )*S;
+            C[18] = 0.0;
+            C[19] = 0.0;
+            C[20] = 1.0;
+            
+            
+            
+            
+            float mag = sqrt(Gx*Gx + Gy*Gy + Gz*Gz);
+            Gx /= mag;
+            Gy /= mag;
+            Gz /= mag;
+            
+            A_matrix->val[count][0] = (Gx*C[0] + Gy*C[7]  + Gz*C[14]); //Scale
+            A_matrix->val[count][1] = (Gx*C[1] + Gy*C[8]  + Gz*C[15]); //omega
+            A_matrix->val[count][2] = (Gx*C[2] + Gy*C[9]  + Gz*C[16]); //phi
+            A_matrix->val[count][3] = (Gx*C[3] + Gy*C[10] + Gz*C[17]); //kappa
+            A_matrix->val[count][4] = (Gx*C[4] + Gy*C[11] + Gz*C[18]); //tx
+            A_matrix->val[count][5] = (Gx*C[5] + Gy*C[12] + Gz*C[19]); //ty
+            A_matrix->val[count][6] = (Gx*C[6] + Gy*C[13] + Gz*C[20]); //tz
+            
+            AW_matrix->val[count][0] = A_matrix->val[count][0]*weight[i];
+            AW_matrix->val[count][1] = A_matrix->val[count][1]*weight[i];
+            AW_matrix->val[count][2] = A_matrix->val[count][2]*weight[i];
+            AW_matrix->val[count][3] = A_matrix->val[count][3]*weight[i];
+            AW_matrix->val[count][4] = A_matrix->val[count][4]*weight[i];
+            AW_matrix->val[count][5] = A_matrix->val[count][5]*weight[i];
+            AW_matrix->val[count][6] = A_matrix->val[count][6]*weight[i];
+            
+            L_matrix->val[count][0] = dH[i];
+            
+            
+            //printf("index %d\t pts %f\t%f\t%f\t%f\t%f\t%f\n",count,P1,P2,P3,normalized_input[i].m_X,normalized_input[i].m_Y,normalized_input[i].m_Z);
+            //printf("Gxyz %f\t%f\t%f\t%f\t dH %f\n",Gx,Gy,Gz,mag,dH[i]);
+            count++;
+        }
+    }
+    
+    free(C);
+    
+    GMA_double_Tran(AW_matrix,AWT_matrix);
+    GMA_double_mul(AWT_matrix,A_matrix,AWTA_matrix);
+    //GMA_double_sum(AWTA_matrix,Wb_matrix,AWTAWb_matrix);
+        
+    GMA_double_inv(AWTA_matrix,Qxx_matrix);
+    //GMA_double_inv(AWTAWb_matrix,Qxx_matrix);
+    
+    GMA_double_mul(AWT_matrix,L_matrix,AWTL_matrix);
+    //GMA_double_mul(Wb_matrix,Lb_matrix,WbLb_matrix);
+    
+    //GMA_double_sum(AWTL_matrix,WbLb_matrix,AWTLWbLb_matrix);
+        
+    
+    GMA_double_mul(Qxx_matrix,AWTL_matrix,X_matrix);
+    //GMA_double_mul(Qxx_matrix,AWTLWbLb_matrix,X_matrix);
+    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+    
+    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+    GMA_double_Tran(V_matrix,VT_matrix);
+    GMA_double_mul(VT_matrix,V_matrix,VTV_matrix);
+    
+    float sigma0 = sqrt(VTV_matrix->val[0][0])/(selected_pts - 7);
+    float sigmaX[7] = {0.};
+    float* dx = (float*)calloc(sizeof(float),7);
+    
+    for(int i = 0 ; i < 7 ; i++)
+    {
+        sigmaX[i] = sqrt(Qxx_matrix->val[i][i]);
+        dx[i] = X_matrix->val[i][0];
+        
+        printf("dx %d\t%f\tsigmaX %f\n",i,dx[i],sigmaX[i]);
+    }
+    /*
+    printf("dx %f\tsigmaX %f\n",dx[4]*coord_scale.m_X,sigmaX[4]*coord_scale.m_X);
+    printf("dy %f\tsigmaX %f\n",dx[5]*coord_scale.m_Y,sigmaX[5]*coord_scale.m_Y);
+    printf("dz %f\tsigmaX %f\n",dx[6]*coord_scale.m_Z,sigmaX[6]*coord_scale.m_Z);
+    */
+    GMA_double_destroy(A_matrix);
+    GMA_double_destroy(AW_matrix);
+    GMA_double_destroy(AWT_matrix);
+    GMA_double_destroy(AWTA_matrix);
+    GMA_double_destroy(AWTAWb_matrix);
+    
+    GMA_double_destroy(Wb_matrix);
+    GMA_double_destroy(Qxx_matrix);
+    
+    GMA_double_destroy(L_matrix);
+    GMA_double_destroy(AWTL_matrix);
+    
+    GMA_double_destroy(Lb_matrix);
+    GMA_double_destroy(WbLb_matrix);
+    GMA_double_destroy(AWTLWbLb_matrix);
+    
+    GMA_double_destroy(X_matrix);
+    GMA_double_destroy(AX_matrix);
+    GMA_double_destroy(V_matrix);
+    GMA_double_destroy(VT_matrix);
+    GMA_double_destroy(VTV_matrix);
+    
+    return dx;
 }
 
 unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size)
@@ -27534,14 +28592,124 @@ unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size)
     return result_img;
 }
 
+F3DPOINT* SettingControls(float* DEM_ref, float* DEM_tar, double grid_size_ref, double grid_size_tar, double *boundary_ref, double *boundary_tar, double* overlapped_br, CSize img_size_ref, CSize img_size_tar, long *tin_point_num)
+{
+    *tin_point_num = 0;
+    F3DPOINT *coord = NULL;
+    
+    CSize coord_size;
+    double control_spacing = grid_size_tar*20;
+    if(control_spacing < 50)
+        control_spacing = 50;
+    
+    coord_size.width = ceil((overlapped_br[2] - overlapped_br[0])/control_spacing);
+    coord_size.height = ceil((overlapped_br[3] - overlapped_br[1])/control_spacing);
+    long data_length = (long)coord_size.width*(long)coord_size.height;
+    
+    coord = (F3DPOINT*)calloc(sizeof(F3DPOINT),data_length);
+    
+    int kernel_size;
+    
+    if(grid_size_tar >= 2)
+        kernel_size = 1;
+    else if(grid_size_tar == 1)
+        kernel_size = 2;
+    else
+        kernel_size = 4;
+    
+    long count_select = 0;
+    for(long r=0;r<coord_size.height;r++)
+    {
+        for(long c=0;c<coord_size.width;c++)
+        {
+            long control_index = r*coord_size.width + c;
+            
+            double t_coord_x = overlapped_br[0] + c*control_spacing;
+            double t_coord_y = overlapped_br[3] - r*control_spacing;
+            
+            long pos_c_ref = (t_coord_x - boundary_ref[0])/grid_size_ref;
+            long pos_r_ref = (boundary_ref[3] - t_coord_y)/grid_size_ref;
+            
+            long pos_c_tar = (t_coord_x - boundary_tar[0])/grid_size_tar;
+            long pos_r_tar = (boundary_tar[3] - t_coord_y)/grid_size_tar;
+            
+            if(pos_c_ref - kernel_size >= 0 && pos_c_ref + kernel_size <= img_size_ref.width && pos_r_ref - kernel_size >= 0 && pos_r_ref + kernel_size <= img_size_ref.height &&
+               pos_c_tar - kernel_size >= 0 && pos_c_tar + kernel_size <= img_size_tar.width && pos_r_tar - kernel_size >= 0 && pos_r_tar + kernel_size <= img_size_tar.height)
+            {
+                long ref_index = pos_r_ref*img_size_ref.width + pos_c_ref;
+                long tar_index = pos_r_tar*img_size_tar.width + pos_c_tar;
+                
+                double *ref_array = (double*)calloc(sizeof(double),(2*kernel_size + 1)*(2*kernel_size + 1));
+                double *tar_array = (double*)calloc(sizeof(double),(2*kernel_size + 1)*(2*kernel_size + 1));
+                
+                for(int k = -kernel_size ; k <= kernel_size ; k++)
+                {
+                    for(int l = -kernel_size ; l <= kernel_size ; l++)
+                    {
+                        long array_index = (k+kernel_size)*(2*kernel_size + 1) + (l+kernel_size);
+                        long k_ref_index = (pos_r_ref + k)*img_size_ref.width + pos_c_ref + l;
+                        long k_tar_index = (pos_r_tar + k)*img_size_tar.width + pos_c_tar + l;
+                        ref_array[array_index] = DEM_ref[k_ref_index];
+                        tar_array[array_index] = DEM_tar[k_tar_index];
+                        
+                    }
+                }
+                
+                double ncc = Correlate(ref_array,tar_array,(2*kernel_size + 1)*(2*kernel_size + 1));
+                free(ref_array);
+                free(tar_array);
+                
+                if(ncc > 0.7 && DEM_ref[ref_index] > -100 && DEM_ref[ref_index] < 10000 && DEM_tar[tar_index] > -100 && DEM_tar[tar_index] < 10000)
+                {
+                    coord[control_index].m_X = t_coord_x;
+                    coord[control_index].m_Y = t_coord_y;
+                    coord[control_index].m_Z = DEM_tar[tar_index];
+                    coord[control_index].flag = true;
+                    count_select++;
+                    
+                    //printf("inside ID %d\t%d\t sel pts %f\t%f\t%f\n",r,c,coord[control_index].m_X,coord[control_index].m_Y,coord[control_index].m_Z);
+                }
+                else
+                    coord[control_index].flag = false;
+            }
+        }
+    }
+    
+    *tin_point_num = count_select;
+    
+    F3DPOINT *select_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),count_select);
+    
+    long t_count = 0;
+    for(long r=0;r<coord_size.height;r++)
+    {
+        for(long c=0;c<coord_size.width;c++)
+        {
+            long ori_index = r*coord_size.width + c;
+            if(coord[ori_index].flag)
+            {
+                select_pts[t_count] = coord[ori_index];
+                
+                //printf("ID %d sel pts %f\t%f\t%f\n",t_count,select_pts[t_count].m_X,select_pts[t_count].m_Y,select_pts[t_count].m_Z);
+                t_count++;
+                
+                
+            }
+        }
+    }
+    
+    free(coord);
 
-F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *boundary, uint8 pyramid_level, CSize _img_size, int _filter_size, double _sigma, float* result_img, uint16* result_slope, uint16* result_aspect, long *tin_point_num, bool check_pts)
+    return select_pts;
+}
+
+F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *boundary, double* overlapped_br, uint8 pyramid_level, CSize _img_size, int _filter_size, double _sigma, float* result_img, long *tin_point_num, bool check_pts)
 {
     double sigma = _sigma;
     double temp,scale;
     double sum = 0;
     double** GaussianFilter;
     CSize result_size;
+    *tin_point_num = 0;
     //float* result_img;
     F3DPOINT *coord = NULL;
     
@@ -27557,7 +28725,14 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
         scale=sqrt(2*PI)*sigma;
         
         if(check_pts)
+        {
             coord = (F3DPOINT*)calloc(sizeof(F3DPOINT),(long)result_size.height*(long)result_size.width);
+            if (coord == NULL)
+            {
+                printf("ERROR: Out of memory - coord is NULL\n");
+                exit(1);
+            }
+        }
         
         for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
             {
@@ -27591,7 +28766,8 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
         if(check_pts)
         {
             coord = (F3DPOINT*)calloc(sizeof(F3DPOINT),data_length);
-        
+            printf("Done coord allocation %ld\n",data_length);
+            
             if (coord == NULL)
             {
                 printf("ERROR: Out of memory - coord is NULL\n");
@@ -27612,10 +28788,19 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
             temp = 0;
             long ori_index = r*(long)result_size.width + c;
             
-            if(check_pts)
+            double t_coord_x = boundary[0] + c*grid_size;
+            double t_coord_y = boundary[3] - r*grid_size;
+            bool check_inside = false;
+            
+            if(t_coord_x >= overlapped_br[0] && t_coord_x <= overlapped_br[2] && t_coord_y >= overlapped_br[1] && t_coord_y <= overlapped_br[3])
+                check_inside = true;
+            
+            if(check_pts && check_inside)
             {
-                coord[ori_index].m_X = c;
-                coord[ori_index].m_Y = r;
+                coord[ori_index].m_X = t_coord_x;
+                coord[ori_index].m_Y = t_coord_y;
+                
+                //printf("coord %f\t%f\n",coord[ori_index].m_X ,coord[ori_index].m_Y);
             }
             
             if(r >= 0 && r < result_size.height && c >= 0 && c < result_size.width && ori_index >= 0 && ori_index < data_length)
@@ -27651,12 +28836,14 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
                             if(!check_NULL)
                             {
                                 result_img[ori_index] = round(temp);
-                                if(check_pts)
+                                if(check_pts && check_inside)
                                 {
                                     coord[ori_index].m_Z = result_img[ori_index];
                                     coord[ori_index].flag = true;
                                     (*tin_point_num)++;
                                 }
+                                else if(check_pts)
+                                    coord[ori_index].flag = false;
                             }
                             else
                             {
@@ -27682,7 +28869,7 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
                 }
                 else
                 {
-                    if(check_pts)
+                    if(check_pts && check_inside)
                     {
                         //printf("ID %d\t%f\t%f\n",ori_index,coord[ori_index].m_X,coord[ori_index].m_Y);
                         if(result_img[ori_index] > -100 && result_img[ori_index] < 10000)
@@ -27690,14 +28877,14 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
                             coord[ori_index].m_Z = result_img[ori_index];
                             coord[ori_index].flag = true;
                             (*tin_point_num)++;
-                            
-                            
                         }
                         else
                         {
                             coord[ori_index].flag = false;
                         }
                     }
+                    else if(check_pts)
+                        coord[ori_index].flag = false;
                 }
             }
             
@@ -27714,6 +28901,8 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
         //char save[500] = "/home/noh.56/development/SETSM_osu_github/setsm/tin_points.txt";
         //FILE *fid = fopen(save,"w");
         select_pts = (F3DPOINT*)calloc(sizeof(F3DPOINT),*tin_point_num);
+        printf("done select_pts allocation\n");
+        
         long t_count = 0;
         for(long r=0;r<result_size.height;r++)
         {
@@ -27746,11 +28935,11 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
     return select_pts;
 }
 
-void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI3DPOINT *tris, double *boundary, CSize input_size, uint16* result_slope, uint16* result_aspect)
+void SetHeightRange_slope_aspect(float* ref_img, double* ref_br, CSize ref_size, float* tar_img, double* tar_br, CSize tar_size, long numOfPts, long numOfTri, F3DPOINT *pts, UI3DPOINT *tris, double *boundary, CSize input_size, double input_grid,TINinfo* tininfo, bool check_tar)
 {
     uint32 num_triangles;
     int i, tcnt;
-    double gridspace = 1.0;
+    double gridspace = input_grid;
     CSize gridsize;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
     int Col_C, Row_R;
@@ -27807,7 +28996,7 @@ void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI
                 TriP2[2]        = pt1.m_Z;
                 TriP3[2]        = pt2.m_Z;
                 
-                double U[3], V[3], N[3];
+                double U[3], V[3], N[3], normalized_N[3];
                 double norm, angle, aspect;
                 
                 U[0] = pt1.m_X - pt0.m_X;
@@ -27820,8 +29009,20 @@ void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI
                 N[0]        =   U[1]*V[2] - V[1]*U[2];
                 N[1]        = -(U[0]*V[2] - V[0]*U[2]);
                 N[2]        =   U[0]*V[1] - V[0]*U[1];
-                
+                /*
+                if(N[2] < 0)
+                {
+                    N[0] = -N[0];
+                    N[1] = -N[1];
+                    N[2] = -N[2];
+                }
+                */
                 norm  = sqrt(N[0]*N[0] + N[1]*N[1] + N[2]*N[2]);
+                
+                normalized_N[0] = N[0]/norm;
+                normalized_N[1] = N[1]/norm;
+                normalized_N[2] = N[2]/norm;
+                
                 angle = acos(fabs(N[2])/norm)*180/3.141592;
                 
                 if(angle <= 0 && angle >= -90)
@@ -27842,9 +29043,10 @@ void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI
                 TriMaxXY[1] = max(max(TriP1[1],TriP2[1]),TriP3[1]);
                 
                 PixelMinXY[0] = (int)((TriMinXY[0] - boundary[0])/gridspace + 0.5);
-                PixelMinXY[1] = (int)((TriMinXY[1] - boundary[1])/gridspace + 0.5);
+                PixelMinXY[1] = (int)((boundary[3] - TriMinXY[1])/gridspace + 0.5);
+                
                 PixelMaxXY[0] = (int)((TriMaxXY[0] - boundary[0])/gridspace + 0.5);
-                PixelMaxXY[1] = (int)((TriMaxXY[1] - boundary[1])/gridspace + 0.5);
+                PixelMaxXY[1] = (int)((boundary[3] - TriMaxXY[1])/gridspace + 0.5);
                 
                 PixelMinXY[0] -= 1;     PixelMinXY[1] -= 1;
                 PixelMaxXY[0] += 1;     PixelMaxXY[1] += 1;
@@ -27861,102 +29063,194 @@ void SetHeightRange_slope_aspect(long numOfPts, long numOfTri, F3DPOINT *pts, UI
                 {
                     for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                     {
-                        int Index= TIN_Grid_Size_X*Row + Col;
-
-                        if(Row >= 0 && Row < TIN_Grid_Size_Y && Col >= 0 && Col < TIN_Grid_Size_X)
+                        long Index= TIN_Grid_Size_X*Row + Col;
+                        D2DPOINT coord;
+                        coord.m_X = Col * gridspace + boundary[0];
+                        coord.m_Y = boundary[3] - (Row * gridspace);
+                        
+                        long ref_row = (long)((ref_br[3] - coord.m_Y)/gridspace + 0.5);
+                        long ref_col = (long)((coord.m_X - ref_br[0])/gridspace + 0.5);
+                        
+                        long tar_row = (long)((tar_br[3] - coord.m_Y)/gridspace + 0.5);
+                        long tar_col = (long)((coord.m_X - tar_br[0])/gridspace + 0.5);
+                        
+                        long ref_index = ref_row*ref_size.width + ref_col;
+                        long tar_index = tar_row*tar_size.width + tar_col;
+                        
+                        if(ref_row >= 0 && ref_row < ref_size.height && ref_col >= 0 && ref_col < ref_size.width &&
+                           tar_row >= 0 && tar_row < tar_size.height && tar_col >= 0 && tar_col < tar_size.width)
                         {
-                            double CurGPXY[2]={0.};
-                            float Z = -1000.0;
-                            bool rtn = false;
-                            double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
-                            double v23[2], v2P[2], v31[2], v3P[2];
-                            int Sum;
+                            float ref_val = ref_img[ref_index];
+                            float tar_val = tar_img[tar_index];
                             
-                            CurGPXY[0]  = (Col)*gridspace + boundary[0];
-                            CurGPXY[1]  = (Row)*gridspace + boundary[1];
-                            
-                            _p1[0]      = TriP1[0];
-                            _p1[1]      = TriP1[1];
-                            _p1[2]      = TriP1[2];
-                            
-                            _p2[0]      = TriP2[0];
-                            _p2[1]      = TriP2[1];
-                            _p2[2]      = TriP2[2];
-                            
-                            _p3[0]      = TriP3[0];
-                            _p3[1]      = TriP3[1];
-                            _p3[2]      = TriP3[2];
-                            
-                            v12[0]      = _p2[0]-_p1[0];
-                            v12[1]      = _p2[1]-_p1[1];
-                            
-                            v1P[0]      = CurGPXY[0]-_p1[0];
-                            v1P[1]      = CurGPXY[1]-_p1[1];
-                            
-                            v23[0]      = _p3[0]-_p2[0];
-                            v23[1]      = _p3[1]-_p2[1];
-                            
-                            v2P[0]      = CurGPXY[0]-_p2[0];
-                            v2P[1]      = CurGPXY[1]-_p2[1];
-                            
-                            v31[0]      = _p1[0]-_p3[0];
-                            v31[1]      = _p1[1]-_p3[1];
-                            
-                            v3P[0]      = CurGPXY[0]-_p3[0];
-                            v3P[1]      = CurGPXY[1]-_p3[1];
-                            
-                            Sum = 3;
-                            if (v12[0]*v1P[1]-v12[1]*v1P[0] <= 0)
-                                Sum--;
-                            if (v23[0]*v2P[1]-v23[1]*v2P[0] <= 0)
-                                Sum--;
-                            if (v31[0]*v3P[1]-v31[1]*v3P[0] <= 0)
-                                Sum--;
-                            
-                            if (Sum==0 || Sum==3)
+                            if(Row >= 0 && Row < TIN_Grid_Size_Y && Col >= 0 && Col < TIN_Grid_Size_X && ref_val > -100 && ref_val < 10000 && tar_val > -100 && tar_val < 10000)
                             {
-                                double v12[3], v13[3], Len, A, B, C, D;
-                                double Normal[3]={0.};
+                                double CurGPXY[2]={0.};
+                                float Z = -1000.0;
+                                bool rtn = false;
+                                double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
+                                double v23[2], v2P[2], v31[2], v3P[2];
+                                int Sum;
                                 
-                                v12[0]  = _p2[0]-_p1[0];
-                                v12[1]  = _p2[1]-_p1[1];
-                                v12[2]  = _p2[2]-_p1[2];
+                                CurGPXY[0]  = (Col)*gridspace + boundary[0];
+                                CurGPXY[1]  = boundary[3] - (Row)*gridspace;
                                 
-                                v13[0]  = _p3[0]-_p1[0];
-                                v13[1]  = _p3[1]-_p1[1];
-                                v13[2]  = _p3[2]-_p1[2];
+                                _p1[0]      = TriP1[0];
+                                _p1[1]      = TriP1[1];
+                                _p1[2]      = TriP1[2];
                                 
-                                Normal[0]=v12[1]*v13[2] - v12[2]*v13[1];
-                                Normal[1]=v12[2]*v13[0] - v12[0]*v13[2];
-                                Normal[2]=v12[0]*v13[1] - v12[1]*v13[0];
+                                _p2[0]      = TriP2[0];
+                                _p2[1]      = TriP2[1];
+                                _p2[2]      = TriP2[2];
                                 
-                                Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
-                                if(Len > 0 )
+                                _p3[0]      = TriP3[0];
+                                _p3[1]      = TriP3[1];
+                                _p3[2]      = TriP3[2];
+                                
+                                v12[0]      = _p2[0]-_p1[0];
+                                v12[1]      = _p2[1]-_p1[1];
+                                
+                                v1P[0]      = CurGPXY[0]-_p1[0];
+                                v1P[1]      = CurGPXY[1]-_p1[1];
+                                
+                                v23[0]      = _p3[0]-_p2[0];
+                                v23[1]      = _p3[1]-_p2[1];
+                                
+                                v2P[0]      = CurGPXY[0]-_p2[0];
+                                v2P[1]      = CurGPXY[1]-_p2[1];
+                                
+                                v31[0]      = _p1[0]-_p3[0];
+                                v31[1]      = _p1[1]-_p3[1];
+                                
+                                v3P[0]      = CurGPXY[0]-_p3[0];
+                                v3P[1]      = CurGPXY[1]-_p3[1];
+                                
+                                Sum = 3;
+                                if (v12[0]*v1P[1]-v12[1]*v1P[0] <= 0)
+                                    Sum--;
+                                if (v23[0]*v2P[1]-v23[1]*v2P[0] <= 0)
+                                    Sum--;
+                                if (v31[0]*v3P[1]-v31[1]*v3P[0] <= 0)
+                                    Sum--;
+                                
+                                if (Sum==0 || Sum==3)
                                 {
-                                    Normal[0]/=Len;
-                                    Normal[1]/=Len;
-                                    Normal[2]/=Len;
+                                    double v12[3], v13[3], Len, A, B, C, D;
+                                    double Normal[3]={0.};
                                     
-                                    A = Normal[0];
-                                    B = Normal[1];
-                                    C = Normal[2];
-                                    D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
+                                    v12[0]  = _p2[0]-_p1[0];
+                                    v12[1]  = _p2[1]-_p1[1];
+                                    v12[2]  = _p2[2]-_p1[2];
                                     
-                                    if(C != 0)
+                                    v13[0]  = _p3[0]-_p1[0];
+                                    v13[1]  = _p3[1]-_p1[1];
+                                    v13[2]  = _p3[2]-_p1[2];
+                                    
+                                    Normal[0]=v12[1]*v13[2] - v12[2]*v13[1];
+                                    Normal[1]=v12[2]*v13[0] - v12[0]*v13[2];
+                                    Normal[2]=v12[0]*v13[1] - v12[1]*v13[0];
+                                    
+                                    Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
+                                    if(Len > 0 )
                                     {
-                                        Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
-                                        rtn = true;
+                                        Normal[0]/=Len;
+                                        Normal[1]/=Len;
+                                        Normal[2]/=Len;
+                                        
+                                        A = Normal[0];
+                                        B = Normal[1];
+                                        C = Normal[2];
+                                        D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
+                                        
+                                        if(C != 0)
+                                        {
+                                            Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
+                                            rtn = true;
+                                        }
+                                        else
+                                            rtn = false;
                                     }
-                                    else
-                                        rtn = false;
+                                    //GridPT3[Index].angle = (double)angle;
                                 }
-                                //GridPT3[Index].angle = (double)angle;
-                            }
-                            
-                            if (rtn)
-                            {
-                                result_slope[Index] = angle;
-                                result_aspect[Index] = aspect;
+                                
+                                if (rtn)
+                                {
+                                    tininfo->dem[Index] = Z;
+                                    /*tininfo->slope[Index] = angle;
+                                    tininfo->aspect[Index] = aspect;
+                                    tininfo->normal[Index].m_X = normalized_N[0];
+                                    tininfo->normal[Index].m_Y = normalized_N[1];
+                                    tininfo->normal[Index].m_Z = normalized_N[2];
+                                    
+                                    //float mag = sqrt(tininfo->normal[Index].m_X*tininfo->normal[Index].m_X + tininfo->normal[Index].m_Y*tininfo->normal[Index].m_Y + tininfo->normal[Index].m_Z*tininfo->normal[Index].m_Z);
+                                    //printf("normal %f\t%f\t%f\t%f\n",tininfo->normal[Index].m_X,tininfo->normal[Index].m_Y,tininfo->normal[Index].m_Z,mag);
+                                    
+                                    if(check_tar)
+                                    {
+                                        int kernel_count = 0;
+                                        
+                                        for(int kernel_r = -2 ; kernel_r <= 2 ;kernel_r ++)
+                                        {
+                                            for(int kernel_c = -2 ; kernel_c <= 2 ;kernel_c ++)
+                                            {
+                                                long pos_ref_col = ref_col + kernel_c;
+                                                long pos_ref_row = ref_row + kernel_r;
+                                                
+                                                long pos_tar_col = tar_col + kernel_c;
+                                                long pos_tar_row = tar_row + kernel_r;
+                                                
+                                                long pos_ref = pos_ref_row*ref_size.width  +  pos_ref_col;
+                                                long pos_tar = pos_tar_row*tar_size.width  +  pos_tar_col;
+                                                
+                                                if(pos_ref_col >= 0 && pos_ref_col < ref_size.width && pos_ref_row >=0 && pos_ref_row < ref_size.height &&
+                                                   pos_tar_col >= 0 && pos_tar_col < tar_size.width && pos_tar_row >=0 && pos_tar_row < tar_size.height)
+                                                {
+                                                    if(ref_img[pos_ref] > -100 && ref_img[pos_ref] < 10000 && tar_img[pos_tar] > -100 && tar_img[pos_tar] < 10000)
+                                                        kernel_count++;
+                                                }
+                                            }
+                                        }
+                                        
+                                        if(kernel_count > 20)
+                                        {
+                                            double* ref_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
+                                            double* tar_patch_vecs = (double*)calloc(sizeof(double),kernel_count);
+                                            
+                                            kernel_count = 0;
+                                            
+                                            for(int kernel_r = -2 ; kernel_r <= 2 ;kernel_r ++)
+                                            {
+                                                for(int kernel_c = -2 ; kernel_c <= 2 ;kernel_c ++)
+                                                {
+                                                    long pos_ref_col = ref_col + kernel_c;
+                                                    long pos_ref_row = ref_row + kernel_r;
+                                                    
+                                                    long pos_tar_col = tar_col + kernel_c;
+                                                    long pos_tar_row = tar_row + kernel_r;
+                                                    
+                                                    long pos_ref = pos_ref_row*ref_size.width  +  pos_ref_col;
+                                                    long pos_tar = pos_tar_row*tar_size.width  +  pos_tar_col;
+                                                    
+                                                    if(pos_ref_col >= 0 && pos_ref_col < ref_size.width && pos_ref_row >=0 && pos_ref_row < ref_size.height &&
+                                                       pos_tar_col >= 0 && pos_tar_col < tar_size.width && pos_tar_row >=0 && pos_tar_row < tar_size.height)
+                                                    {
+                                                        if(ref_img[pos_ref] > -100 && ref_img[pos_ref] < 10000 && tar_img[pos_tar] > -100 && tar_img[pos_tar] < 10000)
+                                                        {
+                                                            ref_patch_vecs[kernel_count] = ref_img[pos_ref];
+                                                            tar_patch_vecs[kernel_count] = tar_img[pos_tar];
+                                                            kernel_count++;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            double ncc = Correlate(ref_patch_vecs,tar_patch_vecs,kernel_count);
+                                            tininfo->ncc[Index] = ncc;
+                                            free(ref_patch_vecs);
+                                            free(tar_patch_vecs);
+                                       }
+                                    }
+                                     */
+                                }
                             }
                         }
                     }
@@ -29366,9 +30660,9 @@ D2DPOINT* CoregParam_Image_MPs_stereo(ProInfo *proinfo,uint8 Pyramid_step, uint8
                         if( (index_l > 0 && index_l < LImagesize.height*LImagesize.width) && (index_r > 0 && index_r < RImagesize.height*RImagesize.width) && Images_ref[index_l] > 0 && Images_tar[index_r] > 0 )
                         {
                             ori_diff = 0;
-                            
+                            F2DPOINT peak_pos;
                             if(postNCC_ortho_BYTE(Pyramid_step, ori_diff, Left_Y,  Left_X, Right_Y, Right_X,
-                                             subA,TsubA,InverseSubA,Template_size,_flag,1,LImagesize,RImagesize,Images_ref,Images_tar,&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh))
+                                             subA,TsubA,InverseSubA,Template_size,_flag,1,LImagesize,RImagesize,Images_ref,Images_tar,&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh,&peak_pos))
                             {
                                 flag_MPs[i] = true;
                                 
@@ -29382,8 +30676,8 @@ D2DPOINT* CoregParam_Image_MPs_stereo(ProInfo *proinfo,uint8 Pyramid_step, uint8
                                     sum_weight_Y += t_sum_weight_Y;
                                     sum_max_roh  += t_sum_max_roh;
                                     
-                                    save_pts[i].m_X = t_sum_weight_X/t_sum_max_roh*pwrtwo(Pyramid_step);
-                                    save_pts[i].m_Y = t_sum_weight_Y/t_sum_max_roh*pwrtwo(Pyramid_step);
+                                    save_pts[i].m_X = peak_pos.m_X*pwrtwo(Pyramid_step);//t_sum_weight_X/t_sum_max_roh*pwrtwo(Pyramid_step);
+                                    save_pts[i].m_Y = peak_pos.m_Y*pwrtwo(Pyramid_step);//t_sum_weight_Y/t_sum_max_roh*pwrtwo(Pyramid_step);
                                     save_pts[i].flag = 1;
                                     
                                     //printf(" save pts %f\t%f\n",save_pts[i].m_X,save_pts[i].m_Y);
@@ -29857,7 +31151,7 @@ bool postNCC_ortho(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double 
 
 
 bool postNCC_ortho_BYTE(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size,
-                   NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, unsigned char* _leftimage, unsigned char* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh)
+                   NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, unsigned char* _leftimage, unsigned char* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, F2DPOINT *peak_pos)
 {
     
     // input order: NumOfPt, LeftImage, RightImage, Template_size, center_row_left, center_col_left, center_row_right, center_col_right, ncc_weight
@@ -30151,6 +31445,9 @@ bool postNCC_ortho_BYTE(uint8 Pyramid_step, double Ori_diff, double Left_CR,  do
                 t_weight_X += max_X*max_roh;
                 t_weight_Y += max_Y*max_roh;
                 t_max_roh  += max_roh;
+                
+                peak_pos->m_X = max_X;
+                peak_pos->m_Y = max_Y;
                 
                 check_pt = true;
                 //printf("max XY %f\t%f\t%f\n",max_X,max_Y,max_roh);
@@ -31655,20 +32952,24 @@ void Preprocessing_SDM(ProInfo proinfo, char *save_path,char *Lsubsetfile, char 
             switch(proinfo.image_bits)
             {
                 case 8:
+                {
                     uint8* data8 = (uint8*)malloc(sizeof(uint8)*data_length);
                     fread(data8,sizeof(uint8),data_length,pFile_raw);
                     #pragma omp parallel for schedule(guided)
                     for(long int index = 0 ; index < data_length ; index++)
                         pyimg[0][index] = data8[index];
                     free(data8);
+                }
                     break;
                 case 12:
+                {
                     uint16* data16 = (uint16*)malloc(sizeof(uint16)*data_length);
                     fread(data16,sizeof(uint16),data_length,pFile_raw);
 #pragma omp parallel for schedule(guided)
                     for(long int index = 0 ; index < data_length ; index++)
                         pyimg[0][index] = data16[index];
                     free(data16);
+                }
                     break;
             }
             
