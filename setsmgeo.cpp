@@ -1,5 +1,9 @@
 #include "setsmgeo.hpp"
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "math.h"
+#include <cmath>
 
 #define FLOAT 4
 #define UCHAR 1
@@ -65,6 +69,7 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
 
     SetUpTIFFDirectory(tif, width, height, scale, minX, maxY, data_type);
     SetUpGeoKeys(gtif, projection, zone, NS_hemisphere);
+    
     for (int row=0; row<height; row++)
     {
         if (TIFFWriteScanline(tif, ((char *)buffer) + (bytes * row * width), row, 0) == -1) // TODO: TIFFWriteScanline may return -1 on failure:
@@ -72,11 +77,346 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
             TIFFError("WriteGeotiff_DEM","failure in WriteScanline on row %d\n", row);
         }
     }
+    /*
+    int TileLength = 256;
+    int TileWidth = 256;
+    int index = 0;
+    
+    int tileR = (ceil)(height/(double)TileLength);
+    int tileC = (ceil)(width/(double)TileWidth);
+    
+    printf("tileRC %d\t%d\t%d\t%d\n",tileR,tileC,height, width);
+    switch (data_type)
+    {
+        case FLOAT:
+            {
+                for ( int y = 0; y < tileR; y ++ )
+                {
+                    for (int x = 0; x < tileC; x ++ )
+                    {
+                        int t_height = height - y*TileLength;
+                        int t_width = width - x*TileWidth;
+                        
+                        if(y == tileR - 1 && x == tileC - 1)
+                        {
+                            float* buf = NULL;
+                            buf = (float*)calloc(sizeof(float),t_height*t_width);
+                            
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((float*)(buffer))[pos];
+                                    else
+                                        buf[index] = - 9999;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else if(y == tileR - 1)
+                        {
+                            float* buf = NULL;
+                            buf = (float*)calloc(sizeof(float),t_height*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((float*)(buffer))[pos];
+                                    else
+                                        buf[index] = - 9999;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        else if(x == tileC - 1)
+                        {
+                            float* buf = NULL;
+                            buf = (float*)calloc(sizeof(float),TileLength*t_width);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((float*)(buffer))[pos];
+                                    else
+                                        buf[index] = - 9999;
 
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else
+                        {
+                            float* buf = NULL;
+                            buf = (float*)calloc(sizeof(float),TileLength*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((float*)(buffer))[pos];
+                                    else
+                                        buf[index] = - 9999;
+
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        
+                    }
+                }
+            }
+            break;
+        case UCHAR:
+            {
+                for ( int y = 0; y < tileR; y ++ )
+                {
+                    for (int x = 0; x < tileC; x ++ )
+                    {
+                        int t_height = height - y*TileLength;
+                        int t_width = width - x*TileWidth;
+                        
+                        if(y == tileR - 1 && x == tileC - 1)
+                        {
+                            unsigned char* buf = NULL;
+                            buf = (unsigned char*)calloc(sizeof(unsigned char),t_height*t_width);
+                            
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((unsigned char*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else if(y == tileR - 1)
+                        {
+                            unsigned char* buf = NULL;
+                            buf = (unsigned char*)calloc(sizeof(unsigned char),t_height*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((unsigned char*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        else if(x == tileC - 1)
+                        {
+                            unsigned char* buf = NULL;
+                            buf = (unsigned char*)calloc(sizeof(unsigned char),TileLength*t_width);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((unsigned char*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else
+                        {
+                            float* buf = NULL;
+                            buf = (float*)calloc(sizeof(float),TileLength*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((float*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        
+                    }
+                }
+            }
+            break;
+        case UINT16:
+            {
+                for ( int y = 0; y < tileR; y ++ )
+                {
+                    for (int x = 0; x < tileC; x ++ )
+                    {
+                        int t_height = height - y*TileLength;
+                        int t_width = width - x*TileWidth;
+                        
+                        if(y == tileR - 1 && x == tileC - 1)
+                        {
+                            uint16* buf = NULL;
+                            buf = (uint16*)calloc(sizeof(uint16),t_height*t_width);
+                            
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((uint16*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else if(y == tileR - 1)
+                        {
+                            uint16* buf = NULL;
+                            buf = (uint16*)calloc(sizeof(uint16),t_height*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < height; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((uint16*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        else if(x == tileC - 1)
+                        {
+                            uint16* buf = NULL;
+                            buf = (uint16*)calloc(sizeof(uint16),TileLength*t_width);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < width; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((uint16*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                          
+                        }
+                        else
+                        {
+                            uint16* buf = NULL;
+                            buf = (uint16*)calloc(sizeof(uint16),TileLength*TileWidth);
+                            index =0;
+                            for (int i = y*TileLength; i < (y+1)*TileLength; i++)
+                            {
+                                for (int j = x*TileWidth; j < (x+1)*TileWidth; j++)
+                                {
+                                    long pos = i*width + j;
+                                    if( i < height && j < width)
+                                        buf[index] =  ((uint16*)(buffer))[pos];
+                                    else
+                                        buf[index] = 0;
+
+                                    index++;
+                                }
+                            }
+                            TIFFWriteTile(tif, (tdata_t)buf, x*TileWidth, y*TileLength, 0, 0);
+                            free(buf);
+                        }
+                        
+                    }
+                }
+            }
+            break;
+        default:
+            printf("unrecognized data type: %d\n", data_type);
+            break;
+    }
+    */
+    
+    
     GTIFWriteKeys(gtif);
     GTIFFree(gtif);
     XTIFFClose(tif);
     return 0;
+}
+
+uint8 ReadGeotiff_bits(char *filename)
+{
+    TIFF *tif;
+    uint8 bits;
+    
+    tif = XTIFFOpen(filename, "r");
+    if (tif)
+    {
+        size_t value = 0;
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &value);
+        
+        if(value == 16)
+            bits = 12;
+        else
+            bits = value;
+        
+        XTIFFClose(tif);
+    }
+    return bits;
 }
 
 CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_size)
@@ -103,7 +443,11 @@ CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &value);
         image_size.height = value;
 
-        XTIFFClose(tif);
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &value);
+        
+        if(value == 16)
+            value = 12;
+       XTIFFClose(tif);
     }
     return image_size;
 }
@@ -156,7 +500,10 @@ void SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, do
     TIFFSetField(tif, TIFFTAG_GEOPIXELSCALE, 3,pixscale);
     TIFFSetField(tif, TIFFTAG_PREDICTOR, 1);
     TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
-
+    
+    //TIFFSetField(tif, TIFFTAG_TILEWIDTH, 256);
+    //TIFFSetField(tif, TIFFTAG_TILELENGTH,  256);
+    
     switch (data_type)
     {
         case FLOAT:

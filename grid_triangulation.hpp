@@ -34,7 +34,13 @@ class GridTriangulation
 	public:
 		GridTriangulation(INDEX width, INDEX height);
 		~GridTriangulation();
+		Grid<GridType, IterType> *getGrid();
 		void Triangulate(GridPoint *points[], size_t num_points);
+		Edge *FindFaceRepresentative(Edge *edge);
+		void RemoveAllPoints(GridPoint **blunders, size_t num_blunders);
+		void Retriangulate(GridPoint **blunders, size_t num_blunders);
+		void RetriangulateVertical(std::vector<GridPoint*> blunders, bool nosplit);
+		void RetriangulateHorizontal(std::vector<GridPoint*> blunders, bool nosplit);
 		void SetEdgeOut(const GridPoint &p, Edge *e) { this->grid->SetElem(p, e); }
 		Edge *GetEdgeOut(const GridPoint &p) { return this->grid->GetElem(p); }
 		void RemovePoint(const GridPoint &p)
@@ -55,6 +61,10 @@ class GridTriangulation
 			this->grid->IgnorePoint(p);
 		}
 		void TriangulateEmptyPolygon(Edge &edge);
+		void TriangulateEmpty4(Edge &edge);	
+		void TriangulateEmpty5(Edge &edge);	
+		void TriangulateEmpty6(Edge &edge);
+		void TriangulateEmpty7(Edge &edge);
 		void TriangulateBorder(Edge& e, const GridPoint& p);
 		void RemovePointAndRetriangulate(const GridPoint &p);
 

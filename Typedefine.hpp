@@ -24,7 +24,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 3
+#define MaxImages 1000000
 
 #ifndef bool
 //#define bool unsigned char
@@ -135,7 +135,7 @@ typedef struct UpdateGrid{
 	
 	float Height; //after blunder detection
 	double roh;
-	double ortho_ncc[MaxImages];
+	double ortho_ncc[10];
     double Mean_ortho_ncc;
 
     uint8 Matched_flag;
@@ -229,9 +229,11 @@ typedef struct ProjectInfo{
     int number_of_images;
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     uint8 pyramid_level;
+    uint8 end_level;
     uint8 SDM_SS;
     double SDM_AS;
-    int SDM_days;
+    double SDM_days;
+    uint8 image_bits;
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
@@ -305,7 +307,7 @@ typedef struct ArgumentInfo{
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
     uint8 pyramid_level;
     uint8 SDM_SS;
-    int SDM_days;
+    double SDM_days;
     double SDM_AS;
     
     char Image[MaxImages][500];
@@ -314,7 +316,8 @@ typedef struct ArgumentInfo{
 	char seedDEMfilename[500];
 	char metafilename[500];
     char EO_Path[500];
-	
+    char DEM_input_file[500];
+    
 	bool check_DEM_space;
 	bool check_Threads_num;
 	bool check_seeddem;
@@ -344,8 +347,10 @@ typedef struct ArgumentInfo{
     bool check_fl;
     bool check_ccd;
     bool check_full_cal;
+    int check_txt_input;
     int check_coreg;
     int check_sdm_ortho;
+    int check_DEM_coreg_output;
     
     //SGM test flag
     bool check_SNCC;
@@ -423,8 +428,26 @@ typedef struct tagNCCresultSDM
     double result0;
     D2DPOINT result2;
     D2DPOINT result3;
- } NCCresultSDM;
+} NCCresultSDM;
 
+typedef struct tagTINinfo
+{
+    F3DPOINT *normal;
+    uint16 *slope;
+    uint16 *aspect;
+    float *ncc;
+    float *dem;
+} TINinfo;
 
+typedef struct tagConformalparam
+{
+    float scale;
+    float omega;
+    float phi;
+    float kappa;
+    float Tx;
+    float Ty;
+    float Tz;
+} Conformalparam;
 #endif
 

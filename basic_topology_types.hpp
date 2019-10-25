@@ -12,8 +12,10 @@
  **************************
  **************************/
 #define THREADED_CUTOFF 100	// Number of points after which the algorithm should switch to a serial triangulation
+#define RETRI_CUTOFF 50	// Number of points after which the algorithm should switch to a serial triangulation
+#define TINUPD_THRSHLD 100 // Used to decide update vs. new triangulation; larger means less likely to use TINUpdate
 
-// TODO
+// We don't really need 128-bit integers but here's the code in case it's ever wanted
 typedef int64_t INT64;
 //#ifdef __SIZEOF_INT128__ // __int128_t is a compiler extension
 //	typedef __int128_t INT128; 
@@ -54,7 +56,7 @@ inline std::size_t Convert(const GridPoint &p, INDEX width) { return p.row * wid
 // Data structure for (half-)edge in grid
 struct Edge
 {
-	Edge *dnext;	// Next edge out of destination vertex, counter-clockwise
+	Edge *dnext;	// Next edge out of destination vertex, counter-clockwise. That is, starting from a point on Edge e, rotate CCW. The next edge you tough this way is e's dnext. Note that this is opposite from some sources where dnext would be the next clockwise edge.
 	Edge *oprev;	// Previous edge into origin vertex, counter-clockwise (that is, next edge into origin, clockwise)
 	Edge *twin;	// The companion edge with origin and destination switched
 	GridPoint orig;	// The origin of the edge
@@ -86,12 +88,18 @@ class EdgeList
 		std::size_t idx;	// Current length of 'unused_edges' 
 		std::size_t size;	// Maximum number of edges to store
 		bool is_part_of_split;	// Denotes whether this is part of a larger, split EdgeList
+		bool is_local_copy;	// Denotes whether this is a copy of the global EdgeList
 
 		// Alternative constructor to create EdgeList from components of a base EdgeList
 		//   edges - list of edge objects from base EdgeList
 		//   unused_edges - list of unused edges from base EdgeList
 		//   num_points = maximum number of points for THIS triangulation (not for base triangulation)
 		EdgeList(Edge *edges, Edge **unused_edges, std::size_t num_points);
+		// Alternative constructor to create a local EdgeList from a global EdgeList
+		// Used for parallel point removal
+		//   global_list - global EdgeList
+		//   num_unused = maximum number of unused edges for local point removal
+		EdgeList(Edge *edges, std::size_t num_points);
 	public:
 		// Standard constructor to create EdgeList from scratch
 		//   num_points - maximum number of points in corresponding triangulation
@@ -118,6 +126,11 @@ class EdgeList
 		//   right_list - the right EdgeList from SplitEdgeList call
 		// The input EdgeLists should have been created by calling SplitEdgeList on this
 		void MergeEdgeLists(EdgeList &left_list, EdgeList &right_list);
+		// Creates a copy of the current EdgeList with its own empty unused_edges and idx
+		EdgeList *MakeLocalCopy();
+		// Merges local unused list into the current unused list
+		//   local_list - the left EdgeList from MakeLocalCopy call
+		void MergeUnused(EdgeList &local_list);
 
 		// Sets grid so that each grid point corresponding to a point in the
 		// triangulation stores an pointer to an Edge object out of that point
@@ -167,6 +180,7 @@ void EdgeList::SetGrid(Grid<GridType, IterType> *grid)
 	for (size_t t = 0; t < this->size; t++)
 	{
 		if (invalid_edge[t]) continue;
+
 		
 		grid->SetElem((this->edges[t]).orig, this->edges + t);
 	}
