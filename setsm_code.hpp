@@ -367,4 +367,5 @@ bool SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 float quickselect(float *arr, int n, int k);
+bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb);
 #endif // SETSM_CODE_H
