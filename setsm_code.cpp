@@ -3138,6 +3138,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
 		}
          */
         bool check_cal = false;
+        bool check_cal_2 = false;
         if(proinfo->IsRA)
             check_cal = true;
         else {
@@ -3148,9 +3149,21 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             pcheckFile = fopen(check_file,"r");
             if(!pcheckFile)
                 check_cal = true;
+            else
+                fclose(pcheckFile);
+            
+            FILE* pcheckFile_2;
+            sprintf(check_file,"%s/txt/matched_BR_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
+            pcheckFile_2 = fopen(check_file,"r");
+            if(!pcheckFile_2)
+                check_cal_2 = true;
+            else
+                fclose(pcheckFile_2);
+            
+            printf("check existing tile reuslt %d\t%d\t%d\t%d\n",row,col,check_cal,check_cal_2);
         }
 
-        if(check_cal)
+        if(check_cal || check_cal_2)
         {
             printf("start cal tile\n");
             total_count += 1;
@@ -3926,27 +3939,35 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     
                                     i = 0;
                                     //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
-                                    while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                    F3DPOINT pts_tmp;
+                                    while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&pts_tmp.m_X,&pts_tmp.m_Y,&pts_tmp.m_Z,&pts_tmp.flag)) != EOF )
                                     {
-                                        if(minmaxBR[0] > ptslists[i].m_X)
-                                            minmaxBR[0]     = ptslists[i].m_X;
-                                        if(minmaxBR[1] > ptslists[i].m_Y)
-                                            minmaxBR[1]     = ptslists[i].m_Y;
-                                        
-                                        if(minmaxBR[2] < ptslists[i].m_X)
-                                            minmaxBR[2]     = ptslists[i].m_X;
-                                        if(minmaxBR[3] < ptslists[i].m_Y)
-                                            minmaxBR[3]     = ptslists[i].m_Y;
-                                        if(minmaxBR[4] > ptslists[i].m_Z)
-                                            minmaxBR[4] = ptslists[i].m_Z;
-                                        if(minmaxBR[5] < ptslists[i].m_Z)
-                                            minmaxBR[5] = ptslists[i].m_Z;
-                                        /*
-                                        temp_pts[i].m_X = ptslists[i].m_X;
-                                        temp_pts[i].m_Y = ptslists[i].m_Y;
-                                        temp_pts[i].m_Z = ptslists[i].m_Z;
-                                        temp_pts[i].flag = ptslists[i].flag;
-                                        */
+                                        if(pts_tmp.m_X >= subBoundary[0] && pts_tmp.m_X <= subBoundary[2] && pts_tmp.m_Y >= subBoundary[1] && pts_tmp.m_Y <= subBoundary[3])
+                                        {
+                                            ptslists[i].m_X = pts_tmp.m_X;
+                                            ptslists[i].m_Y = pts_tmp.m_Y;
+                                            ptslists[i].m_Z = pts_tmp.m_Z;
+                                            
+                                            if(minmaxBR[0] > ptslists[i].m_X)
+                                                minmaxBR[0]     = ptslists[i].m_X;
+                                            if(minmaxBR[1] > ptslists[i].m_Y)
+                                                minmaxBR[1]     = ptslists[i].m_Y;
+                                            
+                                            if(minmaxBR[2] < ptslists[i].m_X)
+                                                minmaxBR[2]     = ptslists[i].m_X;
+                                            if(minmaxBR[3] < ptslists[i].m_Y)
+                                                minmaxBR[3]     = ptslists[i].m_Y;
+                                            if(minmaxBR[4] > ptslists[i].m_Z)
+                                                minmaxBR[4] = ptslists[i].m_Z;
+                                            if(minmaxBR[5] < ptslists[i].m_Z)
+                                                minmaxBR[5] = ptslists[i].m_Z;
+                                            /*
+                                            temp_pts[i].m_X = ptslists[i].m_X;
+                                            temp_pts[i].m_Y = ptslists[i].m_Y;
+                                            temp_pts[i].m_Z = ptslists[i].m_Z;
+                                            temp_pts[i].flag = ptslists[i].flag;
+                                            */
+                                        }
                                         i++;
                                         
                                     }
@@ -15224,7 +15245,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 count_Results[0] = 0;
                 for(tcnt=0;tcnt<count_MPs;tcnt++)
                 {
-                    if(ptslists[tcnt].flag != 1)
+                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
                         fprintf(pfile,"%lf %lf %lf %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         count_Results[0]++;
@@ -15260,9 +15281,11 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             {
                 FILE *pfile = fopen(filename_mps,"w");
                 int tcnt = 0;
+                int selected_count_MPs = 0;
+                
                 for(tcnt=0;tcnt<count_MPs;tcnt++)
                 {
-                    if(ptslists[tcnt].flag != 1)
+                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
                         fprintf(pfile,"%lf %lf %lf %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         
@@ -15270,9 +15293,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                             *minz_mp        = ptslists[tcnt].m_Z;
                         if(*maxz_mp < ptslists[tcnt].m_Z)
                             *maxz_mp        = ptslists[tcnt].m_Z;
+                        
+                        selected_count_MPs++;
                     }
                     
                 }
+                count_MPs = selected_count_MPs;
                 count_Results[0] = count_MPs;
                 fclose(pfile);
             }
@@ -18963,6 +18989,7 @@ CSize DEM_final_Size(char *save_path, int row_start, int col_start,int row_end, 
     double mt_grid;
     int index_file;
     int col_count, row_count;
+    int header_line = 7;
     
     minX = 10000000;
     minY = 10000000;
@@ -18993,22 +19020,50 @@ CSize DEM_final_Size(char *save_path, int row_start, int col_start,int row_end, 
             pfile = fopen(t_str,"r");
             if(pfile)
             {
-                count_matched_files++;
-                fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
-                //printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
-                if(minX > minmaxBR[0])
-                    minX     = minmaxBR[0];
-                if(minY > minmaxBR[1])
-                    minY     = minmaxBR[1];
-                
-                if(maxX < minmaxBR[2])
-                    maxX     = minmaxBR[2];
-                if(maxY < minmaxBR[3])
-                    maxY     = minmaxBR[3];
-                if(minHeight > minmaxBR[4])
-                    minHeight = minmaxBR[4];
-                if(maxHeight < minmaxBR[5])
-                    maxHeight = minmaxBR[5];
+                char h_t_str[500];
+                FILE *p_hfile;
+                sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",save_path,row,col);
+                p_hfile     = fopen(h_t_str,"r");
+                if(p_hfile)
+                {
+                    int iter;
+                    char hv_t_str[500];
+                    char ortho_str[500];
+                    int row_size,col_size;
+                    double t_boundary[4];
+                    double t_grid_size;
+                    for(iter=0;iter<header_line;iter++)
+                    {
+                        int t_row,t_col,t_level;
+                        
+                        fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
+                               &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                    }
+                    t_boundary[2] = t_boundary[0] + col_size*t_grid_size;
+                    t_boundary[3] = t_boundary[1] + row_size*t_grid_size;
+                    
+                    count_matched_files++;
+                    fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
+                    //printf("BR %f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
+                    if(minmaxBR[0] >= t_boundary[0] && minmaxBR[2] <= t_boundary[2] &&
+                       minmaxBR[1] >= t_boundary[1] && minmaxBR[3] <= t_boundary[3])
+                    {
+                        if(minX > minmaxBR[0])
+                            minX     = minmaxBR[0];
+                        if(minY > minmaxBR[1])
+                            minY     = minmaxBR[1];
+                        
+                        if(maxX < minmaxBR[2])
+                            maxX     = minmaxBR[2];
+                        if(maxY < minmaxBR[3])
+                            maxY     = minmaxBR[3];
+                        if(minHeight > minmaxBR[4])
+                            minHeight = minmaxBR[4];
+                        if(maxHeight < minmaxBR[5])
+                            maxHeight = minmaxBR[5];
+                    }
+                    fclose(p_hfile);
+                }
                 fclose(pfile);
             }
         }
@@ -20515,288 +20570,298 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     
     CSize Orthoimagesize;
     double OrthoBoundary[4];
-    
+    bool check_overlap;
     // set generated orthoimage info by comparing DEM info
     if(args.sensor_type == SB)
-        SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param, Ortho_resolution);
+        check_overlap = SetOrthoBoundary_ortho(&Orthoimagesize, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, param, Ortho_resolution);
     else
     {
         GetImageSize_ortho(ImageFilename,&m_frameinfo.m_Camera.m_ImageSize);
-        SetDEMBoundary_ortho_photo(&Orthoimagesize, OrthoBoundary,DEM_resolution, DEM_size, DEM_minX, DEM_maxY, Ortho_resolution, m_frameinfo.Photoinfo[0], m_frameinfo.m_Camera, m_frameinfo.Photoinfo[0].m_Rm);
+        check_overlap = SetDEMBoundary_ortho_photo(&Orthoimagesize, OrthoBoundary,DEM_resolution, DEM_size, DEM_minX, DEM_maxY, Ortho_resolution, m_frameinfo.Photoinfo[0], m_frameinfo.m_Camera, m_frameinfo.Photoinfo[0].m_Rm);
     }
     
-    // set saving pointer for orthoimage
-    uint16 *result_ortho    = (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
-    
-    float *DEM_value    = NULL;
-    
-    double minmaxHeight[2];
-    minmaxHeight[0]     = 99999;
-    minmaxHeight[1]     = -99999;
-    // load DEM value;
-    DEM_value = GetDEMValue(DEMFilename, DEM_size);
-    
-    printf("%d\n",DEM_size.width);
-    printf("%d\n",DEM_size.height);
-    printf("%f\n",DEM_minX);
-    printf("%f\n",DEM_maxY);
-    printf("%f\n",DEM_resolution);
-    printf("%f\n",Ortho_resolution);        
-    
-    int i, j;
-    for(i=0;i<DEM_size.height;i++)
+    if(check_overlap)
     {
-        for(j=0;j<DEM_size.width;j++)
+        // set saving pointer for orthoimage
+        uint16 *result_ortho    = (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
+        
+        float *DEM_value    = NULL;
+        
+        double minmaxHeight[2];
+        minmaxHeight[0]     = 99999;
+        minmaxHeight[1]     = -99999;
+        // load DEM value;
+        DEM_value = GetDEMValue(DEMFilename, DEM_size);
+        
+        printf("%d\n",DEM_size.width);
+        printf("%d\n",DEM_size.height);
+        printf("%f\n",DEM_minX);
+        printf("%f\n",DEM_maxY);
+        printf("%f\n",DEM_resolution);
+        printf("%f\n",Ortho_resolution);
+        
+        int i, j;
+        for(i=0;i<DEM_size.height;i++)
         {
-            if( (minmaxHeight[0] > DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
-                minmaxHeight[0] = DEM_value[i*DEM_size.width + j];
-            
-            if( (minmaxHeight[1] < DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
-                minmaxHeight[1] = DEM_value[i*DEM_size.width + j];
-        }
-    }
-    
-    double subfactor                      = pow(4-impyramid_step,2.0);
-    if(subfactor <= 1)
-        subfactor                       = 1;
-    int sub_height                  = ceil(Orthoimagesize.height/subfactor);
-    int sub_width                   = ceil(Orthoimagesize.width/subfactor);
-    int height_interval             = Ortho_resolution*sub_height;
-    int width_interval              = Ortho_resolution*sub_width;
-    
-    int buffer_x                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
-    int buffer_y                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
-    
-    int tile_count;
-    
-    double imageparam[2];
-    if(pair == 1)
-    {
-        imageparam[0] = 0.0;
-        imageparam[1] = 0.0;
-    }
-    else
-    {
-        imageparam[0] = Imageparams[1][0];
-        imageparam[1] = Imageparams[1][1];
-    }
-    printf("Image ID %d\tRPCs bias %f\t%f\n",pair,imageparam[0],imageparam[1]);
-    
-    for(i=0; i < subfactor;i++)
-    {
-        for(j=0; j<subfactor;j++)
-        {
-            char MEG[500];
-            sprintf(MEG,"Tile %d %d, processing:%6.1f\n",j+1,i+1,((i)*subfactor+j+1)/subfactor/subfactor*100);
-            printf("%s",MEG);
-
-            double Y_size[2];
-            Y_size[0]        = OrthoBoundary[3] - (i+1)*height_interval;
-            Y_size[1]        = OrthoBoundary[3] - i*height_interval;
-            double X_size[2];
-            X_size[0]        = OrthoBoundary[0] + j*width_interval;
-            X_size[1]        = OrthoBoundary[0] + (j+1)*width_interval;
-            
-            
-            X_size[0]       = X_size[0] - buffer_x;
-            Y_size[0]       = Y_size[0] - buffer_y;
-            Y_size[1]       = Y_size[1] + buffer_y;
-            X_size[1]       = X_size[1] + buffer_x;
-            
-            if( X_size[0] < OrthoBoundary[0])
-                X_size[0]   = OrthoBoundary[0];
-            
-            if (X_size[1] > OrthoBoundary[2])
-                X_size[1]   = OrthoBoundary[2];
-            
-            if (Y_size[0] < OrthoBoundary[1])
-                Y_size[0]   = OrthoBoundary[1];
-            
-            if (Y_size[1] > OrthoBoundary[3])
-                Y_size[1]   = OrthoBoundary[3];
-            
-            double subBoundary[4];
-            subBoundary[0] = X_size[0];
-            subBoundary[1] = Y_size[0];
-            subBoundary[2] = X_size[1];
-            subBoundary[3] = Y_size[1];
-            
-            D2DPOINT startpos_ori;
-            char subsetImageFilename[500];
-            char subsetImageFilename_hdr[500];
-            CSize subsetsize;
-            uint16 *subimage;
-            bool check_subsetImage = false;
-            
-            subimage = subsetImage_ortho(args.sensor_type, m_frameinfo, param, RPCs, ImageFilename,
-                                         subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
-            if(check_subsetImage)
+            for(j=0;j<DEM_size.width;j++)
             {
-                int ori_impyramid_step = impyramid_step;
-                if(impyramid_step > 0)
-                    impyramid_step = 1;
+                if( (minmaxHeight[0] > DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
+                    minmaxHeight[0] = DEM_value[i*DEM_size.width + j];
                 
-                CSize data_size[impyramid_step+1];
-                D2DPOINT startpos;
-                char t_str[500];
+                if( (minmaxHeight[1] < DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
+                    minmaxHeight[1] = DEM_value[i*DEM_size.width + j];
+            }
+        }
+        
+        double subfactor                      = pow(4-impyramid_step,2.0);
+        if(subfactor <= 1)
+            subfactor                       = 1;
+        int sub_height                  = ceil(Orthoimagesize.height/subfactor);
+        int sub_width                   = ceil(Orthoimagesize.width/subfactor);
+        int height_interval             = Ortho_resolution*sub_height;
+        int width_interval              = Ortho_resolution*sub_width;
+        
+        int buffer_x                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
+        int buffer_y                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
+        
+        int tile_count;
+        
+        double imageparam[2];
+        if(pair == 1)
+        {
+            imageparam[0] = 0.0;
+            imageparam[1] = 0.0;
+        }
+        else
+        {
+            imageparam[0] = Imageparams[1][0];
+            imageparam[1] = Imageparams[1][1];
+        }
+        printf("Image ID %d\tRPCs bias %f\t%f\n",pair,imageparam[0],imageparam[1]);
+        
+        printf("Orthoimage info size %d\t%d\tBR %f\t%f\t%f\t%f\n",Orthoimagesize.width,Orthoimagesize.height,OrthoBoundary[0],OrthoBoundary[1],OrthoBoundary[2],OrthoBoundary[3]);
+        
+        for(i=0; i < subfactor;i++)
+        {
+            for(j=0; j<subfactor;j++)
+            {
+                char MEG[500];
+                sprintf(MEG,"Tile %d %d, processing:%6.1f\n",j+1,i+1,((i)*subfactor+j+1)/subfactor/subfactor*100);
+                printf("%s",MEG);
+
+                double Y_size[2];
+                Y_size[0]        = OrthoBoundary[3] - (i+1)*height_interval;
+                Y_size[1]        = OrthoBoundary[3] - i*height_interval;
+                double X_size[2];
+                X_size[0]        = OrthoBoundary[0] + j*width_interval;
+                X_size[1]        = OrthoBoundary[0] + (j+1)*width_interval;
                 
                 
-                SetPySizes_ortho(data_size, subsetsize, impyramid_step);
-                startpos.m_X       = (double)(startpos_ori.m_X/pwrtwo(impyramid_step));      startpos.m_Y       = (double)(startpos_ori.m_Y/pwrtwo(impyramid_step));
+                X_size[0]       = X_size[0] - buffer_x;
+                Y_size[0]       = Y_size[0] - buffer_y;
+                Y_size[1]       = Y_size[1] + buffer_y;
+                X_size[1]       = X_size[1] + buffer_x;
                 
-                uint16 *pyimg;
+                if( X_size[0] < OrthoBoundary[0])
+                    X_size[0]   = OrthoBoundary[0];
                 
-                if(impyramid_step > 0)
-                    pyimg = Preprocessing_ortho(ori_impyramid_step,data_size,subimage);
+                if (X_size[1] > OrthoBoundary[2])
+                    X_size[1]   = OrthoBoundary[2];
                 
-                Image_size  = data_size[impyramid_step];
+                if (Y_size[0] < OrthoBoundary[1])
+                    Y_size[0]   = OrthoBoundary[1];
                 
-                //printf("Image_size %d\t%d\n",Image_size.width,Image_size.height);
+                if (Y_size[1] > OrthoBoundary[3])
+                    Y_size[1]   = OrthoBoundary[3];
                 
-                int col_size    = (int)((X_size[1] - X_size[0])/Ortho_resolution + 0.5);
-                int row_size    = (int)((Y_size[1] - Y_size[0])/Ortho_resolution + 0.5);
+                double subBoundary[4];
+                subBoundary[0] = X_size[0];
+                subBoundary[1] = Y_size[0];
+                subBoundary[2] = X_size[1];
+                subBoundary[3] = Y_size[1];
                 
-#pragma omp parallel for schedule(guided)
-                for(int count = 0; count < col_size*row_size ; count++)
+                D2DPOINT startpos_ori;
+                char subsetImageFilename[500];
+                char subsetImageFilename_hdr[500];
+                CSize subsetsize;
+                uint16 *subimage;
+                bool check_subsetImage = false;
+                
+                subimage = subsetImage_ortho(args.sensor_type, m_frameinfo, param, RPCs, ImageFilename,
+                                             subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
+                if(check_subsetImage)
                 {
-                    double row  = ((int)(floor(count/col_size)))*Ortho_resolution + Y_size[0];
-                    double col  = (count % col_size)*Ortho_resolution + X_size[0];
-
-                    long int index1,index2,index3, index4;
-                    double t_col, t_row;
-                    long int t_col_int, t_row_int;
-                    double dcol,drow;
+                    int ori_impyramid_step = impyramid_step;
+                    if(impyramid_step > 0)
+                        impyramid_step = 1;
                     
-                    t_col       = (col - DEM_minX)/DEM_resolution;
-                    t_row       = (DEM_maxY - row)/DEM_resolution;
+                    CSize data_size[impyramid_step+1];
+                    D2DPOINT startpos;
+                    char t_str[500];
                     
-                    t_col_int   = (long int)(t_col + 0.01);
-                    t_row_int   = (long int)(t_row + 0.01);
                     
-                    dcol        = t_col - t_col_int;
-                    drow        = t_row - t_row_int;
+                    SetPySizes_ortho(data_size, subsetsize, impyramid_step);
+                    startpos.m_X       = (double)(startpos_ori.m_X/pwrtwo(impyramid_step));      startpos.m_Y       = (double)(startpos_ori.m_Y/pwrtwo(impyramid_step));
                     
-                    if(t_col_int >= 0 && t_col_int +1 < DEM_size.width && t_row_int >= 0 && t_row_int +1 < DEM_size.height)
+                    uint16 *pyimg;
+                    
+                    if(impyramid_step > 0)
+                        pyimg = Preprocessing_ortho(ori_impyramid_step,data_size,subimage);
+                    
+                    Image_size  = data_size[impyramid_step];
+                    
+                    //printf("Image_size %d\t%d\n",Image_size.width,Image_size.height);
+                    
+                    int col_size    = (int)((X_size[1] - X_size[0])/Ortho_resolution + 0.5);
+                    int row_size    = (int)((Y_size[1] - Y_size[0])/Ortho_resolution + 0.5);
+                    
+    #pragma omp parallel for schedule(guided)
+                    for(int count = 0; count < col_size*row_size ; count++)
                     {
-                        double value1, value2, value3, value4, value;
-                        
-                        index1  = (t_col_int   ) + (t_row_int   )*(long)DEM_size.width;
-                        index2  = (t_col_int +1) + (t_row_int   )*(long)DEM_size.width;
-                        index3  = (t_col_int   ) + (t_row_int +1)*(long)DEM_size.width;
-                        index4  = (t_col_int +1) + (t_row_int +1)*(long)DEM_size.width;
-                        
-                        value1      = DEM_value[index1];
-                        value2      = DEM_value[index2];
-                        value3      = DEM_value[index3];
-                        value4      = DEM_value[index4];
-                        
-                        
-                        value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-                            + value3*(1-dcol)*drow + value4*dcol*drow;
-                        
-                        D3DPOINT object;
-                        D2DPOINT objectXY;
-                        //double imageparam[2] = {0.};
-                        object.m_X  = col;
-                        object.m_Y  = row;
-                        object.m_Z  = value;
-                        
-                        objectXY.m_X  = col;
-                        objectXY.m_Y  = row;
-                        
-                        if(value > -1000)
-                        {
-                            D2DPOINT image;
-                            D2DPOINT temp_pt;
-                            if(args.sensor_type == SB)
-                            {
-                                D2DPOINT wgsPt = ps2wgs_single(param, objectXY);
-                               
-                                object.m_X  = wgsPt.m_X;
-                                object.m_Y  = wgsPt.m_Y;
-                                image = GetObjectToImageRPC_single_ortho(RPCs, 2, imageparam, object);
-                            }
-                            else
-                            {
-                                D2DPOINT photo  = GetPhotoCoordinate_single(object,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera,m_frameinfo.Photoinfo[0].m_Rm);
-                                image = PhotoToImage_single(photo, m_frameinfo.m_Camera.m_CCDSize, m_frameinfo.m_Camera.m_ImageSize);
-                                
-                                //printf("done photoToImage %f\t%f\n",image.m_X,image.m_Y);
-                            }
-                            
-                            
-                            temp_pt     = OriginalToPyramid_single_ortho(image, startpos, impyramid_step);
-                            
-                            t_col       = temp_pt.m_X;
-                            t_row       = temp_pt.m_Y;
-                            
-                            t_col_int   = (long int)(t_col + 0.01);
-                            t_row_int   = (long int)(t_row + 0.01);
-                            
-                            dcol        = t_col - t_col_int;
-                            drow        = t_row - t_row_int;
-                            
-                            //printf("temp_pt %f\t%f\n",temp_pt.m_X,temp_pt.m_Y);
-                            if(t_col_int >= 0 && t_col_int +1 < Image_size.width && t_row_int >= 0 && t_row_int +1 < Image_size.height
-                               && (t_col_int +1) + (t_row_int +1)*(long)Image_size.width < (long)Image_size.width*(long)Image_size.height)
-                            {
-                                //printf("inside of image value\n");
-                                double value1, value2, value3, value4, value;
-                                long int index;
-                                index1  = (t_col_int   ) + (t_row_int   )*(long)Image_size.width;
-                                index2  = (t_col_int +1) + (t_row_int   )*(long)Image_size.width;
-                                index3  = (t_col_int   ) + (t_row_int +1)*(long)Image_size.width;
-                                index4  = (t_col_int +1) + (t_row_int +1)*(long)Image_size.width;
-                                
-                                if(impyramid_step > 0)
-                                {
-                                    value1      = pyimg[index1];
-                                    value2      = pyimg[index2];
-                                    value3      = pyimg[index3];
-                                    value4      = pyimg[index4];
-                                }
-                                else {
-                                    value1      = subimage[index1];
-                                    value2      = subimage[index2];
-                                    value3      = subimage[index3];
-                                    value4      = subimage[index4];
-                                }
+                        double row  = ((int)(floor(count/col_size)))*Ortho_resolution + Y_size[0];
+                        double col  = (count % col_size)*Ortho_resolution + X_size[0];
 
-                                value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-                                    + value3*(1-dcol)*drow + value4*dcol*drow;
-                                
-                                t_col_int       = (long int)((col - OrthoBoundary[0])/Ortho_resolution + 0.01);
-                                t_row_int       = (long int)((OrthoBoundary[3] - row)/Ortho_resolution + 0.01);
-                                index           = t_col_int + t_row_int*(long)Orthoimagesize.width;
-                                
-                                if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < (long)Orthoimagesize.width*(long)Orthoimagesize.height)
+                        long int index1,index2,index3, index4;
+                        double t_col, t_row;
+                        long int t_col_int, t_row_int;
+                        double dcol,drow;
+                        
+                        t_col       = (col - DEM_minX)/DEM_resolution;
+                        t_row       = (DEM_maxY - row)/DEM_resolution;
+                        
+                        t_col_int   = (long int)(t_col + 0.01);
+                        t_row_int   = (long int)(t_row + 0.01);
+                        
+                        dcol        = t_col - t_col_int;
+                        drow        = t_row - t_row_int;
+                        
+                        if(t_col_int >= 0 && t_col_int +1 < DEM_size.width && t_row_int >= 0 && t_row_int +1 < DEM_size.height)
+                        {
+                            double value1, value2, value3, value4, value;
+                            
+                            index1  = (t_col_int   ) + (t_row_int   )*(long)DEM_size.width;
+                            index2  = (t_col_int +1) + (t_row_int   )*(long)DEM_size.width;
+                            index3  = (t_col_int   ) + (t_row_int +1)*(long)DEM_size.width;
+                            index4  = (t_col_int +1) + (t_row_int +1)*(long)DEM_size.width;
+                            
+                            value1      = DEM_value[index1];
+                            value2      = DEM_value[index2];
+                            value3      = DEM_value[index3];
+                            value4      = DEM_value[index4];
+                            
+                            
+                            value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
+                                + value3*(1-dcol)*drow + value4*dcol*drow;
+                            
+                            D3DPOINT object;
+                            D2DPOINT objectXY;
+                            //double imageparam[2] = {0.};
+                            object.m_X  = col;
+                            object.m_Y  = row;
+                            object.m_Z  = value;
+                            
+                            objectXY.m_X  = col;
+                            objectXY.m_Y  = row;
+                            
+                            if(value > -1000)
+                            {
+                                D2DPOINT image;
+                                D2DPOINT temp_pt;
+                                if(args.sensor_type == SB)
                                 {
-                                    //printf("inside of ortho\n");
-                                    result_ortho[index] = value1;
+                                    D2DPOINT wgsPt = ps2wgs_single(param, objectXY);
+                                   
+                                    object.m_X  = wgsPt.m_X;
+                                    object.m_Y  = wgsPt.m_Y;
+                                    image = GetObjectToImageRPC_single_ortho(RPCs, 2, imageparam, object);
+                                }
+                                else
+                                {
+                                    D2DPOINT photo  = GetPhotoCoordinate_single(object,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera,m_frameinfo.Photoinfo[0].m_Rm);
+                                    image = PhotoToImage_single(photo, m_frameinfo.m_Camera.m_CCDSize, m_frameinfo.m_Camera.m_ImageSize);
+                                    
+                                    //printf("done photoToImage %f\t%f\n",image.m_X,image.m_Y);
+                                }
+                                
+                                
+                                temp_pt     = OriginalToPyramid_single_ortho(image, startpos, impyramid_step);
+                                
+                                t_col       = temp_pt.m_X;
+                                t_row       = temp_pt.m_Y;
+                                
+                                t_col_int   = (long int)(t_col + 0.01);
+                                t_row_int   = (long int)(t_row + 0.01);
+                                
+                                dcol        = t_col - t_col_int;
+                                drow        = t_row - t_row_int;
+                                
+                                //printf("temp_pt %f\t%f\n",temp_pt.m_X,temp_pt.m_Y);
+                                if(t_col_int >= 0 && t_col_int +1 < Image_size.width && t_row_int >= 0 && t_row_int +1 < Image_size.height
+                                   && (t_col_int +1) + (t_row_int +1)*(long)Image_size.width < (long)Image_size.width*(long)Image_size.height)
+                                {
+                                    //printf("inside of image value\n");
+                                    double value1, value2, value3, value4, value;
+                                    long int index;
+                                    index1  = (t_col_int   ) + (t_row_int   )*(long)Image_size.width;
+                                    index2  = (t_col_int +1) + (t_row_int   )*(long)Image_size.width;
+                                    index3  = (t_col_int   ) + (t_row_int +1)*(long)Image_size.width;
+                                    index4  = (t_col_int +1) + (t_row_int +1)*(long)Image_size.width;
+                                    
+                                    if(impyramid_step > 0)
+                                    {
+                                        value1      = pyimg[index1];
+                                        value2      = pyimg[index2];
+                                        value3      = pyimg[index3];
+                                        value4      = pyimg[index4];
+                                    }
+                                    else {
+                                        value1      = subimage[index1];
+                                        value2      = subimage[index2];
+                                        value3      = subimage[index3];
+                                        value4      = subimage[index4];
+                                    }
+
+                                    value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
+                                        + value3*(1-dcol)*drow + value4*dcol*drow;
+                                    
+                                    t_col_int       = (long int)((col - OrthoBoundary[0])/Ortho_resolution + 0.01);
+                                    t_row_int       = (long int)((OrthoBoundary[3] - row)/Ortho_resolution + 0.01);
+                                    index           = t_col_int + t_row_int*(long)Orthoimagesize.width;
+                                    
+                                    if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < (long)Orthoimagesize.width*(long)Orthoimagesize.height)
+                                    {
+                                        //printf("inside of ortho\n");
+                                        result_ortho[index] = value1;
+                                    }
                                 }
                             }
                         }
                     }
+                    
+                    if(impyramid_step > 0)
+                        free(pyimg);
+                    
+                    free(subimage);
                 }
                 
-                if(impyramid_step > 0)
-                    free(pyimg);
-                
-                free(subimage);
             }
-            
         }
+        free(RPCs);
+        free(DEM_value);
+        
+        WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
+        free(result_ortho);
+        
+        ET = time(0);
+        
+        gap = difftime(ET,ST);
+        printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
     }
-    free(RPCs);
-    free(DEM_value);
-    
-    WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
-    free(result_ortho);
-    
-    ET = time(0);
-    
-    gap = difftime(ET,ST);
-    printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
+    else
+    {
+        printf("check overlap area between DEM and image, or match a projection type of input image based on DEM projection by adding '-projection' option\n");
+        free(RPCs);
+    }
 }
 
 D2DPOINT OriginalToPyramid_single_ortho(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step)
@@ -21433,11 +21498,16 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     DEMboundary[1]  = TopLeft[1]-DEM_size.height*gridspace;
     DEMboundary[2]  = TopLeft[0]+DEM_size.width*gridspace;
     DEMboundary[3]  = TopLeft[1];
+    
+    printf("DEMBoundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
+    
     double minLon, maxLon, minLat, maxLat;
     minLon          = -1.15*RPCs[1][2] + RPCs[0][2];
     maxLon          =  1.15*RPCs[1][2] + RPCs[0][2];
     minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
     maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
+    
+    printf("lon lat %f\t%f\t%f\t%f\n",minLon,maxLon,minLat,maxLat);
     
     D2DPOINT *XY;
     D2DPOINT LonLat[4];
@@ -21465,6 +21535,21 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     ImageBoundary[2]    = ceil(t_maxX)+1;
     ImageBoundary[3]    = ceil(t_maxY)+1;
     
+    printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
+    
+    D2DPOINT DEM_lt,DEM_rb,Image_lt,Image_rb;
+    DEM_lt.m_X = DEMboundary[0];
+    DEM_lt.m_Y = DEMboundary[3];
+    DEM_rb.m_X = DEMboundary[2];
+    DEM_rb.m_Y = DEMboundary[1];
+    
+    Image_lt.m_X = ImageBoundary[0];
+    Image_lt.m_Y = ImageBoundary[3];
+    Image_rb.m_X = ImageBoundary[2];
+    Image_rb.m_Y = ImageBoundary[1];
+    
+    bool check_overlap = CheckOverlap(DEM_lt, DEM_rb, Image_lt, Image_rb);
+    
     Boundary[0] = (max(DEMboundary[0],ImageBoundary[0]));
     Boundary[1] = (max(DEMboundary[1],ImageBoundary[1]));
     Boundary[2] = (min(DEMboundary[2],ImageBoundary[2]));
@@ -21476,7 +21561,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     free(XY);
 
     printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
-    return true;
+    return check_overlap;
 }
 
 bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double gridspace, CSize DEM_size, double minX, double maxY, double Ortho_resolution, EO Photo, CAMERA_INFO m_Camera, RM M)
@@ -21531,6 +21616,19 @@ bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double grids
     //printf("photo coord %f\t%f\n%f\t%f\n%f\t%f\n%f\t%f\n",top_left.m_X,top_left.m_Y,top_right.m_X,top_right.m_Y,bottom_right.m_X,bottom_right.m_Y,bottom_left.m_X,bottom_left.m_Y);
     //printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
     //printf("DEMboundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
+    
+    D2DPOINT DEM_lt,DEM_rb,Image_lt,Image_rb;
+    DEM_lt.m_X = DEMboundary[0];
+    DEM_lt.m_Y = DEMboundary[3];
+    DEM_rb.m_X = DEMboundary[2];
+    DEM_rb.m_Y = DEMboundary[1];
+    
+    Image_lt.m_X = ImageBoundary[0];
+    Image_lt.m_Y = ImageBoundary[3];
+    Image_rb.m_X = ImageBoundary[2];
+    Image_rb.m_Y = ImageBoundary[1];
+    
+    bool check_overlap = CheckOverlap(DEM_lt, DEM_rb, Image_lt, Image_rb);
     
     Boundary[0] = (max(DEMboundary[0],ImageBoundary[0]));
     Boundary[1] = (max(DEMboundary[1],ImageBoundary[1]));
@@ -35617,4 +35715,15 @@ float quickselect(float *arr, int n, int k) {
             if (j <= k) l=i;
         }
     }
+}
+
+bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb)
+{
+    if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
+        return false;
+    
+    if (br1_lt.m_Y < br2_rb.m_Y || br2_lt.m_Y < br1_rb.m_Y)
+        return false;
+    
+    return true;
 }
