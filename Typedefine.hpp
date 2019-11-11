@@ -24,7 +24,7 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 1000000
+#define MaxImages 1000
 
 #ifndef bool
 //#define bool unsigned char
@@ -33,7 +33,7 @@
 #endif
 
 enum SensorType {SB , AB};
-enum SensorProvider {DG, PL};
+enum SensorProvider {DG, PL, PT};
 
 typedef struct tagUI2DPoint
 {
