@@ -2118,7 +2118,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 CSize Matchtag_seeddem_size;
                 
-                if(proinfo->check_Matchtag)
+                if(proinfo->check_Matchtag && !args.check_tiles_SR && !args.check_tiles_SC && !args.check_tiles_ER && !args.check_tiles_EC)
                 {
                     double t_minX,t_maxY, t_grid_size;
                     char *seed_path = proinfo->priori_DEM_tif;
@@ -2702,7 +2702,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             double FinalDEM_boundary[4] = {0.};
                             CSize Final_DEMsize;
                             
-                            if(proinfo->check_Matchtag)
+                            if(proinfo->check_Matchtag && !args.check_tiles_SR && !args.check_tiles_SC && !args.check_tiles_ER && !args.check_tiles_EC)
                             {
                                 buffer_tile = 0;
                                 
@@ -3305,11 +3305,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             
             RA_memory = RA_memory/1024.0/1024.0/1024.0;
             
-            printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
-            if(RA_memory > proinfo->System_memory - 2)
+            if(proinfo->IsRA)
             {
-                printf("System memory is not enough to run a relative RPC bias computation module of SETSM. Please reduce RA tilesize or assign more physical memory!!\n");
-                exit(1);
+                printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
+                if(RA_memory > proinfo->System_memory - 2)
+                {
+                    printf("System memory is not enough to run a relative RPC bias computation module of SETSM. Please reduce RA tilesize or assign more physical memory!!\n");
+                    exit(1);
+                }
             }
             
             if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,
@@ -3608,7 +3611,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                         }
             
-                        printf("end start ResizeGridPT3\n");
+                        printf("end start ResizeGridPT3 minmax height %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
                         
                         pre_Size_Grid2D.width = Size_Grid2D.width;
                         pre_Size_Grid2D.height = Size_Grid2D.height;
@@ -3739,9 +3742,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                         }
                         
-                        /*if(proinfo->check_Matchtag)
+                        if(proinfo->check_Matchtag && proinfo->DEM_resolution < 2)
                             check_matching_rate = true;
-                        */
+                        
                         if(!check_matching_rate)
                             grid_voxel = (VOXEL**)calloc(sizeof(VOXEL*),Size_Grid2D.width*Size_Grid2D.height);
                        
@@ -4054,7 +4057,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     FILE *pFile = fopen(filename_mps,"wb");
                                     fwrite(ptslists,sizeof(F3DPOINT),count_MPs,pFile);
                                     
-                                    FILE *pFile_a = fopen(filename_mps_asc,"w");
+                                    /*FILE *pFile_a = fopen(filename_mps_asc,"w");
                                     for(i=0;i<count_MPs;i++)
                                     {
                                         //if(ptslists[i].flag != 1)
@@ -4064,7 +4067,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                     }
                                     fclose(pFile_a);
-                                    
+                                    */
                                     fclose(pFile);
                                     
                                     if(!proinfo->IsRA)
@@ -18057,8 +18060,8 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
     outMean_ortho = fopen(t_str,"wb");
     
     
-    sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
-    outMean_ortho_asc = fopen(t_str,"w");
+    //sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
+    //outMean_ortho_asc = fopen(t_str,"w");
     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
     {
         sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_%d.txt",save_path,row,col,level,iteration,add_str,ti);
@@ -18095,7 +18098,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
                 //if(roh_height[matlab_index].NumOfHeight > 0)
                 {
                     //fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                    fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
+                    //fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Mean_ortho_ncc);
                 
                     temp_height[matlab_index] = GridPT3[matlab_index].Height;
                     temp_ncc[matlab_index] = GridPT3[matlab_index].Mean_ortho_ncc;
@@ -18117,7 +18120,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
             //fprintf(outfile_h,"\n");
-            fprintf(outMean_ortho_asc,"\n");
+            //fprintf(outMean_ortho_asc,"\n");
             /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                 fprintf(outfile_roh[ti],"\n");*/
             /*fprintf(outfile_flag,"\n");*/
@@ -18131,7 +18134,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
         //fclose(outfile_max);
         fclose(outfile_h);
         fclose(outMean_ortho);
-        fclose(outMean_ortho_asc);
+        //fclose(outMean_ortho_asc);
         /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
             fclose(outfile_roh[ti]);*/
         /*fclose(outfile_flag);*/
