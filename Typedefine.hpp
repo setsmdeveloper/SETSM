@@ -33,7 +33,7 @@
 #endif
 
 enum SensorType {SB , AB};
-enum SensorProvider {DG, PL};
+enum SensorProvider {DG, PL, PT};
 
 typedef struct tagUI2DPoint
 {
