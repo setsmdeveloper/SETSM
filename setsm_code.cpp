@@ -11679,7 +11679,12 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                     
                                                 	}
                                                 	else
-                                                    	grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
+                                                    {
+                                                        if(count_INCC > 0)
+                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
+                                                        else
+                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = -1.0;
+                                                    }
                                             	}
                                         	}
                                         	else
@@ -11700,8 +11705,12 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                     if(check_ortho && count_GNCC > 0)
                                         temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
                                     else
-                                        temp_rho = sum_INCC_multi/count_INCC;
-
+                                    {
+                                        if(count_INCC > 0)
+                                            temp_rho = sum_INCC_multi/count_INCC;
+                                        else
+                                            temp_rho = -1.0;
+                                    }
                                     
                                      grid_index           = pt_index;
                                      
@@ -11785,8 +11794,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                      pre_height             = iter_height;
                                      direction              = t_direction;
                                      
-                                     pre_INCC_roh           = sum_INCC_multi/count_INCC;
-                                     pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
+                                     //pre_INCC_roh           = sum_INCC_multi/count_INCC;
+                                     //pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
                                     
                                     if(max_WNCC < temp_rho)
                                     {
@@ -11802,8 +11811,13 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                     if(check_ortho && count_GNCC > 0)
 										temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
 									else
-										temp_rho = sum_INCC_multi/count_INCC;
-                                    
+                                    {
+                                        if(count_INCC > 0)
+                                            temp_rho = sum_INCC_multi/count_INCC;
+                                        else
+                                            temp_rho = -1.0;
+                                    }
+								      
                                     if(temp_rho > 1.0)
                                         temp_rho = 1.0;
                                     if(temp_rho < -1.0)
@@ -14894,7 +14908,12 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2))// || Pyramid_step <= 1)
                 ROR = 1.0;
             else
-                ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+            {
+                if(fabs(roh_height[grid_index].result0) > 0)
+                    ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+                else
+                    ROR         = 0;
+            }
             
             
             
