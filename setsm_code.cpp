@@ -35915,7 +35915,7 @@ D2DPOINT GetObjectToImage_single_SDM(uint16 _numofpts, D2DPOINT _GP, double *bou
     return IP;
 }
 
-bool SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere)
+void SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere)
 {
     
     param->utm_zone = args.utm_zone;
