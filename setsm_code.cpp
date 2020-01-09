@@ -3741,7 +3741,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 check_matching_rate = true;
                             }
                         }
-                        
+
+			if(!check_matching_rate)
+			{
+			    if(level == 0 && iteration == 3 && proinfo->DEM_resolution < 1)
+				check_matching_rate = true; 
+			}                        
+ 
                         if(proinfo->check_Matchtag && proinfo->DEM_resolution < 2)
                             check_matching_rate = true;
                         
@@ -3772,6 +3778,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         *stereo_angle_accuracy = MPP_stereo_angle;
                         
                         printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
+			printf("Voxel calculation %d\n",!check_matching_rate);
                         
                         int Accessable_grid;
                         bool level_check_matching_rate = false;

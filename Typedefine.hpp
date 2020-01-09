@@ -135,7 +135,7 @@ typedef struct UpdateGrid{
 	
 	float Height; //after blunder detection
 	double roh;
-	double ortho_ncc[10];
+	double ortho_ncc[2];
     double Mean_ortho_ncc;
 
     uint8 Matched_flag;
