@@ -118,6 +118,7 @@ typedef struct tagNCCresult
 	float result2; //first peak height
 	float result3; //second peak height
     float GNCC;
+    float *GNCC_multi;
 	int result4; //peak count
     double max_WNCC;
     int max_WNCC_pos;
@@ -149,6 +150,7 @@ typedef struct tagVoxelinfo
     float height;
     bool flag_cal;
     float INCC;
+    float *INCC_multi;
 }VOXEL;
 
 typedef struct LSFinfo{
