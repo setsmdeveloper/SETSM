@@ -1020,11 +1020,141 @@ int main(int argc,char *argv[])
      
                 if (strcmp("-seed",argv[i]) == 0)
                 {
-                    TIFF *tif = NULL;
-                    
-                    if (argc == i+1) {
-                        printf("Please input the seed filepath\n");
-                        cal_flag = false;
+                    if(args.check_sdm_ortho == 0)
+                    {
+                        TIFF *tif = NULL;
+                        
+                        if (argc == i+1) {
+                            printf("Please input the seed filepath\n");
+                            cal_flag = false;
+                        }
+                        else
+                        {
+                            int str_size = strlen(argv[i+1]);
+                            int kk=0;
+                            
+                            for(kk=0;kk<str_size;kk++)
+                            {
+                                args.seedDEMfilename[kk] = argv[i+1][kk];
+                            }
+                            args.seedDEMfilename[str_size] = '\0';
+                            
+                            printf("%s\n",args.seedDEMfilename);
+                            
+                            printf("DEM check\n");
+                            tif  = TIFFOpen(args.seedDEMfilename,"r");
+                            printf("first check\n");
+
+                            if(tif)
+                            {
+                                printf("DEM is exist!! \n");
+                                
+                                printf("%s\n",args.seedDEMfilename);
+                                args.check_seeddem = true;
+                            }
+                            else {
+                                printf("second check\n");
+                                char* temp_path = remove_ext(args.seedDEMfilename);
+                                
+                                sprintf(args.seedDEMfilename,"%s.tif",temp_path);
+                                
+                                tif  = TIFFOpen(args.seedDEMfilename,"r");
+                                if(tif)
+                                {
+                                    printf("%s\n",args.seedDEMfilename);
+                                    args.check_seeddem = true;
+                                }
+                                else
+                                {
+                                    sprintf(args.seedDEMfilename,"%s.raw",temp_path);
+                                    printf("%s\n",args.seedDEMfilename);
+                                    FILE *pfile = fopen(args.seedDEMfilename,"r");
+                                    if(pfile)
+                                    {
+                                        printf("DEM is exist!! \n");
+                                        
+                                        printf("%s\n",args.seedDEMfilename);
+                                        args.check_seeddem = true;
+                                    }
+                                    else
+                                    {
+                                        printf("DEM doesn't exist!! Please check DEM path\n");
+                                        args.check_seeddem = false;
+                                        exit(0);
+                                    }
+                                }
+
+                                free(temp_path);
+                            }
+
+                            if(args.check_seeddem)
+                            {
+                                char* temp_path = remove_ext(args.seedDEMfilename);
+                                printf("seedem %s\n",temp_path);
+                                int full_size;
+                                full_size       = strlen(args.seedDEMfilename);
+                                char* Metafile1 = (char*)malloc(sizeof(char)*(full_size-8+1));
+                                char Metafile[500];
+                                int i;
+                                for(i=0;i<full_size-8;i++)
+                                    Metafile1[i] = args.seedDEMfilename[i];
+                                Metafile1[full_size-8] = '\0';
+                                
+                                for(i=0;i<full_size-8;i++)
+                                    Metafile[i] = args.seedDEMfilename[i];
+                                Metafile[full_size-8] = '\0';
+                                
+                                printf("%s\n",Metafile);
+                                char *str = (char*)"meta.txt";
+                                
+                                sprintf(args.metafilename,"%s_%s",Metafile,str);
+                                printf("Meta file %s\n",args.metafilename);
+                                
+                                FILE* pFile_meta;
+                                pFile_meta  = fopen(args.metafilename,"r");
+                                if(pFile_meta)
+                                {
+                                    printf("meta file loading successful\n");
+                                    printf("Meta file %s\n",args.metafilename);
+                                    fclose(pFile_meta);
+                                }
+                                else
+                                {
+                                    printf("%s\n",Metafile1);
+                                    
+                                    sprintf(args.metafilename,"%s_%s",Metafile1,str);
+                                    FILE* pFile_meta1;
+                                    pFile_meta1 = fopen(args.metafilename,"r");
+                                    if(pFile_meta1)
+                                    {
+                                        printf("meta file loading successful\n");
+                                        printf("Meta file %s\n",args.metafilename);
+                                        fclose(pFile_meta1);
+                                    }
+                                    else
+                                    {
+                                        printf("meta file loading failed\n");
+                                        args.check_seeddem = false;
+                                    }
+                                }
+                                
+                                free(Metafile1);
+                                free(temp_path);
+                            }
+                            
+                        }
+                        
+                        if (argc == i+2) {
+                            printf("Please input the seed sigma value\n");
+                            cal_flag = false;
+                        }
+                        else
+                        {
+                            args.seedDEMsigma = atof(argv[i+2]);
+                            printf("%f\n",args.seedDEMsigma);
+                            if(tif)
+                                args.check_seeddem = true;
+                        }
                     }
                     else
                     {
@@ -1038,120 +1168,7 @@ int main(int argc,char *argv[])
                         args.seedDEMfilename[str_size] = '\0';
                         
                         printf("%s\n",args.seedDEMfilename);
-                        
-                        printf("DEM check\n");
-                        tif  = TIFFOpen(args.seedDEMfilename,"r");
-                        printf("first check\n");
-
-                        if(tif)
-                        {
-                            printf("DEM is exist!! \n");
-                            
-                            printf("%s\n",args.seedDEMfilename);
-                            args.check_seeddem = true;
-                        }
-                        else {
-                            printf("second check\n");
-                            char* temp_path = remove_ext(args.seedDEMfilename);
-                            
-                            sprintf(args.seedDEMfilename,"%s.tif",temp_path);
-                            
-                            tif  = TIFFOpen(args.seedDEMfilename,"r");
-                            if(tif)
-                            {
-                                printf("%s\n",args.seedDEMfilename);
-                                args.check_seeddem = true;
-                            }
-                            else
-                            {
-                                sprintf(args.seedDEMfilename,"%s.raw",temp_path);
-                                printf("%s\n",args.seedDEMfilename);
-                                FILE *pfile = fopen(args.seedDEMfilename,"r");
-                                if(pfile)
-                                {
-                                    printf("DEM is exist!! \n");
-                                    
-                                    printf("%s\n",args.seedDEMfilename);
-                                    args.check_seeddem = true;
-                                }
-                                else
-                                {
-                                    printf("DEM doesn't exist!! Please check DEM path\n");
-                                    args.check_seeddem = false;
-                                    exit(0);
-                                }
-                            }
-
-                            free(temp_path);
-                        }
-
-                        if(args.check_seeddem)
-                        {
-                            char* temp_path = remove_ext(args.seedDEMfilename);
-                            printf("seedem %s\n",temp_path);
-                            int full_size;
-                            full_size       = strlen(args.seedDEMfilename);
-                            char* Metafile1 = (char*)malloc(sizeof(char)*(full_size-8+1));
-                            char Metafile[500];
-                            int i;
-                            for(i=0;i<full_size-8;i++)
-                                Metafile1[i] = args.seedDEMfilename[i];
-                            Metafile1[full_size-8] = '\0';
-                            
-                            for(i=0;i<full_size-8;i++)
-                                Metafile[i] = args.seedDEMfilename[i];
-                            Metafile[full_size-8] = '\0';
-                            
-                            printf("%s\n",Metafile);
-                            char *str = (char*)"meta.txt";
-                            
-                            sprintf(args.metafilename,"%s_%s",Metafile,str);
-                            printf("Meta file %s\n",args.metafilename);
-                            
-                            FILE* pFile_meta;
-                            pFile_meta  = fopen(args.metafilename,"r");
-                            if(pFile_meta)
-                            {
-                                printf("meta file loading successful\n");
-                                printf("Meta file %s\n",args.metafilename);
-                                fclose(pFile_meta);
-                            }
-                            else
-                            {
-                                printf("%s\n",Metafile1);
-                                
-                                sprintf(args.metafilename,"%s_%s",Metafile1,str);
-                                FILE* pFile_meta1;
-                                pFile_meta1 = fopen(args.metafilename,"r");
-                                if(pFile_meta1)
-                                {
-                                    printf("meta file loading successful\n");
-                                    printf("Meta file %s\n",args.metafilename);
-                                    fclose(pFile_meta1);
-                                }
-                                else
-                                {
-                                    printf("meta file loading failed\n");
-                                    args.check_seeddem = false;
-                                }
-                            }
-                            
-                            free(Metafile1);
-                            free(temp_path);
-                        }
-                        
-                    }
-                    
-                    if (argc == i+2) {
-                        printf("Please input the seed sigma value\n");
-                        cal_flag = false;
-                    }
-                    else
-                    {
-                        args.seedDEMsigma = atof(argv[i+2]);
-                        printf("%f\n",args.seedDEMsigma);
-                        if(tif)
-                            args.check_seeddem = true;
+                        args.check_seeddem = true;
                     }
                 }
                 
@@ -1492,8 +1509,6 @@ int main(int argc,char *argv[])
                         {
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
 
-                            exit(1);
-                            
                             char DEMFilename[500];
                             char Outputpath[500];
                             
@@ -24087,6 +24102,12 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         ncc_flag.weight_flag     = 1;
         int py_level = proinfo->pyramid_level;
         
+        if(args.check_sdm_ortho > 0)
+        {
+            if(py_level < 2)
+                py_level = 2;
+        }
+        
         for(int i=0;i<proinfo->number_of_images;i++)
         {
             Boundary[i] = (double*)calloc(sizeof(double),4);
@@ -31565,40 +31586,51 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
             
             int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
-            if(sdm_kernal_size > 3)
+            
+            if(proinfo.pre_DEMtif)
             {
+                sdm_kernal_size = 3;
                 proinfo.SDM_SS = sdm_kernal_size;
+                proinfo.pyramid_level = args.pyramid_level;
+                proinfo.end_level = 0;
             }
             else
-                proinfo.SDM_SS = 3;
-            
-            printf("ks %d\t sdm_ss %d\n",sdm_kernal_size,proinfo.SDM_SS);
-            
-            if(proinfo.SDM_SS > 5 && proinfo.pyramid_level >= 2)
             {
-                bool check_while = false;
-                while(!check_while)
+                if(sdm_kernal_size > 3)
                 {
-                    proinfo.pyramid_level++;
-                    sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
-                    if(sdm_kernal_size > 3)
-                    {
-                        proinfo.SDM_SS = sdm_kernal_size;
-                    }
-                    else
-                        proinfo.SDM_SS = 3;
-                    
-                    if(proinfo.SDM_SS < 5)
-                        check_while = true;
+                    proinfo.SDM_SS = sdm_kernal_size;
                 }
-                //printf("search kernel size is too large to minimize procesing time at the pyramid level. Please increase pyramid level!!\n");
-                //exit(1);
+                else
+                    proinfo.SDM_SS = 3;
+                
+                printf("ks %d\t sdm_ss %d\n",sdm_kernal_size,proinfo.SDM_SS);
+                
+                if(proinfo.SDM_SS > 5 && proinfo.pyramid_level >= 2)
+                {
+                    bool check_while = false;
+                    while(!check_while)
+                    {
+                        proinfo.pyramid_level++;
+                        sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+                        if(sdm_kernal_size > 3)
+                        {
+                            proinfo.SDM_SS = sdm_kernal_size;
+                        }
+                        else
+                            proinfo.SDM_SS = 3;
+                        
+                        if(proinfo.SDM_SS < 5)
+                            check_while = true;
+                    }
+                    //printf("search kernel size is too large to minimize procesing time at the pyramid level. Please increase pyramid level!!\n");
+                    //exit(1);
+                }
+                if(proinfo.pyramid_level <= proinfo.end_level)
+                    proinfo.end_level = proinfo.pyramid_level - 1;
+                
+                if(proinfo.end_level < 0 || proinfo.DEM_resolution < 50)
+                    proinfo.end_level = 0;
             }
-            if(proinfo.pyramid_level <= proinfo.end_level)
-                proinfo.end_level = proinfo.pyramid_level - 1;
-            
-            if(proinfo.end_level < 0 || proinfo.DEM_resolution < 50)
-                proinfo.end_level = 0;
             
             printf("pyramid leve %d\tend level %d\n",proinfo.pyramid_level,proinfo.end_level);
             
@@ -31743,6 +31775,123 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
     }
 }
 
+void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary, CSize Grid_size, double Grid_set)
+{
+    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0, a_minX = 0, a_maxX = 0, a_minY = 0, a_maxY = 0;
+    CSize seeddem_size;
+    char* hdr_path;
+    FILE *bin;
+    TIFF *tif;
+    char save_DEMfile[500];
+    char *GIMP_path = proinfo.priori_DEM_tif;
+    char row_shift_path[500];
+    char col_shift_path[500];
+    
+    char* temp_outpathname = SetOutpathName(GIMP_path);
+    sprintf(col_shift_path,"%s/%s_dx.tif",GIMP_path,temp_outpathname);
+    sprintf(row_shift_path,"%s/%s_dy.tif",GIMP_path,temp_outpathname);
+    
+    printf("dx file %s\n",col_shift_path);
+    printf("dy file %s\n",row_shift_path);
+    int check_ftype = 1; // 1 = tif, 2 = raw
+    
+    seeddem_size = ReadGeotiff_info(col_shift_path, &minX, &maxY, &grid_size);
+    
+    maxX    = minX + grid_size*((double)seeddem_size.width);
+    minY    = maxY - grid_size*((double)seeddem_size.height);
+    
+    printf("SDM_days %f\n",proinfo.SDM_days);
+    printf("%d\n",seeddem_size.width);
+    printf("%d\n",seeddem_size.height);
+    printf("%f\n",minX);
+    printf("%f\n",minY);
+    printf("%f\n",maxX);
+    printf("%f\n",maxY);
+    printf("%f\n",grid_size);
+
+    if(minX > (double)Boundary[0])
+        a_minX = minX;
+    else {
+        a_minX = (double)Boundary[0];
+    }
+    if (maxX < (double)Boundary[2]) {
+        a_maxX = maxX;
+    }
+    else {
+        a_maxX = (double)Boundary[2];
+    }
+
+    if(minY > (double)Boundary[1])
+        a_minY = minY;
+    else {
+        a_minY = (double)Boundary[1];
+    }
+    if (maxY < (double)Boundary[3]) {
+        a_maxY = maxY;
+    }
+    else {
+        a_maxY = (double)Boundary[3];
+    }
+
+    printf("%f %f %f %f\n",(double)Boundary[0],(double)Boundary[1],(double)Boundary[2],(double)Boundary[3]);
+    printf("%f %f %f %f\n",a_minX, a_maxX, a_minY, a_maxY);
+    if ( (a_minX < a_maxX) && (a_minY < a_maxY))
+    {
+        int row,col;
+        
+        float *seeddx = NULL;
+        float *seeddy = NULL;
+        int cols[2];
+        int rows[2];
+        CSize data_size;
+
+        CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
+        LImagesize->width = seeddem_size.width;
+        LImagesize->height = seeddem_size.height;
+        
+        cols[0] = 0;
+        cols[1] = seeddem_size.width;
+        
+        rows[0] = 0;
+        rows[1] = seeddem_size.height;
+        
+        seeddx = Readtiff_DEM(col_shift_path,LImagesize,cols,rows,&data_size);
+        seeddy = Readtiff_DEM(row_shift_path,LImagesize,cols,rows,&data_size);
+        printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
+        
+        for (row = 0; row < Grid_size.height; row ++) {
+            for (col = 0; col < Grid_size.width; col ++) {
+                int index_grid = row*Grid_size.width + col;
+                double t_x,t_y;
+                int index_seeddem;
+                int row_seed, col_seed;
+                
+                t_x = Boundary[0] + col*Grid_set;
+                t_y = Boundary[1] + row*Grid_set;
+                col_seed = floor((t_x - minX)/grid_size);// - cols[0];
+                row_seed = floor((maxY - t_y)/grid_size);// - rows[0];
+                
+                index_seeddem = row_seed*data_size.width + col_seed;
+                if(index_seeddem >= 0 && index_seeddem < data_size.width*data_size.height)
+                {
+                    if(seeddx[index_seeddem] > -1000 && seeddy[index_seeddem] > -1000)
+                    {
+                        Grid[index_grid].col_shift = seeddx[index_seeddem]*proinfo.SDM_days/grid_size;
+                        Grid[index_grid].row_shift = -seeddy[index_seeddem]*proinfo.SDM_days/grid_size;
+                        
+                        //printf("col row shift %f\t%f\tdx dy %f\t%f\n",Grid[index_grid].col_shift,Grid[index_grid].row_shift,seeddx[index_seeddem],seeddy[index_seeddem]);
+                    }
+                }
+                
+            }
+        }
+        
+        free(seeddx);
+        free(seeddy);
+        printf("seeddem end\n");
+    }
+}
+
 int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, double *Image_res,double *Res, double *Limageparam, double *Rimageparam, CSize Limagesize,CSize Rimagesize, double *Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2,double* LBoundary,double* RBoundary)
 {
     int final_iteration = -1;
@@ -31880,6 +32029,9 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         Template_size = 7;
                                 }
                                 
+                                if(proinfo.pre_DEMtif)
+                                    Template_size = 7;
+                                    
                                 //Template_size = 15;
                                 printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
                                 
@@ -31903,7 +32055,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 if(!flag_start)
                                 {
                                     printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f \n",proinfo.pre_DEMtif,proinfo.priori_DEM_tif,Image_res[0]);
-                                    GridPT3 = SetGrid3PT_SDM(flag_start, Size_Grid2D, Th_roh);
+                                    GridPT3 = SetGrid3PT_SDM(proinfo,flag_start, Size_Grid2D, Th_roh,subBoundary,py_resolution);
                                 }
                                 
                                 if(flag_start)
@@ -31994,11 +32146,28 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                     printf("template size =%d\n",Template_size);
                                     
                                     //echoprint_shift(Lstartpos, Rstartpos,subBoundary,LRPCs, RRPCs, t_Rimageparam, param,GridPT,proinfo.save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,"final");
-                                    if(level < 2 /*&& proinfo.resolution > 5*/)
+                                    bool check_smooth = false;
+                                    if(grid_resolution >= 200 && level == 0)
+                                        check_smooth = true;
+                                    else if(level < 2 && grid_resolution < 300)
+                                        check_smooth = true;
+                                    
+                                    if(check_smooth)
                                     {
                                         bool check_while = false;
                                         bool check_last_iter = false;
-                                        int check_size = 3;
+                                        int check_size = 3;//*(int)(200/grid_resolution);
+                                        if(grid_resolution >= 300)
+                                            check_size = 3;
+                                        else if(grid_resolution >= 200)
+                                            check_size = 4;
+                                        else if(grid_resolution >= 100)
+                                            check_size = 5;
+                                        else
+                                            check_size = 7;
+                                            
+                                        if(check_size < 3)
+                                            check_size = 3;
                                         int total_size = (2*check_size+1)*(2*check_size+1);
                                         int sm_iter = 0;
                                         
@@ -32077,10 +32246,12 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                             {
                                                                 if(GridPT3[t_index].ortho_ncc > 0.0)
                                                                 {
-                                                                    double dist = sqrt((double)(t_i*t_i + t_j*t_j));
-                                                                    sum_row_shift += (GridPT3[t_index].row_shift*GridPT3[t_index].ortho_ncc);
-                                                                    sum_col_shift += (GridPT3[t_index].col_shift*GridPT3[t_index].ortho_ncc);
-                                                                    sum_roh += GridPT3[t_index].ortho_ncc;
+                                                                    //double dist = sqrt((double)(t_i*t_i + t_j*t_j));
+                                                                    double ncc = 1 + GridPT3[t_index].ortho_ncc;
+                                                                    double weith_n = pow(ncc,10);
+                                                                    sum_row_shift += (GridPT3[t_index].row_shift*weith_n);
+                                                                    sum_col_shift += (GridPT3[t_index].col_shift*weith_n);
+                                                                    sum_roh += weith_n;
                                                                     //sum_row_shift += (GridPT3[t_index].row_shift/pow(dist,p)*GridPT3[t_index].ortho_ncc);
                                                                     //sum_col_shift += (GridPT3[t_index].col_shift/pow(dist,p)*GridPT3[t_index].ortho_ncc);
                                                                     //sum_roh += ((1.0/pow(dist,p))*GridPT3[t_index].ortho_ncc);
@@ -32208,6 +32379,11 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     matching_change_rate = 0.001;
                                             }
                                             
+                                            if(proinfo.pre_DEMtif && iteration >= 4)
+                                            {
+                                                Th_roh = Th_roh_min - 1.0;
+                                                matching_change_rate = 0.001;
+                                            }
                                             
                                             if(Th_roh >= Th_roh_min)
                                             {
@@ -33262,7 +33438,7 @@ D2DPOINT *SetDEMGrid_SDM(double *Boundary, double Grid_x, double Grid_y, CSize *
     return GridPT;
 }
 
-UGRIDSDM *SetGrid3PT_SDM(bool flag_start, CSize Size_Grid2D, double Th_roh)
+UGRIDSDM *SetGrid3PT_SDM(ProInfo proinfo,bool flag_start, CSize Size_Grid2D, double Th_roh, double *subBoundary, double py_resolution)
 {
     UGRIDSDM *GridPT3;
     int total_grid_counts;
@@ -33281,6 +33457,12 @@ UGRIDSDM *SetGrid3PT_SDM(bool flag_start, CSize Size_Grid2D, double Th_roh)
             GridPT3[i].col_shift        = 0.0;
             GridPT3[i].row_shift        = 0.0;
         }
+    }
+    
+    if(proinfo.pre_DEMtif)
+    {
+        printf("seedem load\n");
+        SetHeightWithSeedDEM_SDM(proinfo,GridPT3,subBoundary,Size_Grid2D,py_resolution);
     }
     
     return GridPT3;
