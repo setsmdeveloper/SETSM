@@ -31714,8 +31714,9 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             total_count            = 0;
             
             printf("proinfo res %f\n",proinfo.resolution);
+            int matching_number = 0;
             final_iteration = Matching_SETSM_SDM(proinfo,pyramid_step, Template_size, Image_res,Res, Limageparam, Rimageparam,
-                                                 Limagesize,Rimagesize, Boundary, GSD_image1, GSD_image2,LBoundary,RBoundary);
+                                                 Limagesize,Rimagesize, Boundary, GSD_image1, GSD_image2,LBoundary,RBoundary,&matching_number);
             
             //if(!args.check_ortho)
             {
@@ -31749,7 +31750,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                 t_col_end     = max_col + 1;
             }
             final_iteration = 3;
-            //if(!pFile_DEM)
+            if(matching_number > 10)
             {
                 printf("Tile merging start final iteration %d!!\n",final_iteration);
                 int buffer_tile = 0;
@@ -31892,7 +31893,7 @@ void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary,
     }
 }
 
-int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, double *Image_res,double *Res, double *Limageparam, double *Rimageparam, CSize Limagesize,CSize Rimagesize, double *Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2,double* LBoundary,double* RBoundary)
+int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, double *Image_res,double *Res, double *Limageparam, double *Rimageparam, CSize Limagesize,CSize Rimagesize, double *Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2,double* LBoundary,double* RBoundary, int *matching_number)
 {
     int final_iteration = -1;
     bool lower_level_match;
@@ -32645,6 +32646,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                     
                                     if (level == 0 && iteration == 3)
                                     {
+                                        *matching_number = count_MPs;
                                     }
                                     else
                                     {
