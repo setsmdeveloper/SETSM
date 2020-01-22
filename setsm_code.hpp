@@ -340,7 +340,8 @@ float* AdjustmentConformal3D(long pts_nums, long selected_pts, F3DPOINT* normali
 
 //SDM ortho
 bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, double** Coreg_param);
-int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, double *Image_res,double *Res, double *Limageparam, double *Rimageparam, CSize Limagesize,CSize Rimagesize, double *Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2,double* LBoundary,double* RBoundary);
+void SetHeightWithSeedDEM_SDM(ProInfo proinfo,UGRIDSDM *Grid, double *Boundary, CSize Grid_size, double Grid_set);
+int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, double *Image_res,double *Res, double *Limageparam, double *Rimageparam, CSize Limagesize,CSize Rimagesize, double *Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2,double* LBoundary,double* RBoundary, int *matching_number);
 bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename, double *subBoundary, D2DPOINT *Lstartpos, D2DPOINT *Rstartpos, char *LsubsetImage, char *RsubsetImage, CSize* Lsubsetsize, CSize* Rsubsetsize, FILE *fid,bool check_checktiff);
 bool GetsubareaImage_SDM(ProInfo proinfo, char *ImageFilename, CSize *Imagesize, double *subBoundary, int *cols, int *rows);
 D2DPOINT* GetObjectToImage(uint16 _numofpts, D2DPOINT *_GP, double *boundary, double imageres);
@@ -348,7 +349,7 @@ void Preprocessing_SDM(ProInfo proinfo, char *save_path,char *Lsubsetfile, char 
 void SetThs_SDM(int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, uint8 pyramid_step);
 D2DPOINT *SetGrids_SDM(ProInfo proinfo, int prc_level,int level, int start_py, int final_level_iteration, double resolution, CSize *Size_Grid2D, double DEM_resolution, double *py_resolution, double *grid_resolution, double *subBoundary);
 D2DPOINT *SetDEMGrid_SDM(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D);
-UGRIDSDM *SetGrid3PT_SDM(bool flag_start, CSize Size_Grid2D, double Th_roh);
+UGRIDSDM *SetGrid3PT_SDM(ProInfo proinfo,bool flag_start, CSize Size_Grid2D, double Th_roh, double *subBoundary, double py_resolution);
 UGRIDSDM* ResizeGirdPT3_SDM(CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRIDSDM *preGridPT3, double pre_gridsize);
 bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *MagImages_L,uint16 *MagImages_R,double DEM_resolution, double im_resolution, CSize LImagesize_ori, CSize LImagesize, uint16* LeftImage, CSize RImagesize_ori, CSize RImagesize, uint16* RightImage, uint8 Template_size, CSize Size_Grid2D, D2DPOINT* GridPts, UGRIDSDM *GridPT3, uint8 Pyramid_step,uint8 start_py, D2DPOINT Lstartpos, D2DPOINT Rstartpos, uint8 iteration, double* Boundary, ImageGSD gsd_image1, ImageGSD gsd_image2, double* Coreg_param,uint8* SubOriImages_L,uint8* SubOriImages_R);
 int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRIDSDM *GridPT3, uint8 Pyramid_step,uint8 prc_level, uint8 iteration, char *filename_mps,uint8 tile_row,uint8 tile_col,double *Boundary);
@@ -364,7 +365,7 @@ void RemoveFiles_SDM(char *save_path, char *lfilename, char *rfilename, int py_l
 double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param,int Hemisphere,uint8 pyramid_step);
 D2DPOINT GetObjectToImage_single_SDM(uint16 _numofpts, D2DPOINT _GP, double *boundary, double imageres);
 void SetTransParam_param(TransParam *param, bool Hemisphere);
-bool SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere);
+void SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere);
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 float quickselect(float *arr, int n, int k);
