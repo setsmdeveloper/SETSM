@@ -25,6 +25,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
+#define MaxNCC 2
 
 #ifndef bool
 //#define bool unsigned char
@@ -118,6 +119,7 @@ typedef struct tagNCCresult
 	float result2; //first peak height
 	float result3; //second peak height
     float GNCC;
+    float *GNCC_multi;
 	int result4; //peak count
     double max_WNCC;
     int max_WNCC_pos;
@@ -135,7 +137,7 @@ typedef struct UpdateGrid{
 	
 	float Height; //after blunder detection
 	double roh;
-	double ortho_ncc[2];
+	double ortho_ncc[MaxNCC];
     double Mean_ortho_ncc;
 
     uint8 Matched_flag;
@@ -149,6 +151,7 @@ typedef struct tagVoxelinfo
     float height;
     bool flag_cal;
     float INCC;
+    float *INCC_multi;
 }VOXEL;
 
 typedef struct LSFinfo{
