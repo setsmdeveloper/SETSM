@@ -6332,7 +6332,7 @@ UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool 
             GridPT3[i].roh              = Th_roh;
             GridPT3[i].anchor_flag      = 0;
             //GridPT3[i].Matched_height   = -1000.0;
-            for(int ti=0;ti<10;ti++)
+            for(int ti=0;ti<MaxNCC;ti++)
                 GridPT3[i].ortho_ncc[ti]        = 0;
             GridPT3[i].Mean_ortho_ncc   = 0;
             //GridPT3[i].angle            = 0;

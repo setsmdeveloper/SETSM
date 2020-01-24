@@ -25,6 +25,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
+#define MaxNCC 2
 
 #ifndef bool
 //#define bool unsigned char
@@ -136,7 +137,7 @@ typedef struct UpdateGrid{
 	
 	float Height; //after blunder detection
 	double roh;
-	double ortho_ncc[10];
+	double ortho_ncc[MaxNCC];
     double Mean_ortho_ncc;
 
     uint8 Matched_flag;
