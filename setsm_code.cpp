@@ -4730,7 +4730,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
-                            /*
+                            
                             if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
@@ -4753,7 +4753,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     remove(filename_mps_anchor);
                                 }
                             }
-                            */
+                            
                             if(lower_level_match)
                             {
                                 flag_start          = true;
