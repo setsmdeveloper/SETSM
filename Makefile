@@ -28,8 +28,8 @@ ifeq ($(COMPILER), intel)
   CXX=icpc
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise 
-  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise
+  CFLAGS=-std=c99 -qopenmp -fp-model precise 
+  CXXFLAGS=-g -std=c++11 -qopenmp -fp-model precise
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
   CXX=pgc++

@@ -4098,7 +4098,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     FILE *pFile = fopen(filename_mps,"wb");
                                     fwrite(ptslists,sizeof(F3DPOINT),count_MPs,pFile);
                                     
-                                    FILE *pFile_a = fopen(filename_mps_asc,"w");
+                                    /*FILE *pFile_a = fopen(filename_mps_asc,"w");
                                     for(i=0;i<count_MPs;i++)
                                     {
                                         //if(ptslists[i].flag != 1)
@@ -4108,7 +4108,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                     }
                                     fclose(pFile_a);
-                                    
+                                    */
                                     fclose(pFile);
                                     
                                     if(!proinfo->IsRA)
@@ -4730,7 +4730,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
-                            /*
+                            
                             if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
@@ -4753,7 +4753,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     remove(filename_mps_anchor);
                                 }
                             }
-                            */
+                            
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -10224,7 +10224,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             {
                 nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
                 nccresult[t_i].maxHeight = GridPT3[t_i].maxHeight;
-                nccresult[t_i].GNCC = -1.0;
+                nccresult[t_i].GNCC = DoubleToSchar(-1.0);
                 nccresult[t_i].check_height_change = true;
                 check_blunder_cell = false;
             }
@@ -10313,7 +10313,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 {
                     nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
                     nccresult[t_i].maxHeight = GridPT3[t_i].maxHeight;
-                    nccresult[t_i].GNCC = -1.0;
+                    nccresult[t_i].GNCC = DoubleToSchar(-1.0);
                     nccresult[t_i].check_height_change = true;
                 }
                 else
@@ -10377,7 +10377,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             grid_voxel[t_i][h].flag_cal = true;
                             grid_voxel[t_i][h].height = (float)(nccresult[t_i].minHeight + h*height_step);
                             //grid_voxel[t_i][h].SSD = 0;
-                            grid_voxel[t_i][h].INCC = -1;
+                            grid_voxel[t_i][h].INCC = DoubleToSchar(-1);
                         }
                     }
                     else
@@ -10829,7 +10829,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             bool check_rho  = false;
             
             int count_height;
-            int NumOfHeights;
+            unsigned short NumOfHeights;
             int start_H, end_H;
             int i,j;
             double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
@@ -10852,7 +10852,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                 //    h_divide = 2;
                 
                 
-                NumOfHeights = (int)((end_H -  start_H)/height_step);
+                NumOfHeights = (unsigned short)((end_H -  start_H)/height_step);
                 
                 if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
                 {
@@ -10923,7 +10923,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                 if(!check_blunder_cell && nccresult[pt_index].NumOfHeight > 0)
                 {
                     double max_WNCC = -100;
-                    int max_WNCC_pos = -1;
+                    //int max_WNCC_pos = -1;
                     int reference_id = 0;
                     
                     //ortho one time
@@ -10958,7 +10958,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 RImagesize_next.height = Imagesizes[ti][Pyramid_step-1].height;
                             }
                             
-                            if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                            if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > DoubleToSchar(ortho_th))
                             {
                                 for(int row = -Half_template_size; row <= Half_template_size ; row++)
                                 {
@@ -11237,9 +11237,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 }  // if(check_combined_WNCC)
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
 							if(count_GNCC > 0)
-								nccresult[pt_index].GNCC = sum_GNCC_multi/count_GNCC;
+								nccresult[pt_index].GNCC = DoubleToSchar(sum_GNCC_multi/count_GNCC);
 							else
-								nccresult[pt_index].GNCC = -1.0;
+								nccresult[pt_index].GNCC = DoubleToSchar(-1.0);
                         }
                     }  // end ti loop
                     
@@ -11276,9 +11276,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 
                                 if(grid_voxel_hindex == 0)
                                 {
-                                    nccresult[pt_index].result0 = -1.0;
+                                    nccresult[pt_index].result0 = DoubleToSchar(-1.0);
                                     nccresult[pt_index].result2 = -1000;
-                                    nccresult[pt_index].result1 = -1.0;
+                                    nccresult[pt_index].result1 = DoubleToSchar(-1.0);
                                     nccresult[pt_index].result3 = -1000;
                                     nccresult[pt_index].result4 = 0;
                                 }
@@ -11727,9 +11727,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                 	else
                                                     {
                                                         if(count_INCC > 0)
-                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
+                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSchar(sum_INCC_multi/count_INCC);
                                                         else
-                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = -1.0;
+                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSchar(-1.0);
                                                     }
                                             	}
                                         	}
@@ -11804,13 +11804,15 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                      
                                          if( check_peak )
                                          {
-                                             nccresult[grid_index].result4 += 1;
-                                             if(nccresult[grid_index].result0 < pre_rho)
+                                             if(nccresult[grid_index].result4 < 10)
+                                                 nccresult[grid_index].result4 += 1;
+                                             
+                                             if(nccresult[grid_index].result0 < DoubleToSchar(pre_rho))
                                              {
-                                                 double temp_1;
+                                                 signed char temp_1;
                                                  float temp_2;
                                                  temp_1 = nccresult[grid_index].result0;
-                                                 nccresult[grid_index].result0 = pre_rho;
+                                                 nccresult[grid_index].result0 = DoubleToSchar(pre_rho);
                                              
                                                  temp_2 = nccresult[grid_index].result2;
                                                  nccresult[grid_index].result2 = pre_height;
@@ -11826,9 +11828,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                              }
                                              else
                                              {
-                                                 if(nccresult[grid_index].result1 < pre_rho)
+                                                 if(nccresult[grid_index].result1 < DoubleToSchar(pre_rho))
                                                  {
-                                                     nccresult[grid_index].result1 = pre_rho;
+                                                     nccresult[grid_index].result1 = DoubleToSchar(pre_rho);
                                                      nccresult[grid_index].result3 = pre_height;
                                                  }
                                              }
@@ -11846,7 +11848,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                     if(max_WNCC < temp_rho)
                                     {
                                         max_WNCC = temp_rho;
-                                        max_WNCC_pos = grid_voxel_hindex;
+                                        //max_WNCC_pos = grid_voxel_hindex;
                                     }
                                      //nccresult[grid_index].roh_count ++;
                                 }
@@ -11891,7 +11893,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         if(max_WNCC < temp_rho)
                                         {
                                             max_WNCC = temp_rho;
-                                            max_WNCC_pos = grid_voxel_hindex;
+                                            //max_WNCC_pos = grid_voxel_hindex;
                                         }
                                     }
                                 }
@@ -11903,8 +11905,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     {
                         if(nccresult[pt_index].check_height_change)
                         {
-                            nccresult[pt_index].max_WNCC = max_WNCC;
-                            nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
+                            nccresult[pt_index].max_WNCC = DoubleToSchar(max_WNCC);
+                            //nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
                         }
                     }
                 }
@@ -11979,7 +11981,7 @@ void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel
                 /*if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[pair_index] > ortho_th)
                     WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
                 else*/
-                    WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                    WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC);
                 
                 LHcost_pre[height_step] = WNCC_sum;
                 SumCost[pt_index][height_step] += LHcost_pre[height_step];
@@ -12014,7 +12016,7 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                     /*if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[pair_index] > ortho_th)
                         WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
                     else*/
-                        WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                        WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC);
                     
                     int t_col = pts_col + u_col[direction_iter]; //left previous pos
                     int t_row = pts_row + v_row[direction_iter];
@@ -12036,40 +12038,40 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                             {
                                 V2 = LHcost_pre[t_index_h_index_2] - P1;
                                 V3 = LHcost_pre[t_index_h_index];
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value23 = V2 > V3 ? V2 : V3;
                                 double max_value = max_value23 > V4 ? max_value23 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else if(grid_voxel[t_index][t_index_h_index].flag_cal)
                             {
                                 V3 = LHcost_pre[t_index_h_index];
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V3 > V4 ? V3 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else if(grid_voxel[t_index][t_index_h_index_2].flag_cal)
                             {
                                 V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V2 > V4 ? V2 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else
                             {
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
@@ -12080,40 +12082,40 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                             {
                                 V1 = LHcost_pre[t_index_h_index_1] - P1;
                                 V3 = LHcost_pre[t_index_h_index];
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value23 = V1 > V3 ? V1 : V3;
                                 double max_value = max_value23 > V4 ? max_value23 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else if(grid_voxel[t_index][t_index_h_index].flag_cal)
                             {
                                 V3 = LHcost_pre[t_index_h_index];
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V3 > V4 ? V3 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else if(grid_voxel[t_index][t_index_h_index_1].flag_cal)
                             {
                                 V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V1 > V4 ? V1 : V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                             else
                             {
-                                V4 = nccresult[t_index].max_WNCC - P2;
+                                V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                 
                                 double max_value = V4;
-                                double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                 LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                 SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
@@ -12132,12 +12134,12 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value12 = V1 > V2 ? V1 : V2;
                                     double max_value23 = max_value12 > V3 ? max_value12 : V3;
                                     double max_value = max_value23 > V4 ? max_value23 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
@@ -12145,12 +12147,12 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value12 = V1;
                                     double max_value23 = max_value12 > V3 ? max_value12 : V3;
                                     double max_value = max_value23 > V4 ? max_value23 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
@@ -12158,12 +12160,12 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value12 = V1 > V2 ? V1 : V2;
                                     double max_value23 = max_value12 > V3 ? max_value12 : V3;
                                     double max_value = max_value23 > V4 ? max_value23 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
@@ -12171,52 +12173,52 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value12 = V2;
                                     double max_value23 = max_value12 > V3 ? max_value12 : V3;
                                     double max_value = max_value23 > V4 ? max_value23 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(grid_voxel[t_index][t_index_h_index].flag_cal)
                                 {
                                     V3 = LHcost_pre[t_index_h_index];
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value23 = V3;
                                     double max_value = max_value23 > V4 ? max_value23 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(grid_voxel[t_index][t_index_h_index_1].flag_cal)
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value = V1 > V4 ? V1 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(grid_voxel[t_index][t_index_h_index_2].flag_cal)
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value = V2 > V4 ? V2 : V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else
                                 {
-                                    V4 = nccresult[t_index].max_WNCC - P2;
+                                    V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                                     
                                     double max_value = V4;
-                                    double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                                    double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                                     LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
@@ -12254,10 +12256,10 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                         }
                         else
                         {
-                            V4 = nccresult[t_index].max_WNCC - P2;
+                            V4 = ScharToDouble(nccresult[t_index].max_WNCC) - P2;
                             
                             double max_value = V4;
-                            double t_WNCC_sum = max_value - nccresult[t_index].max_WNCC;
+                            double t_WNCC_sum = max_value - ScharToDouble(nccresult[t_index].max_WNCC);
                             
                             LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                             SumCost[pt_index][height_step] += LHcost_curr[height_step];
@@ -13025,9 +13027,9 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         {
             if(height_step == 0)
             {
-                nccresult[pt_index].result0 = -1000.0;
+                nccresult[pt_index].result0 = DoubleToSchar(-1.0);
                 nccresult[pt_index].result2 = -1000;
-                nccresult[pt_index].result1 = -1000.0;
+                nccresult[pt_index].result1 = DoubleToSchar(-1.0);
                 nccresult[pt_index].result3 = -1000;
                 nccresult[pt_index].result4 = 0;
             }
@@ -13051,10 +13053,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     {
                         temp_rho = SumCost[pt_index][height_step];//count_cell;
                         
-                        if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
-                            WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                        if(check_ortho && ScharToDouble(nccresult[pt_index].GNCC) > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
+                            WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + ScharToDouble(nccresult[pt_index].GNCC)*ncc_beta;
                         else
-                            WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                            WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC);
                         WNCC_temp_rho = WNCC_sum;
                         /*
                         if(temp_rho <= 0)
@@ -13071,10 +13073,10 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     {
                         //if(grid_voxel[pt_index][height_step].flag_cal)
                         {
-                            if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
-                                WNCC_sum = grid_voxel[pt_index][height_step].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
+                            if(check_ortho && ScharToDouble(nccresult[pt_index].GNCC) > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
+                                WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + ScharToDouble(nccresult[pt_index].GNCC)*ncc_beta;
                             else
-                                WNCC_sum = grid_voxel[pt_index][height_step].INCC;
+                                WNCC_sum = ScharToDouble(grid_voxel[pt_index][height_step].INCC);
                             WNCC_temp_rho = WNCC_sum;
                             /*
                             {
@@ -13211,12 +13213,14 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     
                     if((iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2))// || (iteration <= 1 && Pyramid_step == 1)) //Max AWNCC
                     {
-                        if(nccresult[grid_index].result0 < temp_rho)
+                        if(nccresult[grid_index].result0 < DoubleToSchar(temp_rho))
                         {
-                            nccresult[grid_index].result4 += 1;
-                            nccresult[grid_index].result0 = temp_rho;
+                            if(nccresult[grid_index].result4 < 10)
+                                nccresult[grid_index].result4 += 1;
+                            
+                            nccresult[grid_index].result0 = DoubleToSchar(temp_rho);
                             nccresult[grid_index].result2 = iter_height;
-                            nccresult[grid_index].result1 = -1.0;
+                            nccresult[grid_index].result1 = DoubleToSchar(-1.0);
                             nccresult[grid_index].result3 = -9999;
 
                             max_roh_id = height_step;
@@ -13228,13 +13232,15 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     {
                         if( check_peak )
                         {
-                            nccresult[grid_index].result4 += 1;
-                            if(nccresult[grid_index].result0 < pre_rho)
+                            if(nccresult[grid_index].result4 < 10)
+                                nccresult[grid_index].result4 += 1;
+                            
+                            if(nccresult[grid_index].result0 < DoubleToSchar(pre_rho))
                             {
-                                double temp_1;
+                                signed char temp_1;
                                 float temp_2;
                                 temp_1 = nccresult[grid_index].result0;
-                                nccresult[grid_index].result0 = pre_rho;
+                                nccresult[grid_index].result0 = DoubleToSchar(pre_rho);
                                 
                                 temp_2 = nccresult[grid_index].result2;
                                 nccresult[grid_index].result2 = pre_height;
@@ -13250,9 +13256,9 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                             }
                             else
                             {
-                                if(nccresult[grid_index].result1 < pre_rho)
+                                if(nccresult[grid_index].result1 < DoubleToSchar(pre_rho))
                                 {
-                                    nccresult[grid_index].result1 = pre_rho;
+                                    nccresult[grid_index].result1 = DoubleToSchar(pre_rho);
                                     nccresult[grid_index].result3 = pre_height;
                                 }
                             }
@@ -13282,8 +13288,8 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     WNCC_re = grid_voxel[pt_index][max_roh_id].INCC;
                 */
                 if(Pyramid_step == 0 && iteration >= 2)
-                    nccresult[pt_index].result0 = max_roh;
-                nccresult[pt_index].result1 = -1.0;
+                    nccresult[pt_index].result0 = DoubleToSchar(max_roh);
+                nccresult[pt_index].result1 = DoubleToSchar(-1.0);
                 nccresult[pt_index].result3 = -9999;
             }
             /*else
@@ -14244,7 +14250,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     if(max_ncc < t_nccresult)
                         max_ncc = t_nccresult;
                     
-                    GridPT3[pt_index].ortho_ncc[ti] = t_nccresult;
+                    GridPT3[pt_index].ortho_ncc[ti] = DoubleToSchar(t_nccresult);
                     
                     /*if(t_nccresult > -1)
                     {
@@ -14256,8 +14262,8 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             
             //if(count_ncc > 0)
             {
-                GridPT3[pt_index].Mean_ortho_ncc = max_ncc;
-                nccresult[pt_index] = GridPT3[pt_index].Mean_ortho_ncc;
+                GridPT3[pt_index].Mean_ortho_ncc = DoubleToSchar(max_ncc);
+                nccresult[pt_index] = ScharToDouble(GridPT3[pt_index].Mean_ortho_ncc);
             }
         }
     } // end omp for
@@ -14784,7 +14790,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 
                 if(row >= 0 && row < Size_Grid2D.height && col >= 0 && col < Size_Grid2D.width && roh_height[grid_index].NumOfHeight > 2)
                 {
-                    int roh_int = ceil(roh_height[grid_index].result0*100);
+                    int roh_int = ceil(ScharToDouble(roh_height[grid_index].result0)*100);
                     //printf("roh int %d\t%f\n",roh_int,roh_height[grid_index].result0);
                     if(roh_int > 999)
                         roh_int = 999;
@@ -14965,8 +14971,8 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 ROR = 1.0;
             else
             {
-                if(fabs(roh_height[grid_index].result0) > 0)
-                    ROR         = (roh_height[grid_index].result0 - roh_height[grid_index].result1)/roh_height[grid_index].result0;
+                if(fabs(ScharToDouble(roh_height[grid_index].result0)) > 0)
+                    ROR         = (ScharToDouble(roh_height[grid_index].result0) - ScharToDouble(roh_height[grid_index].result1))/ScharToDouble(roh_height[grid_index].result0);
                 else
                     ROR         = 0;
             }
@@ -14975,17 +14981,17 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             
             if(Pyramid_step == 0)
             {
-                if(ROR >= (0.1 - 0.03*(3 - Pyramid_step)) && roh_height[grid_index].result0 > minimum_Th)
+                if(ROR >= (0.1 - 0.03*(3 - Pyramid_step)) && ScharToDouble(roh_height[grid_index].result0) > minimum_Th)
                     index_2 = true;
             }
             else
             {
-                if(ROR >= 0.1 && roh_height[grid_index].result0 > minimum_Th)
+                if(ROR >= 0.1 && ScharToDouble(roh_height[grid_index].result0) > minimum_Th)
                     index_2 = true;
             }
             
             // threshold of 1st peak roh
-            if(roh_height[grid_index].result0 > GridPT3[grid_index].roh - roh_th)
+            if(ScharToDouble(roh_height[grid_index].result0) > ScharToDouble(GridPT3[grid_index].roh) - roh_th)
                 index_3     = true;
 
             if(roh_height[grid_index].result4 > 0)
@@ -15001,7 +15007,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                     roh_index   = index & index_2 & index_3;
                 else if(Pyramid_step >= 1)
                 {
-                    if( index_3  && roh_height[grid_index].result0 > minimum_Th)
+                    if( index_3  && ScharToDouble(roh_height[grid_index].result0) > minimum_Th)
                         index_1 = true;
                     
                     roh_index   = ((index_3 & index_2) | index_1);
@@ -15074,12 +15080,12 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 
                 if(Pyramid_step <= 0)
                 {
-                    if( (ROR < (0.1 - 0.03*(3 - Pyramid_step)) ) && (roh_height[grid_index].result1 > GridPT3[grid_index].roh - roh_th) ) 
+                    if( (ROR < (0.1 - 0.03*(3 - Pyramid_step)) ) && (ScharToDouble(roh_height[grid_index].result1) > ScharToDouble(GridPT3[grid_index].roh) - roh_th) )
                         index   = true;
                 }
                 else
                 {
-                    if( (ROR < 0.1) && (roh_height[grid_index].result1 > GridPT3[grid_index].roh - roh_th) ) 
+                    if( (ROR < 0.1) && (ScharToDouble(roh_height[grid_index].result1) > ScharToDouble(GridPT3[grid_index].roh) - roh_th) )
                         index   = true;
                 }
                 
@@ -15115,9 +15121,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 
                 fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
     
-                if(GridPT3[grid_index].roh < minimum_Th)
+                if(GridPT3[grid_index].roh < DoubleToSchar(minimum_Th))
                 {
-                    GridPT3[grid_index].roh = minimum_Th;
+                    GridPT3[grid_index].roh = DoubleToSchar(minimum_Th);
                 }
                 
             }
@@ -15181,17 +15187,17 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
 
                             // update max_roh value
                             GridPT3[grid_index].roh     = roh_height[grid_index].result0;
-                            if(GridPT3[grid_index].roh < minimum_Th)
+                            if(GridPT3[grid_index].roh < DoubleToSchar(minimum_Th))
                             {
-                                GridPT3[grid_index].roh = minimum_Th;
+                                GridPT3[grid_index].roh = DoubleToSchar(minimum_Th);
                             }
                             
                         }
                         else
                         {
-                            GridPT3[grid_index].roh = Th_roh;
-                            if(check_iter_end && Th_roh_start == GridPT3[grid_index].roh)
-                                GridPT3[grid_index].roh     = Th_roh_next;
+                            GridPT3[grid_index].roh = DoubleToSchar(Th_roh);
+                            if(check_iter_end && Th_roh_start == ScharToDouble(GridPT3[grid_index].roh))
+                                GridPT3[grid_index].roh     = DoubleToSchar(Th_roh_next);
                         }
                         
                     }
@@ -15205,18 +15211,18 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         }
                         // update max_roh value
                         GridPT3[grid_index].roh     = roh_height[grid_index].result0;
-                        if(GridPT3[grid_index].roh < minimum_Th)
+                        if(GridPT3[grid_index].roh < DoubleToSchar(minimum_Th))
                         {
-                            GridPT3[grid_index].roh = minimum_Th;
+                            GridPT3[grid_index].roh = DoubleToSchar(minimum_Th);
                         }
                     }
                 }
                 else
                 {
-                    GridPT3[grid_index].roh = Th_roh;
+                    GridPT3[grid_index].roh = DoubleToSchar(Th_roh);
                     // update max_roh value
-                    if(check_iter_end && Th_roh_start == GridPT3[grid_index].roh)
-                        GridPT3[grid_index].roh     = Th_roh_next;
+                    if(check_iter_end && Th_roh_start == ScharToDouble(GridPT3[grid_index].roh))
+                        GridPT3[grid_index].roh     = DoubleToSchar(Th_roh_next);
                 }
             }
         }
@@ -18149,8 +18155,8 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
     outMean_ortho = fopen(t_str,"wb");
     
     
-    sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
-    outMean_ortho_asc = fopen(t_str,"w");
+    //sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
+    //outMean_ortho_asc = fopen(t_str,"w");
     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
     {
         sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_%d.txt",save_path,row,col,level,iteration,add_str,ti);
@@ -18187,10 +18193,10 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
                 //if(roh_height[matlab_index].NumOfHeight > 0)
                 {
                     //fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                    fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Height);
+                    //fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Height);
                     printf("%f\t",GridPT3[matlab_index].Height);
                     temp_height[matlab_index] = GridPT3[matlab_index].Height;
-                    temp_ncc[matlab_index] = GridPT3[matlab_index].Mean_ortho_ncc;
+                    temp_ncc[matlab_index] = ScharToDouble(GridPT3[matlab_index].Mean_ortho_ncc);
                     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                         fprintf(outfile_roh[ti],"%f\t",GridPT3[matlab_index].ortho_ncc[ti]);*/
                     /*fprintf(outfile_flag,"%d\t",GridPT3[matlab_index].Matched_flag);*/
@@ -18209,7 +18215,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
             //fprintf(outfile_h,"\n");
-            fprintf(outMean_ortho_asc,"\n");
+            //fprintf(outMean_ortho_asc,"\n");
             /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                 fprintf(outfile_roh[ti],"\n");*/
             /*fprintf(outfile_flag,"\n");*/
@@ -18223,7 +18229,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
         //fclose(outfile_max);
         fclose(outfile_h);
         fclose(outMean_ortho);
-        fclose(outMean_ortho_asc);
+        //fclose(outMean_ortho_asc);
         /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
             fclose(outfile_roh[ti]);*/
         /*fclose(outfile_flag);*/
@@ -18269,10 +18275,10 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
         {
             int matlab_index    = k*temp_S.width + j;
             
-            fprintf(outfile_min,"%f\t",nccresult[matlab_index].result0);
+            fprintf(outfile_min,"%f\t",ScharToDouble(nccresult[matlab_index].result0));
             fprintf(outfile_max,"%d\t",nccresult[matlab_index].NumOfHeight);
-            fprintf(outfile_h,"%f\t",nccresult[matlab_index].max_WNCC);
-            fprintf(outfile_roh,"%d\t",nccresult[matlab_index].max_WNCC_pos);
+            fprintf(outfile_h,"%f\t",ScharToDouble(nccresult[matlab_index].max_WNCC));
+            //fprintf(outfile_roh,"%d\t",nccresult[matlab_index].max_WNCC_pos);
             //fprintf(outfile_peak,"%f\t",nccresult[matlab_index].result4);
             
             
@@ -18998,6 +19004,18 @@ double CalMemorySize_Post(CSize DEM_size, CSize Final_DEMsize)
     
     return result;
 }
+
+signed char DoubleToSchar(double val)
+{
+    return round(val*100.0);
+}
+
+
+double ScharToDouble(signed char val)
+{
+    return double(val/100.0);
+}
+
 
 double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize)
 {
