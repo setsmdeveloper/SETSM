@@ -28,8 +28,8 @@ ifeq ($(COMPILER), intel)
   CXX=icpc
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -qopenmp -fp-model precise 
-  CXXFLAGS=-g -std=c++11 -qopenmp -fp-model precise
+  CFLAGS=-pg -g -std=c99 -O3 -qopenmp -fp-model precise 
+  CXXFLAGS=-pg -g -std=c++11 -O3 -qopenmp -fp-model precise
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
   CXX=pgc++
@@ -42,8 +42,8 @@ else
   CXX=g++
   MPICC=mpicc
   MPICXX=mpicxx
-  CFLAGS=-std=c99 -O3 -fopenmp 
-  CXXFLAGS=-O3 -fopenmp 
+  CFLAGS=-std=c99 -g -O3 -fopenmp 
+  CXXFLAGS=-g -O3 -fopenmp 
 endif
 
 setsm : setsm_code.o $(OBJS)

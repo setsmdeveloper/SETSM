@@ -114,14 +114,14 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-	signed char result0; //first peak roh
-	signed char result1; //second peak roh
+	short result0; //first peak roh
+	short result1; //second peak roh
 	float result2; //first peak height
 	float result3; //second peak height
     signed char GNCC;
     //float *GNCC_multi;
 	unsigned char result4; //peak count
-    signed char max_WNCC;
+    short max_WNCC;
     //int max_WNCC_pos;
 	
     int minHeight;
@@ -148,7 +148,7 @@ typedef struct UpdateGrid{
 typedef struct tagVoxelinfo
 {
     //float ANCC;
-    float height;
+    //float height;
     bool flag_cal;
     signed char INCC;
     //float *INCC_multi;
