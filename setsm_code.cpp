@@ -18188,7 +18188,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
                 {
                     //fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
                     //fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Height);
-                    printf("%f\t",GridPT3[matlab_index].Height);
+                    //printf("%f\t",GridPT3[matlab_index].Height);
                     temp_height[matlab_index] = GridPT3[matlab_index].Height;
                     temp_ncc[matlab_index] = GridPT3[matlab_index].Mean_ortho_ncc;
                     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
