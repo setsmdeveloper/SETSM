@@ -10217,8 +10217,12 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             int change_step_max = 0;
             bool check_blunder_cell = true;
             double th_height = 1000;
-            if(DEM_resolution <= 4)
+            if(DEM_resolution < 4)
+            {
                 th_height = 100;
+                if(pyramid_step == 0)
+                    th_height = 10;
+            }
             
             if(proinfo->check_Matchtag || iteration == 1)
             {
@@ -17235,9 +17239,9 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
             }
             else if(pyramid_step == 0)
             {
-                th_HG = 100;// - 100*iteration;
-                if(th_HG < 100)
-                    th_HG = 100;
+                th_HG = 10;// - 100*iteration;
+                //if(th_HG < 100)
+                //   th_HG = 100;
             }
         }
         else
@@ -17344,7 +17348,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                     Total_Max_Z = temp_MaxZ;
 
                 
-                double diff_H = fabs(Total_Max_Z - Total_Min_Z)/3.0;
+                //double diff_H = fabs(Total_Max_Z - Total_Min_Z)/3.0;
                 double BF;
 
                 if(pyramid_step >= 3)
