@@ -114,31 +114,33 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-	short result0; //first peak roh
-	short result1; //second peak roh
-	float result2; //first peak height
-	float result3; //second peak height
-    signed char GNCC;
+    float result2; //4,first peak height
+    float result3; //4,second peak height
+    short minHeight;  //2
+    short maxHeight;  //2
+	short result0; //2,first peak roh
+	short result1; //2,second peak roh
+	 short max_WNCC;//2
+    signed char GNCC; //1
     //float *GNCC_multi;
-	unsigned char result4; //peak count
-    short max_WNCC;
+	unsigned char result4; //1,peak count
+    
     //int max_WNCC_pos;
 	
-    int minHeight;
-    int maxHeight;
-    unsigned short NumOfHeight;
-    bool check_height_change;
+    
+    unsigned short NumOfHeight; //2
+    bool check_height_change; //1
 	//int roh_count;
 } NCCresult;
 
-typedef struct UpdateGrid{
-	int minHeight;
-	int maxHeight;
-	
-	float Height; //after blunder detection
-	signed char roh;
-	signed char ortho_ncc[MaxNCC];
-    signed char Mean_ortho_ncc;
+typedef struct UpdateGrid
+{
+    float Height; //4, after blunder detection
+	short minHeight; //2
+	short maxHeight; //2
+	signed char roh; //1
+	signed char ortho_ncc[MaxNCC]; //1
+    signed char Mean_ortho_ncc; //1
 
     uint8 Matched_flag;
 	uint8 anchor_flag;
@@ -149,8 +151,8 @@ typedef struct tagVoxelinfo
 {
     //float ANCC;
     //float height;
-    bool flag_cal;
-    signed char INCC;
+    bool flag_cal; //1
+    signed char INCC; //1
     //float *INCC_multi;
 }VOXEL;
 
