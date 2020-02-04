@@ -4193,7 +4193,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
-                                        while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                        while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
                                             if(level == 4)
                                             {
@@ -4286,7 +4286,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
-                                        while( i < count_MPs && (fscanf(survey,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                        while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                         {
                                             /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
@@ -4491,7 +4491,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
-                                        while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                        while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
                                             /*if(maxX_ptslists < ptslists[i].m_X)
                                                 maxX_ptslists = ptslists[i].m_X;
@@ -15187,7 +15187,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 
                 count_MPs++;
                 
-                fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
     
                 if(GridPT3[grid_index].roh < DoubleToSignedchar(minimum_Th))
                 {
@@ -15251,7 +15251,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
                             // update max_roh value
                             GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15275,7 +15275,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%lf %lf %lf 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
                         }
                         // update max_roh value
                         GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15446,7 +15446,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             //double minX_ptslists =  100000000;
             //double minY_ptslists =  100000000;
             
-            while( i < count_MPs && (fscanf(survey,"%lf %lf %lf %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+            while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
             {
                 /*if(maxX_ptslists < ptslists[i].m_X)
                     maxX_ptslists = ptslists[i].m_X;
@@ -15629,7 +15629,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
-                        fprintf(pfile,"%lf %lf %lf %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
+                        fprintf(pfile,"%f %f %f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         count_Results[0]++;
                     }
                 }
@@ -15669,7 +15669,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
-                        fprintf(pfile,"%lf %lf %lf %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
+                        fprintf(pfile,"%f %f %f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         
                         if(*minz_mp > ptslists[tcnt].m_Z)
                             *minz_mp        = ptslists[tcnt].m_Z;
@@ -18448,7 +18448,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     
     for(i=0;i<NumofPts;i++)
     {
-        fscanf(fid_pts,"%lf %lf %lf %hhd\n",&MPs[i].m_X,&MPs[i].m_Y,&MPs[i].m_Z,&MPs[i].flag);
+        fscanf(fid_pts,"%f %f %f %hhd\n",&MPs[i].m_X,&MPs[i].m_Y,&MPs[i].m_Z,&MPs[i].flag);
         //printf("t_coord %f\t%f\t%f\n",MPs[i].m_X,MPs[i].m_Y,MPs[i].m_Z);
     }
  
@@ -24471,7 +24471,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 D2DPOINT *tar_pts = (D2DPOINT*)malloc(sizeof(D2DPOINT)*RA_iter_counts[ti]);
                 int i = 0;
                 //printf("file %s\t%d\n",out_file,RA_iter_counts[ti]);
-                while( i < RA_iter_counts[ti] && (fscanf(p_GCP,"%lf\t%lf\t%lf\t%lf\n",&ref_pts[i].m_X,&ref_pts[i].m_Y,&tar_pts[i].m_X,&tar_pts[i].m_Y)) != EOF )
+                while( i < RA_iter_counts[ti] && (fscanf(p_GCP,"%f\t%f\t%f\t%f\n",&ref_pts[i].m_X,&ref_pts[i].m_Y,&tar_pts[i].m_X,&tar_pts[i].m_Y)) != EOF )
                 {
                     //printf("%f\t%f\t%f\t%f\n",ref_pts[i].m_X,ref_pts[i].m_Y,tar_pts[i].m_X,tar_pts[i].m_Y);
                     i++;
@@ -29937,7 +29937,7 @@ int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, do
             MPs = (D2DPOINT*)malloc(sizeof(D2DPOINT)*total_grid_counts);
             int i = 0;
             fid_pts_pre = fopen(temp_path,"r");
-            while( fscanf(fid_pts_pre,"%lf\t%lf\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
+            while( fscanf(fid_pts_pre,"%f\t%f\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
             {
                 //printf("mps id %d\t%f\t%f\n",i,MPs[i].m_X,MPs[i].m_Y);
                 i++;
@@ -30292,7 +30292,7 @@ D2DPOINT** CoregParam_Image_MPs(ProInfo *proinfo,uint8 Pyramid_step, uint8 total
             MPs = (D2DPOINT*)malloc(sizeof(D2DPOINT)*total_grid_counts);
             int i = 0;
             fid_pts_pre = fopen(temp_path,"r");
-            while( fscanf(fid_pts_pre,"%lf\t%lf\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
+            while( fscanf(fid_pts_pre,"%f\t%f\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
             {
                 //printf("mps id %d\t%f\t%f\n",i,MPs[i].m_X,MPs[i].m_Y);
                 i++;
@@ -32555,7 +32555,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     
                                                     i = 0;
                                                     
-                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -32614,7 +32614,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_shift);
                                                     
                                                     i = 0;
-                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -34156,7 +34156,7 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
                 {
                     count_MPs++;
                     
-                    fprintf(temp_fid,"%lf %lf %lf %lf %lf %lf\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
+                    fprintf(temp_fid,"%f %f %f %f %f %f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
                     
                     fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pow(2.0,prc_level));
                     fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pow(2.0,prc_level));
@@ -36348,9 +36348,14 @@ void SetTranParam_fromOrtho(TransParam *param,char* inputfile,ARGINFO args,bool 
     //printf("param %d\t%d\t%d\t%lf\n",param.projection,param.bHemisphere,projCoordTransfCode,projNatOriginLat);
     
     D2DPOINT minXmaxY;
-    double grid_size_c;
-    ReadGeotiff_info(inputfile,&minXmaxY.m_X,&minXmaxY.m_Y,&grid_size_c);
+    double t_minXY_X;
+    double t_minXY_Y;
     
+    double grid_size_c;
+    ReadGeotiff_info(inputfile,&t_minXY_X,&t_minXY_Y,&grid_size_c);
+    
+    minXmaxY.m_X = (float)t_minXY_X;
+    minXmaxY.m_Y = (float)t_minXY_Y;
     //printf("coord %f\t%f\n",minXmaxY.m_X,minXmaxY.m_Y);
     SetTransParam_param(param,param->bHemisphere);
     D2DPOINT wgs_coord = ps2wgs_single(*param, minXmaxY);
