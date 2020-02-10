@@ -7453,8 +7453,8 @@ D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size
         for(int col = 0; col < Size_2D->width ; col++)
         {
             int index = row*Size_2D->width + col;
-            GridPT[index].m_X = Boundary[0] + col*Grid_x;
-            GridPT[index].m_Y = Boundary[1] + row*Grid_y;
+            GridPT[index].m_X = (float)(Boundary[0] + col*Grid_x);
+            GridPT[index].m_Y = (float)(Boundary[1] + row*Grid_y);
         }
 
     return GridPT;
@@ -8883,9 +8883,9 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
             double rho = a * m_c * t / t_c;
             
             double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
-            m_sPS[i].m_X = pm * rho * sin(lambda - lambda_0);
-            m_sPS[i].m_Y = -pm * rho * cos(lambda - lambda_0);
-            m_sPS[i].m_Z = _wgs[i].m_Z;
+            m_sPS[i].m_X = (float)(pm * rho * sin(lambda - lambda_0));
+            m_sPS[i].m_Y = (float)(-pm * rho * cos(lambda - lambda_0));
+            m_sPS[i].m_Z = (float)(_wgs[i].m_Z);
         }
             
         return m_sPS;
@@ -8938,9 +8938,9 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
             if (yy < 0)
                 yy = 9999999 + yy;
             
-            m_sPS[i].m_X = xx;
-            m_sPS[i].m_Y = yy;
-            m_sPS[i].m_Z = _wgs[i].m_Z;
+            m_sPS[i].m_X = (float)(xx);
+            m_sPS[i].m_Y = (float)(yy);
+            m_sPS[i].m_Z = (float)(_wgs[i].m_Z);
         }
         
         return m_sPS;
@@ -8999,8 +8999,8 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
                 lambda = lambda + 2 * PI;
             }
             
-            m_sWGS[i].m_Y = RadToDeg * phi;
-            m_sWGS[i].m_X = RadToDeg * lambda;
+            m_sWGS[i].m_Y = (float)(RadToDeg * phi);
+            m_sWGS[i].m_X = (float)(RadToDeg * lambda);
         }
             
         return m_sWGS;
@@ -9060,8 +9060,8 @@ D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
             
             double latitude = ( lat + ( 1 + e2cuadrada * (cos(lat)*cos(lat)) - ( 3/2.0 )* e2cuadrada * sin(lat) * cos(lat) * ( TaO - lat ) )* ( TaO - lat ) ) * (180/PI);
             
-            m_sWGS[i].m_Y = latitude;
-            m_sWGS[i].m_X = longitude;
+            m_sWGS[i].m_Y = (float)(latitude);
+            m_sWGS[i].m_X = (float)(longitude);
         }
         return m_sWGS;
         
@@ -9218,9 +9218,9 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
                 lambda = lambda + 2 * PI;
             }
             
-            m_sWGS[i].m_Y = RadToDeg * phi;
-            m_sWGS[i].m_X = RadToDeg * lambda;
-            m_sWGS[i].m_Z = _ps[i].m_Z;
+            m_sWGS[i].m_Y = (float)(RadToDeg * phi);
+            m_sWGS[i].m_X = (float)(RadToDeg * lambda);
+            m_sWGS[i].m_Z = (float)(_ps[i].m_Z);
         }
             
         return m_sWGS;
@@ -9280,9 +9280,9 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
             
             double latitude = ( lat + ( 1 + e2cuadrada * (cos(lat)*cos(lat)) - ( 3/2.0 )* e2cuadrada * sin(lat) * cos(lat) * ( TaO - lat ) )* ( TaO - lat ) ) * (180/PI);
             
-            m_sWGS[i].m_Y = latitude;
-            m_sWGS[i].m_X = longitude;
-            m_sWGS[i].m_Z = _ps[i].m_Z;
+            m_sWGS[i].m_Y = (float)(latitude);
+            m_sWGS[i].m_X = (float)(longitude);
+            m_sWGS[i].m_Z = (float)(_ps[i].m_Z);
         }
         return m_sWGS;
     }
@@ -9356,13 +9356,13 @@ D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imagepa
             IP[i].m_Y = 0;
         
         if(IP[i].m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
-            IP[i].m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+            IP[i].m_Y = (float)(_rpc[0][0] + _rpc[1][0]*1.2);
         
         if(IP[i].m_X < 0)
             IP[i].m_X = 0;
         
         if(IP[i].m_X > _rpc[0][1] + _rpc[1][1]*1.2)
-            IP[i].m_X = _rpc[0][1] + _rpc[1][1]*1.2;
+            IP[i].m_X = (float)(_rpc[0][1] + _rpc[1][1]*1.2);
     }
 
     return IP;
@@ -9426,13 +9426,13 @@ D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_i
         IP.m_Y = 0;
     
     if(IP.m_Y > _rpc[0][0] + _rpc[1][0]*1.2)
-        IP.m_Y = _rpc[0][0] + _rpc[1][0]*1.2;
+        IP.m_Y = (float)(_rpc[0][0] + _rpc[1][0]*1.2);
     
     if(IP.m_X < 0)
         IP.m_X = 0;
     
     if(IP.m_X > _rpc[0][1] + _rpc[1][1]*1.2)
-        IP.m_X = _rpc[0][1] + _rpc[1][1]*1.2;
+        IP.m_X = (float)(_rpc[0][1] + _rpc[1][1]*1.2);
     
     return IP;
 }
@@ -9488,8 +9488,8 @@ D2DPOINT GetObjectToImageRPC_single_mpp(double **_rpc, uint8 _numofparam, double
     deltaP      = _imageparam[0];
     deltaR      = _imageparam[1];
     
-    IP.m_Y      = deltaP + Line;
-    IP.m_X      = deltaR + Samp;
+    IP.m_Y      = (float)(deltaP + Line);
+    IP.m_X      = (float)(deltaR + Samp);
     
     return IP;
 }
@@ -13943,7 +13943,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     return (double)(count_low)/(double)(count_total)*100;
 }
 
-bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
+bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
                                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
                                uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
@@ -14169,8 +14169,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
                     int Count_N[3] = {0};
                     
                     double t_nccresult;
-                    INCC[pt_index] = -1.0;
-
+                    
                     bool check_INCC = false;
                     
                     for(int row = -Half_template_size; row <= Half_template_size ; row++)
@@ -14331,7 +14330,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
             //if(count_ncc > 0)
             {
                 GridPT3[pt_index].Mean_ortho_ncc = DoubleToSignedchar(max_ncc);
-                nccresult[pt_index] = SignedcharToDouble(GridPT3[pt_index].Mean_ortho_ncc);
+                nccresult[pt_index] = (float)(SignedcharToDouble(GridPT3[pt_index].Mean_ortho_ncc));
             }
         }
     } // end omp for
@@ -14365,13 +14364,13 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, double* INCC,
     return true;
 }
 
-int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
+float VerticalLineLocus_Ortho(ProInfo *proinfo, float *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
                              uint16 **MagImages, uint16 **Images,
                              double DEM_resolution, double im_resolution, double ***RPCs,
                              CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
                              double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
                              D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,
-                             double* boundary,double *F_sncc)
+                             double* boundary,float *F_sncc)
 {
     double h_divide;
     double height_step;
@@ -14414,7 +14413,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
         min_th_sncc = 0.5;
     }
     
-    double selected_count = 0;
+    float selected_count = 0;
     //printf("start height iter %f\t%f\n",start_H,end_H);
     
     for(int count_height = 0 ; count_height < NumOfHeights ; count_height++)
@@ -14444,7 +14443,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
         
         TriP1[2]        = ref1_pt.m_Z;
         TriP2[2]        = ref2_pt.m_Z;
-        TriP3[2]        = (double)iter_height;
+        TriP3[2]        = iter_height;
         
         // calculation on BoundingBox(MinMax XY) of triangle
         TriMinXY[0] = min(min(TriP1[0],TriP2[0]),TriP3[0]);
@@ -14498,11 +14497,11 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                 {
                     for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                     {
-                        double CurGPXY[2]={0.};
-                        double Z = 0.0;
+                        float CurGPXY[2]={0.};
+                        float Z = 0.0;
                         bool rtn = false;
-                        double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
-                        double v23[2], v2P[2], v31[2], v3P[2];
+                        float _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
+                        float v23[2], v2P[2], v31[2], v3P[2];
                         int Sum;
                         
                         CurGPXY[0]  = (Col)*gridspace + boundary[0];
@@ -14548,8 +14547,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                         
                         if (Sum==0 || Sum==3)
                         {
-                            double v12[3], v13[3], Len, A, B, C, D;
-                            double Normal[3]={0.};
+                            float v12[3], v13[3], Len, A, B, C, D;
+                            float Normal[3]={0.};
                             
                             v12[0]  = _p2[0]-_p1[0];
                             v12[1]  = _p2[1]-_p1[1];
@@ -14741,8 +14740,8 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     if(F_NCC < sncc)
                     {
                         F_NCC = sncc;
-                        *F_Height = (double)iter_height;
-                        selected_count =  ((double)(sum_count_N)/(double)(count_NCC));
+                        *F_Height = iter_height;
+                        selected_count =  (float)((double)(sum_count_N)/(double)(count_NCC));
                         *F_sncc = F_NCC;
                     }
                 }
@@ -14757,7 +14756,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                     {
                         F_NCC = sncc;
                         *F_Height = (ref1_pt.m_Z + ref2_pt.m_Z)/2.0;
-                        selected_count =  ((double)(sum_count_N)/(double)(count_NCC));
+                        selected_count =  (float)((double)(sum_count_N)/(double)(count_NCC));
                         *F_sncc = F_NCC;
                     }
                 }
@@ -15181,13 +15180,13 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
         
             if(Pyramid_step == 0 && GridPT3[grid_index].Matched_flag == 2 && iteration > 100)
             {
-                temp_mp.m_Z = (double)GridPT3[grid_index].Height;
+                temp_mp.m_Z = GridPT3[grid_index].Height;
                 temp_mp.m_X = GridPts_XY[grid_index].m_X;
                 temp_mp.m_Y = GridPts_XY[grid_index].m_Y;
                 
                 count_MPs++;
                 
-                fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
     
                 if(GridPT3[grid_index].roh < DoubleToSignedchar(minimum_Th))
                 {
@@ -15214,7 +15213,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                     index_6         = false;
                     index_7         = false;
 
-                    temp_mp.m_Z = (double)roh_height[grid_index].result2;
+                    temp_mp.m_Z = roh_height[grid_index].result2;
                     temp_mp.m_X = GridPts_XY[grid_index].m_X;
                     temp_mp.m_Y = GridPts_XY[grid_index].m_Y;
                     
@@ -15251,7 +15250,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
                             // update max_roh value
                             GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15275,7 +15274,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%f %f %f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
                         }
                         // update max_roh value
                         GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15487,8 +15486,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     int count_blunders = 0;
                     double mt_minmaxheight[2];
-                    double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-                    double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+                    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
                     blunder_count[0] = 0;
                     blunder_count[1] = 0;
                    
@@ -15500,17 +15498,16 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         
                         printf("mt_minmax %f %f\n",mt_minmaxheight[0],mt_minmaxheight[1]);
                         
-                        VerticalLineLocus_blunder(proinfo,ortho_ncc, INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                        VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
                                                   Images, Template_size,
                                                   Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
                                                   NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                                                   save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,true);
                     }
-                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,INCC,flag_blunder,count,&blunder_dh,filename_mps,ptslists, detBlunders, count_MPs,
+                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,flag_blunder,count,&blunder_dh,filename_mps,ptslists, detBlunders, count_MPs,
                                           trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight,IsRA,seedDEMsigma);
                     
                     free(ortho_ncc);
-                    free(INCC);
                     
                     printf("blunder detection end\tblunder_dh = %f\n",blunder_dh);
 
@@ -15629,7 +15626,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
-                        fprintf(pfile,"%f %f %f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
+                        fprintf(pfile,"%.4f %.4f %.4f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         count_Results[0]++;
                     }
                 }
@@ -15646,17 +15643,15 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     count = 40;
                 }
 
-                double* ortho_ncc = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
-                double* INCC = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
+                float* ortho_ncc = (float*)calloc(sizeof(float),Size_Grid2D.height*Size_Grid2D.width);
                 
-                VerticalLineLocus_blunder(proinfo,ortho_ncc, INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+                VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
                                           Images, Template_size,
                                           Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
                                           NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                                           save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,false);
                 printf("DecisionMP : end VerticalLineLocus_blunder\n");
                 free(ortho_ncc);
-                free(INCC);
                 delete origTri;
             }
             else
@@ -15669,7 +15664,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
                     {
-                        fprintf(pfile,"%f %f %f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
+                        fprintf(pfile,"%.4f %.4f %.4f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
                         
                         if(*minz_mp > ptslists[tcnt].m_Z)
                             *minz_mp        = ptslists[tcnt].m_Z;
@@ -15714,8 +15709,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     BL blunder_param;
     double blunder_dh = 0;
     double mt_minmaxheight[2];
-    double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
-    double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
     
     blunder_param.Boundary  = Boundary;
     blunder_param.gridspace = grid_resolution;
@@ -15729,13 +15723,12 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     
     SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,numoftri, GridPT3, blunder_param,mt_minmaxheight,false);
     
-    VerticalLineLocus_blunder(proinfo,ortho_ncc,INCC, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
+    VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
                               Images, Template_size,
                               Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
                               NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                               save_filepath, tile_row, tile_col, iteration,100,Boundary,ori_images,blunder_selected_level,false);
     free(ortho_ncc);
-    free(INCC);
     
     return count;
 }
@@ -15963,7 +15956,7 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
 }
 
 
-bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
+bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
                            D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
                            double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma)
 {
@@ -16356,13 +16349,13 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                 {
                     uint32 reference_index = 0;
                     int t_count = 0;
-                    double U[3], V[3];
+                    float U[3], V[3];
                     int target_index_0 = 0, target_index_1 = 0;
                       
-                    double dh1, dh2, dh3, ddh_1, ddh_2, ddh_3;
-                    double N[3];
-                    double norm, angle = 0;
-                    double dh_max;
+                    float dh1, dh2, dh3, ddh_1, ddh_2, ddh_3;
+                    float N[3];
+                    float norm, angle = 0;
+                    float dh_max;
                     D3DPOINT pt0,pt1,pt2;
                     int kk;
                     bool check_index = false;
@@ -16474,8 +16467,8 @@ bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, double* INCC, bool 
                             if((fabs(ddh_1) > height_th || fabs(ddh_2) > height_th || fabs(ddh_3) > height_th) && check_match)
                             {
                                 int order[3]    = {(int)reference_index,target_index_0,target_index_1};
-                                double height[3] = {pt0.m_Z,pt1.m_Z,pt2.m_Z};
-                                double h1,h2,dh;
+                                float height[3] = {pt0.m_Z,pt1.m_Z,pt2.m_Z};
+                                float h1,h2,dh;
                                 int t_o_min,t_o_max,t_o_mid;
 
                                 // all node check with height difference.
@@ -16729,13 +16722,13 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
                        CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps)
 {
     int total_count = 0;
-    double X,Y,Z;
+    float X,Y,Z;
     int t_flag;
     int i = 0;
     FILE *fid = fopen(filename_mps_anchor,"r");
     FILE *fid_all = fopen(filename_mps,"w");
     
-    while( i < count_MPs_anchor && (fscanf(fid,"%lf %lf %lf %d\n",&X,&Y,&Z,&t_flag)) != EOF )
+    while( i < count_MPs_anchor && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
     {
         int grid_index;
         int t_col, t_row;
@@ -16755,7 +16748,7 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
     
     i=0;
     fid = fopen(filename_mps_aft,"r");
-    while( i < count_MPs_blunder && (fscanf(fid,"%lf %lf %lf %d\n",&X,&Y,&Z,&t_flag)) != EOF )
+    while( i < count_MPs_blunder && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
     {
         int grid_index;
         int t_col, t_row;
@@ -16765,7 +16758,7 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
         grid_index     = Size_Grid2D.width*t_row + t_col;
         if(grid_index >= 0 && grid_index < Size_Grid2D.width*Size_Grid2D.height && t_col >=0 && t_col < Size_Grid2D.width && t_row >= 0 && t_row < Size_Grid2D.height)
         {
-            fprintf(fid_all,"%lf %lf %lf %d\n",X,Y,Z,t_flag);
+            fprintf(fid_all,"%.4f %.4f %.4f %d\n",X,Y,Z,t_flag);
             total_count++;
             if(GridPT3[grid_index].anchor_flag != 1)
             {
@@ -16829,11 +16822,11 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
       
         check_stop_TIN = true;
       
-        double *updated_height = (double*)malloc(sizeof(double)*num_triangles);
+        float *updated_height = (float*)malloc(sizeof(float)*num_triangles);
         int *selected_index = (int*)malloc(sizeof(int)*num_triangles);
         bool *updated_check = (bool*)calloc(sizeof(bool),num_triangles);
-        double *selected_count = (double*)calloc(sizeof(double),num_triangles);
-        double *FNCC = (double*)calloc(sizeof(double),num_triangles);
+        float *selected_count = (float*)calloc(sizeof(float),num_triangles);
+        float *FNCC = (float*)calloc(sizeof(float),num_triangles);
         int *selected_target_index = (int*)malloc(sizeof(int)*num_triangles);
         
         //printf("ortho bluncer iteration %d\n",while_count);
@@ -16845,12 +16838,12 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                 UI3DPOINT t_tri;
                 D3DPOINT pt0,pt1,pt2;
                 int pdex0,pdex1,pdex2;
-                double TriP1[3];
-                double TriP2[3];
-                double TriP3[3];
+                float TriP1[3];
+                float TriP2[3];
+                float TriP3[3];
                 
-                double temp_MinZ, temp_MaxZ;
-                double TriMinXY[2], TriMaxXY[2];
+                float temp_MinZ, temp_MaxZ;
+                float TriMinXY[2], TriMaxXY[2];
                 int PixelMinXY[2]={0};
                 int PixelMaxXY[2]={0};
                 int Col, Row;
@@ -16906,7 +16899,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                         D3DPOINT ref1_pt, ref2_pt, target_pt;
                         int target_index,ref1_index, ref2_index;
                         int target_pt_index;
-                        double F_height;
+                        float F_height;
                         
                         if(node1_F == 2)
                         {
@@ -16940,8 +16933,8 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                         }
                         
                         //printf("tri id %d VerticalLineLocus_Ortho start\n",tcnt);
-                        double F_SNCC;
-                        double t_selected_count = VerticalLineLocus_Ortho(proinfo,&F_height,ref1_pt,ref2_pt,target_pt,
+                        float F_SNCC;
+                        float t_selected_count = VerticalLineLocus_Ortho(proinfo,&F_height,ref1_pt,ref2_pt,target_pt,
                                                 MagImages, Images,
                                                 DEM_resolution, im_resolution, RPCs,
                                                 Imagesizes, Size_Grid2D, param, NumofIAparam,
@@ -16973,8 +16966,8 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
             }
         }
         
-        double* com_count = (double*)calloc(sizeof(double),numOfPts);
-        double* com_FNCC = (double*)calloc(sizeof(double),numOfPts);
+        float* com_count = (float*)calloc(sizeof(float),numOfPts);
+        float* com_FNCC = (float*)calloc(sizeof(float),numOfPts);
         //int* count_target = (int*)calloc(sizeof(int),numOfPts);
         
         for(int tcnt=0;tcnt<(int)(num_triangles);tcnt++)
@@ -16984,12 +16977,12 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                 UI3DPOINT t_tri;
                 D3DPOINT pt0,pt1,pt2;
                 int pdex0,pdex1,pdex2;
-                double TriP1[3];
-                double TriP2[3];
-                double TriP3[3];
+                float TriP1[3];
+                float TriP2[3];
+                float TriP3[3];
                 
-                double temp_MinZ, temp_MaxZ;
-                double TriMinXY[2], TriMaxXY[2];
+                float temp_MinZ, temp_MaxZ;
+                float TriMinXY[2], TriMaxXY[2];
                 int PixelMinXY[2]={0};
                 int PixelMaxXY[2]={0};
                 int Col, Row;
@@ -17037,7 +17030,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                             
                             
                             int target_index = selected_target_index[tcnt];
-                            double F_height = updated_height[tcnt];
+                            float F_height = updated_height[tcnt];
                             
                             GridPT3[target_index].anchor_flag = 3;
                             pts[target_pt_index].m_Z = F_height;
@@ -17569,6 +17562,17 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                     }
                                 }
                                 
+                                if(pyramid_step > 2)
+                                {
+                                    if(SignedcharToDouble(nccresult[Index].GNCC) < 0.0)
+                                        BF = BF*3;
+                                    else if(SignedcharToDouble(nccresult[Index].GNCC) < 0.2)
+                                        BF = BF*2;
+                                    
+                                    if(BF > 100)
+                                        BF = 100;
+                                }
+                                
                                 m_bHeight[Index] = 1;
                                 GridPT3[Index].Height = (float)Z;
                                 NewHeight[Index] = GridPT3[Index].Height;
@@ -17648,7 +17652,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                 GridPT3[Index].maxHeight = ceil(GridPT3[Index].maxHeight);
                                 
                                 int HeightGap = ((GridPT3[Index].maxHeight - GridPT3[Index].minHeight));
-                                if(HeightGap > th_HG)
+                                if(HeightGap > th_HG && pyramid_step <= 1)
                                 {
                                     GridPT3[Index].minHeight = -100;
                                     GridPT3[Index].maxHeight = -100;
@@ -17759,7 +17763,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
             GridPT3[Index].maxHeight = ceil(GridPT3[Index].maxHeight);
             
             int HeightGap = ((GridPT3[Index].maxHeight - GridPT3[Index].minHeight));
-            if(HeightGap > th_HG)
+            if(HeightGap > th_HG && pyramid_step <= 1)
             {
                 GridPT3[Index].minHeight = -100;
                 GridPT3[Index].maxHeight = -100;
@@ -19075,7 +19079,7 @@ double CalMemorySize_Post(CSize DEM_size, CSize Final_DEMsize)
 
 short DoubleToSchar(double val)
 {
-    short temp = short(round(val*1000.0));
+    short temp = short((val*1000.0));
     //if(round(val*10000.0) > 30000 || round(val*10000.0) < -30000)
     //    printf("%5.4f\t%d\n",val*10000.0,temp);
     
@@ -19089,9 +19093,9 @@ double ScharToDouble(short val)
 
 signed char DoubleToSignedchar(double val)
 {
-    signed char temp = (signed char)(round(val*100.0));
-    if(round(val*100.0) > 120 || round(val*100.0) < -120)
-        printf("%3.2f\t%d\n",val*100.0,temp);
+    signed char temp = (signed char)((val*100.0));
+    //if((signed char)(val*100.0) > 120 || (signed char)(val*100.0) < -120)
+    //    printf("%3.2f\t%d\n",val*100.0,temp);
     
     return temp;
 }
@@ -24078,6 +24082,8 @@ double Correlate(double *L, double *R, int N)
         rho = (double) -99;
     }
  
+    rho = (int)(rho*1000.0)/1000.0;
+    
 	return rho;
 }
 
@@ -24124,6 +24130,8 @@ float Correlate_float(float *L, float *R, int N)
         rho = (float) -99;
     }
  
+    rho = (int)(rho*1000.0)/1000.0;
+    
     return rho;
 }
 
@@ -24137,6 +24145,8 @@ double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, doubl
 		(double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
 		(double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
+    patch = (int)(patch*100.0)/100.0;
+    
 	return patch;
 }
 

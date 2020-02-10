@@ -2,7 +2,8 @@
 #define BASIC_TOPOLOGY_TYPES_H
 
 #include <cstddef>
-#include <stdint.h>
+#include <cstdint>
+#include <vector>
 
 /**************************
  **************************
@@ -84,8 +85,11 @@ class EdgeList
 {
 	private:
 		Edge *edges;		// List of Edge objects
-		Edge **unused_edges;	// List of pointers to currently unused positions in 'edges'
-		std::size_t idx;	// Current length of 'unused_edges' 
+		// List of pointers to currently unused positions in 'edges'
+		union {
+			struct { Edge **unused_edges; std::size_t idx; };
+			std::vector<Edge *> *local_copy_unused_edges;
+		};
 		std::size_t size;	// Maximum number of edges to store
 		bool is_part_of_split;	// Denotes whether this is part of a larger, split EdgeList
 		bool is_local_copy;	// Denotes whether this is a copy of the global EdgeList

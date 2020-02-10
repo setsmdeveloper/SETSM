@@ -39,7 +39,7 @@ EdgeList::EdgeList(Edge *edges, size_t size)
 	this->size = size;
 	this->idx = 0;
 	this->edges = edges;
-	this->unused_edges = new Edge*[this->size];
+	this->local_copy_unused_edges = new std::vector<Edge *>();
 	this->is_part_of_split = false;
 	this->is_local_copy = true;
 }
@@ -47,23 +47,40 @@ EdgeList::EdgeList(Edge *edges, size_t size)
 EdgeList::~EdgeList()
 {
 	// If this is part of a split EdgeList, do not free any edge memory
-	if (this->is_part_of_split) return;
-	delete [] this->unused_edges;
+	if (this->is_part_of_split)
+		return;
+
 	// If this is part of a local copy, do not free main edge memory
-	if (this->is_local_copy) return;
+	if (this->is_local_copy)
+	{
+		delete this->local_copy_unused_edges;
+		return;
+	}
+
+	delete [] this->unused_edges;
 	delete [] this->edges;
 }
 
 Edge *EdgeList::GetNewEdge()
 {
-	this->idx--;
-	return this->unused_edges[this->idx];
+	if (!this->is_local_copy) {
+		this->idx--;
+		return this->unused_edges[this->idx];
+	} else {
+		Edge *edge = this->local_copy_unused_edges->back();
+		this->local_copy_unused_edges->pop_back();
+		return edge;
+	}
 }
 
 void EdgeList::RemoveEdge(Edge &edge)
 {
-	this->unused_edges[this->idx] = &edge;
-	this->idx++;
+	if (!this->is_local_copy) {
+		this->unused_edges[this->idx] = &edge;
+		this->idx++;
+	} else {
+		this->local_copy_unused_edges->push_back(&edge);
+	}
 }
 
 void EdgeList::SplitEdgeList(EdgeList *&left_list, EdgeList *&right_list, size_t median)
@@ -91,11 +108,10 @@ void EdgeList::MergeUnused(EdgeList &local_list)
 {
 	// Combine lists of unused edges, updating
 	// this->idx appropriately
-	for (size_t t = 0; t < local_list.idx; t++)
+	for (Edge* edge : *local_list.local_copy_unused_edges)
 	{
-		this->unused_edges[this->idx + t] = local_list.unused_edges[t];
+		this->unused_edges[this->idx++] = edge;
 	}
-	this->idx += local_list.idx;
 }
 
 EdgeList *EdgeList::MakeLocalCopy()
@@ -103,4 +119,3 @@ EdgeList *EdgeList::MakeLocalCopy()
 	EdgeList *local = new EdgeList(this->edges, this->size);
 	return local;
 }
-
