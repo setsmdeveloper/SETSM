@@ -5675,7 +5675,7 @@ void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *p
     sprintf(param->direction,"%s",direction);
     
     if(param->utm_zone < -1)
-        param->zone = (int)( ( minLon / 6 ) + 31);
+        param->zone = (int)( ( minLon / 6.0 ) + 31.0);
     else
         param->zone = param->utm_zone;
     
@@ -20699,7 +20699,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     double DEM_minX, DEM_maxY;
     double minLat,minLon;
     CSize DEM_size, Image_size;
-    TransParam param;
+    TransParam param = _param;
     FrameInfo m_frameinfo;
     m_frameinfo.m_Camera.m_focalLength  = 0;
     m_frameinfo.m_Camera.m_CCDSize      = 0;
@@ -20719,7 +20719,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     }
     
     printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
-    
+    printf("param %s %d %d\n", _param.direction,_param.zone,_param.projection);
     tmp_chr = remove_ext_ortho(ImageFilename);
     
     char *Ifilename  = SetOutpathName(ImageFilename);
@@ -20872,7 +20872,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
       Image_resolution = 1.0;
     */
     printf("Image resolution %f\n",Image_resolution);
-    
+    /*
     if(args.sensor_type == SB)
     {
         minLat = RPCs[0][3];
@@ -20887,8 +20887,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         
         param.projection = _param.projection;
     }
+     */
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
-
+    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+    
     // load DEM infor from geotiff file.
     DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
     
