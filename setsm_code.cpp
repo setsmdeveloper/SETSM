@@ -26,6 +26,10 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include "setsmgeo.hpp"
+#include <syslog.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 #ifdef BUILDMPI
 #include "mpi.h"
 #endif
@@ -42,6 +46,16 @@ char *dirname(char *path);
 
 int main(int argc,char *argv[])
 {
+    
+    setlogmask(LOG_UPTO(LOG_NOTICE));
+     
+    openlog("exampleprog", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
+     
+    syslog(LOG_NOTICE, "Program started by User %d", getuid ());
+    syslog(LOG_INFO, "A tree falls in a forest");
+     
+    closelog();
+    
     setbuf(stdout, NULL);
     TIFFSetWarningHandler(NULL);
     char* projectfilename   = (char*)"default.txt";
@@ -116,7 +130,7 @@ int main(int argc,char *argv[])
     args.System_memory = 50.0; //default system memory
     
     int DEM_divide = 0;
-    double **Imageparams;
+    double **Imageparams = NULL;
     
     /*CSize DEM_size;
     DEM_size.width = 40000;
@@ -3193,15 +3207,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     }
 #endif
 
-    int i;
-    for(i = 0; i < length; i += 1)
+    int tile_iter, i;
+    for(tile_iter = 0; tile_iter < length; tile_iter += 1)
     {
-        row = iterations[2*i];
-        col = iterations[2*i+1];
+        row = iterations[2*tile_iter];
+        col = iterations[2*tile_iter+1];
 
 #ifdef BUILDMPI
         // Skip this tile if it belongs to a different MPI rank
-        if (i % size != rank)
+        if (tile_iter % size != rank)
             continue;   
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
@@ -3944,7 +3958,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             if(!check_matching_rate)
                             {
-                                FILE* t_fid_c = fopen(filename_tri,"w");
+                                //FILE* t_fid_c = fopen(filename_tri,"w");
                                 
                                 size_t voxel_size = 0;
                                 InitializeVoxel(grid_voxel,Size_Grid2D, height_step, GridPT3, nccresult,iteration,level,proinfo->DEM_resolution,proinfo,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,Imagesizes,data_size_lr,minmaxHeight);
@@ -3957,7 +3971,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         if(nccresult[t_index].NumOfHeight > 0)
                                         {
                                             voxel_size += (sizeof(VOXEL)*nccresult[t_index].NumOfHeight);
-                                            fprintf(t_fid_c,"%d\t",nccresult[t_index].NumOfHeight);
+                                            //fprintf(t_fid_c,"%d\t",nccresult[t_index].NumOfHeight);
                                         }
                                         /*else
                                         {
@@ -3965,9 +3979,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 free(grid_voxel[t_index]);
                                         }*/
                                     }
-                                    fprintf(t_fid_c,"\n");
+                                    //fprintf(t_fid_c,"\n");
                                 }
-                                fclose(t_fid_c);
+                                //fclose(t_fid_c);
                                 
                                 voxel_all_size += voxel_size;
                                 printf("Done grid_voxel initialize. memory size %f\n",(double)(voxel_all_size)/1024.0/1024.0/1024.0);
@@ -4014,20 +4028,50 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             else
                                 MPP = MPP_simgle_image;
                             
+                            std::list<D3DPOINT> MatchedPts_list;
+                            
                             count_MPs = SelectMPs(proinfo,nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
-                                                  iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle);
-                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\n",row,col,level,iteration,count_MPs);
+                                                  iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
+                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
+                            
+                            
+                            D3DPOINT *ptslists = NULL;
+                            
+                            std::list<D3DPOINT>::iterator it;
+                            std::list<D3DPOINT> MatchedPts_list_mps;
+                            std::list<D3DPOINT> MatchedPts_list_blunder;
+                            std::list<D3DPOINT> MatchedPts_list_anchor;
                             
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
                                 //anchor points
+                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                i = 0;
+                                for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
+                                {
+                                    ptslists[i] = *it;
+                                    i++;
+                                }
+                                
                                 count_blunder = DecisionMPs(proinfo,false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
                                                             SubMagImages_B,grid_resolution, Image_res[0],RPCs,
                                                             Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
                                                             NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level);
+                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
+                                int tcnt;
+                                count_results_anchor[0] = 0;
+                                for(tcnt=0;tcnt<count_MPs;tcnt++)
+                                {
+                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                    {
+                                        MatchedPts_list_anchor.push_back(ptslists[tcnt]);
+                                        count_results_anchor[0]++;
+                                    }
+                                    ptslists[tcnt].flag = 0;
+                                }
+                                
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
 
                                 //blunder detection
@@ -4037,22 +4081,66 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                             Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
                                                             NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level);
+                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
                                 
+                                count_results[0] = 0;
+                                for(tcnt=0;tcnt<count_MPs;tcnt++)
+                                {
+                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                    {
+                                        MatchedPts_list_blunder.push_back(ptslists[tcnt]);
+                                        count_results[0]++;
+                                        
+                                        if(minH_mps > ptslists[tcnt].m_Z)
+                                            minH_mps        = ptslists[tcnt].m_Z;
+                                        if(maxH_mps < ptslists[tcnt].m_Z)
+                                            maxH_mps       = ptslists[tcnt].m_Z;
+                                    }
+                                }
+                                
+                                free(ptslists);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
                             else
                             {
+                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                i = 0;
+                                for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
+                                {
+                                    ptslists[i] = *it;
+                                    i++;
+                                }
+                                
                                 count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,
                                                             Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
                                                             SubMagImages_B,grid_resolution, Image_res[0],RPCs,
                                                             Imagesizes,data_size_lr,SubImages_B,Template_size,
                                                             param, Grid_wgs,GridPT,
                                                             NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level);
+                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
+                                
+                                count_results[0] = 0;
+                                for(int tcnt=0;tcnt<count_MPs;tcnt++)
+                                {
+                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                    {
+                                        MatchedPts_list_mps.push_back(ptslists[tcnt]);
+                                        count_results[0]++;
+                                        
+                                        if(minH_mps > ptslists[tcnt].m_Z)
+                                            minH_mps        = ptslists[tcnt].m_Z;
+                                        if(maxH_mps < ptslists[tcnt].m_Z)
+                                            maxH_mps       = ptslists[tcnt].m_Z;
+                                    }
+                                }
+                                
                                 count_MPs       = count_results[0];
+                                
+                                free(ptslists);
                                 printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
+                            
+                            MatchedPts_list.clear();
                             
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
 
@@ -4069,11 +4157,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 if(check_ortho_cal && proinfo->IsRA != 1)
                                 {
-                                    count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin);
-                                    survey  = fopen(filename_mps_fin,"r");
+                                    printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
+                                    count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin,MatchedPts_list_anchor,MatchedPts_list_blunder,&MatchedPts_list_mps);
+                                    MatchedPts_list_anchor.clear();
+                                    MatchedPts_list_blunder.clear();
+                                    
+                                    //survey  = fopen(filename_mps_fin,"r");
                                 }
-                                else
-                                    survey  = fopen(filename_mps,"r");
+                                //else
+                                    //survey  = fopen(filename_mps,"r");
                                 
                                 blunder_param.Boundary  = subBoundary;
                                 blunder_param.gridspace = grid_resolution;
@@ -4102,11 +4194,16 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     TIN_split_level = 4;
                                 }
                                 
+                                printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                count_MPs = MatchedPts_list_mps.size();
+                                
+                                std::list<UI3DPOINT> t_trilists;
+                                std::list<UI3DPOINT>::iterator it_tri;
+                                
                                 if(level == 0 && iteration == 3)
                                 {
-                                    F3DPOINT *ptslists;
-                                    ptslists = (F3DPOINT*)calloc(count_MPs,sizeof(F3DPOINT));
-                                    
+                                    //F3DPOINT *ptslists;
+                                    ptslists = (D3DPOINT*)calloc(count_MPs,sizeof(D3DPOINT));
                                     double minmaxBR[6];
                                     minmaxBR[0] = 10000000;
                                     minmaxBR[1] = 10000000;
@@ -4115,6 +4212,30 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     minmaxBR[4] = 100000;
                                     minmaxBR[5] = -100000;
                                     
+                                    i = 0;
+                                    for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                    {
+                                        ptslists[i] = *it;
+                                        
+                                        if(minmaxBR[0] > ptslists[i].m_X)
+                                            minmaxBR[0]     = ptslists[i].m_X;
+                                        if(minmaxBR[1] > ptslists[i].m_Y)
+                                            minmaxBR[1]     = ptslists[i].m_Y;
+                                        
+                                        if(minmaxBR[2] < ptslists[i].m_X)
+                                            minmaxBR[2]     = ptslists[i].m_X;
+                                        if(minmaxBR[3] < ptslists[i].m_Y)
+                                            minmaxBR[3]     = ptslists[i].m_Y;
+                                        if(minmaxBR[4] > ptslists[i].m_Z)
+                                            minmaxBR[4] = ptslists[i].m_Z;
+                                        if(minmaxBR[5] < ptslists[i].m_Z)
+                                            minmaxBR[5] = ptslists[i].m_Z;
+                                        i++;
+                                    }
+                                    
+                                    MatchedPts_list_mps.clear();
+                                    
+                                    /*
                                     i = 0;
                                     //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
                                     F3DPOINT pts_tmp;
@@ -4139,20 +4260,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 minmaxBR[4] = ptslists[i].m_Z;
                                             if(minmaxBR[5] < ptslists[i].m_Z)
                                                 minmaxBR[5] = ptslists[i].m_Z;
-                                            /*
-                                            temp_pts[i].m_X = ptslists[i].m_X;
-                                            temp_pts[i].m_Y = ptslists[i].m_Y;
-                                            temp_pts[i].m_Z = ptslists[i].m_Z;
-                                            temp_pts[i].flag = ptslists[i].flag;
-                                            */
                                         }
                                         i++;
                                         
                                     }
                                     fclose(survey);
-                                    
+                                    */
                                     FILE *pFile = fopen(filename_mps,"wb");
                                     fwrite(ptslists,sizeof(F3DPOINT),count_MPs,pFile);
+                                    fclose(pFile);
                                     
                                     /*FILE *pFile_a = fopen(filename_mps_asc,"w");
                                     for(i=0;i<count_MPs;i++)
@@ -4165,7 +4281,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     }
                                     fclose(pFile_a);
                                     */
-                                    fclose(pFile);
+                                    
                                     
                                     if(!proinfo->IsRA)
                                     {
@@ -4194,9 +4310,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 {
                                     if(check_ortho_cal && proinfo->IsRA != 1)
                                     {
-                                        D3DPOINT *ptslists;
+                                        //D3DPOINT *ptslists;
                                         
-                                        FILE *pTri;
+                                        //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
@@ -4206,6 +4322,19 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
+                                        for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                        {
+                                            ptslists[i] = *it;
+                                            if(level == 4)
+                                            {
+                                                ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                            }
+                                            i++;
+                                        }
+                                        MatchedPts_list_mps.clear();
+                                        
+                                        /*
+                                        i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
                                             if(level == 4)
@@ -4213,39 +4342,41 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
                                             }
                                             
-                                            /*if(maxX_ptslists < ptslists[i].m_X)
-                                                maxX_ptslists = ptslists[i].m_X;
-                                            if(maxY_ptslists < ptslists[i].m_Y)
-                                                maxY_ptslists = ptslists[i].m_Y;
-                                            if(minX_ptslists > ptslists[i].m_X)
-                                                minX_ptslists = ptslists[i].m_X;
-                                            if(minY_ptslists > ptslists[i].m_Y)
-                                                minY_ptslists = ptslists[i].m_Y;
-                                            */
                                             i++;
                                         }
                                         
                                         fclose(survey);
+                                         */
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
                                         
+                                        //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                        
+                                        FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                        delete origTri;
+                                        
+                                        count_tri = t_trilists.size();
+                                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                        
+                                        i = 0;
+                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                            
-                                            FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
-                                            delete origTri;
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                            i = 0;
-                                            for(i=0;i<count_tri;i++)
-                                            {
-                                                trilists[i].m_X = t_trilists[i].m_X;
-                                                trilists[i].m_Y = t_trilists[i].m_Y;
-                                                trilists[i].m_Z = t_trilists[i].m_Z;
-                                            }
-                                            
-                                            free(t_trilists);
+                                            trilists[i] = *it_tri;
+                                            i++;
+                                        }
+                                        t_trilists.clear();
+                                        
+                                        /*
+                                        i = 0;
+                                        for(i=0;i<count_tri;i++)
+                                        {
+                                            trilists[i].m_X = t_trilists[i].m_X;
+                                            trilists[i].m_Y = t_trilists[i].m_Y;
+                                            trilists[i].m_Z = t_trilists[i].m_Z;
                                         }
                                         
+                                        free(t_trilists);
+                                        */
                                     
                                         fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
                                         
@@ -4263,77 +4394,73 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         int matched_pts = 0;
                                         i = 0;
+                                        
+                                        if(level == 4)
                                         {
-                                            FILE *fid_all = fopen(filename_mps,"w");
+                                            std::list<D3DPOINT> ortho_list;
                                             for(i=0;i<count_MPs;i++)
                                             {
-                                                if(level == 4)
+                                                if(ptslists[i].flag != 1)
                                                 {
-                                                    if(ptslists[i].flag != 1)
-                                                    {
-                                                        /*int t_col, t_row,grid_index;
-                                                        t_col         = (int)((ptslists[i].m_X - subBoundary[0])/grid_resolution + 0.5);
-                                                        t_row         = (int)((ptslists[i].m_Y - subBoundary[1])/grid_resolution + 0.5);
-                                                        grid_index     = Size_Grid2D.width*t_row + t_col;
-                                                        */
-                                                        fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-                                                        //i++;
-                                                        matched_pts++;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    fprintf(fid_all,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                                    ortho_list.push_back(ptslists[i]);
                                                     matched_pts++;
                                                 }
                                             }
-                                            fclose(fid_all);
+                                            
+                                            free(ptslists);
+                                            count_MPs = matched_pts;
+                                            ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                            
+                                            i = 0;
+                                            for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
+                                            {
+                                                ptslists[i] = *it;
+                                                i++;
+                                            }
+                                            ortho_list.clear();
                                         }
                                         
-                                        free(ptslists);
-                                            
-                                        printf("load ortho_blunder pts %d\n",matched_pts);
-                                        count_MPs = matched_pts;
+                                        printf("load ortho_blunder pts %d\n",count_MPs);
                                         
-                                        survey  = fopen(filename_mps,"r");
-                                        ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                        
-                                        i = 0;
+                                        //survey  = fopen(filename_mps,"r");
+                                        /*
                                         while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                         {
-                                            /*if(maxX_ptslists < ptslists[i].m_X)
-                                                maxX_ptslists = ptslists[i].m_X;
-                                            if(maxY_ptslists < ptslists[i].m_Y)
-                                                maxY_ptslists = ptslists[i].m_Y;
-                                            if(minX_ptslists > ptslists[i].m_X)
-                                                minX_ptslists = ptslists[i].m_X;
-                                            if(minY_ptslists > ptslists[i].m_Y)
-                                                minY_ptslists = ptslists[i].m_Y;
-                                            */
                                             i++;
                                         }
                                         fclose(survey);
+                                         */
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        {
-                                            UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                            
-                                            //Save triangulation and delete it since we will not use it
-                                            FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max2,&count_tri, grid_resolution);
-                                            delete origTri;
+                                        //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                        
+                                        //Save triangulation and delete it since we will not use it
+                                        FullTriangulation *origTri_2 = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max2,&count_tri, grid_resolution);
+                                        delete origTri_2;
 
-                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                            i = 0;
-                                            for(i=0;i<count_tri;i++)
-                                            {
-                                                trilists[i].m_X = t_trilists[i].m_X;
-                                                trilists[i].m_Y = t_trilists[i].m_Y;
-                                                trilists[i].m_Z = t_trilists[i].m_Z;
-                                            }
-                                            
-                                            free(t_trilists);
+                                        
+                                        count_tri = t_trilists.size();
+                                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                        
+                                        i = 0;
+                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
+                                        {
+                                            trilists[i] = *it_tri;
+                                            i++;
+                                        }
+                                        t_trilists.clear();
+                                        /*
+                                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                        i = 0;
+                                        for(i=0;i<count_tri;i++)
+                                        {
+                                            trilists[i].m_X = t_trilists[i].m_X;
+                                            trilists[i].m_Y = t_trilists[i].m_Y;
+                                            trilists[i].m_Z = t_trilists[i].m_Z;
                                         }
                                         
+                                        free(t_trilists);
+                                        */
                                         
                                         count_blunder = DecisionMPs_setheight(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
                                                                               Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
@@ -4492,9 +4619,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     }
                                     else
                                     {
-                                        D3DPOINT *ptslists;
+                                        //D3DPOINT *ptslists;
                                         
-                                        FILE *pTri;
+                                        //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
@@ -4504,30 +4631,44 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
+                                        for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                        {
+                                            ptslists[i] = *it;
+                                            i++;
+                                        }
+                                        MatchedPts_list_mps.clear();
+                                        
+                                        /*
+                                        i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
                                         {
-                                            /*if(maxX_ptslists < ptslists[i].m_X)
-                                                maxX_ptslists = ptslists[i].m_X;
-                                            if(maxY_ptslists < ptslists[i].m_Y)
-                                                maxY_ptslists = ptslists[i].m_Y;
-                                            if(minX_ptslists > ptslists[i].m_X)
-                                                minX_ptslists = ptslists[i].m_X;
-                                            if(minY_ptslists > ptslists[i].m_Y)
-                                                minY_ptslists = ptslists[i].m_Y;
-                                            */
                                             i++;
                                         }
                                         fclose(survey);
+                                        */
                                         
                                         UI3DPOINT *trilists;
                                         
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         
-                                        UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                                        //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
                                         
                                         //Save triangulation and delete it since we will not use it
-                                        FullTriangulation *origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                                        FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
+                                        
+                                        count_tri = t_trilists.size();
+                                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                        
+                                        i = 0;
+                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
+                                        {
+                                            trilists[i] = *it_tri;
+                                            i++;
+                                        }
+                                        t_trilists.clear();
+                                        
+                                        /*
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
                                         for(i=0;i<count_tri;i++)
@@ -4538,7 +4679,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                         
                                         free(t_trilists);
-                                           
+                                        */
+                                        
                                         if(pre_matched_pts == 0)
                                              matching_change_rate = 0;
                                          else
@@ -4688,91 +4830,95 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                         
                                         free(trilists);
-                                        free(ptslists);
-                                    }
-                                
-                                    if(proinfo->IsRA && level <= 3)
-                                    {
-                                        int RA_iter_counts = 0;
-                                        RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
-                                                                     Template_size, SubImages, data_size_lr, SubOriImages, param,
-                                                                     bin_angle, pyramid_step, Hemisphere, proinfo->save_filepath, proinfo->tmpdir);
-                                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                        
+                                        if(proinfo->IsRA && level <= 3)
                                         {
-                                            if(proinfo->check_selected_image[ti])
+                                            int RA_iter_counts = 0;
+                                            RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
+                                                                         Template_size, SubImages, data_size_lr, SubOriImages, param,
+                                                                         bin_angle, pyramid_step, Hemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
+                                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                             {
-                                                fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
-                                                printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                if(proinfo->check_selected_image[ti])
+                                                {
+                                                    fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                    printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                }
+                                            }
+                                            
+                                            if (level <= 1)
+                                            {
+                                                //sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath,row,col);
+                                                sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath);
+                                                fid_RAinfo  = fopen(save_file,"w");
+                                                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                                    fprintf(fid_RAinfo,"%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                fclose(fid_RAinfo);
+                                            }
+                                        }
+                                
+                                        if(proinfo->IsRA)
+                                        {
+                                            if(check_RA_divide)
+                                            {
+                                                if(level <= 3 && iteration > 2)
+                                                {
+                                                    //FILE *fid_pts       = fopen(filename_mps,"r");
+                                                    double t_X,t_Y,t_Z;
+                                                    //bool t_flag;
+                                                    int* t_count = (int*)calloc(sizeof(int),total_tile);
+                                                    
+                                                    for(int k=0;k<count_MPs;k++)
+                                                    {
+                                                        //fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
+                                                        t_X = ptslists[k].m_X;
+                                                        t_Y = ptslists[k].m_Y;
+                                                        t_Z = ptslists[k].m_Z;
+                                                        
+                                                        int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
+                                                        int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
+                                                        
+                                                        t_count[t_col+division_X*t_row] ++;
+                                                    }
+                                                    //fclose(fid_pts);
+                                                    
+                                                    int saved_count = 0;
+                                                    int selected_X = 0;
+                                                    int selected_Y = 0;
+                                                    int total_count = 0;
+                                                    for(int k=0;k<total_tile;k++)
+                                                    {
+                                                        if(t_count[k] > saved_count)
+                                                        {
+                                                            saved_count = t_count[k];
+                                                            selected_Y  = floor(k/division_X);
+                                                            selected_X  = k % division_X;
+                                                        }
+                                                        total_count += t_count[k];
+                                                        
+                                                        //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
+                                                    }
+                                                    printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
+                                                    printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
+                                                           subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+                                                    
+                                                    fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
+                                                    
+                                                    new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
+                                                    new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
+                                                    new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
+                                                    new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
+                                                    
+                                                    check_new_subBoundary_RA = true;
+                                                    check_RA_divide = false;
+                                                    
+                                                    free(t_count);
+                                                
+                                                }
                                             }
                                         }
                                         
-                                        if (level <= 1)
-                                        {
-                                            //sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath,row,col);
-                                            sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath);
-                                            fid_RAinfo  = fopen(save_file,"w");
-                                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                                                fprintf(fid_RAinfo,"%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
-                                            fclose(fid_RAinfo);
-                                        }
-                                    }
-                                
-                                    if(proinfo->IsRA)
-                                    {
-                                        if(check_RA_divide)
-                                        {
-                                            if(level <= 3 && iteration > 2)
-                                            {
-                                                FILE *fid_pts       = fopen(filename_mps,"r");
-                                                double t_X,t_Y,t_Z;
-                                                bool t_flag;
-                                                int* t_count = (int*)calloc(sizeof(int),total_tile);
-                                                
-                                                for(int k=0;k<count_results[0];k++)
-                                                {
-                                                    fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
-                                                    
-                                                    int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
-                                                    int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
-                                                    
-                                                    t_count[t_col+division_X*t_row] ++;
-                                                }
-                                                fclose(fid_pts);
-                                                
-                                                int saved_count = 0;
-                                                int selected_X = 0;
-                                                int selected_Y = 0;
-                                                int total_count = 0;
-                                                for(int k=0;k<total_tile;k++)
-                                                {
-                                                    if(t_count[k] > saved_count)
-                                                    {
-                                                        saved_count = t_count[k];
-                                                        selected_Y  = floor(k/division_X);
-                                                        selected_X  = k % division_X;
-                                                    }
-                                                    total_count += t_count[k];
-                                                    
-                                                    //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
-                                                }
-                                                printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
-                                                       subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
-                                                
-                                                fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                
-                                                new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
-                                                new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
-                                                new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
-                                                new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
-                                                
-                                                check_new_subBoundary_RA = true;
-                                                check_RA_divide = false;
-                                                
-                                                free(t_count);
-                                            
-                                            }
-                                        }
+                                        free(ptslists);
                                     }
                                 }
                                 
@@ -4786,7 +4932,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
-                            
+                            /*
                             if (level == 0 && iteration == 3)
                             {
                                 remove(filename_mps_pre);
@@ -4809,7 +4955,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     remove(filename_mps_anchor);
                                 }
                             }
-                            
+                            */
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -5734,7 +5880,7 @@ void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *p
     sprintf(param->direction,"%s",direction);
     
     if(param->utm_zone < -1)
-        param->zone = (int)( ( minLon / 6 ) + 31);
+        param->zone = (int)( ( minLon / 6.0 ) + 31.0);
     else
         param->zone = param->utm_zone;
     
@@ -14838,7 +14984,7 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
 
 int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
               double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-              uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle)
+              uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,std::list<D3DPOINT> *linkedlist)
 {
     int count_MPs = 0;
 
@@ -14956,7 +15102,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
     printf("minimum TH %f\n",minimum_Th);
     
     bool check_iter_end = false;
-    FILE* temp_fid;
+    //FILE* temp_fid;
     double h_divide;
     
     if(Pyramid_step >= 3)
@@ -14971,7 +15117,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
         h_divide = 2;
     }
 
-    temp_fid            = fopen(filename_mps,"w");
+    //temp_fid            = fopen(filename_mps,"w");
 
     //roh_next = 0.45 - 0.10*(4-Pyramid_step);
     
@@ -15199,7 +15345,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                 
                 count_MPs++;
                 
-                fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                temp_mp.flag = 0;
+                linkedlist->push_back(temp_mp);
+                //fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
     
                 if(GridPT3[grid_index].roh < DoubleToSignedchar(minimum_Th))
                 {
@@ -15263,7 +15411,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            temp_mp.flag = 0;
+                            linkedlist->push_back(temp_mp);
+                            //fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
                             // update max_roh value
                             GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15287,7 +15437,9 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                         {
                             count_MPs++;
                             
-                            fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            temp_mp.flag = 0;
+                            linkedlist->push_back(temp_mp);
+                            //fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
                         }
                         // update max_roh value
                         GridPT3[grid_index].roh     = roh_height[grid_index].result0;
@@ -15307,7 +15459,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
             }
         }
     }
-    fclose(temp_fid);
+    //fclose(temp_fid);
 
     return count_MPs;
 }
@@ -15319,7 +15471,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                 TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
                 uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
-                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level)
+                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level,D3DPOINT *ptslists)
 {
     char *filename_tri = proinfo->save_filepath;
     char* save_filepath = proinfo->save_filepath;
@@ -15417,8 +15569,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             }
         }
         
-        survey  = fopen(filename_mps_pre,"r");
-        if(survey)
+        //survey  = fopen(filename_mps_pre,"r");
+        //if(survey)
         {
             int i=0;
             BL blunder_param;
@@ -15450,39 +15602,48 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             }
             
             //TIN generation start
+            /*
             D3DPOINT *ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
             
-            
-            //double maxX_ptslists = -100000000;
-            //double maxY_ptslists = -100000000;
-            //double minX_ptslists =  100000000;
-            //double minY_ptslists =  100000000;
-            
+            std::list<D3DPOINT>::iterator it;
+            int kk = 0;
+            for(it = input_ptslist.begin(); it != input_ptslist.end() ; ++it)
+            {
+                ptslists[kk] = *it;
+                kk++;
+            }
+            */
+            /*
             while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
             {
-                /*if(maxX_ptslists < ptslists[i].m_X)
-                    maxX_ptslists = ptslists[i].m_X;
-                if(maxY_ptslists < ptslists[i].m_Y)
-                    maxY_ptslists = ptslists[i].m_Y;
-                if(minX_ptslists > ptslists[i].m_X)
-                    minX_ptslists = ptslists[i].m_X;
-                if(minY_ptslists > ptslists[i].m_Y)
-                    minY_ptslists = ptslists[i].m_Y;
-                */
                 i++;
             }
+            */
             double min_max[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
             
             if( !(Pyramid_step == 0 && iteration == 3) /*&& Pyramid_step > proinfo->SGM_py*/)
             {
                 UI3DPOINT *trilists;
                 FullTriangulation *origTri;
-                UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
+                std::list<UI3DPOINT> t_trilists;
                 
                 //Save triangulation for later use as we will remove blunders directly from this triangulation
-                origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                //origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
+                origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                
+                count_tri = t_trilists.size();
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                std::list<UI3DPOINT>::iterator it;
+                i = 0;
+                for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
+                {
+                    trilists[i] = *it;
+                    i++;
+                }
+                t_trilists.clear();
+                /*
                 i = 0;
                 for(i=0;i<count_tri;i++)
                 {
@@ -15492,6 +15653,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 }
                 
                 free(t_trilists);
+                 */
                 // TIN generation end
                 
                 
@@ -15553,7 +15715,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
                     D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
                     uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
-                    FILE *pTri;
+                    //FILE *pTri;
                     
                     int new_blunder_cnt=0;
                     int t_tri_counts = 0;
@@ -15570,7 +15732,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         {
                             if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
                             {
-				input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
                                 input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
                                 check_id[t_tri_counts]          = i;
                                 t_tri_counts++;
@@ -15592,21 +15754,38 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 					if (new_blunder_cnt > 0)
 					{
                     	free(trilists);
-                    	UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
+                    	//UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
+                        std::list<UI3DPOINT> tt_trilists;
                     	//If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
 						//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
                     	if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
                     	{
                        		//Must delete old triangulation and create new one, should be faster
                        		delete origTri;
-                       		origTri = TINCreate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution);
-                    	}else
+                       		//origTri = TINCreate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution);
+                            origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, grid_resolution);
+                    	}
+                        else
                     	{
                     		//Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                    		TINUpdate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
+                    		TINUpdate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
                     	}
 
+                        count_tri = tt_trilists.size();
+                        
                     	trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                        
+                        std::list<UI3DPOINT>::iterator itt;
+                        i = 0;
+                        for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
+                        {
+                            trilists[i].m_X = check_id[itt->m_X];
+                            trilists[i].m_Y = check_id[itt->m_Y];
+                            trilists[i].m_Z = check_id[itt->m_Z];
+                            i++;
+                        }
+                        tt_trilists.clear();
+                        /*
                    		for(i=0;i<count_tri;i++)
                    		{
                        		trilists[i].m_X = check_id[t_trilists[i].m_X];
@@ -15614,6 +15793,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                        		trilists[i].m_Z = check_id[t_trilists[i].m_Z];
                    		}
                    		free(t_trilists);
+                         */
 					}
 
                     free(input_blunder_pts);
@@ -15632,6 +15812,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     int floor_ieration = 2;
                 }
                 
+                /*
                 FILE *pfile = fopen(filename_mps,"w");
                 int tcnt = 0;
                 count_Results[0] = 0;
@@ -15644,7 +15825,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     }
                 }
                 fclose(pfile);
-                
+                */
                 double mt_minmaxheight[2];
                 SetHeightRange_blunder(minmaxHeight,ptslists, count_Results[0], trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
                 
@@ -15669,6 +15850,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
             }
             else
             {
+                /*
                 FILE *pfile = fopen(filename_mps,"w");
                 int tcnt = 0;
                 int selected_count_MPs = 0;
@@ -15691,11 +15873,12 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 count_MPs = selected_count_MPs;
                 count_Results[0] = count_MPs;
                 fclose(pfile);
+                 */
             }
-            free(ptslists);
+            //free(ptslists);
 
         }
-        fclose(survey);
+        //fclose(survey);
         
     }
     else
@@ -15815,6 +15998,92 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
         row = tris[t][2].row;
         col = tris[t][2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+    }
+    printf("s4\n");
+    delete [] tris;
+    delete [] points_ptrs;
+    delete [] grid_points;
+    
+    printf("s5\n");
+    return triangulation;
+}
+
+FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution)
+{
+    if (numofpts <= 2) {
+        *count_tri = 0;
+        return NULL;
+    }
+
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
+
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    //Check to ensure grid width/height fit in 16 bit integers
+    if(width > 32767 || height > 32767)
+    {
+        printf("ERROR: Grid is too large. width: %d height: %d\n", width, height);
+        exit(1);
+    }
+    printf("\tTINCreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
+
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    GridPoint *grid_points = new GridPoint[numofpts];
+
+    printf("done s1\n");
+    for (std::size_t t = 0; t < numofpts; ++t)
+    {
+        grid_points[t].col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
+        grid_points[t].row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+        index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
+    }
+
+    printf("done s2\n");
+    GridPoint **points_ptrs = new GridPoint*[numofpts];
+    #pragma omp parallel for
+    for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
+
+    FullTriangulation *triangulation = new FullTriangulation(width, height);
+    //double begin = omp_get_wtime();
+    printf("done s3\n");
+    triangulation->Triangulate(points_ptrs, numofpts);
+    printf("done triangulation\n");
+    //double end = omp_get_wtime();
+    //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
+
+    std::size_t max_num_tris = 2 * numofpts;
+    printf("GridPoint = %d\n",max_num_tris);
+    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    printf("s3-1\n");
+    *count_tri = (int)(triangulation->GetAllTris(tris));
+    printf("count tri = %d\n",*count_tri);
+    for (std::size_t t = 0; t < *count_tri; t++)
+    {
+        int row, col;
+        UI3DPOINT temp_pt;
+        
+        row = tris[t][0].row;
+        col = tris[t][0].col;
+        //trilists[t].m_X = index_in_ptslists[row * width + col];
+        temp_pt.m_X = index_in_ptslists[row * width + col];
+        
+        row = tris[t][1].row;
+        col = tris[t][1].col;
+        //trilists[t].m_Y = index_in_ptslists[row * width + col];
+        temp_pt.m_Y = index_in_ptslists[row * width + col];
+        
+        row = tris[t][2].row;
+        col = tris[t][2].col;
+        //trilists[t].m_Z = index_in_ptslists[row * width + col];
+        temp_pt.m_Z = index_in_ptslists[row * width + col];
+        
+        trilists->push_back(temp_pt);
+        
+        
     }
     printf("s4\n");
     delete [] tris;
@@ -15968,6 +16237,76 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     delete [] grid_blunders;
 }
 
+void TINUpdate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
+{
+
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
+
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    printf("\tTINUpdate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
+
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    for (std::size_t t = 0; t < numofpts; ++t)
+    {
+        //index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
+        INDEX col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
+    INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+    index_in_ptslists[row * width + col] = t;
+    }
+
+    GridPoint *grid_blunders = new GridPoint[numblunders];
+    for (std::size_t t = 0; t < numblunders; ++t)
+    {
+        grid_blunders[t].col = 0.5 + (blunderlist[t].m_X - minX_ptslists) / resolution;
+        grid_blunders[t].row = 0.5 + (blunderlist[t].m_Y - minY_ptslists) / resolution;
+    }
+
+    GridPoint **blunder_ptrs = new GridPoint*[numblunders];
+    #pragma omp parallel for
+    for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
+    
+    //double begin = omp_get_wtime();
+
+    oldTri->Retriangulate(blunder_ptrs, numblunders);
+
+    //double end = omp_get_wtime();
+    //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+
+    std::size_t max_num_tris = 2 * numofpts;
+    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    *count_tri = (int)(oldTri->GetAllTris(tris));
+    for (std::size_t t = 0; t < *count_tri; t++)
+    {
+        int row, col;
+        UI3DPOINT temp_pt;
+        
+        row = tris[t][0].row;
+        col = tris[t][0].col;
+
+        //trilists[t].m_X = index_in_ptslists[row * width + col];
+        temp_pt.m_X = index_in_ptslists[row * width + col];
+        
+        row = tris[t][1].row;
+        col = tris[t][1].col;
+        //trilists[t].m_Y = index_in_ptslists[row * width + col];
+        temp_pt.m_Y = index_in_ptslists[row * width + col];
+        
+        row = tris[t][2].row;
+        col = tris[t][2].col;
+        //trilists[t].m_Z = index_in_ptslists[row * width + col];
+        temp_pt.m_Z = index_in_ptslists[row * width + col];
+        
+        trilists->push_back(temp_pt);
+    }
+    delete [] tris;
+    delete [] blunder_ptrs;
+    delete [] grid_blunders;
+}
 
 bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
                            D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
@@ -16732,15 +17071,38 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,ui
 }
 
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
-                       CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps)
+                       CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps,std::list<D3DPOINT> MatchedPts_list_anchor,std::list<D3DPOINT> MatchedPts_list_blunder,std::list<D3DPOINT> *MatchedPts_list_mps)
 {
     int total_count = 0;
     float X,Y,Z;
     int t_flag;
     int i = 0;
-    FILE *fid = fopen(filename_mps_anchor,"r");
-    FILE *fid_all = fopen(filename_mps,"w");
+    //FILE *fid = fopen(filename_mps_anchor,"r");
+    //FILE *fid_all = fopen(filename_mps,"w");
     
+    std::list<D3DPOINT>::iterator it;
+    i = 0;
+    for(it = MatchedPts_list_anchor.begin(); it != MatchedPts_list_anchor.end() ; ++it)
+    {
+        X = it->m_X;
+        Y = it->m_Y;
+        Z = it->m_Z;
+        t_flag = it->flag;
+        
+        int grid_index;
+        int t_col, t_row;
+        
+        t_col         = (int)((X - subBoundary[0])/grid_resolution + 0.5);
+        t_row         = (int)((Y - subBoundary[1])/grid_resolution + 0.5);
+        grid_index     = Size_Grid2D.width*t_row + t_col;
+        if(grid_index >= 0 && grid_index < Size_Grid2D.width*Size_Grid2D.height && t_col >=0 && t_col < Size_Grid2D.width && t_row >= 0 && t_row < Size_Grid2D.height)
+        {
+            GridPT3[grid_index].anchor_flag = 1;
+        }
+        
+        i++;
+    }
+    /*
     while( i < count_MPs_anchor && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
     {
         int grid_index;
@@ -16758,8 +17120,43 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
         
     }
     fclose(fid);
-    
+    */
     i=0;
+    for(it = MatchedPts_list_blunder.begin(); it != MatchedPts_list_blunder.end() ; ++it)
+    {
+        X = it->m_X;
+        Y = it->m_Y;
+        Z = it->m_Z;
+        t_flag = it->flag;
+        
+        int grid_index;
+        int t_col, t_row;
+        
+        t_col         = (int)((X - subBoundary[0])/grid_resolution + 0.5);
+        t_row         = (int)((Y - subBoundary[1])/grid_resolution + 0.5);
+        grid_index     = Size_Grid2D.width*t_row + t_col;
+        if(grid_index >= 0 && grid_index < Size_Grid2D.width*Size_Grid2D.height && t_col >=0 && t_col < Size_Grid2D.width && t_row >= 0 && t_row < Size_Grid2D.height)
+        {
+            D3DPOINT temp_pts;
+            temp_pts.m_X = X;
+            temp_pts.m_Y = Y;
+            temp_pts.m_Z = Z;
+            temp_pts.flag = t_flag;
+            
+            MatchedPts_list_mps->push_back(temp_pts);
+            
+            total_count++;
+            if(GridPT3[grid_index].anchor_flag != 1)
+            {
+                GridPT3[grid_index].anchor_flag = 2;
+                
+            }
+        }
+        
+        i++;
+    }
+    
+    /*
     fid = fopen(filename_mps_aft,"r");
     while( i < count_MPs_blunder && (fscanf(fid,"%f %f %f %d\n",&X,&Y,&Z,&t_flag)) != EOF )
     {
@@ -16785,7 +17182,7 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
     }
     fclose(fid);
     fclose(fid_all);
-    
+    */
     return total_count;
 }
 
@@ -17574,7 +17971,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                         GridPT3[Index].Matched_flag = 2;
                                     }
                                 }
-                                
+                                /*
                                 if(pyramid_step > 2)
                                 {
                                     if(SignedcharToDouble(nccresult[Index].GNCC) < 0.0)
@@ -17585,7 +17982,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                     if(BF > 100)
                                         BF = 100;
                                 }
-                                
+                                */
                                 m_bHeight[Index] = 1;
                                 GridPT3[Index].Height = (float)Z;
                                 NewHeight[Index] = GridPT3[Index].Height;
@@ -18397,7 +18794,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
                 uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
-                double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir)
+                double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir, D3DPOINT* ptslists)
 {
     int i,iter_count;
     
@@ -18417,7 +18814,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     double **InverseSubA;
 
     FILE *fid_pts;
-    D3DPOINT* MPs;
+    //D3DPOINT* MPs;
     D3DPOINT *Coord;
     
     int ii,kk;
@@ -18459,7 +18856,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     InverseSubA[3][0] = -0.333333; InverseSubA[3][1] =  0.000000; InverseSubA[3][2] =  0.000000; InverseSubA[3][3] =  0.500000; InverseSubA[3][4] =  0.000000; InverseSubA[3][5] =  0.000000;
     InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
     InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
-
+    
+    /*
     fid_pts     = fopen(file_pts,"r");
     MPs = (D3DPOINT*)malloc(sizeof(D3DPOINT)*NumofPts);
     
@@ -18470,10 +18868,10 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     }
  
     fclose(fid_pts);
-
+     */
     
 
-    Coord           = ps2wgs_3D(param,NumofPts,MPs);
+    Coord           = ps2wgs_3D(param,NumofPts,ptslists);
 
     for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
     {
@@ -18615,7 +19013,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     free(InverseSubA);
     
     free(Coord);
-    free(MPs);
+    //free(MPs);
 
     return iter_count;
 }
@@ -20818,7 +21216,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     double DEM_minX, DEM_maxY;
     double minLat,minLon;
     CSize DEM_size, Image_size;
-    TransParam param;
+    TransParam param = _param;
     FrameInfo m_frameinfo;
     m_frameinfo.m_Camera.m_focalLength  = 0;
     m_frameinfo.m_Camera.m_CCDSize      = 0;
@@ -20838,7 +21236,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     }
     
     printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
-    
+    printf("param %s %d %d\n", _param.direction,_param.zone,_param.projection);
     tmp_chr = remove_ext_ortho(ImageFilename);
     
     char *Ifilename  = SetOutpathName(ImageFilename);
@@ -20991,7 +21389,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
       Image_resolution = 1.0;
     */
     printf("Image resolution %f\n",Image_resolution);
-    
+    /*
     if(args.sensor_type == SB)
     {
         minLat = RPCs[0][3];
@@ -21006,8 +21404,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         
         param.projection = _param.projection;
     }
+     */
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
-
+    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+    
     // load DEM infor from geotiff file.
     DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
     
@@ -24095,7 +24495,7 @@ double Correlate(double *L, double *R, int N)
         rho = (double) -99;
     }
  
-    rho = (int)(rho*1000.0)/1000.0;
+    //rho = (int)(rho*1000.0)/1000.0;
     
 	return rho;
 }
@@ -24143,7 +24543,7 @@ float Correlate_float(float *L, float *R, int N)
         rho = (float) -99;
     }
  
-    rho = (int)(rho*1000.0)/1000.0;
+    //rho = (int)(rho*1000.0)/1000.0;
     
     return rho;
 }
@@ -24158,7 +24558,7 @@ double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, doubl
 		(double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
 		(double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
-    patch = (int)(patch*100.0)/100.0;
+    //patch = (int)(patch*100.0)/100.0;
     
 	return patch;
 }
@@ -31780,9 +32180,14 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                         //exit(1);
                     }
                     if(proinfo.pyramid_level <= proinfo.end_level)
-                        proinfo.end_level = proinfo.pyramid_level - 1;
+                    {
+                        if(proinfo.pyramid_level <= 1)
+                            proinfo.end_level = 0;
+                        else
+                            proinfo.end_level = proinfo.pyramid_level - 1;
+                    }
                     
-                    if(proinfo.end_level < 0 || proinfo.DEM_resolution < 50)
+                    if(/*proinfo.end_level < 0 || */proinfo.DEM_resolution < 50)
                         proinfo.end_level = 0;
                 }
                 
@@ -31933,6 +32338,8 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             printf("SDM has been already processed. *_dmag.tif file exists!!\n");
         }
     }
+    
+    return true;
 }
 
 void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary, CSize Grid_size, double Grid_set)
@@ -35637,7 +36044,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             int t_hist_row = (int)(save_row[k]);
                             int t_hist_slope = (int)(save_slope[k]/da);
                             
-                            if(pyramid_step >= 0 )
+                            if(pyramid_step >= uint8(0) )
                             {
                                 //column
                                 selected_col[total_seleted_count_col] = save_col[k];
@@ -35765,7 +36172,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 0)
+                            if(pyramid_step >= uint8(0))
                             {
                                 if((max_hist_col > save_count*0.4))
                                 {
@@ -35812,7 +36219,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 0)
+                            if(pyramid_step >= uint8(0))
                             {
                                 if((max_hist_row > save_count*0.4))
                                 {

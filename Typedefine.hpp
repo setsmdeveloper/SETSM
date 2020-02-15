@@ -454,5 +454,10 @@ typedef struct tagConformalparam
     float Ty;
     float Tz;
 } Conformalparam;
+
+typedef struct Pnode {
+    D3DPOINT val;
+    struct Pnode * next;
+} Pnode_t;
 #endif
 
