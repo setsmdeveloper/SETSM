@@ -25,6 +25,7 @@
 #include "tiff.h"
 #include "tiffio.h"
 #include <list>
+#include <vector>
 
 #define	 MAXRAND	 0x7fffffff
 #define	 BIGNUM		 1e37
@@ -33,6 +34,9 @@
 #define	 MAXSTR		 48
 #define	 SQ(x)		 (x) * (x)
 #define SWAP(a,b) temp=a;a=b;b=temp;
+
+using std::vector;
+using std::list;
 
 typedef struct nnXY
 {
@@ -49,7 +53,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
 int Maketmpfolders(ProInfo *info);
 bool SetupParam(ProInfo *info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *DEM_level,  bool *pre_DEMtif, bool *check_tile_array);
 void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *param);
-void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
+void SetTiles(double seedDEM_gridsize,ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
 			  uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY);
 void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
 				 uint8 *RA_row_start, uint8 *RA_row_end, uint8 * RA_row_iter, uint8 *t_col_start, uint8 *t_col_end, uint8 *RA_col_iter, double *subX, double *subY);
@@ -150,7 +154,7 @@ D2DPOINT OriginalToPyramid_single(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyr
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
 			  double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,std::list<D3DPOINT> *linkedlist);
+			  uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,vector<D3DPOINT> *linkedlist);
 
 UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
 						 double min_max[],
@@ -175,7 +179,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
 						  uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
 						  char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level);
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
-					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_results_anchor,int count_results_blunder, char *filename_mps,std::list<D3DPOINT> MatchedPts_list_anchor,std::list<D3DPOINT> MatchedPts_list_blunder,std::list<D3DPOINT> *MatchedPts_list_mps);
+					   CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_results_anchor,int count_results_blunder, char *filename_mps,vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
 
 int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
 				uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
@@ -184,10 +188,10 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 			 NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh,double **left_patch_vecs,double **right_patch_vecs);
 
 FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution);
-FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution);
+FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution);
 
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
-void TINUpdate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
+void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 
 bool blunder_detection_TIN(int pre_DEMtif, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
 						   D3DPOINT *ptslists, bool *detectedBlunders, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 

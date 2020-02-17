@@ -2208,6 +2208,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 if(!args.check_ortho)
                 {
+                    double seedDEM_gridsize;
                     printf("minmaxH = %f\t%f\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
                     printf("seed fff %d\n",proinfo->pre_DEMtif);
                     if(SetupParam(proinfo,&NumOfIAparam, &pre_DEM_level, &DEM_level,&proinfo->pre_DEMtif,&check_tile_array ))
@@ -2446,7 +2447,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                                     if(!args.check_Matchtag)
                                                     {
                                                         if (version > 2.0128) {
-                                                            proinfo->seedDEMsigma = 20;
+                                                            if(args.seedDEMsigma < 10)
+                                                                proinfo->seedDEMsigma = 10;
+                                                            else
+                                                                proinfo->seedDEMsigma = args.seedDEMsigma;
                                                         }
                                                         else {
                                                             proinfo->seedDEMsigma = 100;
@@ -2454,7 +2458,13 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                                     }
                                                     printf("sigma %f\n",proinfo->seedDEMsigma);
                                                 }
-                                                
+                                                else if(strstr(bufstr,"Output Resolution=")!=NULL)
+                                                {
+                                                    printf("%s\n",bufstr);
+                                                    double version;
+                                                    sscanf(bufstr,"Output Resolution=%lf\n",&seedDEM_gridsize);
+                                                    printf("seed DEM gridsize %f\n",seedDEM_gridsize);
+                                                }
                                             }
                                             
                                             
@@ -2596,7 +2606,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             bin_angle           = 360.0/18.0;
 
-                            SetTiles(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
+                            SetTiles(seedDEM_gridsize,proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
                                  &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
 
                             long int* count_matched_pts = (long int*)calloc(sizeof(long int),(iter_row_end - iter_row_start + 1)*(t_col_end - t_col_start + 1));
@@ -4028,7 +4038,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             else
                                 MPP = MPP_simgle_image;
                             
-                            std::list<D3DPOINT> MatchedPts_list;
+                            vector<D3DPOINT> MatchedPts_list;
                             
                             count_MPs = SelectMPs(proinfo,nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
                                                   iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
@@ -4037,10 +4047,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             
                             D3DPOINT *ptslists = NULL;
                             
-                            std::list<D3DPOINT>::iterator it;
-                            std::list<D3DPOINT> MatchedPts_list_mps;
-                            std::list<D3DPOINT> MatchedPts_list_blunder;
-                            std::list<D3DPOINT> MatchedPts_list_anchor;
+                            vector<D3DPOINT>::iterator it;
+                            vector<D3DPOINT> MatchedPts_list_mps;
+                            vector<D3DPOINT> MatchedPts_list_blunder;
+                            vector<D3DPOINT> MatchedPts_list_anchor;
                             
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
@@ -4141,6 +4151,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             
                             MatchedPts_list.clear();
+                            vector<D3DPOINT>().swap(MatchedPts_list);
                             
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
 
@@ -4160,8 +4171,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
                                     count_MPs = SetttingFlagOfGrid(subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_anchor,filename_mps_aft,count_results_anchor[0],count_results[0],filename_mps_fin,MatchedPts_list_anchor,MatchedPts_list_blunder,&MatchedPts_list_mps);
                                     MatchedPts_list_anchor.clear();
+                                    vector<D3DPOINT>().swap(MatchedPts_list_anchor);
                                     MatchedPts_list_blunder.clear();
-                                    
+                                    vector<D3DPOINT>().swap(MatchedPts_list_blunder);
                                     //survey  = fopen(filename_mps_fin,"r");
                                 }
                                 //else
@@ -4197,8 +4209,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
                                 count_MPs = MatchedPts_list_mps.size();
                                 
-                                std::list<UI3DPOINT> t_trilists;
-                                std::list<UI3DPOINT>::iterator it_tri;
+                                vector<UI3DPOINT> t_trilists;
+                                vector<UI3DPOINT>::iterator it_tri;
                                 
                                 if(level == 0 && iteration == 3)
                                 {
@@ -4234,6 +4246,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     }
                                     
                                     MatchedPts_list_mps.clear();
+                                    vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                     
                                     /*
                                     i = 0;
@@ -4332,7 +4345,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             i++;
                                         }
                                         MatchedPts_list_mps.clear();
-                                        
+                                        vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
@@ -4365,6 +4378,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             i++;
                                         }
                                         t_trilists.clear();
+                                        vector<UI3DPOINT>().swap(t_trilists);
                                         
                                         /*
                                         i = 0;
@@ -4397,7 +4411,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         
                                         if(level == 4)
                                         {
-                                            std::list<D3DPOINT> ortho_list;
+                                            vector<D3DPOINT> ortho_list;
                                             for(i=0;i<count_MPs;i++)
                                             {
                                                 if(ptslists[i].flag != 1)
@@ -4418,6 +4432,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 i++;
                                             }
                                             ortho_list.clear();
+                                            vector<D3DPOINT>().swap(ortho_list);
                                         }
                                         
                                         printf("load ortho_blunder pts %d\n",count_MPs);
@@ -4449,6 +4464,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             i++;
                                         }
                                         t_trilists.clear();
+                                        vector<UI3DPOINT>().swap(t_trilists);
                                         /*
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         i = 0;
@@ -4637,7 +4653,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             i++;
                                         }
                                         MatchedPts_list_mps.clear();
-                                        
+                                        vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
                                         i = 0;
                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
@@ -4667,6 +4683,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             i++;
                                         }
                                         t_trilists.clear();
+                                        vector<UI3DPOINT>().swap(t_trilists);
                                         
                                         /*
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
@@ -5925,7 +5942,7 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
     param->c    = (param->sa*param->sa)/param->sb;
 }
 
-void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
+void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
               uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY)
 {
     int lengthOfX = Boundary[2] - Boundary[0];
@@ -5942,11 +5959,16 @@ void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res
     
     if(info->pre_DEMtif)
     {
-        if(info->seedDEMsigma <= 15)
-            *pyramid_step   = 2;
-        else if(info->seedDEMsigma <= 30)
-            *pyramid_step   = 3;
+        info->seedDEMsigma = 25*seedDEM_gridsize;
         
+        if(seedDEM_gridsize >= 8)
+        {
+            *pyramid_step   = 3;
+        }
+        else
+        {
+            *pyramid_step   = 2;
+        }
     }
     
     if(info->DEM_resolution  >= 10)
@@ -14056,15 +14078,17 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                             count_low += 1;
                     }
                     
-                    GridPT3[pt_index].ortho_ncc[ti] = nccresult;
-                    
+                    GridPT3[pt_index].ortho_ncc[ti] = DoubleToSignedchar(nccresult);
+                    GridPT3[pt_index].roh = DoubleToSignedchar(nccresult);
+                    if(nccresult < 0.2)
+                        GridPT3[pt_index].roh = DoubleToSignedchar(0.2);
                     
                     if(proinfo->check_Matchtag)
                     {
                         if(nccresult >= 0.2)
-                            GridPT3[pt_index].roh   = nccresult;
+                            GridPT3[pt_index].roh   = DoubleToSignedchar(nccresult);
                         else
-                            GridPT3[pt_index].roh = -0.2;
+                            GridPT3[pt_index].roh = DoubleToSignedchar(-0.2);
                     }
                     
                     //GridPT3[pt_index].Mean_ortho_ncc = nccresult - 0.2;
@@ -14984,7 +15008,7 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
 
 int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
               double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-              uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,std::list<D3DPOINT> *linkedlist)
+              uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,vector<D3DPOINT> *linkedlist)
 {
     int count_MPs = 0;
 
@@ -15626,7 +15650,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 UI3DPOINT *trilists;
                 FullTriangulation *origTri;
                 //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                std::list<UI3DPOINT> t_trilists;
+                vector<UI3DPOINT> t_trilists;
                 
                 //Save triangulation for later use as we will remove blunders directly from this triangulation
                 //origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
@@ -15635,7 +15659,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 count_tri = t_trilists.size();
                 
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                std::list<UI3DPOINT>::iterator it;
+                vector<UI3DPOINT>::iterator it;
                 i = 0;
                 for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
                 {
@@ -15643,6 +15667,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     i++;
                 }
                 t_trilists.clear();
+                vector<UI3DPOINT>().swap(t_trilists);
                 /*
                 i = 0;
                 for(i=0;i<count_tri;i++)
@@ -15755,7 +15780,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 					{
                     	free(trilists);
                     	//UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
-                        std::list<UI3DPOINT> tt_trilists;
+                        vector<UI3DPOINT> tt_trilists;
                     	//If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
 						//Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
                     	if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
@@ -15775,7 +15800,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                         
                     	trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                         
-                        std::list<UI3DPOINT>::iterator itt;
+                        vector<UI3DPOINT>::iterator itt;
                         i = 0;
                         for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
                         {
@@ -15785,6 +15810,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                             i++;
                         }
                         tt_trilists.clear();
+                        vector<UI3DPOINT>().swap(tt_trilists);
                         /*
                    		for(i=0;i<count_tri;i++)
                    		{
@@ -16008,7 +16034,7 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     return triangulation;
 }
 
-FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution)
+FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -16237,7 +16263,7 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     delete [] grid_blunders;
 }
 
-void TINUpdate_list(D3DPOINT *ptslists, int numofpts, std::list<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
+void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
 {
 
     double minX_ptslists = min_max[0];
@@ -17071,7 +17097,7 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,ui
 }
 
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
-                       CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps,std::list<D3DPOINT> MatchedPts_list_anchor,std::list<D3DPOINT> MatchedPts_list_blunder,std::list<D3DPOINT> *MatchedPts_list_mps)
+                       CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_MPs_anchor,int count_MPs_blunder, char *filename_mps,vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps)
 {
     int total_count = 0;
     float X,Y,Z;
@@ -17080,7 +17106,7 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
     //FILE *fid = fopen(filename_mps_anchor,"r");
     //FILE *fid_all = fopen(filename_mps,"w");
     
-    std::list<D3DPOINT>::iterator it;
+    vector<D3DPOINT>::iterator it;
     i = 0;
     for(it = MatchedPts_list_anchor.begin(); it != MatchedPts_list_anchor.end() ; ++it)
     {
