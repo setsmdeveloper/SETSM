@@ -36,6 +36,8 @@
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
 
+typedef float SUMCOST;
+
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
@@ -118,10 +120,17 @@ typedef struct tagNCCresult
     float result3; //4,second peak height
     short minHeight;  //2
     short maxHeight;  //2
-	short result0; //2,first peak roh
+	/*
+    short result0; //2,first peak roh
 	short result1; //2,second peak roh
 	 short max_WNCC;//2
-    signed char GNCC; //1
+    */
+    float result0; //2,first peak roh
+    float result1; //2,second peak roh
+    float max_WNCC;//2
+    
+    //signed char GNCC; //1
+    float GNCC; //1
     //float *GNCC_multi;
 	unsigned char result4; //1,peak count
     
@@ -138,10 +147,15 @@ typedef struct UpdateGrid
     float Height; //4, after blunder detection
 	short minHeight; //2
 	short maxHeight; //2
+    /*
 	signed char roh; //1
 	signed char ortho_ncc[MaxNCC]; //1
     signed char Mean_ortho_ncc; //1
-
+     */
+    float roh; //1
+    float ortho_ncc[MaxNCC]; //1
+    float Mean_ortho_ncc; //1
+    
     uint8 Matched_flag;
 	uint8 anchor_flag;
     
@@ -152,7 +166,8 @@ typedef struct tagVoxelinfo
     //float ANCC;
     //float height;
     bool flag_cal; //1
-    signed char INCC; //1
+    //signed char INCC; //1
+    float INCC; //1
     //float *INCC_multi;
 }VOXEL;
 

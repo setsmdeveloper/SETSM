@@ -12061,7 +12061,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                              
                                              if(nccresult[grid_index].result0 < DoubleToSchar(pre_rho))
                                              {
-                                                 signed char temp_1;
+                                                 //short temp_1;
+                                                 float temp_1;
                                                  float temp_2;
                                                  temp_1 = nccresult[grid_index].result0;
                                                  nccresult[grid_index].result0 = DoubleToSchar(pre_rho);
@@ -12217,7 +12218,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 }  // end VerticalLineLocus
 
 //void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index, FILE* pfile)
-void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,short **SumCost, double ortho_th, int pair_index,double height_step_interval)
+void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,SUMCOST **SumCost, double ortho_th, int pair_index,double height_step_interval)
 {
 //#pragma omp parallel for schedule(guided) reduction(+:SumCost[:pt_index][:nccresult[pt_index].NumOfHeight])
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
@@ -12248,7 +12249,7 @@ void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel
 }
 
 //void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost, double ortho_th, int pair_index, FILE* pfile)
-void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,short **SumCost, double ortho_th, int pair_index)
+void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,SUMCOST **SumCost, double ortho_th, int pair_index)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -12601,7 +12602,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     
     printf("ncc_alpha ncc_beta %f %f\n",ncc_alpha,ncc_beta);
     
-    short **SumCost = NULL;
+    SUMCOST **SumCost = NULL;
     
     bool check_SGM = false;
     bool check_diagonal = true;
@@ -12613,7 +12614,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     if(check_SGM)
     {
         long total_grid_size = Size_Grid2D.width*Size_Grid2D.height;
-        SumCost = (short**)calloc(sizeof(short*),total_grid_size);
+        SumCost = (SUMCOST**)calloc(sizeof(SUMCOST*),total_grid_size);
         for(int i=0;i<Size_Grid2D.height;i++)
         {
             for(int j=0;j<Size_Grid2D.width;j++)
@@ -12623,7 +12624,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                     printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
                 if(nccresult[t_index].NumOfHeight > 0)
                 {
-                    SumCost[t_index] = (short*)calloc(sizeof(short),nccresult[t_index].NumOfHeight);
+                    SumCost[t_index] = (SUMCOST*)calloc(sizeof(SUMCOST),nccresult[t_index].NumOfHeight);
                 }
             }
         }
@@ -13489,7 +13490,8 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                             
                             if(nccresult[grid_index].result0 < DoubleToSchar(pre_rho))
                             {
-                                signed char temp_1;
+                                //short temp_1;
+                                float temp_1;
                                 float temp_2;
                                 temp_1 = nccresult[grid_index].result0;
                                 nccresult[grid_index].result0 = DoubleToSchar(pre_rho);
@@ -15443,7 +15445,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                             //fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
 
                             // update max_roh value
-                            GridPT3[grid_index].roh     = roh_height[grid_index].result0;
+                            GridPT3[grid_index].roh     = DoubleToSignedchar(ScharToDouble(roh_height[grid_index].result0));
                             if(GridPT3[grid_index].roh < DoubleToSignedchar(minimum_Th))
                             {
                                 GridPT3[grid_index].roh = DoubleToSignedchar(minimum_Th);
@@ -15469,7 +15471,7 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
                             //fprintf(temp_fid,"%.4f %.4f %.4f 0\n",temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
                         }
                         // update max_roh value
-                        GridPT3[grid_index].roh     = roh_height[grid_index].result0;
+                        GridPT3[grid_index].roh     = DoubleToSignedchar(ScharToDouble(roh_height[grid_index].result0));
                         if(GridPT3[grid_index].roh < DoubleToSignedchar(minimum_Th))
                         {
                             GridPT3[grid_index].roh = DoubleToSignedchar(minimum_Th);
@@ -19516,7 +19518,7 @@ double CalMemorySize_Post(CSize DEM_size, CSize Final_DEMsize)
     
     return result;
 }
-
+/*
 short DoubleToSchar(double val)
 {
     short temp = short((val*1000.0));
@@ -19530,7 +19532,18 @@ double ScharToDouble(short val)
 {
     return double(val/1000.0);
 }
+*/
+float DoubleToSchar(float val)
+{
+    
+    return val;
+}
 
+float ScharToDouble(float val)
+{
+    return val;
+}
+/*
 signed char DoubleToSignedchar(double val)
 {
     signed char temp = (signed char)((val*100.0));
@@ -19543,6 +19556,16 @@ signed char DoubleToSignedchar(double val)
 double SignedcharToDouble(signed char val)
 {
     return double(val/100.0);
+}
+*/
+float DoubleToSignedchar(float val)
+{
+    return val;
+}
+
+float SignedcharToDouble(float val)
+{
+    return val;
 }
 
 double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize)

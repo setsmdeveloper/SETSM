@@ -242,10 +242,18 @@ CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, do
 bool TFW_reader_seedDEM(char *filename, double *minX, double *maxY, double *grid_size);
 bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_size, int *zone, char *dir);
 double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size,UGRID *GridPT3, int level, double height_step, double *subBoundary,double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes);
-short DoubleToSchar(double val);
-double ScharToDouble(short val);
-signed char DoubleToSignedchar(double val);
-double SignedcharToDouble(signed char val);
+
+//short DoubleToSchar(double val);
+//double ScharToDouble(short val);
+
+float DoubleToSchar(float val);
+float ScharToDouble(float val);
+
+//signed char DoubleToSignedchar(double val);
+//double SignedcharToDouble(signed char val);
+
+float DoubleToSignedchar(float val);
+float SignedcharToDouble(float val);
 
 //orthogeneration
 void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, char *Outputpath,int pair,int DEM_divide,double **ImageParam);
