@@ -36,8 +36,6 @@
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
 
-typedef float SUMCOST;
-
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
@@ -68,15 +66,15 @@ typedef struct tagF3DPoint
 
 typedef struct tagD2DPoint
 {
-	float m_X;
-	float m_Y;
+	double m_X;
+	double m_Y;
 } D2DPOINT;
 
 typedef struct tagD3DPoint
 {
-	float m_X;
-	float m_Y;
-	float m_Z;
+	double m_X;
+	double m_Y;
+	double m_Z;
     uint8 flag;
 } D3DPOINT;
 
@@ -116,46 +114,32 @@ typedef struct tagNCCflag
 
 typedef struct tagNCCresult
 {
-    float result2; //4,first peak height
-    float result3; //4,second peak height
-    short minHeight;  //2
-    short maxHeight;  //2
-	/*
-    short result0; //2,first peak roh
-	short result1; //2,second peak roh
-	 short max_WNCC;//2
-    */
-    float result0; //2,first peak roh
-    float result1; //2,second peak roh
-    float max_WNCC;//2
-    
-    //signed char GNCC; //1
-    float GNCC; //1
+	double result0; //first peak roh
+	double result1; //second peak roh
+	float result2; //first peak height
+	float result3; //second peak height
+    float GNCC;
     //float *GNCC_multi;
-	unsigned char result4; //1,peak count
-    
-    //int max_WNCC_pos;
+	int result4; //peak count
+    double max_WNCC;
+    int max_WNCC_pos;
 	
-    
-    unsigned short NumOfHeight; //2
-    bool check_height_change; //1
+    int minHeight;
+    int maxHeight;
+    int NumOfHeight;
+    bool check_height_change;
 	//int roh_count;
 } NCCresult;
 
-typedef struct UpdateGrid
-{
-    float Height; //4, after blunder detection
-	short minHeight; //2
-	short maxHeight; //2
-    /*
-	signed char roh; //1
-	signed char ortho_ncc[MaxNCC]; //1
-    signed char Mean_ortho_ncc; //1
-     */
-    float roh; //1
-    float ortho_ncc[MaxNCC]; //1
-    float Mean_ortho_ncc; //1
-    
+typedef struct UpdateGrid{
+	int minHeight;
+	int maxHeight;
+	
+	float Height; //after blunder detection
+	double roh;
+	double ortho_ncc[MaxNCC];
+    double Mean_ortho_ncc;
+
     uint8 Matched_flag;
 	uint8 anchor_flag;
     
@@ -164,10 +148,9 @@ typedef struct UpdateGrid
 typedef struct tagVoxelinfo
 {
     //float ANCC;
-    //float height;
-    bool flag_cal; //1
-    //signed char INCC; //1
-    float INCC; //1
+    float height;
+    bool flag_cal;
+    float INCC;
     //float *INCC_multi;
 }VOXEL;
 
@@ -469,10 +452,5 @@ typedef struct tagConformalparam
     float Ty;
     float Tz;
 } Conformalparam;
-
-typedef struct Pnode {
-    D3DPOINT val;
-    struct Pnode * next;
-} Pnode_t;
 #endif
 
