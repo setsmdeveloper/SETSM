@@ -4003,9 +4003,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                               param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
                                               row,col,subBoundary,v_temp_path,mag_avg,mag_var,Startpos_next,SubImages_next,SubOriImages_next,SubMagImages_next,Py_combined_level,check_matching_rate,height_step);
                             
-                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"verticalline");
+                            echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"verticalline");
                             
-                            printf("Done VerticalLineLocus\n");
+                            printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                             
                             if(!check_matching_rate)
                             {
@@ -4023,8 +4023,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             
                             
-                            
-                            //echo_print_nccresults(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"inter");
+                            //void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str)
+                            echo_print_nccresults(proinfo->save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,(char*)"inter");
                             
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
 
@@ -10444,12 +10444,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             int change_step_max = 0;
             bool check_blunder_cell = true;
             double th_height = 1000;
-            if(DEM_resolution < 4)
+            /*if(DEM_resolution < 4)
             {
                 th_height = 100;
                 if(pyramid_step == 0)
                     th_height = 100;
             }
+            */
+            if(DEM_resolution <= 4)
+                th_height = 500;
             
             if(proinfo->check_Matchtag || iteration == 1)
             {
@@ -10465,7 +10468,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     check_blunder_cell = false;
                 else if( GridPT3[t_i].Matched_flag != 0)
                 {
-                    if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
+                    if((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight > 0)
                     {
                         if(pyramid_step <= 1)
                         {
@@ -10487,7 +10490,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         
                         if(pyramid_step == 1)
                         {
-                            if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
+                            if((abs((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight) < 1000))
                                 check_blunder_cell = false;
                             else
                                 check_blunder_cell = true;
@@ -10497,14 +10500,14 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if(iteration > 1)
                             {
-                                if((abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height) && (abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
+                                if((abs((int)nccresult[t_i].maxHeight - (int)nccresult[t_i].minHeight) < th_height) && (abs((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight) < th_height))
                                     check_blunder_cell = false;
                                 else
                                     check_blunder_cell = true;
                             }
                             else
                             {
-                                if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height))
+                                if((abs((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight) < th_height))
                                     check_blunder_cell = false;
                                 else
                                     nccresult[t_i].NumOfHeight = 0;
@@ -10549,7 +10552,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     
                     if(pyramid_step == 1)
                     {
-                        if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) > 1000))
+                        if((abs((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight) > 1000))
                         {
                             GridPT3[t_i].maxHeight = -100;
                             GridPT3[t_i].minHeight = -100;
@@ -10558,7 +10561,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     }
                     else if(pyramid_step == 0)
                     {
-                        if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) > th_height))
+                        if((abs((int)GridPT3[t_i].maxHeight - (int)GridPT3[t_i].minHeight) > th_height))
                         {
                             GridPT3[t_i].maxHeight = -100;
                             GridPT3[t_i].minHeight = -100;
@@ -10568,7 +10571,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 }
                 else
                 {
-                    int NumberofHeightVoxel = (int)((nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
+                    int NumberofHeightVoxel = (int)(((int)nccresult[t_i].maxHeight - (int)nccresult[t_i].minHeight)/height_step);
                     //new search height
                     if(nccresult[t_i].NumOfHeight == 0 && NumberofHeightVoxel > 0)
                     {
@@ -10582,15 +10585,15 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight || nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
                         {
                             if(nccresult[t_i].minHeight > GridPT3[t_i].minHeight)
-                                change_step_min = (int)((nccresult[t_i].minHeight - GridPT3[t_i].minHeight)/height_step + 0.5);
+                                change_step_min = (int)(((int)nccresult[t_i].minHeight - (int)GridPT3[t_i].minHeight)/height_step + 0.5);
                             
                             if(nccresult[t_i].maxHeight < GridPT3[t_i].maxHeight)
-                                change_step_max = (int)((GridPT3[t_i].maxHeight - nccresult[t_i].maxHeight)/height_step + 0.5);
+                                change_step_max = (int)(((int)GridPT3[t_i].maxHeight - (int)nccresult[t_i].maxHeight)/height_step + 0.5);
                        
-                            nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
-                            nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
+                            nccresult[t_i].minHeight = floor((int)nccresult[t_i].minHeight - change_step_min*height_step);
+                            nccresult[t_i].maxHeight = ceil((int)nccresult[t_i].maxHeight + change_step_max*height_step);
                             
-                            if(pyramid_step == 0 && abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) < th_height)
+                            if(pyramid_step == 0 && abs((int)nccresult[t_i].maxHeight - (int)nccresult[t_i].minHeight) < th_height)
                                 nccresult[t_i].check_height_change = true;
                             else
                                 nccresult[t_i].check_height_change = false;
@@ -10604,10 +10607,10 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 
                 if(nccresult[t_i].check_height_change)
                 {
-                    nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
-                    nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
+                    nccresult[t_i].minHeight = floor((int)nccresult[t_i].minHeight - change_step_min*height_step);
+                    nccresult[t_i].maxHeight = ceil((int)nccresult[t_i].maxHeight + change_step_max*height_step);
                     
-                    int NumberofHeightVoxel = (int)((nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
+                    int NumberofHeightVoxel = (int)(((int)nccresult[t_i].maxHeight - (int)nccresult[t_i].minHeight)/height_step);
                     
                     if(NumberofHeightVoxel > 0 )
                     {
@@ -11085,8 +11088,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             //if(Pyramid_step == 4 || Pyramid_step <= 1)
             //    ortho_th = -100;
             
-            start_H     = GridPT3[pt_index].minHeight;
-            end_H       = GridPT3[pt_index].maxHeight;
+            start_H     = (int)GridPT3[pt_index].minHeight;
+            end_H       = (int)GridPT3[pt_index].maxHeight;
 
             //printf("start end h %d\t%d\t%d\t%d\n",pts_row,pts_col,start_H,end_H);
             if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes_ori,Imagesizes,Half_template_size,Pyramid_step))
@@ -11095,7 +11098,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                 bool check_blunder_cell = false;
                 double th_height = 1000;
                 if(proinfo->DEM_resolution <= 4)
-                    th_height = 100;
+                    th_height = 1000;
                 
                 //if(GridPT3[pt_index].Matched_flag == 0)
                 //    h_divide = 2;
@@ -11119,12 +11122,12 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     {
                         if(Pyramid_step == 1)
                         {
-                            if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
+                            if((abs((int)GridPT3[pt_index].maxHeight - (int)GridPT3[pt_index].minHeight) < 1000))
                                 check_blunder_cell = false;
                              else
                                 check_blunder_cell = true;
                         }
-                        else if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
+                        else if((abs((int)GridPT3[pt_index].maxHeight - (int)GridPT3[pt_index].minHeight) < th_height))
                             check_blunder_cell = false;
                         else
                             check_blunder_cell = true;
@@ -11165,7 +11168,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     {
                         check_blunder_cell = true;
                     }
-                    else if( (abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) > 1000) )
+                    else if( (abs((int)GridPT3[pt_index].maxHeight - (int)GridPT3[pt_index].minHeight) > 1000) )
                         check_blunder_cell = true;
                 }
                 
@@ -13536,7 +13539,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 else
                     WNCC_re = grid_voxel[pt_index][max_roh_id].INCC;
                 */
-                if(Pyramid_step == 0 && iteration >= 2)
+                //if(Pyramid_step == 0 && iteration >= 2)
                     nccresult[pt_index].result0 = DoubleToSchar(max_roh);
                 nccresult[pt_index].result1 = DoubleToSchar(-1.0);
                 nccresult[pt_index].result3 = -9999;
@@ -18071,7 +18074,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
                                 else
                                 {
                                     GridPT3[Index].Matched_flag = 1;
-                                    if(GridPT3[Index].Mean_ortho_ncc > ortho_ncc_th)
+                                    if(SignedcharToDouble(GridPT3[Index].Mean_ortho_ncc) > ortho_ncc_th)
                                     {
                                         
                                         GridPT3[Index].minHeight = floor(Z - BF);
@@ -18663,13 +18666,13 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
     outMean_ortho = fopen(t_str,"wb");
     
     
-    //sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
-    //outMean_ortho_asc = fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_asc.txt",save_path,row,col,level,iteration,add_str);
+    outMean_ortho_asc = fopen(t_str,"w");
     /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
     {
         sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%s_%d.txt",save_path,row,col,level,iteration,add_str,ti);
         outfile_roh[ti] = fopen(t_str,"w");
-    }*/
+    }
     /*sprintf(t_str,"%s/txt/tin_flag_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
       outfile_flag  = fopen(t_str,"w");*/
     
@@ -18701,7 +18704,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
                 //if(roh_height[matlab_index].NumOfHeight > 0)
                 {
                     //fprintf(outfile_h,"%f\t",GridPT3[matlab_index].Height);
-                    //fprintf(outMean_ortho_asc,"%f\t",GridPT3[matlab_index].Height);
+                    fprintf(outMean_ortho_asc,"%f\t",SignedcharToDouble(GridPT3[matlab_index].ortho_ncc[1]));
                     //printf("%f\t",GridPT3[matlab_index].Height);
                     temp_height[matlab_index] = GridPT3[matlab_index].Height;
                     temp_ncc[matlab_index] = SignedcharToDouble(GridPT3[matlab_index].Mean_ortho_ncc);
@@ -18723,7 +18726,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
             //fprintf(outfile_min,"\n");
             //fprintf(outfile_max,"\n");
             //fprintf(outfile_h,"\n");
-            //fprintf(outMean_ortho_asc,"\n");
+            fprintf(outMean_ortho_asc,"\n");
             /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
                 fprintf(outfile_roh[ti],"\n");*/
             /*fprintf(outfile_flag,"\n");*/
@@ -18737,7 +18740,7 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,char *save_path,i
         //fclose(outfile_max);
         fclose(outfile_h);
         fclose(outMean_ortho);
-        //fclose(outMean_ortho_asc);
+        fclose(outMean_ortho_asc);
         /*for(int ti = 0 ; ti < proinfo->number_of_images; ti++)
             fclose(outfile_roh[ti]);*/
         /*fclose(outfile_flag);*/
@@ -18759,8 +18762,8 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     sprintf(t_str,"%s/txt/nccresult_max_NCC_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     outfile_h   = fopen(t_str,"w");
     
-    sprintf(t_str,"%s/txt/nccresult_max_NCC_pos_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
-    outfile_roh = fopen(t_str,"w");
+    //sprintf(t_str,"%s/txt/nccresult_max_NCC_pos_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+    //outfile_roh = fopen(t_str,"w");
     /*
     sprintf(t_str,"%s/txt/nccresult_peaks_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
     outfile_peak    = fopen(t_str,"w");
@@ -18784,8 +18787,8 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
             int matlab_index    = k*temp_S.width + j;
             
             fprintf(outfile_min,"%f\t",ScharToDouble(nccresult[matlab_index].result0));
-            fprintf(outfile_max,"%d\t",nccresult[matlab_index].NumOfHeight);
-            fprintf(outfile_h,"%f\t",ScharToDouble(nccresult[matlab_index].max_WNCC));
+            fprintf(outfile_max,"%f\t",ScharToDouble(nccresult[matlab_index].result1));
+            fprintf(outfile_h,"%d\t",nccresult[matlab_index].NumOfHeight);
             //fprintf(outfile_roh,"%d\t",nccresult[matlab_index].max_WNCC_pos);
             //fprintf(outfile_peak,"%f\t",nccresult[matlab_index].result4);
             
@@ -18797,7 +18800,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
         fprintf(outfile_min,"\n");
         fprintf(outfile_max,"\n");
         fprintf(outfile_h,"\n");
-        fprintf(outfile_roh,"\n");
+        //fprintf(outfile_roh,"\n");
         //fprintf(outfile_peak,"\n");
         //fprintf(outfile_diff,"\n");
         
@@ -18809,7 +18812,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     fclose(outfile_min);
     fclose(outfile_max);
     fclose(outfile_h);
-    fclose(outfile_roh);
+    //fclose(outfile_roh);
     //fclose(outfile_peak);
     //fclose(outfile_diff);
     
