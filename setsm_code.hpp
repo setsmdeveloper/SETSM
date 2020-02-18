@@ -124,7 +124,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index, FILE* pfile);
 void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost, double ortho_th, int pair_index, FILE* pfile);
 */
-void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index);
+void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index,double height_step_interval);
 void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, double P1, double P2, float* LHcost_pre,float* LHcost_curr,float **SumCost, double ortho_th, int pair_index);
 
 void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel);
