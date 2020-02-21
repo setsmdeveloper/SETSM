@@ -34,7 +34,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.1.1";
+const char setsm_version[] = "4.2.0";
 
 //const double RA_resolution = 16;
 
@@ -2208,6 +2208,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 if(!args.check_ortho)
                 {
+                    double seedDEM_gridsize;
                     printf("minmaxH = %f\t%f\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
                     printf("seed fff %d\n",proinfo->pre_DEMtif);
                     if(SetupParam(proinfo,&NumOfIAparam, &pre_DEM_level, &DEM_level,&proinfo->pre_DEMtif,&check_tile_array ))
@@ -2446,13 +2447,23 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                                     if(!args.check_Matchtag)
                                                     {
                                                         if (version > 2.0128) {
-                                                            proinfo->seedDEMsigma = 20;
+                                                            if(args.seedDEMsigma < 10)
+                                                                proinfo->seedDEMsigma = 10;
+                                                            else
+                                                                proinfo->seedDEMsigma = args.seedDEMsigma;
                                                         }
                                                         else {
                                                             proinfo->seedDEMsigma = 100;
                                                         }
                                                     }
                                                     printf("sigma %f\n",proinfo->seedDEMsigma);
+                                                }
+                                                else if(strstr(bufstr,"Output Resolution=")!=NULL)
+                                                {
+                                                    printf("%s\n",bufstr);
+                                                    double version;
+                                                    sscanf(bufstr,"Output Resolution=%lf\n",&seedDEM_gridsize);
+                                                    printf("seed DEM gridsize %f\n",seedDEM_gridsize);
                                                 }
                                                 
                                             }
@@ -2596,7 +2607,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             bin_angle           = 360.0/18.0;
 
-                            SetTiles(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
+                            SetTiles(seedDEM_gridsize,proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
                                  &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
 
                             long int* count_matched_pts = (long int*)calloc(sizeof(long int),(iter_row_end - iter_row_start + 1)*(t_col_end - t_col_start + 1));
@@ -5929,7 +5940,7 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
     param->c    = (param->sa*param->sa)/param->sb;
 }
 
-void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
+void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
               uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY)
 {
     int lengthOfX = Boundary[2] - Boundary[0];
@@ -5946,11 +5957,16 @@ void SetTiles(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res
     
     if(info->pre_DEMtif)
     {
-        if(info->seedDEMsigma <= 15)
-            *pyramid_step   = 2;
-        else if(info->seedDEMsigma <= 30)
-            *pyramid_step   = 3;
+        info->seedDEMsigma = 25*seedDEM_gridsize;
         
+        if(seedDEM_gridsize >= 8)
+        {
+            *pyramid_step   = 3;
+        }
+        else
+        {
+            *pyramid_step   = 2;
+        }
     }
     
     if(info->DEM_resolution  >= 10)
@@ -11071,8 +11087,16 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             //if(Pyramid_step == 4 || Pyramid_step <= 1)
             //    ortho_th = -100;
             
-            start_H     = nccresult[pt_index].minHeight;
-            end_H       = nccresult[pt_index].maxHeight;
+            if(IsRA || check_matching_rate)
+            {
+                start_H     = GridPT3[pt_index].minHeight;
+                end_H       = GridPT3[pt_index].maxHeight;
+            }
+            else
+            {
+                start_H     = nccresult[pt_index].minHeight;
+                end_H       = nccresult[pt_index].maxHeight;
+            }
 
             //printf("start end h %d\t%d\t%d\t%d\n",pts_row,pts_col,start_H,end_H);
             if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes_ori,Imagesizes,Half_template_size,Pyramid_step))
