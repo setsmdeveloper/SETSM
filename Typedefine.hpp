@@ -66,15 +66,15 @@ typedef struct tagF3DPoint
 
 typedef struct tagD2DPoint
 {
-	double m_X;
-	double m_Y;
+	float m_X;
+	float m_Y;
 } D2DPOINT;
 
 typedef struct tagD3DPoint
 {
-	double m_X;
-	double m_Y;
-	double m_Z;
+	float m_X;
+	float m_Y;
+	float m_Z;
     uint8 flag;
 } D3DPOINT;
 

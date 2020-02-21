@@ -137,7 +137,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
 								uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
 								char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEMsigma);
 
-bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
+bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
                                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
                                uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
@@ -193,7 +193,7 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 
-bool blunder_detection_TIN(int pre_DEMtif, double* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
+bool blunder_detection_TIN(int pre_DEMtif, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
 						   D3DPOINT *ptslists, bool *detectedBlunders, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 
 						   uint32 *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma);
 

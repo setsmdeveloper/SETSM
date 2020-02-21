@@ -1527,8 +1527,9 @@ int main(int argc,char *argv[])
                             
                             sprintf(Outputpath, "%s", save_filepath);
                             
-                            printf("param %s %d\n", param.direction,param.zone);
-                            param.projection = args.projection;
+                            printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+                            if(args.projection != 3)
+                                param.projection = args.projection;
                             
                             printf("imageparams %f\t%f\t%f\t%f\n",Imageparams[0][0],Imageparams[0][1],Imageparams[1][0],Imageparams[1][1]);
                             
@@ -5957,6 +5958,7 @@ void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, doub
     
     if(info->pre_DEMtif)
     {
+        /*
         info->seedDEMsigma = 25*seedDEM_gridsize;
         
         if(seedDEM_gridsize >= 8)
@@ -5967,6 +5969,11 @@ void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, doub
         {
             *pyramid_step   = 2;
         }
+         */
+        if(info->seedDEMsigma <= 15)
+            *pyramid_step   = 2;
+        else if(info->seedDEMsigma <= 30)
+            *pyramid_step   = 3;
     }
     
     if(info->DEM_resolution  >= 10)
@@ -11087,17 +11094,18 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             //if(Pyramid_step == 4 || Pyramid_step <= 1)
             //    ortho_th = -100;
             
-            if(IsRA || check_matching_rate)
+            //if(IsRA || check_matching_rate)
             {
                 start_H     = GridPT3[pt_index].minHeight;
                 end_H       = GridPT3[pt_index].maxHeight;
             }
+            /*
             else
             {
                 start_H     = nccresult[pt_index].minHeight;
                 end_H       = nccresult[pt_index].maxHeight;
             }
-
+             */
             //printf("start end h %d\t%d\t%d\t%d\n",pts_row,pts_col,start_H,end_H);
             if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes_ori,Imagesizes,Half_template_size,Pyramid_step))
             {
@@ -11462,6 +11470,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 									//else
 									//	temp_GNCC_roh = -1;
                                     
+                                    //sum_GNCC_multi += temp_GNCC_roh;
+                                    //count_GNCC ++;
                                     //check_ortho_com = true;
             					}
                                                     
@@ -11497,6 +11507,9 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 										//else
 										//	temp_GNCC_roh = -1;
                                     	
+                                        //sum_GNCC_multi += temp_GNCC_roh;
+                                        //count_GNCC ++;
+                                        
                                     	//check_ortho_com = true;
             						}
                                 }  // if(check_combined_WNCC)
@@ -11510,18 +11523,17 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     
 					//INCC computation
                     //printf("pt_index %d\tGridPT3[pt_index].NumOfHeight %d\n",pt_index,GridPT3[pt_index].NumOfHeight);
-                    for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
+                    if(IsRA || nccresult[pt_index].check_height_change || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                     {
-                        float iter_height;
-                        
-                        if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
-                            iter_height = start_H + grid_voxel_hindex*height_step;
-                        else
-                            iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*height_step;
-                            //iter_height = grid_voxel[pt_index][grid_voxel_hindex].height;
-                       
-                        if(nccresult[pt_index].check_height_change || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
+                        for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                         {
+                            float iter_height;
+                            
+                            if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
+                                iter_height = start_H + grid_voxel_hindex*height_step;
+                            else
+                                iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*height_step;
+                                //iter_height = grid_voxel[pt_index][grid_voxel_hindex].height;
                             //grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                             //printf("no calculation %d\n",pt_index);
                         /*}
@@ -11934,11 +11946,11 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 														//else
 														//	temp_INCC_roh = -1;
                                                      	
-                                                        if(!check_matching_rate)
-                                                        {
-                                                            if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 /*&& proinfo->DEM_resolution >= 2*/)))
-                                                                grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
-                                                        }
+                                                        //sum_INCC_multi += temp_INCC_roh;
+                                                        //count_INCC ++;
+                                                        
+                                                        if(!check_matching_rate && !IsRA)
+                                                            grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                                     }
                                                     
                                                     if(check_combined_WNCC_INCC)
@@ -11967,12 +11979,14 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
 															if (count_roh > 0)
                                                             {
 																temp_INCC_roh = temp_roh/count_roh;
-                                                                sum_INCC_multi += temp_INCC_roh;
-                                                                count_INCC ++;
+                                                                //sum_INCC_multi += temp_INCC_roh;
+                                                                //count_INCC ++;
                                                             }
-															//else
-															//	temp_INCC_roh = -1;
+															else
+																temp_INCC_roh = -1;
                                                         	
+                                                            sum_INCC_multi += temp_INCC_roh;
+                                                            count_INCC ++;
                                                             
                                                             //if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
                                                             //    grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
@@ -11993,17 +12007,14 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         	}
                                         	else
                                         	{
-                                                if(!check_matching_rate)
-                                                {
-                                                    if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 /*&& proinfo->DEM_resolution >= 2*/)))
-                                                        grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
-                                                }
+                                                if(!check_matching_rate && !IsRA)
+                                                    grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                                             }
                                         }
                                     }
                                 }  // end ti loop
                                 
-                                if(IsRA || check_matching_rate/*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
+                                //if(IsRA || check_matching_rate || nccresult[pt_index].check_height_change/*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
                                 {
                                     //find peak position
                                     if(check_ortho && count_GNCC > 0)
@@ -12108,7 +12119,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         max_WNCC_pos = grid_voxel_hindex;
                                     }
                                      //nccresult[grid_index].roh_count ++;
-                                }
+                                }/*
                                 else
                                 {
                                     //grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
@@ -12131,12 +12142,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         temp_rho = 1.0;
                                     if(temp_rho < -1.0)
                                         temp_rho = -1.0;
-                                	/*
-                                	if(check_ortho && count_GNCC > 0)
-                                        temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC*ncc_alpha + (sum_GNCC_multi/count_GNCC)*ncc_beta;
-                                    else
-                                        temp_rho = grid_voxel[pt_index][grid_voxel_hindex].INCC;
-									*/
+                                	
                             
                                     if(grid_voxel[pt_index][grid_voxel_hindex].flag_cal && nccresult[pt_index].check_height_change)
                                     {
@@ -12154,6 +12160,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         }
                                     }
                                 }
+                                  */
                             }//check_height_change
                             /*else
                             {
@@ -12161,17 +12168,15 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                 exit(1);
                             }*/
                         }// end iter_height loop
-                        
-                    }  // end grid_voxel_hindex loop
-                    
-                    if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 /*&& proinfo->DEM_resolution >= 2*/)))
-                    {
-                        if(nccresult[pt_index].check_height_change)
+                        //if(!IsRA)
                         {
-                            nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
-                            //nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
+                            if(nccresult[pt_index].check_height_change)
+                            {
+                                nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
+                                //nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
+                            }
                         }
-                    }
+                    }  // end grid_voxel_hindex loop
                 }
                 //printf("id inside boundary %d\t%d\n",pts_row,pts_col);
             }
@@ -12291,8 +12296,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                     int t_index = t_row*Size_Grid2D.width + t_col;
                     
                     float maxWNCC = SignedCharToDouble_result(nccresult[t_index].max_WNCC);
-                    if(maxWNCC < 0)
-                        maxWNCC = 0;
+                    //if(maxWNCC < 0)
+                    //    maxWNCC = 0;
                     
                     if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >= 0 && t_row < Size_Grid2D.height)
                     {
@@ -13570,27 +13575,17 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         
         if(check_SGM_peak)
         {
-            //if(cell_check_peak)
+            if(Pyramid_step == 0 && iteration >= 2)
             {
-                /*
-                double WNCC_re = 0;
-                if(check_ortho && nccresult[pt_index].GNCC > -1.0)// && GridPT3[pt_index].ortho_ncc[1] > ortho_th)
-                    WNCC_re = grid_voxel[pt_index][max_roh_id].INCC*ncc_alpha + nccresult[pt_index].GNCC*ncc_beta;
-                else
-                    WNCC_re = grid_voxel[pt_index][max_roh_id].INCC;
-                */
-                //if(Pyramid_step == 0 && iteration >= 2)
-                    nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
+                nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                 nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
                 nccresult[pt_index].result3 = -9999;
             }
-            /*else
+            else
             {
-                nccresult[pt_index].result0 = -1.0;
-                nccresult[pt_index].result1 = -1.0;
-                nccresult[pt_index].result3 = -9999;
+                nccresult[pt_index].result0 = DoubleToSignedChar_result(temp_nccresult);
+                nccresult[pt_index].result1 = DoubleToSignedChar_result(temp_nccresult_sec);
             }
-             */
         }
         else
         {
@@ -14172,7 +14167,7 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     return (double)(count_low)/(double)(count_total)*100;
 }
 
-bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
+bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
                                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                                CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
                                uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
@@ -14513,7 +14508,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, uint16 **MagI
                         } // end row loop
                         
                         // Compute collelations
-                        if(Count_N[0] > 0)
+                        if(Count_N[0] > 0 && Count_N[1] > 0 && Count_N[2] > 0)
                         {
                             double temp_roh = 0;
                             double count_roh = 0;
@@ -14534,7 +14529,7 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,double* nccresult, uint16 **MagI
                                 }
                             }
                             if (count_roh > 0)
-                                t_nccresult = temp_roh/count_roh;
+                                t_nccresult = round(temp_roh/count_roh*1000.0)/1000.0;
                             else
                                 t_nccresult = -1;
                         }
@@ -15732,7 +15727,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                 {
                     int count_blunders = 0;
                     double mt_minmaxheight[2];
-                    double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+                    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
                     blunder_count[0] = 0;
                     blunder_count[1] = 0;
                     
@@ -15909,7 +15904,7 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
                     count = 40;
                 }
                 
-                double* ortho_ncc = (double*)calloc(sizeof(double),Size_Grid2D.height*Size_Grid2D.width);
+                float* ortho_ncc = (float*)calloc(sizeof(float),Size_Grid2D.height*Size_Grid2D.width);
                 
                 VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
                                           Images, Template_size,
@@ -15977,7 +15972,7 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     BL blunder_param;
     double blunder_dh = 0;
     double mt_minmaxheight[2];
-    double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
+    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
     //double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
     
     blunder_param.Boundary  = Boundary;
@@ -16383,7 +16378,7 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
 }
 
 
-bool blunder_detection_TIN(int pre_DEMtif,double* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
+bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
                            D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
                            double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma)
 {
@@ -19532,7 +19527,7 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
 
 short DoubleToSignedChar_result(double val)
 {
-    return (short)(val*1000.0);
+    return (short)round(val*1000.0);
 }
 
 double SignedCharToDouble_result(short val)
@@ -19542,7 +19537,7 @@ double SignedCharToDouble_result(short val)
 
 short DoubleToSignedChar_grid(double val)
 {
-    return (short)(val*1000.0);
+    return (short)round(val*1000.0);
 }
 
 double SignedCharToDouble_grid(short val)
@@ -21296,7 +21291,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     double DEM_minX, DEM_maxY;
     double minLat,minLon;
     CSize DEM_size, Image_size;
-    TransParam param;
+    TransParam param = _param;
     FrameInfo m_frameinfo;
     m_frameinfo.m_Camera.m_focalLength  = 0;
     m_frameinfo.m_Camera.m_CCDSize      = 0;
@@ -21469,7 +21464,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
       Image_resolution = 1.0;
     */
     printf("Image resolution %f\n",Image_resolution);
-    
+    /*
     if(args.sensor_type == SB)
     {
         minLat = RPCs[0][3];
@@ -21484,8 +21479,10 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         
         param.projection = _param.projection;
     }
+     */
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
-
+    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+    
     // load DEM infor from geotiff file.
     DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
     
@@ -22462,6 +22459,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     LonLat[3].m_X = maxLon;
     LonLat[3].m_Y = minLat;
     
+    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
     XY          = wgs2ps(param,4, LonLat);
     
     t_minX      = min(min(min(XY[0].m_X,XY[1].m_X),XY[2].m_X),XY[3].m_X);
@@ -22474,6 +22472,14 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     ImageBoundary[1]    = floor(t_minY)-1;
     ImageBoundary[2]    = ceil(t_maxX)+1;
     ImageBoundary[3]    = ceil(t_maxY)+1;
+    
+    if(param.projection != 1)
+    {
+        ImageBoundary[0]    = DEMboundary[0];
+        ImageBoundary[1]    = DEMboundary[1];
+        ImageBoundary[2]    = DEMboundary[2];
+        ImageBoundary[3]    = DEMboundary[3];
+    }
     
     printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
     
@@ -24560,8 +24566,8 @@ double Correlate(double *L, double *R, int N)
         if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
         {
             rho = SumLR / (sqrt(SumL2*SumR2));
-            //int rI = (int)round(rho*1000);
-            //rho = (double)rI / 1000.0;
+            int rI = (int)round(rho*1000);
+            rho = (double)rI / 1000.0;
         }
         else
         {
