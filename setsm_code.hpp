@@ -224,6 +224,15 @@ bool check_image_boundary(ProInfo *proinfo, double ***rpc, uint8 numofparam, dou
 						  D2DPOINT pos_xy_m,D2DPOINT pos_xy, double minH, double maxH, CSize *Imagesizes_ori, CSize **sizes, int H_template_size, int pyramid_step);
 void RemoveFiles(ProInfo *proinfo,char *save_path, char **filename, int py_level, bool flag);
 
+short DoubleToSignedChar_result(double val);
+double SignedCharToDouble_result(short val);
+
+short DoubleToSignedChar_grid(double val);
+double SignedCharToDouble_grid(short val);
+
+short DoubleToSignedChar_voxel(double val);
+double SignedCharToDouble_voxel(short val);
+
 double CalMemorySize_Post(CSize DEM_size,CSize Final_DEMsize);
 double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize);
 double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize);

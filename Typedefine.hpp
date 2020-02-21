@@ -66,15 +66,15 @@ typedef struct tagF3DPoint
 
 typedef struct tagD2DPoint
 {
-	float m_X;
-	float m_Y;
+	double m_X;
+	double m_Y;
 } D2DPOINT;
 
 typedef struct tagD3DPoint
 {
-	float m_X;
-	float m_Y;
-	float m_Z;
+	double m_X;
+	double m_Y;
+	double m_Z;
     uint8 flag;
 } D3DPOINT;
 
@@ -119,13 +119,13 @@ typedef struct tagNCCresult
     short minHeight;
     short maxHeight;
     
-	float result0; //first peak roh
-	float result1; //second peak roh
-	float max_WNCC;
+	short result0; //first peak roh
+	short result1; //second peak roh
+	short max_WNCC;
     
-    float GNCC;
+    short GNCC;
     //float *GNCC_multi;
-	unsigned short result4; //peak count
+	unsigned char result4; //peak count
     
     //int max_WNCC_pos;
 	
@@ -141,9 +141,9 @@ typedef struct UpdateGrid{
 	short maxHeight;
 	
 	
-	float roh;
-	float ortho_ncc[MaxNCC];
-    float Mean_ortho_ncc;
+	short roh;
+	short ortho_ncc[MaxNCC];
+    short Mean_ortho_ncc;
 
     uint8 Matched_flag;
 	uint8 anchor_flag;
@@ -155,7 +155,7 @@ typedef struct tagVoxelinfo
     //float ANCC;
     //float height;
     bool flag_cal;
-    float INCC;
+    short INCC;
     //float *INCC_multi;
 }VOXEL;
 
