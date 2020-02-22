@@ -20,8 +20,7 @@ INCS = $(TIFFINC) $(GEOTIFFINC)
 LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB)
 
 OBJS = setsmgeo.o grid.o grid_triangulation.o edge_list.o
-HDRS = Typedefine.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp
-
+HDRS = Typedefine.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp git_description.h
 
 ifeq ($(COMPILER), intel)
   CC=icc
@@ -45,6 +44,10 @@ else
   CFLAGS=-std=c99 -g -O3 -fopenmp 
   CXXFLAGS=-g -O3 -fopenmp 
 endif
+
+$(shell git describe --always --tags --dirty > git_description)
+GIT_DESCRIPTION:=$(shell cat git_description)
+export GIT_DESCRIPTION
 
 setsm : setsm_code.o $(OBJS)
 	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff
@@ -70,5 +73,7 @@ $(OBJS) : $(HDRS)
 
 clean :
 	rm -f setsm setsm_mpi
-	rm -f *.o
+	rm -f *.o git_description git_description.h
 
+git_description.h: git_description
+	echo "#define GIT_DESCRIPTION \"$(GIT_DESCRIPTION)\"" > $@
