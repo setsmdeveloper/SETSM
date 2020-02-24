@@ -1543,9 +1543,11 @@ int main(int argc,char *argv[])
                                 //else
                                 //    sprintf(DEMFilename, "%s", args.seedDEMfilename);
                                 
-                                orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
-                                //if(!args.check_ortho)
+                                if(!args.check_Matchtag)
+                                {
+                                    orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
                                     orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                }
                                 //else if(args.ortho_count == 2)
                                 //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 
@@ -1557,9 +1559,11 @@ int main(int argc,char *argv[])
                                 for(int iter = 1 ; iter <= DEM_divide ; iter++)
                                 {
                                     sprintf(DEMFilename, "%s/%s_%d_dem.tif", save_filepath,args.Outputpath_name,iter);
-                                    orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
-                                    //if(!args.check_ortho)
+                                    if(!args.check_Matchtag)
+                                    {
+                                        orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
                                         orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                    }
                                     //else if(args.ortho_count == 2)
                                     //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
                                     
