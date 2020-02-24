@@ -24992,7 +24992,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     D2DPOINT *tar_pts = (D2DPOINT*)malloc(sizeof(D2DPOINT)*RA_iter_counts[ti]);
                     int i = 0;
                     //printf("file %s\t%d\n",out_file,RA_iter_counts[ti]);
-                    while( i < RA_iter_counts[ti] && (fscanf(p_GCP,"%lf\t%lf\t%lf\t%lf\n",&ref_pts[i].m_X,&ref_pts[i].m_Y,&tar_pts[i].m_X,&tar_pts[i].m_Y)) != EOF )
+                    while( i < RA_iter_counts[ti] && (fscanf(p_GCP,"%f\t%f\t%f\t%f\n",&ref_pts[i].m_X,&ref_pts[i].m_Y,&tar_pts[i].m_X,&tar_pts[i].m_Y)) != EOF )
                     {
                         //printf("%f\t%f\t%f\t%f\n",ref_pts[i].m_X,ref_pts[i].m_Y,tar_pts[i].m_X,tar_pts[i].m_Y);
                         i++;
@@ -30459,7 +30459,7 @@ int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, do
             MPs = (D2DPOINT*)malloc(sizeof(D2DPOINT)*total_grid_counts);
             int i = 0;
             fid_pts_pre = fopen(temp_path,"r");
-            while( fscanf(fid_pts_pre,"%lf\t%lf\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
+            while( fscanf(fid_pts_pre,"%f\t%f\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
             {
                 //printf("mps id %d\t%f\t%f\n",i,MPs[i].m_X,MPs[i].m_Y);
                 i++;
@@ -30814,7 +30814,7 @@ D2DPOINT** CoregParam_Image_MPs(ProInfo *proinfo,uint8 Pyramid_step, uint8 total
             MPs = (D2DPOINT*)malloc(sizeof(D2DPOINT)*total_grid_counts);
             int i = 0;
             fid_pts_pre = fopen(temp_path,"r");
-            while( fscanf(fid_pts_pre,"%lf\t%lf\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
+            while( fscanf(fid_pts_pre,"%f\t%f\t%f\t%f\n",&MPs[i].m_X,&MPs[i].m_Y,&temp_v,&temp_v) != EOF )
             {
                 //printf("mps id %d\t%f\t%f\n",i,MPs[i].m_X,MPs[i].m_Y);
                 i++;
@@ -33092,7 +33092,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     
                                                     i = 0;
                                                     
-                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -33151,7 +33151,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_shift);
                                                     
                                                     i = 0;
-                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -34693,7 +34693,7 @@ int SelectMPs_SDM(ProInfo proinfo, NCCresultSDM* roh_height, CSize Size_Grid2D, 
                 {
                     count_MPs++;
                     
-                    fprintf(temp_fid,"%lf %lf %lf %lf %lf %lf\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
+                    fprintf(temp_fid,"%f %f %f %f %f %f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result2.m_X,roh_height[grid_index].result2.m_Y,roh_height[grid_index].result3.m_X,roh_height[grid_index].result3.m_Y);
                     
                     fprintf(fid_col_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_X*pow(2.0,prc_level));
                     fprintf(fid_row_shift,"%f\t%f\t%f\n",GridPts_XY[grid_index].m_X,GridPts_XY[grid_index].m_Y,roh_height[grid_index].result3.m_Y*pow(2.0,prc_level));
