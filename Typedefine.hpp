@@ -424,16 +424,16 @@ typedef struct
 
 
 typedef struct UpdateGridSDM{
-    double roh;
-    double ortho_ncc;
-    double col_shift;
-    double row_shift;
+    float roh;
+    float ortho_ncc;
+    float col_shift;
+    float row_shift;
     
 }UGRIDSDM;
 
 typedef struct tagNCCresultSDM
 {
-    double result0;
+    float result0;
     D2DPOINT result2;
     D2DPOINT result3;
 } NCCresultSDM;

@@ -34228,7 +34228,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                         {
                             if(!check_false_h)
                             {
-                                nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
+                                nccresult[pt_index].result0 = (-1.0);
                                 check_false_h = true;
                             }
                             
@@ -34594,7 +34594,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                                     if(max_1stroh < temp_rho)
                                     {
                                         max_1stroh = temp_rho;
-                                        nccresult[grid_index].result0 = max_1stroh;
+                                        nccresult[grid_index].result0 = (max_1stroh);
                                         
                                         nccresult[grid_index].result2.m_X = Left_Imagecoord_py.m_X;
                                         nccresult[grid_index].result2.m_Y = Left_Imagecoord_py.m_Y;
