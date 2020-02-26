@@ -638,7 +638,7 @@ int main(int argc,char *argv[])
                     printf("Insufficient memory available\n");
                     exit(1);
                 }
-                for(int count_index = 0 ; count_index < data_length; count_index++)
+                for(long int count_index = 0 ; count_index < data_length; count_index++)
                 {
                     //Grid_info[count_index].lsf_std = 0.0;
                     Grid_info[count_index].lsf_kernel = 2;
