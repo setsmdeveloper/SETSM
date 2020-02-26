@@ -640,7 +640,7 @@ int main(int argc,char *argv[])
                 }
                 for(int count_index = 0 ; count_index < data_length; count_index++)
                 {
-                    Grid_info[count_index].lsf_std = 0.0;
+                    //Grid_info[count_index].lsf_std = 0.0;
                     Grid_info[count_index].lsf_kernel = 2;
                 }
                 
@@ -2757,9 +2757,13 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 exit(1);
                             }
                             
+                            //LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,0);
+                            
+                            //exit(1);
+                            
                             char str_DEMfile[500];
                             float *DEM_values = NULL;
-                            float *Ortho_values = NULL;
+                            signed char *Ortho_values = NULL;
                             float *H_value = NULL;
                             unsigned char* MT_value = NULL;
                             
@@ -2936,7 +2940,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         {
                                             ST = time(0);
                                             
-                                            Ortho_values = (float*)malloc(sizeof(float)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
+                                            Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
                                             MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
                                         
                                             NNA_M_MT(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,tile_row,Ortho_values,H_value,MT_value,tile_Final_DEMsize,FinalDEM_boundary);
@@ -3031,7 +3035,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     {
                                         ST = time(0);
                                         
-                                        Ortho_values = (float*)malloc(sizeof(float)*Final_DEMsize.width*Final_DEMsize.height);
+                                        Ortho_values = (signed char*)malloc(sizeof(signed char)*Final_DEMsize.width*Final_DEMsize.height);
                                         MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,Final_DEMsize,FinalDEM_boundary);
                                         
                                         NNA_M_MT(proinfo->check_Matchtag,param,proinfo->save_filepath, proinfo->Outputpath_name,temp_c,temp_ortho,iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,mt_grid_size,buffer_tile,Hemisphere,final_iteration,0,Ortho_values,H_value,MT_value,Final_DEMsize,FinalDEM_boundary);
@@ -19576,6 +19580,17 @@ double SignedCharToDouble_voxel(short val)
     return (double)(val)/1000.0;
 }
 
+
+signed char FloatToSignedChar(float val)
+{
+    return (signed char)(val*100.0);
+}
+
+float SignedCharToFloat(signed char val)
+{
+    return (float)(val/100.0);
+}
+
 double CalMemorySize_Post(CSize DEM_size, CSize Final_DEMsize)
 {
     long int Memory = 0;
@@ -19606,7 +19621,7 @@ double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize)
     
     printf("DEM_value %f\t%d\t%d\n",DEM_values/1024.0/1024.0/1024.0,DEM_size.width,DEM_size.height);
     
-    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
+    long int value = (long)(sizeof(signed char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
     printf("value %f\t%d\t%d\n",value/1024.0/1024.0/1024.0,Final_DEMsize.width,Final_DEMsize.height);
     
     long int value_pt = (long)(sizeof(unsigned char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
@@ -19628,15 +19643,15 @@ double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize)
     
     printf("DEM_value %f\t%d\t%d\n",DEM_values/1024.0/1024.0/1024.0,DEM_size.width,DEM_size.height);
     
-    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height)*2;
+    long int value = (long)(sizeof(float)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
     printf("value %f\t%d\t%d\n",value/1024.0/1024.0/1024.0,Final_DEMsize.width,Final_DEMsize.height);
     
-    long int value_pt = (long)(sizeof(unsigned char)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
+    long int value_pt = (long)(sizeof(LSFINFO)*(long)Final_DEMsize.width*(long)Final_DEMsize.height);
     printf("value_pt %f\n",value_pt/1024.0/1024.0/1024.0);
     
     Memory = DEM_values + value + value_pt;
     
-    double result = (double)(Memory/1024.0/1024.0/1024.0);
+    double result = (double)(Memory/1024.0/1024.0/1024.0) + 5.0;
     printf("LSF total memory %f\n",result);
     
     return result;
@@ -19784,7 +19799,7 @@ double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_r
     return grid_size;
 }
 
-double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM_ortho, CSize Final_DEMsize, double *FinalDEM_boundary)
+double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, signed char *DEM_ortho, CSize Final_DEMsize, double *FinalDEM_boundary)
 {
     FILE *poutDEM;
     FILE *poutMatchtag;
@@ -19819,7 +19834,7 @@ double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int 
 #pragma omp parallel for schedule(guided)
     for(long index_a = 0 ; index_a < (long)DEM_size.height*(long)DEM_size.width ; index_a++)
     {
-        DEM_ortho[index_a] = -1.0;
+        DEM_ortho[index_a] = FloatToSignedChar(-1.0);
     }
     
     //setting DEM value
@@ -19888,7 +19903,7 @@ double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int 
                                            iter_col > buffer && iter_col < col_size - buffer)
                                         {
                                             if(ortho_value > -1.0)
-                                                DEM_ortho[index] = ortho_value;
+                                                DEM_ortho[index] = FloatToSignedChar(ortho_value);
                                         }
                                     }
                                 }
@@ -20034,6 +20049,9 @@ CSize DEM_final_Size(char *save_path, int row_start, int col_start,int row_end, 
 
 void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide,CSize Final_DEMsize, float* DEM_values, float* value, unsigned char* value_pt, double *FinalDEM_boundary)
 {
+    time_t total_ST = 0, total_ET = 0;
+    double total_gap;
+    
     double dummy;
     int i0, cnthold,i,j,index;
     double minX,maxX, minY, maxY,DEM_minX,DEM_maxY,minHeight,maxHeight;
@@ -20101,6 +20119,8 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     fclose(fheader);
     
     remove(DEM_header);
+    
+    total_ST = time(0);
     
     for(i=0;i<row_count;i++)
     {
@@ -20268,7 +20288,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     }
     
     printf("Done read matched pts\n");
+    total_ET = time(0);
+    total_gap = difftime(total_ET,total_ST);
+    printf("time[m] = %5.2f\n",total_gap/60.0);
     
+    total_ST = time(0);
     //IDW Interpolation
     long int total_interpolated = 0;
     if(total_search_count > 0 && !check_Matchtag)
@@ -20347,7 +20371,11 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     }
     
     printf("end interpolation\t%ld\t%ld\n",total_search_count,total_interpolated);
+    total_ET = time(0);
+    total_gap = difftime(total_ET,total_ST);
+    printf("time[m] = %5.2f\n",total_gap/60.0);
     
+    total_ST = time(0);
     /*
     //DEM boundary filter
     printf("DEM boundary filter\n");
@@ -20475,6 +20503,9 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
             value_sm[(long)row*(long)col_count + (long)col] = null_sum_h / null_count_cell;
     }
     printf("end smoothing\n");
+    total_ET = time(0);
+    total_gap = difftime(total_ET,total_ST);
+    printf("time[m] = %5.2f\n",total_gap/60.0);
     
     if(!check_Matchtag)
     {
@@ -20501,7 +20532,7 @@ void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputp
     free(value_sm);
 }
 
-void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, float* Ortho_values,float* value, unsigned char* value_pt,CSize Final_DEMsize, double *FinalDEM_boundary)
+void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, signed char* Ortho_values,float* value, unsigned char* value_pt,CSize Final_DEMsize, double *FinalDEM_boundary)
 {
     double dummy;
     int i0, cnthold,i,j,index;
@@ -20575,10 +20606,10 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
     long count_null_cell = 0;
     int check_while = 0;
     
-    float *t_value_orthoncc = (float*)malloc(sizeof(float)*(long)row_count*(long)col_count);
+    signed char *t_value_orthoncc = (signed char*)malloc(sizeof(signed char)*(long)row_count*(long)col_count);
     unsigned char *t_value_pt = (unsigned char*)malloc(sizeof(unsigned char)*(long)row_count*(long)col_count);
     
-    memcpy(t_value_orthoncc,Ortho_values,sizeof(float)*(long)col_count*(long)row_count);
+    memcpy(t_value_orthoncc,Ortho_values,sizeof(signed char)*(long)col_count*(long)row_count);
     memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
     
     int iter_check = 0;
@@ -20643,9 +20674,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                             
                             if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count && value[t_index] > -100 )
                             {
-                                if(value_pt[t_index] == 1 && Ortho_values[t_index] > 0.0)
+                                if(value_pt[t_index] == 1 && SignedCharToFloat(Ortho_values[t_index]) > 0.0)
                                 {
-                                    sum_ortho += Ortho_values[t_index];
+                                    sum_ortho += SignedCharToFloat(Ortho_values[t_index]);
                                     count_cell++;
                                 }
                             }
@@ -20654,14 +20685,14 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                     
                     if (count_cell >= 7 && count_cell >= total_size*th_rate )
                     {
-                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = FloatToSignedChar(sum_ortho/(double)count_cell);
                         t_value_pt[(long)row*(long)col_count + (long)col] = 1;
                         count_null_cell ++;
                     }
                 }
             }
             
-            memcpy(Ortho_values,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+            memcpy(Ortho_values,t_value_orthoncc,sizeof(signed char)*(long)col_count*(long)row_count);
             memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
             
             if(count_null_cell == 0)
@@ -20723,9 +20754,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                                     //sum_ortho += Ortho_values[t_index];
                                     //count_cell++;
                                     
-                                    if(Ortho_values[t_index] < 0.0)
+                                    if(SignedCharToFloat(Ortho_values[t_index]) < 0.0)
                                         count_low_cell++;
-                                    else if(Ortho_values[t_index] > 0.0)
+                                    else if(SignedCharToFloat(Ortho_values[t_index]) > 0.0)
                                         count_high_cell++;
                                 }
                                 
@@ -20839,9 +20870,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                                 
                                 if(index_row >= 0 && index_row < row_count && index_col >= 0 && index_col < col_count )
                                 {
-                                    if(value_pt[t_index] > 0 && Ortho_values[t_index] > 0.0 && value[t_index] > -100)
+                                    if(value_pt[t_index] > 0 && SignedCharToFloat(Ortho_values[t_index]) > 0.0 && value[t_index] > -100)
                                     {
-                                        sum_ortho += Ortho_values[t_index];
+                                        sum_ortho += SignedCharToFloat(Ortho_values[t_index]);
                                         count_cell++;
                                     }
                                     
@@ -20855,7 +20886,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                         
                         if (count_cell >= total_size*th_rate )
                         {
-                            t_value_orthoncc[(long)row*(long)col_count + (long)col] = sum_ortho/(double)count_cell;
+                            t_value_orthoncc[(long)row*(long)col_count + (long)col] = FloatToSignedChar(sum_ortho/(double)count_cell);
                             
                             t_value_pt[(long)row*(long)col_count + (long)col] = 1;
                             
@@ -20868,7 +20899,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                         
                     }
                 }
-                memcpy(Ortho_values,t_value_orthoncc,sizeof(float)*(long)col_count*(long)row_count);
+                memcpy(Ortho_values,t_value_orthoncc,sizeof(signed char)*(long)col_count*(long)row_count);
                 memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
                 
                 if(count_null_cell == 0)
@@ -21159,48 +21190,168 @@ double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_si
     int check_stop = 0;
     int interval;
     int final_interval;
-    double* diff;
-    double* height;
+    //double* diff;
+    //double* height;
+    typedef struct tagKV
+    {
+        double diff;
+        double height;
+    }KV;
+    
+    vector<KV> Kernel;
+    
     int count1,count2,count3,count4;
     
     col_pos = ((X - minX)/grid);
     row_pos = ((maxY - Y)/grid);
     
-    interval = 3;
+    interval = 1;
     
-    
+    *numpts = 0;
+    count1 = 0;
+    count2 = 0;
+    count3 = 0;
+    count4 = 0;
     while (check_stop == 0)
     {
-        *numpts = 0;
-        count1 = 0;
-        count2 = 0;
-        count3 = 0;
-        count4 = 0;
-        for(row = -interval;row<interval;row++)
+        //top
+        row = interval;
+        for(col = -interval ; col <= interval ; col++)
         {
-            for(col = -interval;col < interval ; col++)
+            int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+            if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+               row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
             {
-                int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
-                if(grid_pos >= 0 && grid_pos < row_size*col_size && 
-                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)// && radius > distance)
+                if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
                 {
-                    if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
-                    {
-                        (*numpts)++;
-                        
-                        if (row >= 0 && row <interval && col >= 0 && col < interval) {
-                            count1++;
-                        }
-                        if (row >= 0 && row <interval && col < 0 && col >= -interval) {
-                            count2++;
-                        }
-                        if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
-                            count3++;
-                        }
-                        if (row < 0 && row >= -interval && col >= 0 && col < interval) {
-                            count4++;
-                        }
+                    (*numpts)++;
+                    
+                    if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                        count1++;
                     }
+                    if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                        count2++;
+                    }
+                    if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                        count3++;
+                    }
+                    if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                        count4++;
+                    }
+                    
+                    double x,y,x_ref,y_ref;
+                    double dis_X = (col*grid);
+                    double dis_Y = (row*grid);
+                    KV t_kv;
+                    t_kv.diff = sqrt(dis_X*dis_X + dis_Y*dis_Y);
+                    t_kv.height = input[grid_pos];
+                    Kernel.push_back(t_kv);
+                }
+            }
+        }
+        
+        //bottom
+        row = -interval;
+        for(col = -interval ; col <= interval ; col++)
+        {
+            int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+            if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+               row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+            {
+                if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
+                {
+                    (*numpts)++;
+                    
+                    if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                        count1++;
+                    }
+                    if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                        count2++;
+                    }
+                    if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                        count3++;
+                    }
+                    if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                        count4++;
+                    }
+                    
+                    double x,y,x_ref,y_ref;
+                    double dis_X = (col*grid);
+                    double dis_Y = (row*grid);
+                    KV t_kv;
+                    t_kv.diff = sqrt(dis_X*dis_X + dis_Y*dis_Y);
+                    t_kv.height = input[grid_pos];
+                    Kernel.push_back(t_kv);
+                }
+            }
+        }
+        
+        //right
+        col = interval;
+        for(row = -interval+1 ; row <= interval-1 ; row++)
+        {
+            int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+            if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+               row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+            {
+                if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
+                {
+                    (*numpts)++;
+                    
+                    if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                        count1++;
+                    }
+                    if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                        count2++;
+                    }
+                    if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                        count3++;
+                    }
+                    if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                        count4++;
+                    }
+                    double x,y,x_ref,y_ref;
+                    double dis_X = (col*grid);
+                    double dis_Y = (row*grid);
+                    KV t_kv;
+                    t_kv.diff = sqrt(dis_X*dis_X + dis_Y*dis_Y);
+                    t_kv.height = input[grid_pos];
+                    Kernel.push_back(t_kv);
+                }
+            }
+        }
+        
+        //left
+        col = -interval;
+        for(row = -interval+1 ; row <= interval-1 ; row++)
+        {
+            int grid_pos = (int)((row_pos+row)*col_size + (col_pos+col));
+            if(grid_pos >= 0 && grid_pos < row_size*col_size &&
+               row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+            {
+                if(input[grid_pos] != -9999 && matching_flag[grid_pos] == 1)
+                {
+                    (*numpts)++;
+                    
+                    if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                        count1++;
+                    }
+                    if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                        count2++;
+                    }
+                    if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                        count3++;
+                    }
+                    if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                        count4++;
+                    }
+                    double x,y,x_ref,y_ref;
+                    double dis_X = (col*grid);
+                    double dis_Y = (row*grid);
+                    KV t_kv;
+                    t_kv.diff = sqrt(dis_X*dis_X + dis_Y*dis_Y);
+                    t_kv.height = input[grid_pos];
+                    Kernel.push_back(t_kv);
                 }
             }
         }
@@ -21211,10 +21362,10 @@ double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_si
             final_interval = interval;
         }
         else
-            interval = interval + 2;
+            interval = interval + 1;
         
     }
-    
+    /*
     diff = (double*)malloc(sizeof(double)*(*numpts));
     height = (double*)malloc(sizeof(double)*(*numpts));
     *numpts = 0;
@@ -21244,6 +21395,7 @@ double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_si
             }
         }
     }
+    */
     
     {
         double sum1, sum2;
@@ -21251,12 +21403,24 @@ double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_si
     
         sum1 = 0;
         sum2 = 0;
-        for(row=0;row<*numpts;row++)
+        vector<KV>::iterator it;
+        
+        for(it = Kernel.begin(); it != Kernel.end() ; ++it)
+        {
+            double height = it->height;
+            double diff = it->diff;
+            sum1 += (height/pow(diff,p));
+            sum2 += (1.0/pow(diff,p));
+           
+        }
+        
+        /*
+        for(row=0;row<hight.size();row++)
         {
             sum1 += (height[row]/pow(diff[row],p));
             sum2 += (1.0/pow(diff[row],p));
         }
-        
+        */
         if(sum2 > 0)
             result = sum1/sum2;
         else {
@@ -21265,8 +21429,11 @@ double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_si
 
     }
     
-    free(diff);
-    free(height);
+    Kernel.clear();
+    vector<KV>().swap(Kernel);
+    
+    //free(diff);
+    //free(height);
     
     return result;
 }
@@ -23093,6 +23260,20 @@ unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size)
     return matchtag;
 }
 
+unsigned char FloatToUnsignedChar_lsf(float val)
+{
+    if(val > 25)
+        val = 25;
+    
+    return (unsigned char)(val*10.0);
+}
+
+float UnsingedCharToFloat_lsf(float val)
+{
+    return (float)(val/10.0);
+}
+
+
 void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem, float *smooth_DEM)
 {
     long int i,j;
@@ -23132,13 +23313,13 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
             float sigma;
             long int selected_count;
             
-            if(seeddem[iter_count] > -100)
+            if(seeddem[iter_count] > -50)
             {
                 sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
                 
                 double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
                 
-                Grid_info[iter_count].lsf_std = sigma;
+                //Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
                 
                 if(check_smooth_iter)
                 {
@@ -23150,6 +23331,8 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
                         sigma_sum += sigma;
                         sigma2_sum += (sigma*sigma);
                         //temp_sigma[iter_count] = sigma;
+                        
+                        //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
                     }
                     else
                     {
@@ -23167,6 +23350,7 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
                         sigma_sum += sigma;
                         sigma2_sum += (sigma*sigma);
                         //temp_sigma[iter_count] = sigma;
+                        //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
                     }
                     else
                     {
@@ -23180,7 +23364,6 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
                 smooth_DEM[iter_count] = seeddem[iter_count];
                 //temp_sigma[iter_count] = -9999;
             }
-                
         }
         printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     }
@@ -23211,20 +23394,20 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 {
     double result;
     long int row_pos, col_pos;
-    int row,col;
+    long int row,col;
     long int size_pts;
     int check_stop = 0;
-    int final_interval;
-    int interval = 2;
-    int count1,count2,count3,count4;
-    int max_pts = 9;
-    if(grid >= 8)
-        max_pts = 7;
     
-    int row_interval = 15;
+    long int interval = 1;
+    long int count1,count2,count3,count4;
+    long int max_pts = 15;
+    //if(grid >= 8)
+    //    max_pts = 15;
     
-    col_pos = X;
-    row_pos = Y;
+    long int row_interval = 15;
+    long int final_interval = 5;
+    col_pos = (long int)X;
+    row_pos = (long int)Y;
     
     double hist_th = 0.8;
     if(grid >= 8)
@@ -23235,27 +23418,43 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     bool check_std = false;
     
     long int data_length = (long int)row_size*(long int)col_size;
-    long int t_index = (long int)(row_pos*col_size + col_pos);
+    long int t_index = (long int)(row_pos*(long int)col_size + col_pos);
     double sigma = 999999;
     double MPP_th = 5;
-    int mask_interval = 1;
+    long int mask_interval = 1;
     
-    int add_interval = 0;
+    long int add_interval = 0;
     if(MPP > MPP_th)
         add_interval = 2;
     else if(MPP > MPP_th*2)
         add_interval = 3;
     
+    
+    double maxX_ptslists = -100000000;
+    double maxY_ptslists = -100000000;
+    double minX_ptslists =  100000000;
+    double minY_ptslists =  100000000;
+    double distX_ptslists, distY_ptslists;
+    double Scale_ptslists = 1000;
+    
+    vector<D3DPOINT> saved_XYZ;
+    
     if(smooth_iter > 0)
     {
-        double t_sigma = Grid_info[t_index].lsf_std;
-        int pre_final_interval = (int)Grid_info[t_index].lsf_kernel;
+        //double t_sigma = UnsingedCharToFloat_lsf(Grid_info[t_index].lsf_std);
+        long int pre_final_interval = (long int)Grid_info[t_index].lsf_kernel;
     
+        
         if(add_interval > 0)
         {
             mask_interval = floor(pre_final_interval/5.0);
             if(mask_interval <= 0)
                 mask_interval = 1;
+        }
+        else
+        {
+            if(grid < 2)
+                mask_interval = 2;
         }
         
         /*if(t_sigma < 0.05)
@@ -23270,9 +23469,10 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
          else*/
         {
             
-            final_interval = (int)Grid_info[t_index].lsf_kernel;
-            
-            
+            final_interval = (long int)Grid_info[t_index].lsf_kernel;
+            if(final_interval > 18)
+                final_interval = 18;
+            /*
             if(grid <= 0.1)
             {
                 if(t_sigma < sigma_th)
@@ -23310,11 +23510,219 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     }
                 }
             }
+             */
         }
         
+        for(row = -final_interval;row <= final_interval;row+=mask_interval)
+        {
+            for(col = -final_interval;col <= final_interval ; col+=mask_interval)
+            {
+                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                long int grid_pos_col = (long int)((col_pos+col));
+                long int grid_pos_row = (long int)((row_pos+row));
+                
+                
+                if(grid_pos >= 0 && grid_pos < data_length &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
+                {
+                    
+                    if(input[grid_pos] > - 50)
+                    {
+                        (*numpts)++;
+                        
+                        D3DPOINT t_pts;
+                        t_pts.m_X = (float)(grid_pos_col*grid);
+                        t_pts.m_Y = (float)(grid_pos_row*grid);
+                        t_pts.m_Z = input[grid_pos];
+                        saved_XYZ.push_back(t_pts);
+                    }
+                }
+            }
+        }
     }
     else
     {
+        *numpts = 0;
+        count1 = 0;
+        count2 = 0;
+        count3 = 0;
+        count4 = 0;
+        while (check_stop == 0)
+        {
+            //center
+            long int cen_pos = (long int)((row_pos)*(long int)col_size + (col_pos));
+            
+            if(input[cen_pos] > -50)
+            {
+                (*numpts)++;
+                
+                count1++;
+                D3DPOINT t_pts;
+                t_pts.m_X = col_pos*grid;
+                t_pts.m_Y = row_pos*grid;
+                t_pts.m_Z = input[cen_pos];
+                saved_XYZ.push_back(t_pts);
+            }
+            
+            //top
+            row = interval;
+            for(col = -interval ; col <= interval ; col++)
+            {
+                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                long int grid_pos_col = (long int)((col_pos+col));
+                long int grid_pos_row = (long int)((row_pos+row));
+                
+                if(grid_pos >= 0 && grid_pos < data_length &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+                {
+                    if(input[grid_pos] > -50)
+                    {
+                        (*numpts)++;
+                        
+                        if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                            count1++;
+                        }
+                        if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                            count2++;
+                        }
+                        if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                            count3++;
+                        }
+                        if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                            count4++;
+                        }
+                        
+                          
+                        D3DPOINT t_pts;
+                        t_pts.m_X = (float)(grid_pos_col*grid);
+                        t_pts.m_Y = (float)(grid_pos_row*grid);
+                        t_pts.m_Z = input[grid_pos];
+                        saved_XYZ.push_back(t_pts);
+                    }
+                }
+            }
+            
+            //bottom
+            row = -interval;
+            for(col = -interval ; col <= interval ; col++)
+            {
+                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                long int grid_pos_col = (long int)((col_pos+col));
+                long int grid_pos_row = (long int)((row_pos+row));
+                if(grid_pos >= 0 && grid_pos < data_length &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+                {
+                    if(input[grid_pos] > -50)
+                    {
+                        (*numpts)++;
+                        
+                        if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                            count1++;
+                        }
+                        if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                            count2++;
+                        }
+                        if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                            count3++;
+                        }
+                        if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                            count4++;
+                        }
+                                         
+                        D3DPOINT t_pts;
+                        t_pts.m_X = (float)(grid_pos_col*grid);
+                        t_pts.m_Y = (float)(grid_pos_row*grid);
+                        t_pts.m_Z = input[grid_pos];
+                        saved_XYZ.push_back(t_pts);
+                    }
+                }
+            }
+            
+            //right
+            col = interval;
+            for(row = -interval+1 ; row <= interval-1 ; row++)
+            {
+                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                long int grid_pos_col = (long int)((col_pos+col));
+                long int grid_pos_row = (long int)((row_pos+row));
+                if(grid_pos >= 0 && grid_pos < data_length &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+                {
+                    if(input[grid_pos] > -50)
+                    {
+                        (*numpts)++;
+                        
+                        if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                            count1++;
+                        }
+                        if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                            count2++;
+                        }
+                        if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                            count3++;
+                        }
+                        if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                            count4++;
+                        }
+               
+                        
+                        D3DPOINT t_pts;
+                        t_pts.m_X = (float)(grid_pos_col*grid);
+                        t_pts.m_Y = (float)(grid_pos_row*grid);
+                        t_pts.m_Z = input[grid_pos];
+                        saved_XYZ.push_back(t_pts);
+                    }
+                }
+            }
+            
+            //left
+            col = -interval;
+            for(row = -interval+1 ; row <= interval-1 ; row++)
+            {
+                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                long int grid_pos_col = (long int)((col_pos+col));
+                long int grid_pos_row = (long int)((row_pos+row));
+                if(grid_pos >= 0 && grid_pos < data_length &&
+                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size && col != 0 && row != 0)// && radius > distance)
+                {
+                    if(input[grid_pos] > -50)
+                    {
+                        (*numpts)++;
+                        
+                        if (row >= 0 && row <=interval && col >= 0 && col <= interval) {
+                            count1++;
+                        }
+                        if (row >= 0 && row <=interval && col < 0 && col >= -interval) {
+                            count2++;
+                        }
+                        if (row < 0 && row >= -interval && col < 0 && col >= -interval) {
+                            count3++;
+                        }
+                        if (row < 0 && row >= -interval && col >= 0 && col <= interval) {
+                            count4++;
+                        }
+                         
+                        D3DPOINT t_pts;
+                        t_pts.m_X = (float)(grid_pos_col*grid);
+                        t_pts.m_Y = (float)(grid_pos_row*grid);
+                        t_pts.m_Z = input[grid_pos];
+                        saved_XYZ.push_back(t_pts);
+                    }
+                }
+            }
+            
+            if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
+            {
+                check_stop = 1;
+                final_interval = interval;
+                Grid_info[t_index].lsf_kernel = (unsigned char)final_interval;
+            }
+            else
+                interval = interval + 1;
+        
+        }
+        
+        /*
         while (check_stop == 0)
         {
             *numpts = 0;
@@ -23330,7 +23738,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     
                     
                     if(grid_pos >= 0 && grid_pos < data_length &&
-                       row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size /* && col != 0 && row != 0*/)// && radius > distance)
+                       row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size )
                     {
                         
                         if(input[grid_pos] > -100)
@@ -23370,11 +23778,13 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             else
                 interval = interval + 1;
         }
-        
+         */
     }
     
-    if(!check_std)
+    //if(!check_std)
+    if(saved_XYZ.size() > 15)
     {
+        /*
         double maxX_ptslists = -100000000;
         double maxY_ptslists = -100000000;
         double minX_ptslists =  100000000;
@@ -23412,14 +23822,21 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 }
             }
         }
+        */
+        *numpts = saved_XYZ.size();
+        
+        maxX_ptslists = (double)(final_interval)*grid;
+        maxY_ptslists = (double)(final_interval)*grid;
+        minX_ptslists = - (double)(final_interval)*grid;
+        minY_ptslists = - (double)(final_interval)*grid;
         
         distX_ptslists = maxX_ptslists - minX_ptslists;
         distY_ptslists = maxY_ptslists - minY_ptslists;
         
-        double X_scaled = (col_pos*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
-        double Y_scaled = (row_pos*grid - minY_ptslists)/distY_ptslists*Scale_ptslists;
-        double X_plane = (col_pos*grid - minX_ptslists);
-        double Y_plane = (row_pos*grid - minY_ptslists);
+        double X_scaled = ((double)col_pos*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
+        double Y_scaled = ((double)row_pos*grid - minY_ptslists)/distY_ptslists*Scale_ptslists;
+        double X_plane = ((double)col_pos*grid - minX_ptslists);
+        double Y_plane = ((double)row_pos*grid - minY_ptslists);
         
         if((*numpts) > 15)
         {
@@ -23439,6 +23856,36 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(*numpts));
             
             //plane fitting
+            
+            vector<D3DPOINT>::iterator it;
+            
+            for(it = saved_XYZ.begin(); it != saved_XYZ.end() ; ++it)
+            {
+                D3DPOINT t_pts = *it;
+                double x,y,z;
+                x = (t_pts.m_X - minX_ptslists)/distX_ptslists*Scale_ptslists;
+                y = (t_pts.m_Y - minY_ptslists)/distY_ptslists*Scale_ptslists;
+                z = t_pts.m_Z;
+                
+                XY_save[count].m_X = x;
+                XY_save[count].m_Y = y;
+                XY_save[count].m_Z = z;
+                XY_save[count].flag = 1;
+                
+                x = (t_pts.m_X - minX_ptslists);
+                y = (t_pts.m_Y - minY_ptslists);
+                
+                A_matrix->val[count][0] = x;
+                A_matrix->val[count][1] = y;
+                A_matrix->val[count][2] = 1.0;
+                
+                L_matrix->val[count][0] = z;
+                count++;
+            }
+            saved_XYZ.clear();
+            vector<D3DPOINT>().swap(saved_XYZ);
+            
+            /*
             for(row = -final_interval;row <= final_interval;row+=mask_interval)
             {
                 for(col = -final_interval;col <= final_interval ; col+=mask_interval)
@@ -23475,7 +23922,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     }
                 }
             }
-            
+            */
             GMA_double_Tran(A_matrix,AT_matrix);
             GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
             GMA_double_inv(ATA_matrix,ATAI_matrix);
@@ -23511,7 +23958,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 double temp_fitted_Z;
                 double diff_Z;
                 long int selected_count = 0;
-                int hist[20] = {0};
+                long int hist[20] = {0};
                 for(row = 0; row < *numpts ; row++)
                 {
                     int hist_index = (int)(std::abs(V_matrix->val[row][0]));
@@ -23529,7 +23976,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 while(check_V && row < 20)
                 {
                     hist_sum += hist[row];
-                    hist_rate = (double)hist_sum/(*numpts);
+                    hist_rate = (double)hist_sum/(double)(*numpts);
                     if(hist_rate > hist_th)// && hist_sum > 6)
                     {
                         V_th = row;
@@ -23538,12 +23985,20 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     row++;
                 }
                 
+                //if(V_th == 19)
+                //    V_th = 18;
+                
+                vector<D3DPOINT> p_selected_XY;
+                
                 for(row = 0; row < *numpts ; row++)
                 {
-                    if(std::abs(V_matrix->val[row][0]) > V_th+1)
+                    if(std::abs(V_matrix->val[row][0]) >= V_th+1)
                         XY_save[row].flag = 0;
                     else
+                    {
+                        p_selected_XY.push_back(XY_save[row]);
                         selected_count++;
+                    }
                 }
                 
                 GMA_double_destroy(A_matrix);
@@ -23556,6 +24011,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 GMA_double_destroy(AX_matrix);
                 GMA_double_destroy(V_matrix);
                 
+                selected_count = p_selected_XY.size();
                 if(selected_count > 15)
                 {
                     A_matrix = GMA_double_create(selected_count, 6);
@@ -23571,7 +24027,20 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     V_matrix = GMA_double_create(selected_count,1);
                     
                     count = 0;
-                    
+                    vector<D3DPOINT>::iterator it_p;
+                    for(it_p = p_selected_XY.begin(); it_p != p_selected_XY.end() ; ++it_p)
+                    {
+                        A_matrix->val[count][0] = it_p->m_X*it_p->m_X;
+                        A_matrix->val[count][1] = it_p->m_X*it_p->m_Y;
+                        A_matrix->val[count][2] = it_p->m_Y*it_p->m_Y;
+                        A_matrix->val[count][3] = it_p->m_X;
+                        A_matrix->val[count][4] = it_p->m_Y;
+                        A_matrix->val[count][5] = 1.0;
+                        
+                        L_matrix->val[count][0] = it_p->m_Z;
+                        count++;
+                    }
+                    /*
                     for(row = 0; row < *numpts ; row++)
                     {
                         if(XY_save[row].flag == 1)
@@ -23587,7 +24056,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                             count++;
                         }
                     }
-                    
+                    */
                     GMA_double_Tran(A_matrix,AT_matrix);
                     GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
                     GMA_double_inv(ATA_matrix,ATAI_matrix);
@@ -23601,6 +24070,24 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     sum = 0;
                     min_Z = 99999999999;
                     max_Z = -99999999999;
+                    
+                    count = 0;
+                    for(it_p = p_selected_XY.begin(); it_p != p_selected_XY.end() ; ++it_p)
+                    {
+                        sum += (V_matrix->val[count][0] * V_matrix->val[count][0]);
+                        
+                        
+                        temp_fitted_Z = X_matrix->val[0][0]*(it_p->m_X*it_p->m_X) + X_matrix->val[0][1]*(it_p->m_X*it_p->m_Y) + X_matrix->val[0][2]*(it_p->m_Y*it_p->m_Y) +
+                        X_matrix->val[0][3]*it_p->m_X + X_matrix->val[0][4]*it_p->m_Y + X_matrix->val[0][5];
+                        
+                        if(min_Z > temp_fitted_Z)
+                            min_Z = temp_fitted_Z;
+                        if(max_Z < temp_fitted_Z)
+                            max_Z = temp_fitted_Z;
+                        
+                        count++;
+                    }
+                    /*
                     for(row = 0; row < *numpts ; row++)
                     {
                         sum += V_matrix->val[row][0] * V_matrix->val[row][0];
@@ -23614,15 +24101,29 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                         if(max_Z < temp_fitted_Z)
                             max_Z = temp_fitted_Z;
                     }
-                    
+                    */
                     if(sum > 0 && *numpts > 15 && !isnan(sum))
                     {
-                        sigma = sqrt(sum/(*numpts));
+                        sigma = sqrt(sum/(double)(*numpts));
                     
                         if(isnan(sigma))
                         {
                             printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
                             
+                            count = 0;
+                            for(it_p = p_selected_XY.begin(); it_p != p_selected_XY.end() ; ++it_p)
+                            {
+                                double t_sum = V_matrix->val[count][0] * V_matrix->val[count][0];
+                                
+                                
+                                temp_fitted_Z = X_matrix->val[0][0]*it_p->m_X*it_p->m_X + X_matrix->val[0][1]*it_p->m_X*it_p->m_Y + X_matrix->val[0][2]*it_p->m_Y*it_p->m_Y +
+                                X_matrix->val[0][3]*it_p->m_X + X_matrix->val[0][4]*it_p->m_Y + X_matrix->val[0][5];
+                                
+                                printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[count][0],temp_fitted_Z);
+                                
+                                count++;
+                            }
+                            /*
                             for(row = 0; row < *numpts ; row++)
                             {
                                 double t_sum = V_matrix->val[row][0] * V_matrix->val[row][0];
@@ -23633,7 +24134,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                                 
                                 printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
                             }
-                            
+                            */
                             exit(1);
                         }
                     /*if(sigma > 20)
@@ -23676,13 +24177,21 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                             double sum_weight = 0;
                             double sum_weigtdist = 0;
                             double p = 1.5;
+                            
+                            for(it_p = p_selected_XY.begin(); it_p != p_selected_XY.end() ; ++it_p)
+                            {
+                                double dist = sqrt((it_p->m_X - X_scaled)*(it_p->m_X - X_scaled) + (it_p->m_Y - Y_scaled)*(it_p->m_Y - Y_scaled));
+                                sum_weight += (1.0/pow(dist,p));
+                                sum_weigtdist += it_p->m_Z/pow(dist,p);
+                            }
+                            /*
                             for(row = 0; row < *numpts ; row++)
                             {
                                 double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
                                 sum_weight += (1.0/pow(dist,p));
                                 sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
                             }
-                            
+                            */
                             if(sum_weight > 0)
                             {
                                 *fitted_Z = sum_weigtdist/sum_weight;
@@ -23698,13 +24207,21 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                         double sum_weight = 0;
                         double sum_weigtdist = 0;
                         double p = 1.5;
+                        
+                        for(it_p = p_selected_XY.begin(); it_p != p_selected_XY.end() ; ++it_p)
+                        {
+                            double dist = sqrt((it_p->m_X - X_scaled)*(it_p->m_X - X_scaled) + (it_p->m_Y - Y_scaled)*(it_p->m_Y - Y_scaled));
+                            sum_weight += (1.0/pow(dist,p));
+                            sum_weigtdist += it_p->m_Z/pow(dist,p);
+                        }
+                        /*
                         for(row = 0; row < *numpts ; row++)
                         {
                             double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
                             sum_weight += (1.0/pow(dist,p));
                             sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
                         }
-                        
+                        */
                         if(sum_weight > 0)
                         {
                             *fitted_Z = sum_weigtdist/sum_weight;
@@ -23728,35 +24245,35 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     else if(grid == 2)
                     {
                         if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = 5 + add_interval;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
                         else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = 4 + add_interval;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
                         else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = 3 + add_interval;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
                         else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
-                            Grid_info[t_index].lsf_kernel = 2 + add_interval;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
                     }
                     else if(grid == 1)
                     {
                         if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = 7 + add_interval*2;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
                         else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = 6 + add_interval*2;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
                         else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = 5 + add_interval*2;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
                         else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
-                            Grid_info[t_index].lsf_kernel = 4 + add_interval*2;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
                     }
                     else
                     {
                         if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = 9 + add_interval*3;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
                         else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = 8 + add_interval*3;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
                         else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = 7 + add_interval*3;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
                         else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
-                            Grid_info[t_index].lsf_kernel = 6 + add_interval*3;
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
                     }
                     
                     GMA_double_destroy(A_matrix);
@@ -23776,6 +24293,9 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                     sigma = 999999;
                     *numpts = 0;
                 }
+                
+                p_selected_XY.clear();
+                vector<D3DPOINT>().swap(p_selected_XY);
             }
             else
             {
@@ -23799,13 +24319,29 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
         {
             sigma = 999999;
         }
+        
     }
+    
+    //printf("final_interval\t%d\tfited\t%f\tsigma\t%f\tselected pts\t%d\n",final_interval,*fitted_Z,sigma,*numpts);
+    
+    if(saved_XYZ.size() > 0)
+    {
+        saved_XYZ.clear();
+        vector<D3DPOINT>().swap(saved_XYZ);
+    }
+    
+    
     
     return sigma;
 }
 
 void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, int divide)
 {
+    time_t total_ST = 0, total_ET = 0;
+    double total_gap;
+    
+    total_ST = time(0);
+    
     FILE* pFile_DEM = NULL;
     char str_DEMfile[1000];
     char str_matchfile[1000];
@@ -23956,9 +24492,9 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         Grid_info = (LSFINFO*)calloc(sizeof(LSFINFO),DEM_length);
         
-        for(int count_index = 0 ; count_index < DEM_length; count_index++)
+        for(long int count_index = 0 ; count_index < DEM_length; count_index++)
         {
-            Grid_info[count_index].lsf_std = 0.0;
+            //Grid_info[count_index].lsf_std = FloatToUnsignedChar_lsf(0.0);
             Grid_info[count_index].lsf_kernel = 2;
         }
         
@@ -24001,8 +24537,8 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
             
             printf("End LSF %d\tsigma avg std %f\t%f\n",s_iter,sigma_avg,sigma_std);
             free(seeddem);
-            seeddem = (float*)calloc(sizeof(float),DEM_size.height*DEM_size.width);
-            memcpy(seeddem,smooth_DEM,sizeof(float)*DEM_size.height*DEM_size.width);
+            seeddem = (float*)calloc(sizeof(float),DEM_length);
+            memcpy(seeddem,smooth_DEM,sizeof(float)*DEM_length);
             
             s_iter++;
         }
@@ -24025,6 +24561,11 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         fclose(pFile_DEM);
         
     }
+    
+    total_ET = time(0);
+    
+    total_gap = difftime(total_ET,total_ST);
+    printf("LSF processing time[min] = %5.2f\n",total_gap/60.0);
 }
 
 

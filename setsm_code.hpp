@@ -233,18 +233,21 @@ double SignedCharToDouble_grid(short val);
 short DoubleToSignedChar_voxel(double val);
 double SignedCharToDouble_voxel(short val);
 
+signed char FloatToSignedChar(float val);
+float SignedCharToFloat(signed char val);
+
 double CalMemorySize_Post(CSize DEM_size,CSize Final_DEMsize);
 double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize);
 double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize);
 
 double MergeTiles(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM, CSize Final_DEMsize, double *FinalDEM_boundary);
-double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, float *DEM_ortho, CSize Final_DEMsize, double *FinalDEM_boundary);
+double MergeTiles_Ortho(ProInfo *info, int iter_row_start, int t_col_start, int iter_row_end,int t_col_end, int buffer,int final_iteration, signed char *DEM_ortho, CSize Final_DEMsize, double *FinalDEM_boundary);
 
 double FindNebPts_F_M_IDW(float *input, unsigned char *matching_flag, int row_size, int col_size, double grid, double minX, double minY, double maxX, double maxY, double X, double Y, int *numpts, int row_interval, int col_interval, int ndim1, char* path);
 
 CSize DEM_final_Size(char *save_path, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double *boundary);
 void NNA_M(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start, int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration,int divide,CSize Final_DEMsize, float* DEM_values,float* value, unsigned char* value_pt, double *FinalDEM_boundary);
-void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, float* Ortho_values,float* value, unsigned char* value_pt,CSize Final_DEMsize, double* FinalDEM_boundary);
+void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outputpath_name, char *iterfile, char *iterorthofile, int row_start, int col_start,int row_end, int col_end, double grid_resolution, double mt_grid_resolution, int buffer_clip, int Hemisphere,int final_iteration, int divide, signed char* Ortho_values,float* value, unsigned char* value_pt,CSize Final_DEMsize, double* FinalDEM_boundary);
 void Envihdr_writer(TransParam _param,char *filename, int col_size, int row_size, double grid_size, double minX, double maxY, int NS_flag, int data_type);
 CSize Envihdr_reader(char *filename);
 CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, double *maxY, double *grid_size);
@@ -288,6 +291,9 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
 float* GetDEMValue(char *GIMP_path,CSize seeddem_size);
 unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size);
 void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem, float *smooth_DEM);
+unsigned char FloatToUnsignedChar_lsf(float val);
+float UnsingedCharToFloat_lsf(float val);
+
 double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSFINFO *Grid_info, float *input, int row_size, int col_size, double grid, long int X, long int Y, long int *numpts, double *fitted_Z);
 void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, int divide);
 GMA_double* GMA_double_create(uint32 size_row, uint32 size_col);

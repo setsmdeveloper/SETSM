@@ -160,7 +160,7 @@ typedef struct tagVoxelinfo
 }VOXEL;
 
 typedef struct LSFinfo{
-    float lsf_std;
+    //unsigned char lsf_std;
     unsigned char lsf_kernel;
 }LSFINFO;
 
