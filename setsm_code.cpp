@@ -698,13 +698,13 @@ int main(int argc,char *argv[])
                     
                     s_iter++;
                 }
+                free(smooth_DEM);
                 
-                
-                memcpy(smooth_DEM,seeddem,sizeof(float)*data_length);
+                //memcpy(smooth_DEM,seeddem,sizeof(float)*data_length);
                 
                 free(Grid_info);
                 
-                WriteGeotiff(smooth_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
+                WriteGeotiff(smooth_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
                 
                 fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
                 
@@ -714,7 +714,7 @@ int main(int argc,char *argv[])
                 
                 //free(matchtag);
                 free(seeddem);
-                free(smooth_DEM);
+                
                 
                 fclose(pFile_DEM);
                 
@@ -24160,11 +24160,12 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
             
             s_iter++;
         }
+        free(smooth_DEM);
         
         free(Grid_info);
         
         //Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
-        WriteGeotiff(DEM_GEOTIFF_filename, smooth_DEM, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
+        WriteGeotiff(DEM_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
         
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         
@@ -24174,7 +24175,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         //free(matchtag);
         free(seeddem);
-        free(smooth_DEM);
+        
         
         fclose(pFile_DEM);
         
