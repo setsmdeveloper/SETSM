@@ -21960,7 +21960,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         free(RPCs);
         free(DEM_value);
         
-        WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, Hemisphere, 12);
+        WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, _param.bHemisphere, 12);
         free(result_ortho);
         
         ET = time(0);
