@@ -16057,7 +16057,7 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     //double end = omp_get_wtime();
     //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
     
-    std::size_t max_num_tris = 2 * numofpts;
+    std::size_t max_num_tris = 4 * numofpts;
     printf("GridPoint = %d\n",max_num_tris);
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     printf("s3-1\n");
@@ -16292,7 +16292,7 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     //double end = omp_get_wtime();
     //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
     
-    std::size_t max_num_tris = 2 * numofpts;
+    std::size_t max_num_tris = 4 * numofpts;
     GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     *count_tri = (int)(oldTri->GetAllTris(tris));
     for (std::size_t t = 0; t < *count_tri; t++)
