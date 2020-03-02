@@ -20612,6 +20612,8 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
     memcpy(t_value_orthoncc,Ortho_values,sizeof(signed char)*(long)col_count*(long)row_count);
     memcpy(t_value_pt,value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
     
+    unsigned char *matchtag_check = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
+    
     int iter_check = 0;
     int check_size = 0;
     int max_total_iteration = 3;
@@ -20629,9 +20631,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
     {
         check_while = 0;
         check_size = total_iteration*grid_rate;
-        
+        iter_check = 0;
         //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
-        int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+        //int total_size;// = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
         while(check_while == 0)
         {
             iter_check ++;
@@ -20645,6 +20647,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                 int row, col;
                 
                 long count_cell;
+                long count_matched_cell;
+                long null_cell;
+                
                 int t_i, t_j;
                 int count1 = 0;
                 int count2 = 0;
@@ -20656,13 +20661,17 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                 
                 row = (int)(floor(index/col_count));
                 col = index%col_count;
+                long int grid_pos = (long)row*(long)col_count + (long)col;
                 
-                
-                if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                if (value_pt[grid_pos] == 0 && value[grid_pos] > -100 && !matchtag_check[grid_pos])
                 {
+                    count_matched_cell = 0;
                     count_cell = 0;
+                    null_cell = 0;
+                    
                     sum_h = 0;
                     sum_ortho = 0;
+                    int total_size = 0;
                     
                     for (t_i = -check_size; t_i <= check_size;t_i+=grid_rate )
                     {
@@ -20679,14 +20688,22 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                                     sum_ortho += SignedCharToFloat(Ortho_values[t_index]);
                                     count_cell++;
                                 }
+                                
+                                if(value_pt[t_index] == 0)
+                                    count_matched_cell++;
+                                
+                                total_size++;
                             }
                         }
                     }
                     
+                    if(count_matched_cell == total_size)
+                        matchtag_check[grid_pos] = true;
+                    
                     if (count_cell >= 7 && count_cell >= total_size*th_rate )
                     {
-                        t_value_orthoncc[(long)row*(long)col_count + (long)col] = FloatToSignedChar(sum_ortho/(double)count_cell);
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                        t_value_orthoncc[grid_pos] = FloatToSignedChar(sum_ortho/(double)count_cell);
+                        t_value_pt[grid_pos] = 1;
                         count_null_cell ++;
                     }
                 }
@@ -20695,14 +20712,17 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
             memcpy(Ortho_values,t_value_orthoncc,sizeof(signed char)*(long)col_count*(long)row_count);
             memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
             
-            if(count_null_cell == 0)
+            if(count_null_cell == 0 || iter_check > 100)
                 check_while = 1;
         }
     }
     
+    free(matchtag_check);
+    
     total_mt_count = 0;
     
-    iter_check = 0;
+    matchtag_check = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
+    
     check_size = 10*grid_rate;
     total_iteration = 0;
     printf("second null\n");
@@ -20710,31 +20730,35 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
     {
         check_while = 0;
         //check_size ++;
+        iter_check = 0;
         while(check_while == 0)
         {
-            iter_check ++;
             printf("2nd null iteration %d\t%d\n",check_size,iter_check);
-            
+            iter_check ++;
             count_null_cell = 0;
             int count_highnull_cell = 0;
-            int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
+            //int total_size = (2*check_size/grid_rate+1)*(2*check_size/grid_rate+1);
 #pragma omp parallel for schedule(guided) reduction(+:count_null_cell,count_highnull_cell)
             for (long index = 0; index < (long)col_count*(long)row_count; index++)
             {
                 int row, col;
-                //long count_cell;
                 int t_i, t_j;
                 double sum_h;
-                //double sum_ortho;
                 
                 int count_low_cell = 0;
                 int count_high_cell = 0;
-                //int count_island_points = 0;
+                
+                int count_matched_cell = 0;
+                int count_unmatched_cell = 0;
+                
+                int total_size = 0;
                 
                 row = (int)(floor(index/col_count));
                 col = index%col_count;
                 
-                if (value_pt[(long)row*(long)col_count + (long)col] == 1 && value[(long)row*(long)col_count + (long)col] > -1000)
+                long int grid_pos = (long)row*(long)col_count + (long)col;
+                
+                if (value_pt[grid_pos] == 1 && value[grid_pos] > -100 && !matchtag_check[grid_pos])
                 {
                     //sum_ortho = 0;
                     //count_cell = 0;
@@ -20751,45 +20775,41 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                             {
                                 if(value_pt[t_index] == 0)
                                 {
-                                    //sum_ortho += Ortho_values[t_index];
-                                    //count_cell++;
-                                    
                                     if(SignedCharToFloat(Ortho_values[t_index]) < 0.0)
                                         count_low_cell++;
                                     else if(SignedCharToFloat(Ortho_values[t_index]) > 0.0)
                                         count_high_cell++;
+                                    
                                 }
                                 
-                                 //DEM island points removeal
-                                 //if(value_pt[t_index] == 0 && value[t_index] <= -1000)
-                                 //count_island_points++;
+                                if(value_pt[t_index] == 1)
+                                    count_matched_cell++;
                                 
+                                total_size++;
                             }
                         }
                     }
                     
-                    //sum_ortho /= (double)count_cell;
-                    
-                    if(count_low_cell >= total_size*0.3)
+                    if(count_matched_cell == total_size)
+                        matchtag_check[grid_pos] = true;
+                    else
                     {
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 0;
-                        count_null_cell ++;
+                        if(count_low_cell >= total_size*0.3)
+                        {
+                            t_value_pt[grid_pos] = 0;
+                            count_null_cell ++;
+                        }
+                        
+                        if(count_high_cell >= total_size*0.5)
+                        {
+                            t_value_pt[grid_pos] = 2;
+                            count_highnull_cell++;
+                        }
                     }
-                    
-                    if(count_high_cell >= total_size*0.5)
-                    {
-                        t_value_pt[(long)row*(long)col_count + (long)col] = 2;
-                        count_highnull_cell++;
-                    }
-                    
-                     //DEM island points removeal
-                     //if (count_island_points >= total_size*0.5)
-                     //value[(long)row*(long)col_count + (long)col] = -9999;
-                    
                 }
             }
             printf("%ld\t%d\n",count_null_cell,count_highnull_cell);
-            if(count_null_cell == 0)
+            if(count_null_cell == 0 || iter_check > 100)
                 check_while = 1;
             
             memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
@@ -20798,6 +20818,7 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
         //total_iteration = total_iteration + 1;
     }
  
+    free(matchtag_check);
     
      #pragma omp parallel for schedule(guided)
      for (long index = 0; index < (long)col_count*(long)row_count; index++)
@@ -20809,12 +20830,13 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
          }
      }
     
+    matchtag_check = (unsigned char*)calloc(sizeof(unsigned char),(long)row_count*(long)col_count);
     
     if(grid_rate > 1)
     {
         printf("last iteration\n");
         
-        iter_check = 0;
+        
         check_size = 0;
         max_total_iteration = 3;
         total_iteration;
@@ -20824,9 +20846,9 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
         {
             check_while = 0;
             check_size = total_iteration;
-            
+            iter_check = 0;
             //double th_std_sum_h = 0.2 - 0.03*(max_total_iteration - total_iteration);
-            int total_size = (2*check_size+1)*(2*check_size+1);
+            //int total_size = (2*check_size+1)*(2*check_size+1);
             while(check_while == 0)
             {
                 iter_check ++;
@@ -20845,16 +20867,14 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                     int t_i, t_j;
                     double sum_h;
                     double sum_ortho;
-                    int count1 = 0;
-                    int count2 = 0;
-                    int count3 = 0;
-                    int count4 = 0;
+                    
+                    int total_size = 0;
                     
                     row = (int)(floor(index/col_count));
                     col = index%col_count;
                     
-                    
-                    if (value_pt[(long)row*(long)col_count + (long)col] == 0 && value[(long)row*(long)col_count + (long)col] > -9999)
+                    long int grid_pos = (long)row*(long)col_count + (long)col;
+                    if (value_pt[grid_pos] == 0 && value[grid_pos] > -100 && !matchtag_check[grid_pos])
                     {
                         count_cell = 0;
                         sum_h = 0;
@@ -20876,37 +20896,36 @@ void NNA_M_MT(bool check_Matchtag,TransParam _param, char *save_path, char* Outp
                                         count_cell++;
                                     }
                                     
-                                     //DEM island points removeal
-                                     //if(value_pt[t_index] == 0 && value[t_index] <= -1000)
-                                     //count_island_points++;
+                                    if(value_pt[t_index] == 0)
+                                        count_all_cell++;
                                     
+                                    total_size++;
                                 }
                             }
                         }
                         
+                        if(count_all_cell == total_size)
+                            matchtag_check[grid_pos] = true;
+                        
                         if (count_cell >= total_size*th_rate )
                         {
-                            t_value_orthoncc[(long)row*(long)col_count + (long)col] = FloatToSignedChar(sum_ortho/(double)count_cell);
+                            t_value_orthoncc[grid_pos] = FloatToSignedChar(sum_ortho/(double)count_cell);
                             
-                            t_value_pt[(long)row*(long)col_count + (long)col] = 1;
+                            t_value_pt[grid_pos] = 1;
                             
                             count_null_cell ++;
                         }
-                        
-                         //DEM island points removeal
-                         //if (count_island_points >= total_size*0.5)
-                         //value[(long)row*(long)col_count + (long)col] = -9999;
-                        
                     }
                 }
                 memcpy(Ortho_values,t_value_orthoncc,sizeof(signed char)*(long)col_count*(long)row_count);
                 memcpy(value_pt,t_value_pt,sizeof(unsigned char)*(long)col_count*(long)row_count);
                 
-                if(count_null_cell == 0)
+                if(count_null_cell == 0 || iter_check > 100)
                     check_while = 1;
             }
         }
     }
+    free(matchtag_check);
     
     free(t_value_orthoncc);
     free(Ortho_values);
