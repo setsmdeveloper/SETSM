@@ -27,6 +27,7 @@ typedef int INDEX;
 typedef struct GridPoint GridPoint;
 typedef struct Edge Edge;
 typedef struct ExtremeEdges ExtremeEdges;
+typedef struct Tri Tri;
 
 /*************************************************
  *************************************************
@@ -52,6 +53,14 @@ inline bool LessThanYX(const GridPoint &a, const GridPoint &b) { return (a.row <
 inline GridPoint Convert(std::size_t index, INDEX width) { GridPoint p = { (int)(index / width), (int)(index % width) }; return p; }
 inline std::size_t Convert(const GridPoint &p, INDEX width) { return p.row * width + p.col; }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct Tri
+{
+	GridPoint pts[3];
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Data structure for (half-)edge in grid

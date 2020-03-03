@@ -110,7 +110,7 @@ class Grid
 		// Fills list with triangles of current triangulation
 		//   tris - already created list to store tris. should be
 		//     at least 2*num_points long
-		std::size_t GetAllTris(GridPoint tris[][3]);
+		std::size_t GetAllTris(std::vector<Tri> *tris);
 		std::size_t NumOfPts() { return this->grid->NumOfElems(); }
 
 		// Iterators over both

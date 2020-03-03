@@ -16057,38 +16057,51 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     //double end = omp_get_wtime();
     //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
     
-    std::size_t max_num_tris = 4 * numofpts;
-    printf("GridPoint = %d\n",max_num_tris);
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    //std::size_t max_num_tris = 4 * numofpts;
+    //printf("GridPoint = %d\n",max_num_tris);
+    //GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
     printf("s3-1\n");
-    *count_tri = (int)(triangulation->GetAllTris(tris));
+    //*count_tri = (int)(triangulation->GetAllTris(tris));
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
     printf("count tri = %d\n",*count_tri);
-    for (std::size_t t = 0; t < *count_tri; t++)
+    //for (std::size_t t = 0; t < *count_tri; t++)
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = tris[t][0].row;
-        col = tris[t][0].col;
-        //trilists[t].m_X = index_in_ptslists[row * width + col];
+        //row = tris[t][0].row;
+        //col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
+
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = tris[t][1].row;
-        col = tris[t][1].col;
-        //trilists[t].m_Y = index_in_ptslists[row * width + col];
+        //row = tris[t][1].row;
+        //col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
+
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
-        //trilists[t].m_Z = index_in_ptslists[row * width + col];
+        //row = tris[t][2].row;
+        //col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
+
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
-        
+        t++;
         
     }
     printf("s4\n");
-    delete [] tris;
+    //delete [] tris;
+    tris.clear();
+    vector<Tri>().swap(tris);
     delete [] points_ptrs;
     delete [] grid_points;
     
@@ -16136,44 +16149,61 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
 
     FullTriangulation *triangulation = new FullTriangulation(width, height);
-	//double begin = omp_get_wtime();
+    //double begin = omp_get_wtime();
     printf("done s3\n");
     triangulation->Triangulate(points_ptrs, numofpts);
     printf("done triangulation\n");
-	//double end = omp_get_wtime();
-	//printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
+    //double end = omp_get_wtime();
+    //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
 
-    std::size_t max_num_tris = 2 * numofpts;
-    printf("GridPoint = %d\n",max_num_tris);
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    //std::size_t max_num_tris = 2 * numofpts;
+    //printf("GridPoint = %d\n",max_num_tris);
+    //GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
     printf("s3-1\n");
-    *count_tri = (int)(triangulation->GetAllTris(tris));
+    //*count_tri = (int)(triangulation->GetAllTris(tris));
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
     printf("count tri = %d\n",*count_tri);
-    for (std::size_t t = 0; t < *count_tri; t++)
+    //for (std::size_t t = 0; t < *count_tri; t++)
+    size_t t=0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
 
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        //row = tris[t][0].row;
+        //col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
+
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        //row = tris[t][1].row;
+        //col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
+
         trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        //row = tris[t][2].row;
+        //col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
+
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+        t++;
     }
     printf("s4\n");
-    delete [] tris;
+    //delete [] tris;
+    tris.clear();
+    vector<Tri>().swap(tris);
     delete [] points_ptrs;
     delete [] grid_points;
     
     printf("s5\n");
     return triangulation;
 }
-
+/*
 FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution)
 {
     if (numofpts <= 2) {
@@ -16251,7 +16281,7 @@ FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT*
     printf("s5\n");
     return triangulation;
 }
-
+*/
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
 {
     
@@ -16292,33 +16322,46 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     //double end = omp_get_wtime();
     //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
     
-    std::size_t max_num_tris = 4 * numofpts;
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
-    *count_tri = (int)(oldTri->GetAllTris(tris));
-    for (std::size_t t = 0; t < *count_tri; t++)
+    //std::size_t max_num_tris = 4 * numofpts;
+    //GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    //*count_tri = (int)(oldTri->GetAllTris(tris));
+    //for (std::size_t t = 0; t < *count_tri; t++)
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    *count_tri = (int)(oldTri->GetAllTris(&tris));
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = tris[t][0].row;
-        col = tris[t][0].col;
-        
-        //trilists[t].m_X = index_in_ptslists[row * width + col];
+        //row = tris[t][0].row;
+        //col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
+
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = tris[t][1].row;
-        col = tris[t][1].col;
-        //trilists[t].m_Y = index_in_ptslists[row * width + col];
+        //row = tris[t][1].row;
+        //col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
+
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
-        //trilists[t].m_Z = index_in_ptslists[row * width + col];
+        //row = tris[t][2].row;
+        //col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
+
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
+        t++;
     }
-    delete [] tris;
+    //delete [] tris;
+    tris.clear();
+    vector<Tri>().swap(tris);
     delete [] blunder_ptrs;
     delete [] grid_blunders;
 }
@@ -16341,8 +16384,8 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     {
         //index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
         INDEX col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
-	INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
-	index_in_ptslists[row * width + col] = t;
+    INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+    index_in_ptslists[row * width + col] = t;
     }
 
     GridPoint *grid_blunders = new GridPoint[numblunders];
@@ -16356,34 +16399,50 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     #pragma omp parallel for
     for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     
-	//double begin = omp_get_wtime();
+    //double begin = omp_get_wtime();
 
     oldTri->Retriangulate(blunder_ptrs, numblunders);
 
-	//double end = omp_get_wtime();
-	//printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+    //double end = omp_get_wtime();
+    //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
 
-    std::size_t max_num_tris = 2 * numofpts;
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
-    *count_tri = (int)(oldTri->GetAllTris(tris));
-    for (std::size_t t = 0; t < *count_tri; t++)
-    {	
+    //std::size_t max_num_tris = 2 * numofpts;
+    //GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    //*count_tri = (int)(oldTri->GetAllTris(tris));
+    //for (std::size_t t = 0; t < *count_tri; t++)
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    *count_tri = (int)(oldTri->GetAllTris(&tris));
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
+    {
         int row, col;
 
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        //row = tris[t][0].row;
+        //col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
 
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        //row = tris[t][1].row;
+        //col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
+
         trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        //row = tris[t][2].row;
+        //col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
+
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+        t++;
     }
-    delete [] tris;
+    //delete [] tris;
+    tris.clear();
+    vector<Tri>().swap(tris);
     delete [] blunder_ptrs;
     delete [] grid_blunders;
 }
