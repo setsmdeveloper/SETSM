@@ -13,10 +13,8 @@ Grid<GridType, IterType>::~Grid()
 }
 
 template <typename GridType, typename IterType>
-std::size_t Grid<GridType, IterType>::GetAllTris(GridPoint tris[][3])
+std::size_t Grid<GridType, IterType>::GetAllTris(std::vector<Tri> *tris)
 {
-	std::size_t idx = 0;
-	
 	// Loop over all points in triangulation, collecting adjacent triangles
 	// To prevent 'over-counting' only collect triangle from its smallest vertex
 	// Should be able to be parallelized, but haven't yet found a good one. 
@@ -39,16 +37,17 @@ std::size_t Grid<GridType, IterType>::GetAllTris(GridPoint tris[][3])
 				GridPoint *points = *t_it;
 				if (LessThanXY(points[0], points[1]) && LessThanXY(points[0], points[2]))
 				{
-					tris[idx][0] = points[0];
-					tris[idx][1] = points[1];
-					tris[idx][2] = points[2];
-					idx++;
+					Tri temp_tri;
+					temp_tri.pts[0] = points[0];
+					temp_tri.pts[1] = points[1];
+					temp_tri.pts[2] = points[2];
+					tris->push_back(temp_tri);
 				}
 			}
 		}
 	}
 
-	return idx;
+	return tris->size();
 }
 
 template class Grid<SparseGrid, SparsePointIter>;

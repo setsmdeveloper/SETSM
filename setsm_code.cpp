@@ -16,7 +16,7 @@
 
 #include "setsm_code.hpp"
 
-#include"grid_triangulation.hpp"
+#include "grid_triangulation.hpp"
 
 #include "math.h"
 #include <cmath>
@@ -25,6 +25,7 @@
 #include <dirent.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include <array>
 #include "setsmgeo.hpp"
 #include <syslog.h>
 #include <unistd.h>
@@ -16057,38 +16058,39 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     //double end = omp_get_wtime();
     //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
     
-    std::size_t max_num_tris = 2 * numofpts;
-    printf("GridPoint = %d\n",max_num_tris);
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
     printf("s3-1\n");
-    *count_tri = (int)(triangulation->GetAllTris(tris));
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
     printf("count tri = %d\n",*count_tri);
-    for (std::size_t t = 0; t < *count_tri; t++)
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
         //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
         //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
         //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
+        t++;
         
         
     }
     printf("s4\n");
-    delete [] tris;
+    //delete [] tris;
     delete [] points_ptrs;
     delete [] grid_points;
     
@@ -16143,30 +16145,30 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
 	//double end = omp_get_wtime();
 	//printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
 
-    std::size_t max_num_tris = 2 * numofpts;
-    printf("GridPoint = %d\n",max_num_tris);
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
     printf("s3-1\n");
-    *count_tri = (int)(triangulation->GetAllTris(tris));
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
     printf("count tri = %d\n",*count_tri);
-    for (std::size_t t = 0; t < *count_tri; t++)
+    size_t t=0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
 
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
         trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+        t++;
     }
     printf("s4\n");
-    delete [] tris;
     delete [] points_ptrs;
     delete [] grid_points;
     
@@ -16221,30 +16223,30 @@ FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT*
     //double end = omp_get_wtime();
     //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
 
-    std::size_t max_num_tris = 2 * numofpts;
-    printf("GridPoint = %d\n",max_num_tris);
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
     printf("s3-1\n");
-    *count_tri = (int)(triangulation->GetAllTris(tris));
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
     printf("count tri = %d\n",*count_tri);
-    for (std::size_t t = 0; t < *count_tri; t++)
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
 
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
         trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+        t++;
     }
     printf("s4\n");
-    delete [] tris;
     delete [] points_ptrs;
     delete [] grid_points;
     
@@ -16292,33 +16294,34 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     //double end = omp_get_wtime();
     //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
     
-    std::size_t max_num_tris = 2 * numofpts;
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
-    *count_tri = (int)(oldTri->GetAllTris(tris));
-    for (std::size_t t = 0; t < *count_tri; t++)
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    *count_tri = (int)(oldTri->GetAllTris(&tris));
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
         
         //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
         //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
         //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
+        t++;
     }
-    delete [] tris;
     delete [] blunder_ptrs;
     delete [] grid_blunders;
 }
@@ -16363,27 +16366,28 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
 	//double end = omp_get_wtime();
 	//printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
 
-    std::size_t max_num_tris = 2 * numofpts;
-    GridPoint (*tris)[3] = new GridPoint[max_num_tris][3];
-    *count_tri = (int)(oldTri->GetAllTris(tris));
-    for (std::size_t t = 0; t < *count_tri; t++)
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    *count_tri = (int)(oldTri->GetAllTris(&tris));
+    std::size_t t = 0;
+    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {	
         int row, col;
 
-        row = tris[t][0].row;
-        col = tris[t][0].col;
+        row = it_tr->pts[0].row;
+        col = it_tr->pts[0].col;
 
         trilists[t].m_X = index_in_ptslists[row * width + col];
 
-        row = tris[t][1].row;
-        col = tris[t][1].col;
+        row = it_tr->pts[1].row;
+        col = it_tr->pts[1].col;
         trilists[t].m_Y = index_in_ptslists[row * width + col];
         
-        row = tris[t][2].row;
-        col = tris[t][2].col;
+        row = it_tr->pts[2].row;
+        col = it_tr->pts[2].col;
         trilists[t].m_Z = index_in_ptslists[row * width + col];
+        t++;
     }
-    delete [] tris;
     delete [] blunder_ptrs;
     delete [] grid_blunders;
 }
@@ -18967,23 +18971,35 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 //calculation image coord from object coord by RFM in left and right image
                 b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
                 Half_template_size   = (int)(Template_size/2.0);
-				int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
+                int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-#pragma omp parallel shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh)
-				{
-				// Make patch vectors thread private rather than private to each loop iteration
-				// These are used by postNCC but allocated here for efficiency
-				double *left_patch_vecs[3];
-				double *right_patch_vecs[3];
-				for (int k=0; k<3; k++)
-				{
-					left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-					right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-				}
+                std::array<double*, 3>* left_patch_vecs_array;
+                std::array<double*, 3>* right_patch_vecs_array;
 
-#pragma omp for schedule(guided) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA,_flag,patch_size,reference_id,ti,LImagesize,Images,bin_angle) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+                {
+
+#pragma omp single
+                {
+                    // Make patch vectors thread private rather than private to each loop iteration
+                    // These are used by postNCC but allocated here for efficiency
+                    left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
+                    right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
+                    for (int th=0; th<omp_get_num_threads(); th++) {
+                        for (int k=0; k<3; k++)
+                        {
+                            left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
+                            right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
+                        }
+                    }
+                }
+
+#pragma omp for schedule(guided)
                 for(i = 0; i<NumofPts ; i++)
                 {
+                    double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
+                    double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
+
                     D2DPOINT Left_Imagecoord,Left_Imagecoord_p;
                     
                     Left_Imagecoord_p   = GetObjectToImageRPC_single(RPCs[reference_id],2,left_IA,Coord[i]);
@@ -19028,17 +19044,23 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                             }
                         }
                     }
-				} // end omp for
+                } // end omp for
 
-				// free thread-private vectors
-				for (int k=0; k<3; k++)
-				{
-					free(left_patch_vecs[k]);
-					free(right_patch_vecs[k]);
-				}
-				} // end omp parallel
+#pragma omp single
+                {
+                    // free thread-private vectors
+                    for (int th=0; th<omp_get_num_threads(); th++) {
+                        for (int k=0; k<3; k++)
+                        {
+                            free(left_patch_vecs_array[th][k]);
+                            free(right_patch_vecs_array[th][k]);
+                        }
+                    }
+                    delete[] left_patch_vecs_array;
+                    delete[] right_patch_vecs_array;
+                }
 
-                
+                } // end omp parallel
 
                 if(count_pts > 10)
                 {
@@ -19127,9 +19149,9 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
     
     diff_theta = Ori_diff;
 
-    double *result_rho  = (double*)calloc(9,sizeof(double));
-    double *XX          = (double*)calloc(6,sizeof(double));
-    double *ATLT        = (double*)calloc(6,sizeof(double));
+    double result_rho[9]  = {};
+    double XX[6]          = {};
+    double ATLT[6]        = {};
     int i, j, k;
     uint8 cell_count = 0;
 
@@ -19324,9 +19346,6 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
             }
         }
     }
-    free(result_rho);
-    free(ATLT);
-    free(XX);
 
     if(check_pt)
     {

@@ -68,7 +68,7 @@ class GridTriangulation
 		void TriangulateBorder(Edge& e, const GridPoint& p);
 		void RemovePointAndRetriangulate(const GridPoint &p);
 
-		std::size_t GetAllTris(GridPoint tris[][3])
+		std::size_t GetAllTris(std::vector<Tri> *tris)
 		{
 			if (this->grid->NumOfPts() < 3)
 			{

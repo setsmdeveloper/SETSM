@@ -233,7 +233,7 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::TriangulateHorizontalThread
 	// Partition lexicographically (compare x/col, then y/row)
 	// on median of the list
 	size_t median = num_points / 2;
-	std::nth_element(points, points + median, points + num_points, LessThanPtrXY);	
+	std::sort(points, points + num_points, LessThanPtrXY);	
 
 	// Perform recursive triangulations of list halves
 	// Note alternating direction of cuts for better expected runtime
@@ -338,7 +338,7 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::TriangulateVerticalThreaded
 	// Partition (compare y/row, then -x/col) points on
 	// median of the list
 	size_t median = num_points / 2;
-	std::nth_element(points, points + median, points + num_points, LessThanPtrYX);
+	std::sort(points, points + num_points, LessThanPtrYX);
 
 	// Perform recursive triangulations of list halves
 	// Note alternating direction of cuts for better expected runtime
@@ -439,7 +439,7 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::TriangulateHorizontalSerial
 	// Partition lexicographically (compare x/col, then y/row)
 	// on median of the list
 	size_t median = num_points / 2;
-	std::nth_element(points, points + median, points + num_points, LessThanPtrXY);	
+	std::sort(points, points + num_points, LessThanPtrXY);	
 
 	// Perform recursive triangulations of list halves
 	// Note alternating direction of cuts for better expected runtime
@@ -522,7 +522,7 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::TriangulateVerticalSerial(G
 	// Partition (compare y/row, then -x/col) points on
 	// median of the list
 	size_t median = num_points / 2;
-	std::nth_element(points, points + median, points + num_points, LessThanPtrYX);
+	std::sort(points, points + num_points, LessThanPtrYX);
 
 	// Perform recursive triangulations of list halves
 	// Note alternating direction of cuts for better expected runtime
@@ -628,7 +628,6 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::Triangulate3(GridPoint *poi
 	ExtremeEdges *ex = new ExtremeEdges();
 
 	// Sort points lexicographically (compare x/col, then y/row)
-	//std::nth_element(points, points + 1, points + 3, LessThanPtrXY);
 	std::sort(points, points + 3, LessThanPtrXY);
 	GridPoint a = *(points[0]);
 	GridPoint b = *(points[1]);
@@ -664,7 +663,6 @@ ExtremeEdges *GridTriangulation<GridType, IterType>::Triangulate3(GridPoint *poi
 	}
 
 	// Sort points (compare y/row, -x/col)
-	//std::nth_element(points, points + 1, points + 3, LessThanPtrYX);
 	std::sort(points, points + 3, LessThanPtrYX);
 	a = *(points[0]);
 	b = *(points[1]);
@@ -721,7 +719,7 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 	{
 		//Split blunders in half. Will be sorted into three sets: top and bottom portion (Unlinkeds), and middle (Linked).
 		int med = blunders.size()/2;
-		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrYX);
+		std::sort(blunders.begin(), blunders.end(), LessThanPtrYX);
 		int len1 = 0;
 		int len2 = 0;
 		int linked_len = 0;
@@ -823,7 +821,7 @@ void GridTriangulation<GridType, IterType>::RetriangulateHorizontal(std::vector<
 	{
 		//Same as vertical split except now there are left and right portions (Unlinked) as well as a middle portion (Linked).
 		int med = blunders.size()/2;
-		std::nth_element(blunders.begin(), blunders.begin()+med, blunders.end(), LessThanPtrXY);
+		std::sort(blunders.begin(), blunders.end(), LessThanPtrXY);
 		std::vector<GridPoint*> Unlinked1;
 		Unlinked1.reserve(med);
 		std::vector<GridPoint*> Unlinked2;
