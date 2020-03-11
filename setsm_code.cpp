@@ -40,7 +40,7 @@ const char setsm_version[] = "4.2.0";
 
 //const double RA_resolution = 16;
 
-char *dirname(char *path);
+//char *dirname_n(char *path);
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
@@ -133,7 +133,7 @@ int main(int argc,char *argv[])
     args.System_memory = 50.0; //default system memory
     
     int DEM_divide = 0;
-    double **Imageparams;
+    double **Imageparams = NULL;
     
     /*CSize DEM_size;
     DEM_size.width = 40000;
@@ -592,7 +592,7 @@ int main(int argc,char *argv[])
                     if(seeddem[i] > -100)
                         matchtag[i] = 1;
                 }
-                /*
+                
                 FILE* pDEMheader = fopen(str_matchfile,"r");
                 if(pDEMheader)
                 {
@@ -1687,7 +1687,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             {
                 TransParam param;
                 double ***RPCs, minLat, minLon;
-                double **Imageparams;
+                //double **Imageparams;
                 char DEMFilename[500];
                 char Outputpath[500];
                 bool Hemisphere;
@@ -7302,9 +7302,9 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
                     else
                     {
                        
+#pragma omp parallel for private(i,j) schedule(guided)
                         for (i=0;i<tileL;i++)
                         {
-#pragma omp parallel for private(i,j) schedule(guided)
                             for (j=0;j<tileW;j++)
                             {
                                 int t_row = (row*tileL) + i;
@@ -7591,9 +7591,9 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
                     }
                     else
                     {
+#pragma omp parallel for private(i,j) schedule(guided)
                         for (i=0;i<tileL;i++)
                         {
-#pragma omp parallel for private(i,j) schedule(guided)
                             for (j=0;j<tileW;j++)
                             {
                                 int t_row = (row*tileL) + i;
@@ -18818,7 +18818,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     outINCC = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/GNCC_level_%d_%d_%d_iter_%d.txt",save_path,row,col,level,iteration);
     outGNCC = fopen(t_str,"w");
-    /*
+    
     sprintf(t_str,"%s/txt/rohcount_level_%d_%d_%d_iter_%d.txt",save_path,row,col,level,iteration);
     outcount    = fopen(t_str,"w");
     */
@@ -23322,7 +23322,7 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
     double sigma2_sum = 0;
     long int data_length = (long int)seeddem_size.width*(long int)seeddem_size.height;
     //float *temp_sigma = (float*)malloc(sizeof(float)*data_length);
-    double sum_fitted_Z = 0;
+    //double sum_fitted_Z = 0;
     
     printf("sigma_th = %f\tMPP %f\n",sigma_th,MPP_stereo_angle);
     int row_interval = 20;
@@ -23341,68 +23341,76 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
         long int row_start = 0;
         long int row_end = data_length;
         
-#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sum_fitted_Z, sigma2_sum)// private (row_start,row_end)
+#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sigma2_sum)// private (row_start,row_end)
         for(long int iter_count = row_start ; iter_count < row_end ; iter_count++)
             //for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
-        {
-            long int pts_row = (long int)(floor(iter_count/(long int)seeddem_size.width));
-            long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
-            double fitted_Z = seeddem[iter_count];
-            float sigma;
-            long int selected_count;
-            
-            if(seeddem[iter_count] > -50)
-            {
-                sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
-                
-                double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
-                
-                //Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
-                
-                if(check_smooth_iter)
-                {
-                    if(sigma < 20 && sigma > 0 && selected_count > 6)
-                    {
-                        smooth_DEM[iter_count] = fitted_Z;
-                        sum_fitted_Z += fitted_Z;
-                        total_selected_points++;
-                        sigma_sum += sigma;
-                        sigma2_sum += (sigma*sigma);
-                        //temp_sigma[iter_count] = sigma;
-                        
-                        //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-                    }
-                    else
-                    {
-                        smooth_DEM[iter_count] = seeddem[iter_count];
-                        //temp_sigma[iter_count] = -9999;
-                    }
-                }
-                else
-                {
-                    if(sigma < 20 && sigma > 0 && selected_count > 6)
-                    {
-                        smooth_DEM[iter_count] = fitted_Z;
-                        sum_fitted_Z += fitted_Z;
-                        total_selected_points++;
-                        sigma_sum += sigma;
-                        sigma2_sum += (sigma*sigma);
-                        //temp_sigma[iter_count] = sigma;
-                        //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-                    }
-                    else
-                    {
-                        smooth_DEM[iter_count] = seeddem[iter_count];
-                        //temp_sigma[iter_count] = -9999;
-                    }
-                }
-            }
-            else
-            {
-                smooth_DEM[iter_count] = seeddem[iter_count];
-                //temp_sigma[iter_count] = -9999;
-            }
-        }
+		{
+			long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
+			long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
+			double fitted_Z = seeddem[iter_count];
+			float sigma;
+			long int selected_count;
+
+			if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
+			{
+				//if(!check_smooth_iter)
+				//	printf("pts_pos %d\t%d\t%d\n",pts_row,pts_col,iter_count);
+
+				if(seeddem[iter_count] > -50 && seeddem[iter_count] < 10000)
+				{
+					sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
+					//if(!check_smooth_iter)
+					//	printf("sigma %f\t%f\n",sigma,fitted_Z);
+
+					double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
+
+					//Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
+
+					if(check_smooth_iter)
+					{
+						if(sigma < 20 && sigma > 0 && selected_count > 6)
+						{
+							smooth_DEM[iter_count] = fitted_Z;
+							//sum_fitted_Z += fitted_Z;
+							total_selected_points++;
+							sigma_sum += sigma;
+							sigma2_sum += (sigma*sigma);
+							//temp_sigma[iter_count] = sigma;
+
+							//printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
+						}
+						else
+						{
+							smooth_DEM[iter_count] = seeddem[iter_count];
+							//temp_sigma[iter_count] = -9999;
+						}
+					}
+					else
+					{
+						if(sigma < 20 && sigma > 0 && selected_count > 6)
+						{
+							smooth_DEM[iter_count] = fitted_Z;
+							//sum_fitted_Z += fitted_Z;
+							total_selected_points++;
+							sigma_sum += sigma;
+							sigma2_sum += (sigma*sigma);
+							//temp_sigma[iter_count] = sigma;
+							//printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
+						}
+						else
+						{
+							smooth_DEM[iter_count] = seeddem[iter_count];
+							//temp_sigma[iter_count] = -9999;
+						}
+					}
+				}
+				else
+				{
+					smooth_DEM[iter_count] = seeddem[iter_count];
+					//temp_sigma[iter_count] = -9999;
+				}
+			}
+		}
         printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     }
     
@@ -23653,333 +23661,340 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
             GMA_double_mul(A_matrix,X_matrix,AX_matrix);
             GMA_double_sub(AX_matrix,L_matrix,V_matrix);
             
-            double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
-            
-            if(plane_Z > -100 && plane_Z < 15000)
-            {
-                double N1 = X_matrix->val[0][0];
-                double N2 = X_matrix->val[1][0];
-                double N3 = 1.0;
-                
-                double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-                double angle = acos(fabs(N3)/norm)*180/3.141592;
-                
-                if(angle <= 0 && angle >= -90)
-                    angle = fabs(angle);
-                else if(angle <= -270 && angle >= -360)
-                    angle = 360 + angle;
-                else if(angle >= 270 && angle <= 360)
-                    angle = 360 - angle;
-                
-                
-                //printf("vector %f\t%f\t%f\t norm %f\tangle %f\n",N1,N2,N3,norm,angle);
-                
-                double sum = 0;
-                double min_Z = 99999999999;
-                double max_Z = -99999999999;
-                double temp_fitted_Z;
-                double diff_Z;
-                long int selected_count = 0;
-                long int hist[20] = {0};
-                for(row = 0; row < *numpts ; row++)
-                {
-                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
-                    if(hist_index > 19)
-                        hist_index = 19;
-                    if(hist_index >= 0 && hist_index <= 19)
-                        hist[hist_index]++;
-                }
-                
-                int V_th = 20;
-                int hist_sum = 0;
-                double hist_rate;
-                bool check_V = true;
-                row = 0;
-                while(check_V && row < 20)
-                {
-                    hist_sum += hist[row];
-                    hist_rate = (double)hist_sum/(double)(*numpts);
-                    if(hist_rate > hist_th)// && hist_sum > 6)
-                    {
-                        V_th = row;
-                        check_V = false;
-                    }
-                    row++;
-                }
-                
-                for(row = 0; row < *numpts ; row++)
-                {
-                    if(std::abs(V_matrix->val[row][0]) >= V_th+1)
-                        XY_save[row].flag = 0;
-                    else
-                    {
-                        selected_count++;
-                    }
-                }
-                
-                GMA_double_destroy(A_matrix);
-                GMA_double_destroy(L_matrix);
-                GMA_double_destroy(AT_matrix);
-                GMA_double_destroy(ATA_matrix);
-                GMA_double_destroy(ATAI_matrix);
-                GMA_double_destroy(ATL_matrix);
-                GMA_double_destroy(X_matrix);
-                GMA_double_destroy(AX_matrix);
-                GMA_double_destroy(V_matrix);
-                
-                if(selected_count > 15)
-                {
-                    A_matrix = GMA_double_create(selected_count, 6);
-                    L_matrix = GMA_double_create(selected_count, 1);
-                    AT_matrix = GMA_double_create(6,selected_count);
-                    ATA_matrix = GMA_double_create(6,6);
-                    
-                    ATAI_matrix = GMA_double_create(6,6);
-                    ATL_matrix = GMA_double_create(6,1);
-                    
-                    X_matrix = GMA_double_create(6,1);
-                    AX_matrix = GMA_double_create(selected_count,1);
-                    V_matrix = GMA_double_create(selected_count,1);
-                    
-                    count = 0;
-            
-                    for(row = 0; row < *numpts ; row++)
-                    {
-                        if(XY_save[row].flag == 1)
-                        {
-                            A_matrix->val[count][0] = XY_save[row].m_X*XY_save[row].m_X;
-                            A_matrix->val[count][1] = XY_save[row].m_X*XY_save[row].m_Y;
-                            A_matrix->val[count][2] = XY_save[row].m_Y*XY_save[row].m_Y;
-                            A_matrix->val[count][3] = XY_save[row].m_X;
-                            A_matrix->val[count][4] = XY_save[row].m_Y;
-                            A_matrix->val[count][5] = 1.0;
-                            
-                            L_matrix->val[count][0] = XY_save[row].m_Z;
-                            count++;
-                        }
-                    }
-                    
-                    GMA_double_Tran(A_matrix,AT_matrix);
-                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                    GMA_double_inv(ATA_matrix,ATAI_matrix);
-                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                    
-                    //*numpts = selected_count;
-                    
-                    sum = 0;
-                    min_Z = 99999999999;
-                    max_Z = -99999999999;
-                    count = 0;
-                    for(row = 0; row < *numpts ; row++)
-                    {
-                        if(XY_save[row].flag == 1)
-                        {
-                            sum += V_matrix->val[count][0] * V_matrix->val[count][0];
-                            
-                            
-                            temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
-                            X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
-                            
-                            if(min_Z > temp_fitted_Z)
-                                min_Z = temp_fitted_Z;
-                            if(max_Z < temp_fitted_Z)
-                                max_Z = temp_fitted_Z;
-                            
-                            count++;
-                        }
-                    }
-                    
-                    if(sum > 0 && *numpts > 15 && !isnan(sum))
-                    {
-                        sigma = sqrt(sum/(double)(*numpts));
-                    
-                        if(isnan(sigma))
-                        {
-                            printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
-                            
-                            count = 0;
-                            for(row = 0; row < *numpts ; row++)
-                            {
-                                if(XY_save[row].flag == 1)
-                                {
-                                    double t_sum = V_matrix->val[count][0] * V_matrix->val[count][0];
-                                    
-                                    
-                                    temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
-                                    X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
-                                    
-                                    printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
-                                    
-                                    count++;
-                                }
-                            }
-                            
-                            exit(1);
-                        }
-                    
-                        double diff_Z = fabs(max_Z - min_Z);
-                        
-                        double A = X_matrix->val[0][0];
-                        double B = X_matrix->val[0][2];
-                        double C = X_matrix->val[0][3];
-                        double D = X_matrix->val[0][4];
-                        double E = X_matrix->val[0][1];
-                        
-                        double det = 4*A*B - E*E;
-                        double det1 = D*E - 2*C*B;
-                        double det2 = 2*A*D - C*E;
-                        double xm = -(2*B*C - D*E)/det;
-                        double ym = -(2*A*D - C*E)/det;
-                        double diff_xm = (fabs(xm - X_scaled))/Scale_ptslists*distX_ptslists/grid;
-                        double diff_ym = (fabs(ym - Y_scaled))/Scale_ptslists*distY_ptslists/grid;
-                        
-                        bool check_clinder = false;
-                        if(det == 0 && det1 == det2)
-                            check_clinder = true;
-                        
-                        bool check_center_peak = false;
-                        
-                        if(!check_clinder && !check_center_peak)
-                        {
-                            
-                            *fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[0][1]*X_scaled*Y_scaled + X_matrix->val[0][2]*Y_scaled*Y_scaled +
-                            X_matrix->val[0][3]*X_scaled + X_matrix->val[0][4]*Y_scaled + X_matrix->val[0][5];
-                        }
-                        else
-                        {
-                            double sum_weight = 0;
-                            double sum_weigtdist = 0;
-                            double p = 1.5;
-                            for(row = 0; row < *numpts ; row++)
-                            {
-                                if(XY_save[row].flag == 1)
-                                {
-                                    double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
-                                    sum_weight += (1.0/pow(dist,p));
-                                    sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
-                                }
-                            }
-                            
-                            if(sum_weight > 0)
-                            {
-                                *fitted_Z = sum_weigtdist/sum_weight;
-                                sigma = 1;
-                            }
-                            else
-                                sigma = 999999;
-                        }
-                    }
-                    else
-                    {
-                        
-                        double sum_weight = 0;
-                        double sum_weigtdist = 0;
-                        double p = 1.5;
-                        
-                        for(row = 0; row < *numpts ; row++)
-                        {
-                            if(XY_save[row].flag == 1)
-                            {
-                                double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
-                                sum_weight += (1.0/pow(dist,p));
-                                sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
-                            }
-                        }
-                        
-                        if(sum_weight > 0)
-                        {
-                            *fitted_Z = sum_weigtdist/sum_weight;
-                            sigma = 1;
-                        }
-                        else
-                            sigma = 999999;
-                    }
-                    
-                    if(grid > 2)
-                    {
-                        if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = 4;
-                        else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = 3;
-                        else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = 2;
-                        else if(Grid_info[t_index].lsf_kernel < 2)
-                            Grid_info[t_index].lsf_kernel = 2;
-                    }
-                    else if(grid == 2)
-                    {
-                        if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
-                        else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
-                        else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
-                        else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
-                    }
-                    else if(grid == 1)
-                    {
-                        if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
-                        else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
-                        else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
-                        else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
-                    }
-                    else
-                    {
-                        if(angle < 10)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
-                        else if(angle < 20)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
-                        else if(angle < 30)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
-                        else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
-                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
-                    }
-                    
-                    GMA_double_destroy(A_matrix);
-                    GMA_double_destroy(L_matrix);
-                    GMA_double_destroy(AT_matrix);
-                    GMA_double_destroy(ATA_matrix);
-                    
-                    GMA_double_destroy(ATAI_matrix);
-                    GMA_double_destroy(ATL_matrix);
-                    
-                    GMA_double_destroy(X_matrix);
-                    GMA_double_destroy(AX_matrix);
-                    GMA_double_destroy(V_matrix);
-                    
-                    *numpts = selected_count;
-                }
-                else
-                {
-                    sigma = 999999;
-                    *numpts = 0;
-                }
-            }
-            else
-            {
-                GMA_double_destroy(A_matrix);
-                GMA_double_destroy(L_matrix);
-                GMA_double_destroy(AT_matrix);
-                GMA_double_destroy(ATA_matrix);
-                GMA_double_destroy(ATAI_matrix);
-                GMA_double_destroy(ATL_matrix);
-                GMA_double_destroy(X_matrix);
-                GMA_double_destroy(AX_matrix);
-                GMA_double_destroy(V_matrix);
-                
-                sigma = 999999;
-                *numpts = 0;
-            }
-            
-            free(XY_save);
+			double sum_V = 0;
+			for(row = 0; row < *numpts ; row++)
+				sum_V += V_matrix->val[row][0];
+			
+			if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
+			{
+				double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
+
+				if(plane_Z > -100 && plane_Z < 15000)
+				{
+					double N1 = X_matrix->val[0][0];
+					double N2 = X_matrix->val[1][0];
+					double N3 = 1.0;
+
+					double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+					double angle = acos(fabs(N3)/norm)*180/3.141592;
+
+					if(angle <= 0 && angle >= -90)
+						angle = fabs(angle);
+					else if(angle <= -270 && angle >= -360)
+						angle = 360 + angle;
+					else if(angle >= 270 && angle <= 360)
+						angle = 360 - angle;
+
+
+					//printf("vector %f\t%f\t%f\t norm %f\tangle %f\n",N1,N2,N3,norm,angle);
+
+					double sum = 0;
+					double min_Z = 99999999999;
+					double max_Z = -99999999999;
+					double temp_fitted_Z;
+					double diff_Z;
+					long int selected_count = 0;
+					long int hist[20] = {0};
+					for(row = 0; row < *numpts ; row++)
+					{
+						int hist_index = (int)(std::abs(V_matrix->val[row][0]));
+						if(hist_index > 19)
+							hist_index = 19;
+						if(hist_index >= 0 && hist_index <= 19)
+							hist[hist_index]++;
+					}
+
+					int V_th = 20;
+					int hist_sum = 0;
+					double hist_rate;
+					bool check_V = true;
+					row = 0;
+					while(check_V && row < 20)
+					{
+						hist_sum += hist[row];
+						hist_rate = (double)hist_sum/(double)(*numpts);
+						if(hist_rate > hist_th)// && hist_sum > 6)
+						{
+							V_th = row;
+							check_V = false;
+						}
+						row++;
+					}
+
+					for(row = 0; row < *numpts ; row++)
+					{
+						if(std::abs(V_matrix->val[row][0]) >= V_th+1)
+							XY_save[row].flag = 0;
+						else
+						{
+							selected_count++;
+						}
+					}
+
+					GMA_double_destroy(A_matrix);
+					GMA_double_destroy(L_matrix);
+					GMA_double_destroy(AT_matrix);
+					GMA_double_destroy(ATA_matrix);
+					GMA_double_destroy(ATAI_matrix);
+					GMA_double_destroy(ATL_matrix);
+					GMA_double_destroy(X_matrix);
+					GMA_double_destroy(AX_matrix);
+					GMA_double_destroy(V_matrix);
+
+					if(selected_count > 15)
+					{
+						A_matrix = GMA_double_create(selected_count, 6);
+						L_matrix = GMA_double_create(selected_count, 1);
+						AT_matrix = GMA_double_create(6,selected_count);
+						ATA_matrix = GMA_double_create(6,6);
+
+						ATAI_matrix = GMA_double_create(6,6);
+						ATL_matrix = GMA_double_create(6,1);
+
+						X_matrix = GMA_double_create(6,1);
+						AX_matrix = GMA_double_create(selected_count,1);
+						V_matrix = GMA_double_create(selected_count,1);
+
+						count = 0;
+
+						for(row = 0; row < *numpts ; row++)
+						{
+							if(XY_save[row].flag == 1)
+							{
+								A_matrix->val[count][0] = XY_save[row].m_X*XY_save[row].m_X;
+								A_matrix->val[count][1] = XY_save[row].m_X*XY_save[row].m_Y;
+								A_matrix->val[count][2] = XY_save[row].m_Y*XY_save[row].m_Y;
+								A_matrix->val[count][3] = XY_save[row].m_X;
+								A_matrix->val[count][4] = XY_save[row].m_Y;
+								A_matrix->val[count][5] = 1.0;
+
+								L_matrix->val[count][0] = XY_save[row].m_Z;
+								count++;
+							}
+						}
+
+						GMA_double_Tran(A_matrix,AT_matrix);
+						GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+						GMA_double_inv(ATA_matrix,ATAI_matrix);
+						GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+						GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+						GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+						GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+
+						//*numpts = selected_count;
+
+						sum = 0;
+						min_Z = 99999999999;
+						max_Z = -99999999999;
+						count = 0;
+						for(row = 0; row < *numpts ; row++)
+						{
+							if(XY_save[row].flag == 1)
+							{
+								sum += V_matrix->val[count][0] * V_matrix->val[count][0];
+
+
+								temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
+									X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
+
+								if(min_Z > temp_fitted_Z)
+									min_Z = temp_fitted_Z;
+								if(max_Z < temp_fitted_Z)
+									max_Z = temp_fitted_Z;
+
+								count++;
+							}
+						}
+
+						if(sum > 0 && *numpts > 15 && !isnan(sum))
+						{
+							sigma = sqrt(sum/(double)(*numpts));
+
+							if(isnan(sigma))
+							{
+								printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
+
+								count = 0;
+								for(row = 0; row < *numpts ; row++)
+								{
+									if(XY_save[row].flag == 1)
+									{
+										double t_sum = V_matrix->val[count][0] * V_matrix->val[count][0];
+
+
+										temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
+											X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
+
+										printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
+
+										count++;
+									}
+								}
+
+								exit(1);
+							}
+
+							double diff_Z = fabs(max_Z - min_Z);
+
+							double A = X_matrix->val[0][0];
+							double B = X_matrix->val[0][2];
+							double C = X_matrix->val[0][3];
+							double D = X_matrix->val[0][4];
+							double E = X_matrix->val[0][1];
+
+							double det = 4*A*B - E*E;
+							double det1 = D*E - 2*C*B;
+							double det2 = 2*A*D - C*E;
+							double xm = -(2*B*C - D*E)/det;
+							double ym = -(2*A*D - C*E)/det;
+							double diff_xm = (fabs(xm - X_scaled))/Scale_ptslists*distX_ptslists/grid;
+							double diff_ym = (fabs(ym - Y_scaled))/Scale_ptslists*distY_ptslists/grid;
+
+							bool check_clinder = false;
+							if(det == 0 && det1 == det2)
+								check_clinder = true;
+
+							bool check_center_peak = false;
+
+							if(!check_clinder && !check_center_peak)
+							{
+
+								*fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[0][1]*X_scaled*Y_scaled + X_matrix->val[0][2]*Y_scaled*Y_scaled +
+									X_matrix->val[0][3]*X_scaled + X_matrix->val[0][4]*Y_scaled + X_matrix->val[0][5];
+							}
+							else
+							{
+								double sum_weight = 0;
+								double sum_weigtdist = 0;
+								double p = 1.5;
+								for(row = 0; row < *numpts ; row++)
+								{
+									if(XY_save[row].flag == 1)
+									{
+										double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
+										sum_weight += (1.0/pow(dist,p));
+										sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
+									}
+								}
+
+								if(sum_weight > 0)
+								{
+									*fitted_Z = sum_weigtdist/sum_weight;
+									sigma = 1;
+								}
+								else
+									sigma = 999999;
+							}
+						}
+						else
+						{
+
+							double sum_weight = 0;
+							double sum_weigtdist = 0;
+							double p = 1.5;
+
+							for(row = 0; row < *numpts ; row++)
+							{
+								if(XY_save[row].flag == 1)
+								{
+									double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
+									sum_weight += (1.0/pow(dist,p));
+									sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
+								}
+							}
+
+							if(sum_weight > 0)
+							{
+								*fitted_Z = sum_weigtdist/sum_weight;
+								sigma = 1;
+							}
+							else
+								sigma = 999999;
+						}
+
+						if(grid > 2)
+						{
+							if(angle < 10)
+								Grid_info[t_index].lsf_kernel = 4;
+							else if(angle < 20)
+								Grid_info[t_index].lsf_kernel = 3;
+							else if(angle < 30)
+								Grid_info[t_index].lsf_kernel = 2;
+							else if(Grid_info[t_index].lsf_kernel < 2)
+								Grid_info[t_index].lsf_kernel = 2;
+						}
+						else if(grid == 2)
+						{
+							if(angle < 10)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
+							else if(angle < 20)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
+							else if(angle < 30)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
+							else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
+						}
+						else if(grid == 1)
+						{
+							if(angle < 10)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
+							else if(angle < 20)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
+							else if(angle < 30)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
+							else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
+						}
+						else
+						{
+							if(angle < 10)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
+							else if(angle < 20)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
+							else if(angle < 30)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
+							else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
+								Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
+						}
+
+						GMA_double_destroy(A_matrix);
+						GMA_double_destroy(L_matrix);
+						GMA_double_destroy(AT_matrix);
+						GMA_double_destroy(ATA_matrix);
+
+						GMA_double_destroy(ATAI_matrix);
+						GMA_double_destroy(ATL_matrix);
+
+						GMA_double_destroy(X_matrix);
+						GMA_double_destroy(AX_matrix);
+						GMA_double_destroy(V_matrix);
+
+						*numpts = selected_count;
+					}
+					else
+					{
+						sigma = 999999;
+						*numpts = 0;
+					}
+				}
+				else
+				{
+					GMA_double_destroy(A_matrix);
+					GMA_double_destroy(L_matrix);
+					GMA_double_destroy(AT_matrix);
+					GMA_double_destroy(ATA_matrix);
+					GMA_double_destroy(ATAI_matrix);
+					GMA_double_destroy(ATL_matrix);
+					GMA_double_destroy(X_matrix);
+					GMA_double_destroy(AX_matrix);
+					GMA_double_destroy(V_matrix);
+
+					sigma = 999999;
+					*numpts = 0;
+				}
+			}
+			free(XY_save);
+			
         }
         else
         {
@@ -24108,7 +24123,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
             if(seeddem[i] > -100)
                 matchtag[i] = 1;
         }
-        /*
+        
         FILE* pDEMheader = fopen(str_matchfile,"r");
         if(pDEMheader)
         {
@@ -25058,7 +25073,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             /*
              ImageAdjust_coreg[1][0] = 2.33;
              ImageAdjust_coreg[1][1] = -3.647;
-             /*
+             
              ImageAdjust_coreg[2][0] = 15.0;
              ImageAdjust_coreg[2][1] = -15.0;
              */
@@ -27713,7 +27728,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                     coord_scale.m_Y = (max_Y - min_Y)/2.0*scale_factor;
                     coord_scale.m_Z = (max_H - min_H)/2.0*scale_factor;
                     
-                    /*min_nor_coord.m_X = (min_X - coord_center.m_X)/coord_scale.m_X;
+                    min_nor_coord.m_X = (min_X - coord_center.m_X)/coord_scale.m_X;
                     min_nor_coord.m_Y = (min_Y - coord_center.m_Y)/coord_scale.m_Y;
                     min_nor_coord.m_Z = (min_H - coord_center.m_Z)/coord_scale.m_Z;
                     
@@ -27840,7 +27855,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                                                         min_H = ref_pts.m_Z * coord_scale.m_Z + coord_center.m_Z;
                                                     if(max_H < ref_pts.m_Z * coord_scale.m_Z + coord_center.m_Z)
                                                         max_H = ref_pts.m_Z * coord_scale.m_Z + coord_center.m_Z;
-                                                    /*
+                                                    
                                                     if(min_X > ref_pts.m_X * coord_scale.m_X + coord_center.m_X)
                                                         min_X = ref_pts.m_X * coord_scale.m_X + coord_center.m_X;
                                                     if(max_X < ref_pts.m_X * coord_scale.m_X + coord_center.m_X)
@@ -28623,12 +28638,12 @@ F3DPOINT SurfaceDistance_ori(F3DPOINT tar_normal_ori, float* ref_dem, F3DPOINT t
             bool divergent_index_y          = (pre_angle_y >= vector_slope_y & tar_normal_denor.m_Y != 0 & dy != 0);
             if( divergent_index_x || divergent_index_y)
             {
-                F3DPOINT temp_pt;
+                F3DPOINT temp_pt = {0};
                 temp_pt.m_X                  = pre_pt_on_surface.m_X + (after_pt_on_surface.m_X - pre_pt_on_surface.m_X)/2.0;
                 temp_pt.m_Y                  = pre_pt_on_surface.m_Y + (after_pt_on_surface.m_Y - pre_pt_on_surface.m_Y)/2.0;
                 
                 find_pt                     = Normalize_coord(temp_pt,Mean,Scale);
-                float temp_Z;
+                float temp_Z = 0;
                 temp = FindNormal(&normal_ori,ref_dem, find_pt, Mean, Scale, tin_boundary, temp_X, tinsize, Gridspace, temp_array, &temp_Z, false);
                 temp_Z                   = temp_Z*Scale.m_Z + Mean.m_Z;
                 after_pt_on_surface.m_X  = temp_pt.m_X;
@@ -30338,10 +30353,9 @@ double *Readtiff_Coreg(char *filename, CSize *Imagesize, int *cols, int *rows, C
                     }
                     else
                     {
-                        
+#pragma omp parallel for private(i,j) schedule(guided)
                         for (i=0;i<tileL;i++)
                         {
-#pragma omp parallel for private(i,j) schedule(guided)
                             for (j=0;j<tileW;j++)
                             {
                                 int t_row = (row*tileL) + i;
@@ -32463,9 +32477,14 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                         //exit(1);
                     }
                     if(proinfo.pyramid_level <= proinfo.end_level)
-                        proinfo.end_level = proinfo.pyramid_level - 1;
+					{
+						if(proinfo.pyramid_level >= 1)
+							proinfo.end_level = proinfo.pyramid_level - 1;
+						else
+							proinfo.end_level = proinfo.pyramid_level;
+					}
                     
-                    if(proinfo.end_level < 0 || proinfo.DEM_resolution < 50)
+                    if(proinfo.DEM_resolution < 50)
                         proinfo.end_level = 0;
                 }
                 
@@ -32592,18 +32611,18 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                     printf("Tile merging start final iteration %d!!\n",final_iteration);
                     int buffer_tile = 0;
                     mt_grid_size = MergeTiles_SDM(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration,param,Hemisphere,pyramid_step);
-                    printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
+                    //printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
                 }
                 
-                char hdr_path[500];
-                CSize seeddem_size;
-                double tminX, tmaxY, tgrid_size;
+                //char hdr_path[500];
+                //CSize seeddem_size = {0};
+                //double tminX(0), tmaxY(0), tgrid_size(0);
                 
-                fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
-                fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
+                //fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
+                //fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                 
-                fprintf(pMetafile,"Image 1 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
-                fprintf(pMetafile,"Image 2 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
+                //fprintf(pMetafile,"Image 1 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",leftimage_info.Mean_sun_azimuth_angle,leftimage_info.Mean_sun_elevation,leftimage_info.Mean_sat_azimuth_angle,leftimage_info.Mean_sat_elevation,leftimage_info.Intrack_angle,leftimage_info.Crosstrack_angle,leftimage_info.Offnadir_angle);
+                //fprintf(pMetafile,"Image 2 orientation info\nMean_sun_azimuth_angle = %f\nMean_sun_elevation = %f\nMean_sat_azimuth_angle = %f\nMean_sat_elevation = %f\nIntrack_angle = %f\nCrosstrack_angle = %f\nOffnadir_angle = %f\n",rightimage_info.Mean_sun_azimuth_angle,rightimage_info.Mean_sun_elevation,rightimage_info.Mean_sat_azimuth_angle,rightimage_info.Mean_sat_elevation,rightimage_info.Intrack_angle,rightimage_info.Crosstrack_angle,rightimage_info.Offnadir_angle);
                 fclose(pMetafile);
                 
                 
@@ -32616,6 +32635,8 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             printf("SDM has been already processed. *_dmag.tif file exists!!\n");
         }
     }
+
+	return 0;
 }
 
 void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary, CSize Grid_size, double Grid_set)
@@ -33181,10 +33202,10 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         if(level == 0 && iteration == 3)
                                         {
                                             //echo_print_nccresults_SDM(proinfo.save_filepath,1,1,level, iteration, nccresult, &Size_Grid2D, "final");
+                                        	const char *temp_str = {"final"};    
+                                            echoprint_Gridinfo_SDM(prc_level,proinfo,LBoundary,RBoundary, data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,temp_str);
                                             
-                                            echoprint_Gridinfo_SDM(prc_level,proinfo,LBoundary,RBoundary, data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final");
-                                            
-                                            echoprint_adjustXYZ(prc_level, LBoundary,RBoundary,data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo, proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,"final",grid_resolution,1);
+                                            echoprint_adjustXYZ(prc_level, LBoundary,RBoundary,data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo, proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,temp_str,grid_resolution,1);
                                         }
                                         else
                                         {
@@ -34811,10 +34832,11 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                 }
                 else
                 {
+				/*
                     D2DPOINT temp_GP,temp_GP_R;
                     D2DPOINT Left_Imagecoord;
                     D2DPOINT Right_Imagecoord;
-                    D2DPOINT Left_Imagecoord_py, Right_Imagecoord_py;
+                    D2DPOINT Left_Imagecoord_py(0), Right_Imagecoord_py(0);
                     
                     temp_GP.m_X = GridPts[pt_index].m_X;
                     temp_GP.m_Y = GridPts[pt_index].m_Y;
@@ -34824,10 +34846,10 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                     
                     Left_Imagecoord        = GetObjectToImage_single_SDM(1,temp_GP,proinfo.LBoundary,proinfo.resolution);
                     Right_Imagecoord        = GetObjectToImage_single_SDM(1,temp_GP_R,proinfo.RBoundary,proinfo.resolution);
-                    
+                    */
                     nccresult[pt_index].result0 = GridPT3[pt_index].ortho_ncc;
-                    nccresult[pt_index].result2.m_X = Left_Imagecoord_py.m_X;
-                    nccresult[pt_index].result2.m_Y = Left_Imagecoord_py.m_Y;
+                    //nccresult[pt_index].result2.m_X = Left_Imagecoord_py.m_X;
+                    //nccresult[pt_index].result2.m_Y = Left_Imagecoord_py.m_Y;
                     nccresult[pt_index].result3.m_X = GridPT3[pt_index].col_shift/pow(2.0,Pyramid_step);
                     nccresult[pt_index].result3.m_Y = GridPT3[pt_index].row_shift/pow(2.0,Pyramid_step);
                 }
@@ -34947,7 +34969,7 @@ void echo_print_nccresults_SDM(char *save_path,int row,int col,int level, int it
     fclose(outfile_min);
 }
 
-void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary,char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str)
+void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary,char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, const char *add_str)
 {
     FILE *outfile_h,*outfile_hr, *outfile_min, *outfile_max,     *outfile_roh, *outfile_flag;
     CSize temp_S;
@@ -35018,7 +35040,7 @@ void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,
 
 }
 
-void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary, ProInfo proinfo, char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, char *add_str, double gridsize, int d_date)
+void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary, ProInfo proinfo, char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, const char *add_str, double gridsize, int d_date)
 {
     FILE *outfile_XYZ, *outfile_Xshift, *outfile_Yshift;
     CSize temp_S;
@@ -35926,7 +35948,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
         min_ortho_th = 0.0;
     else if(pyramid_step == 1)
         min_ortho_th = 0.05;
-    /*
+    
     max_kernel_size = 3;
     if(pyramid_step >= 5)
         max_kernel_size = 11;
@@ -35952,7 +35974,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
         else if(pyramid_step == 2)
             kernal_size = 2;
         
-        /*if(pyramid_step > 4)
+        if(pyramid_step > 4)
          {
          if(pyramid_step <= 6)
          kernal_size = 7;
@@ -36320,7 +36342,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             int t_hist_row = (int)(save_row[k]);
                             int t_hist_slope = (int)(save_slope[k]/da);
                             
-                            if(pyramid_step >= 0 )
+                            if((int)pyramid_step >= 0 )
                             {
                                 //column
                                 selected_col[total_seleted_count_col] = save_col[k];
@@ -36448,7 +36470,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 0)
+                            if((int)pyramid_step >= 0)
                             {
                                 if((max_hist_col > save_count*0.4))
                                 {
@@ -36495,7 +36517,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                             sum1_r = 0;
                             sum2_r = 0;
                             
-                            if(pyramid_step >= 0)
+                            if((int)pyramid_step >= 0)
                             {
                                 if((max_hist_row > save_count*0.4))
                                 {
@@ -36881,7 +36903,7 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                 
                 sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
                 p_hfile        = fopen(h_t_str,"r");
-                if(p_hfile)
+                //if(p_hfile)
                 {
                     int iter;
                     char hv_t_str[500];
@@ -36907,7 +36929,7 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                     */
                     sprintf(hv_t_str,"%s/txt/tin_roh_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
                     p_roh    = fopen(hv_t_str,"r");
-                    if(p_hvfile)
+                    //if(p_hvfile)
                     {
                         int index_total;
                         for(index_total = 0; index_total < row_size*col_size ; index_total++)
