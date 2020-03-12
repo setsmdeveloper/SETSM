@@ -5571,7 +5571,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
         }
         else  // Collinear Equation, Frame sensor
         {
-			printf("Load aerial info\n");
+            printf("Load aerial info\n");
             bopened = OpenDMCproject(args.EO_Path, info, args);
         }
         
@@ -5704,7 +5704,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
 //                   info->frameinfo.m_Camera.m_ImageSize.height,info->frameinfo.m_Camera.m_CCDSize);
             
             info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
-			/*
+            /*
             for(int ti = 0 ; ti < info->number_of_images ; ti++)
             {
                 FILE *p_xml;
@@ -5721,7 +5721,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 printf("%s\n",info->Imagefilename[ti]);
                 printf("%s\n",info->frameinfo.Photoinfo[ti].path);
 
-				printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
                        info->frameinfo.Photoinfo[ti].path,
                        info->frameinfo.Photoinfo[ti].m_Xl,info->frameinfo.Photoinfo[ti].m_Yl,info->frameinfo.Photoinfo[ti].m_Zl,
                        info->frameinfo.Photoinfo[ti].m_Wl,info->frameinfo.Photoinfo[ti].m_Pl,info->frameinfo.Photoinfo[ti].m_Kl);
@@ -11049,41 +11049,41 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     int sum_data = 0;
     
 #pragma omp parallel
-	{
-		// Make patch vectors thread private rather than private to each loop iteration
-		double *left_patch_vecs[3];
-		double *right_patch_vecs[3];
-		double *left_mag_patch_vecs[3];
-		double *right_mag_patch_vecs[3];
-		double *left_patch_next_vecs[3];
-		double *right_patch_next_vecs[3];
-		double *left_mag_patch_next_vecs[3];
-		double *right_mag_patch_next_vecs[3];
-		int max_half_template = max(Half_template_size,Template_size/2);
-		int patch_size = (2*max_half_template+1) * (2*max_half_template+1);
-		for (int k=0; k<3; k++)
-		{
-			left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			left_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			right_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-			right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		}
+    {
+        // Make patch vectors thread private rather than private to each loop iteration
+        double *left_patch_vecs[3];
+        double *right_patch_vecs[3];
+        double *left_mag_patch_vecs[3];
+        double *right_mag_patch_vecs[3];
+        double *left_patch_next_vecs[3];
+        double *right_patch_next_vecs[3];
+        double *left_mag_patch_next_vecs[3];
+        double *right_mag_patch_next_vecs[3];
+        int max_half_template = max(Half_template_size,Template_size/2);
+        int patch_size = (2*max_half_template+1) * (2*max_half_template+1);
+        for (int k=0; k<3; k++)
+        {
+            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            left_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+        }
 
 #pragma omp for schedule(guided) reduction(+:sum_data2, sum_data,Accessable_grid)
-    	for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
-    	{
-        	int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-        	int pts_col = iter_count % Size_Grid2D.width;
-        	int pt_index = pts_row*Size_Grid2D.width + pts_col;
+        for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+        {
+            int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
+            int pts_col = iter_count % Size_Grid2D.width;
+            int pt_index = pts_row*Size_Grid2D.width + pts_col;
       
-        	if(nccresult[pt_index].check_height_change)
-            	sum_data2++;
-        	else
-            	sum_data++;
+            if(nccresult[pt_index].check_height_change)
+                sum_data2++;
+            else
+                sum_data++;
             
             double pre_rho  = -1.0;
             double pre_INCC_roh = -1.0;
@@ -11213,7 +11213,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     
                     Accessable_grid ++;
                     
-					//GNCC computation
+                    //GNCC computation
                     for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
                     {
                         if(proinfo->check_selected_image[ti])
@@ -11317,25 +11317,25 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                         //interpolate left_patch
                                                         dx          =  pos_col_left - (int)(pos_col_left);
                                                         dy          =  pos_row_left - (int)(pos_row_left);
-														position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-														double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
+                                                        double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
                                                         double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                                         
                                                         //interpolate right_patch
                                                         dx          =  pos_col_right - (int)(pos_col_right);
                                                         dy          =  pos_row_right - (int)(pos_row_right);
                                                         position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
-														double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                                        double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
                                                         double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                                         
                                                         //end
                                                         
                                                         if(left_patch > 0 && right_patch > 0)
                                                         {
-															left_patch_vecs[0][Count_N_ortho[0]] = left_patch;
-															left_mag_patch_vecs[0][Count_N_ortho[0]] = left_mag_patch;
-															right_patch_vecs[0][Count_N_ortho[0]] = right_patch;
-															right_mag_patch_vecs[0][Count_N_ortho[0]] = right_mag_patch;
+                                                            left_patch_vecs[0][Count_N_ortho[0]] = left_patch;
+                                                            left_mag_patch_vecs[0][Count_N_ortho[0]] = left_mag_patch;
+                                                            right_patch_vecs[0][Count_N_ortho[0]] = right_patch;
+                                                            right_mag_patch_vecs[0][Count_N_ortho[0]] = right_mag_patch;
                                                             Count_N_ortho[0]++;
                                                             
                                                             int size_1, size_2;
@@ -11346,10 +11346,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                 {
                                                                     if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                                                     {
-																		left_patch_vecs[1][Count_N_ortho[1]] = left_patch;
-																		left_mag_patch_vecs[1][Count_N_ortho[1]] = left_mag_patch;
-																		right_patch_vecs[1][Count_N_ortho[1]] = right_patch;
-																		right_mag_patch_vecs[1][Count_N_ortho[1]] = right_mag_patch;
+                                                                        left_patch_vecs[1][Count_N_ortho[1]] = left_patch;
+                                                                        left_mag_patch_vecs[1][Count_N_ortho[1]] = left_mag_patch;
+                                                                        right_patch_vecs[1][Count_N_ortho[1]] = right_patch;
+                                                                        right_mag_patch_vecs[1][Count_N_ortho[1]] = right_mag_patch;
                                                                         Count_N_ortho[1]++;
                                                                     }
                                                                 }
@@ -11362,10 +11362,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                 {
                                                                     if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                                                     {
-																		left_patch_vecs[2][Count_N_ortho[2]] = left_patch;
-																		left_mag_patch_vecs[2][Count_N_ortho[2]] = left_mag_patch;
-																		right_patch_vecs[2][Count_N_ortho[2]] = right_patch;
-																		right_mag_patch_vecs[2][Count_N_ortho[2]] = right_mag_patch;
+                                                                        left_patch_vecs[2][Count_N_ortho[2]] = left_patch;
+                                                                        left_mag_patch_vecs[2][Count_N_ortho[2]] = left_mag_patch;
+                                                                        right_patch_vecs[2][Count_N_ortho[2]] = right_patch;
+                                                                        right_mag_patch_vecs[2][Count_N_ortho[2]] = right_mag_patch;
                                                                         Count_N_ortho[2]++;
                                                                     }
                                                                 }
@@ -11383,32 +11383,32 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                         if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
                                                            pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
                                                         {
-                                                        	double dx;
-                                                        	double dy;
-                                                        	long int position;
+                                                            double dx;
+                                                            double dy;
+                                                            long int position;
 
                                                             //interpolate left_patch
                                                             dx          =  pos_col_left - (int)(pos_col_left);
                                                             dy          =  pos_row_left - (int)(pos_row_left);
                                                             position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
-															double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                        	double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                            double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                            double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
                                                         
-                                                        	//interpolate right_patch
-                                                        	dx          =  pos_col_right - (int)(pos_col_right);
-                                                        	dy          =  pos_row_right - (int)(pos_row_right);
+                                                            //interpolate right_patch
+                                                            dx          =  pos_col_right - (int)(pos_col_right);
+                                                            dy          =  pos_row_right - (int)(pos_row_right);
                                                             position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
-															double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
-                                                        	double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
+                                                            double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
+                                                            double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
                                                         
                                                             //end
                                                             
                                                             if(left_patch > 0 && right_patch > 0)
                                                             {
-																left_patch_next_vecs[0][Count_N_ortho_next[0]] = left_patch;
-																left_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = left_mag_patch;
-																right_patch_next_vecs[0][Count_N_ortho_next[0]] = right_patch;
-																right_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = right_mag_patch;
+                                                                left_patch_next_vecs[0][Count_N_ortho_next[0]] = left_patch;
+                                                                left_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = left_mag_patch;
+                                                                right_patch_next_vecs[0][Count_N_ortho_next[0]] = right_patch;
+                                                                right_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = right_mag_patch;
                                                                 Count_N_ortho_next[0]++;
                                                                 
                                                                 int size_1, size_2;
@@ -11419,10 +11419,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                     {
                                                                         if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                                                         {
-																			left_patch_next_vecs[1][Count_N_ortho_next[1]] = left_patch;
-																			left_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = left_mag_patch;
-																			right_patch_next_vecs[1][Count_N_ortho_next[1]] = right_patch;
-																			right_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = right_mag_patch;
+                                                                            left_patch_next_vecs[1][Count_N_ortho_next[1]] = left_patch;
+                                                                            left_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = left_mag_patch;
+                                                                            right_patch_next_vecs[1][Count_N_ortho_next[1]] = right_patch;
+                                                                            right_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = right_mag_patch;
                                                                             Count_N_ortho_next[1]++;
                                                                         }
                                                                     }
@@ -11435,10 +11435,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                     {
                                                                         if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                                                         {
-																			left_patch_next_vecs[2][Count_N_ortho_next[2]] = left_patch;
-																			left_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = left_mag_patch;
-																			right_patch_next_vecs[2][Count_N_ortho_next[2]] = right_patch;
-																			right_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = right_mag_patch;
+                                                                            left_patch_next_vecs[2][Count_N_ortho_next[2]] = left_patch;
+                                                                            left_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = left_mag_patch;
+                                                                            right_patch_next_vecs[2][Count_N_ortho_next[2]] = right_patch;
+                                                                            right_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = right_mag_patch;
                                                                             Count_N_ortho_next[2]++;
                                                                         }
                                                                     }
@@ -11452,88 +11452,88 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                     }  // end col loop
                                 }  // end row loop
 
-								// Compute correlations
-                               	if(Count_N_ortho[0] > TH_N && Count_N_ortho[1] > TH_N && Count_N_ortho[2] > TH_N)
-                               	{
-									double temp_roh = 0;
+                                // Compute correlations
+                                if(Count_N_ortho[0] > TH_N && Count_N_ortho[1] > TH_N && Count_N_ortho[2] > TH_N)
+                                {
+                                    double temp_roh = 0;
                                     double count_roh = 0;
-									for (int k=0; k<3; k++)
-									{
-										double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
-										if (ncc != -99)
-										{
+                                    for (int k=0; k<3; k++)
+                                    {
+                                        double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
+                                        if (ncc != -99)
+                                        {
                                             count_roh++;
                                             temp_roh += ncc;
                                         }
-							
-										double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
-										if (ncc_mag != -99)
-										{
+                            
+                                        double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
+                                        if (ncc_mag != -99)
+                                        {
                                             count_roh++;
                                             temp_roh += ncc_mag;
                                         }
                                     }
-									if (count_roh>0)
+                                    if (count_roh>0)
                                     {
-										temp_GNCC_roh = temp_roh/count_roh;
+                                        temp_GNCC_roh = temp_roh/count_roh;
                                         sum_GNCC_multi += temp_GNCC_roh;
                                         count_GNCC ++;
                                     }
-									//else
-									//	temp_GNCC_roh = -1;
+                                    //else
+                                    //  temp_GNCC_roh = -1;
                                     
                                     //sum_GNCC_multi += temp_GNCC_roh;
                                     //count_GNCC ++;
                                     //check_ortho_com = true;
-            					}
+                                }
                                                     
                                 if(check_combined_WNCC)
                                 {
-									// Compute correlations
-                                	if(Count_N_ortho_next[0] > TH_N && Count_N_ortho_next[1] > TH_N && Count_N_ortho_next[2] > TH_N)
-                                	{
-										double temp_roh = 0;
+                                    // Compute correlations
+                                    if(Count_N_ortho_next[0] > TH_N && Count_N_ortho_next[1] > TH_N && Count_N_ortho_next[2] > TH_N)
+                                    {
+                                        double temp_roh = 0;
                                         double count_roh = 0;
-										for (int k=0; k<3; k++)
-										{
-											double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (ncc != -99)
-											{
+                                        for (int k=0; k<3; k++)
+                                        {
+                                            double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
+                                            if (ncc != -99)
+                                            {
                                                 count_roh++;
                                                 temp_roh += ncc;
                                             }
 
-											double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
-											if (ncc_mag != -99)
-											{
+                                            double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
+                                            if (ncc_mag != -99)
+                                            {
                                                 count_roh++;
                                                 temp_roh += ncc_mag;
                                             }
-										}
-										if (count_roh>0)
+                                        }
+                                        if (count_roh>0)
                                         {
-											temp_GNCC_roh = temp_roh/count_roh;
+                                            temp_GNCC_roh = temp_roh/count_roh;
                                             sum_GNCC_multi += temp_GNCC_roh;
                                             count_GNCC ++;
                                         }
-										//else
-										//	temp_GNCC_roh = -1;
-                                    	
+                                        //else
+                                        //  temp_GNCC_roh = -1;
+                                        
                                         //sum_GNCC_multi += temp_GNCC_roh;
                                         //count_GNCC ++;
                                         
-                                    	//check_ortho_com = true;
-            						}
+                                        //check_ortho_com = true;
+                                    }
                                 }  // if(check_combined_WNCC)
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
-							if(count_GNCC > 0)
-								nccresult[pt_index].GNCC = DoubleToSignedChar_result(sum_GNCC_multi/count_GNCC);
-							else
-								nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
+                            if(count_GNCC > 0)
+                                nccresult[pt_index].GNCC = DoubleToSignedChar_result(sum_GNCC_multi/count_GNCC);
+                            else
+                                nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
                         }
                     }  // end ti loop
                     
-					//INCC computation
+                    //INCC computation
                     //printf("pt_index %d\tGridPT3[pt_index].NumOfHeight %d\n",pt_index,GridPT3[pt_index].NumOfHeight);
                     if(IsRA || nccresult[pt_index].check_height_change || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                     {
@@ -11764,32 +11764,32 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                 if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                                                     pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                                                 {
-                                                        			double dx;
-                                                        			double dy;
-                                                        			long int position;
+                                                                    double dx;
+                                                                    double dy;
+                                                                    long int position;
 
                                                                     //interpolate left_patch
                                                                     dx          =  pos_col_left - (int)(pos_col_left);
                                                                     dy          =  pos_row_left - (int)(pos_row_left);
                                                                     position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-																	double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                                        			double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
+                                                                    double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                                                    double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                                                      
                                                                     //interpolate right_patch
                                                                     dx          =  pos_col_right - (int)(pos_col_right);
                                                                     dy          =  pos_row_right - (int)(pos_row_right);
                                                                     position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
-																	double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                                        			double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
+                                                                    double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                                                    double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                                                     
                                                                     //end
                                                                     
                                                                     if(left_patch > 0 && right_patch > 0)
                                                                     {
-																		left_patch_vecs[0][Count_N[0]] = left_patch;
-																		left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-																		right_patch_vecs[0][Count_N[0]] = right_patch;
-																		right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
+                                                                        left_patch_vecs[0][Count_N[0]] = left_patch;
+                                                                        left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
+                                                                        right_patch_vecs[0][Count_N[0]] = right_patch;
+                                                                        right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
                                                                         Count_N[0]++;
 
                                                                         t_intensity_diff += (left_patch - right_patch)*(left_patch - right_patch);
@@ -11803,10 +11803,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                             {
                                                                                 if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                                                                 {
-																					left_patch_vecs[1][Count_N[1]] = left_patch;
-																					left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-																					right_patch_vecs[1][Count_N[1]] = right_patch;
-																					right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
+                                                                                    left_patch_vecs[1][Count_N[1]] = left_patch;
+                                                                                    left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
+                                                                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                                                                    right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
                                                                                     Count_N[1]++;
                                                                                 }
                                                                             }
@@ -11819,10 +11819,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                             {
                                                                                 if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                                                                 {
-																					left_patch_vecs[2][Count_N[2]] = left_patch;
-																					left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-																					right_patch_vecs[2][Count_N[2]] = right_patch;
-																					right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
+                                                                                    left_patch_vecs[2][Count_N[2]] = left_patch;
+                                                                                    left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
+                                                                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                                                                    right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
                                                                                     Count_N[2]++;
                                                                                 }
                                                                             }
@@ -11850,32 +11850,32 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                     if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
                                                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
                                                                     {
-                                                        				double dx;
-                                                        				double dy;
-                                                        				long int position;
+                                                                        double dx;
+                                                                        double dy;
+                                                                        long int position;
 
                                                                         //interpolate left_patch
                                                                         dx          =  pos_col_left - (int)(pos_col_left);
                                                                         dy          =  pos_row_left - (int)(pos_row_left);
                                                                         position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
-																		double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                        				double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                                        double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
+                                                                        double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
                                                                         
                                                                         //interpolate right_patch
                                                                         dx          =  pos_col_right - (int)(pos_col_right);
                                                                         dy          =  pos_row_right - (int)(pos_row_right);
                                                                         position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
-																		double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
-                                                        				double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
+                                                                        double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
+                                                                        double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
                                                                         
                                                                         //end
                                                                         
                                                                         if(left_patch > 0 && right_patch > 0)
                                                                         {
-																			left_patch_next_vecs[0][Count_N_next[0]] = left_patch;
-																			left_mag_patch_next_vecs[0][Count_N_next[0]] = left_mag_patch;
-																			right_patch_next_vecs[0][Count_N_next[0]] = right_patch;
-																			right_mag_patch_next_vecs[0][Count_N_next[0]] = right_mag_patch;
+                                                                            left_patch_next_vecs[0][Count_N_next[0]] = left_patch;
+                                                                            left_mag_patch_next_vecs[0][Count_N_next[0]] = left_mag_patch;
+                                                                            right_patch_next_vecs[0][Count_N_next[0]] = right_patch;
+                                                                            right_mag_patch_next_vecs[0][Count_N_next[0]] = right_mag_patch;
                                                                             Count_N_next[0]++;
                                                                             
                                                                             //t_intensity_diff += (left_patch - right_patch)*(left_patch - right_patch);
@@ -11889,10 +11889,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                                 {
                                                                                     if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                                                                     {
-																						left_patch_next_vecs[1][Count_N_next[1]] = left_patch;
-																						left_mag_patch_next_vecs[1][Count_N_next[1]] = left_mag_patch;
-																						right_patch_next_vecs[1][Count_N_next[1]] = right_patch;
-																						right_mag_patch_next_vecs[1][Count_N_next[1]] = right_mag_patch;
+                                                                                        left_patch_next_vecs[1][Count_N_next[1]] = left_patch;
+                                                                                        left_mag_patch_next_vecs[1][Count_N_next[1]] = left_mag_patch;
+                                                                                        right_patch_next_vecs[1][Count_N_next[1]] = right_patch;
+                                                                                        right_mag_patch_next_vecs[1][Count_N_next[1]] = right_mag_patch;
                                                                                         Count_N_next[1]++;
                                                                                     }
                                                                                 }
@@ -11905,10 +11905,10 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                                                 {
                                                                                     if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                                                                     {
-																						left_patch_next_vecs[2][Count_N_next[2]] = left_patch;
-																						left_mag_patch_next_vecs[2][Count_N_next[2]] = left_mag_patch;
-																						right_patch_next_vecs[2][Count_N_next[2]] = right_patch;
-																						right_mag_patch_next_vecs[2][Count_N_next[2]] = right_mag_patch;
+                                                                                        left_patch_next_vecs[2][Count_N_next[2]] = left_patch;
+                                                                                        left_mag_patch_next_vecs[2][Count_N_next[2]] = left_mag_patch;
+                                                                                        right_patch_next_vecs[2][Count_N_next[2]] = right_patch;
+                                                                                        right_mag_patch_next_vecs[2][Count_N_next[2]] = right_mag_patch;
                                                                                         Count_N_next[2]++;
                                                                                     }
                                                                                 }
@@ -11927,37 +11927,37 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                         }  // end col loop
                                                     }  // end row loop
 
-													// Compute correlations
-                                					if(Count_N[0] > TH_N && Count_N[1] > TH_N && Count_N[2] > TH_N)
-                                					{
-														double temp_roh = 0;
+                                                    // Compute correlations
+                                                    if(Count_N[0] > TH_N && Count_N[1] > TH_N && Count_N[2] > TH_N)
+                                                    {
+                                                        double temp_roh = 0;
                                                         double count_roh = 0;
-														for (int k=0; k<3; k++)
-														{
-															double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-															if (ncc != -99)
-															{
+                                                        for (int k=0; k<3; k++)
+                                                        {
+                                                            double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
+                                                            if (ncc != -99)
+                                                            {
                                                                 count_roh++;
                                                                 temp_roh += ncc;
-															}
+                                                            }
 
-															double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-															if (ncc_mag != -99)
-															{
+                                                            double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
+                                                            if (ncc_mag != -99)
+                                                            {
                                                                 count_roh++;
                                                                 temp_roh += ncc_mag;
                                                             }
-														}
+                                                        }
 
-														if (count_roh > 0)
+                                                        if (count_roh > 0)
                                                         {
-															temp_INCC_roh = temp_roh/count_roh;
+                                                            temp_INCC_roh = temp_roh/count_roh;
                                                             sum_INCC_multi += temp_INCC_roh;
                                                             count_INCC ++;
                                                         }
-														//else
-														//	temp_INCC_roh = -1;
-                                                     	
+                                                        //else
+                                                        //  temp_INCC_roh = -1;
+                                                        
                                                         //sum_INCC_multi += temp_INCC_roh;
                                                         //count_INCC ++;
                                                         
@@ -11969,34 +11969,34 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                     {
                                                         if(Count_N_next[0] > TH_N && Count_N_next[1] > TH_N && Count_N_next[2] > TH_N)
                                                         {
-															double temp_roh = 0;
+                                                            double temp_roh = 0;
                                                             double count_roh = 0;
-															for (int k=0; k<3; k++)
-															{
-																double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
-																if (ncc != -99)
-																{
+                                                            for (int k=0; k<3; k++)
+                                                            {
+                                                                double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
+                                                                if (ncc != -99)
+                                                                {
                                                                     count_roh++;
                                                                     temp_roh += ncc;
                                                                 }
 
-																double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
-																if (ncc_mag != -99)
-																{
+                                                                double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
+                                                                if (ncc_mag != -99)
+                                                                {
                                                                     count_roh++;
                                                                     temp_roh += ncc_mag;
                                                                 }
                                                             }
 
-															if (count_roh > 0)
+                                                            if (count_roh > 0)
                                                             {
-																temp_INCC_roh = temp_roh/count_roh;
+                                                                temp_INCC_roh = temp_roh/count_roh;
                                                                 //sum_INCC_multi += temp_INCC_roh;
                                                                 //count_INCC ++;
                                                             }
-															else
-																temp_INCC_roh = -1;
-                                                        	
+                                                            else
+                                                                temp_INCC_roh = -1;
+                                                            
                                                             sum_INCC_multi += temp_INCC_roh;
                                                             count_INCC ++;
                                                             
@@ -12004,21 +12004,21 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                                             //    grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                                         }
                                                     }
-                                                	if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
-                                                	{
+                                                    if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
+                                                    {
                                                     
-                                                	}
-                                                	else
+                                                    }
+                                                    else
                                                     {
                                                         if(count_INCC > 0)
                                                             grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(sum_INCC_multi/count_INCC);
                                                         else
                                                             grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(-1.0);
                                                     }
-                                            	}
-                                        	}
-                                        	else
-                                        	{
+                                                }
+                                            }
+                                            else
+                                            {
                                                 if(!check_matching_rate && !IsRA)
                                                     grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                                             }
@@ -12149,12 +12149,12 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                                         else
                                             temp_rho = -1.0;
                                     }
-								      
+                                      
                                     if(temp_rho > 1.0)
                                         temp_rho = 1.0;
                                     if(temp_rho < -1.0)
                                         temp_rho = -1.0;
-                                	
+                                    
                             
                                     if(grid_voxel[pt_index][grid_voxel_hindex].flag_cal && nccresult[pt_index].check_height_change)
                                     {
@@ -12196,19 +12196,19 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             {
                 //printf("id out of boundary %d\t%d\n",pts_row,pts_col);
             }
-    	} // end omp for
-		for (int k=0; k<3; k++)
-		{
-			free(left_patch_vecs[k]);
-			free(right_patch_vecs[k]);
-			free(left_mag_patch_vecs[k]);
-			free(right_mag_patch_vecs[k]);
-			free(left_patch_next_vecs[k]);
-			free(right_patch_next_vecs[k]);
-			free(left_mag_patch_next_vecs[k]);
-			free(right_mag_patch_next_vecs[k]);
-		}
-	} // end omp parallel
+        } // end omp for
+        for (int k=0; k<3; k++)
+        {
+            free(left_patch_vecs[k]);
+            free(right_patch_vecs[k]);
+            free(left_mag_patch_vecs[k]);
+            free(right_mag_patch_vecs[k]);
+            free(left_patch_next_vecs[k]);
+            free(right_patch_next_vecs[k]);
+            free(left_mag_patch_next_vecs[k]);
+            free(right_mag_patch_next_vecs[k]);
+        }
+    } // end omp parallel
     
     printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
     
@@ -13934,20 +13934,20 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     int count_total = 0;
     int count_low = 0;
 #pragma omp parallel
-	{
+    {
 // Make patch vectors thread private rather than private to each loop iteration
-	double *left_patch_vecs[3];
-	double *right_patch_vecs[3];
-	double *left_mag_patch_vecs[3];
-	double *right_mag_patch_vecs[3];
-	int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-	for (int k=0; k<3; k++)
-	{
-		left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-		right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-	}
+    double *left_patch_vecs[3];
+    double *right_patch_vecs[3];
+    double *left_mag_patch_vecs[3];
+    double *right_mag_patch_vecs[3];
+    int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
+    for (int k=0; k<3; k++)
+    {
+        left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+        right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+        left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+        right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+    }
 
 #pragma omp for reduction(+:count_low, count_total) schedule(guided)
     for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
@@ -14021,30 +14021,30 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                                     if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                         pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                     {
-                           				double dx;
-                          				double dy;
-                          				long int position;
+                                        double dx;
+                                        double dy;
+                                        long int position;
 
                                         //interpolate left_patch
                                         dx = pos_col_left - (int) (pos_col_left);
                                         dy = pos_row_left - (int) (pos_row_left);
                                         position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-										double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                        double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
                                         double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                         
                                         //interpolate right_patch
                                         dx = pos_col_right - (int) (pos_col_right);
                                         dy = pos_row_right - (int) (pos_row_right);
                                         position = (long int) (pos_col_right) + (long int) pos_row_right * RImagesize.width;
-										double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                        double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
                                         double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                         
                                         //end interpolation
 
-										left_patch_vecs[0][Count_N[0]] = left_patch;
-										left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-										right_patch_vecs[0][Count_N[0]] = right_patch;
-										right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
+                                        left_patch_vecs[0][Count_N[0]] = left_patch;
+                                        left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
+                                        right_patch_vecs[0][Count_N[0]] = right_patch;
+                                        right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
                                         Count_N[0]++;
                                         
                                         int size_1, size_2;
@@ -14053,10 +14053,10 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                                         {
                                             if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                             {
-												left_patch_vecs[1][Count_N[1]] = left_patch;
-												left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-												right_patch_vecs[1][Count_N[1]] = right_patch;
-												right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
+                                                left_patch_vecs[1][Count_N[1]] = left_patch;
+                                                left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
+                                                right_patch_vecs[1][Count_N[1]] = right_patch;
+                                                right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
                                                 Count_N[1]++;
                                             }
                                         }
@@ -14066,10 +14066,10 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                                         {
                                             if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                             {
-												left_patch_vecs[2][Count_N[2]] = left_patch;
-												left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-												right_patch_vecs[2][Count_N[2]] = right_patch;
-												right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
+                                                left_patch_vecs[2][Count_N[2]] = left_patch;
+                                                left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
+                                                right_patch_vecs[2][Count_N[2]] = right_patch;
+                                                right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
                                                 Count_N[2]++;
                                             }
                                         }
@@ -14079,36 +14079,36 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                         } // end col loop
                     } // end row loop
                     
-					// Compute correlations
-            		if(Count_N[0] > 0)
-            		{
-						double temp_roh = 0;
+                    // Compute correlations
+                    if(Count_N[0] > 0)
+                    {
+                        double temp_roh = 0;
                         double count_roh = 0;
-						for (int k=0; k<3; k++)
-						{
-							double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-							if (ncc != -99)
+                        for (int k=0; k<3; k++)
+                        {
+                            double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
+                            if (ncc != -99)
                             {
                                 count_roh++;
                                 temp_roh += ncc;
                             }
 
-							double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-							if (ncc_mag != -99)
+                            double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
+                            if (ncc_mag != -99)
                             {
                                 count_roh++;
                                 temp_roh += ncc_mag;
                             }
                         }
-						if (count_roh > 0)
-							nccresult = temp_roh/count_roh;
-						else
-							nccresult = -1;
-            		}
-            		else 
-            		{
-                		nccresult = -1;
-            		}
+                        if (count_roh > 0)
+                            nccresult = temp_roh/count_roh;
+                        else
+                            nccresult = -1;
+                    }
+                    else 
+                    {
+                        nccresult = -1;
+                    }
                     //nccresult1[pt_index] = nccresult;
                     
                     if(nccresult < 0.3)
@@ -14152,15 +14152,15 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
         
     } // end omp for
     
-	// free thread-private vectors
-	for (int k=0; k<3; k++)
-	{
-		free(left_patch_vecs[k]);
-		free(right_patch_vecs[k]);
-		free(left_mag_patch_vecs[k]);
-		free(right_mag_patch_vecs[k]);
-	}
-	} // end omp parallel
+    // free thread-private vectors
+    for (int k=0; k<3; k++)
+    {
+        free(left_patch_vecs[k]);
+        free(right_patch_vecs[k]);
+        free(left_mag_patch_vecs[k]);
+        free(right_mag_patch_vecs[k]);
+    }
+    } // end omp parallel
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
@@ -14703,15 +14703,15 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
         if (PixelMinXY[1] < 0)  
             PixelMinXY[1] = 0;
         
-		double *left_patch_vec;
-		double *right_patch_vec;
-		double *left_mag_patch_vec;
-		double *right_mag_patch_vec;
-		int patch_size = (PixelMaxXY[1]-PixelMinXY[1]+1) * (PixelMaxXY[0]-PixelMinXY[0]+1);
-		left_patch_vec = (double *)malloc(sizeof(double)*patch_size);
-		right_patch_vec = (double *)malloc(sizeof(double)*patch_size);
-		left_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
-		right_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
+        double *left_patch_vec;
+        double *right_patch_vec;
+        double *left_mag_patch_vec;
+        double *right_mag_patch_vec;
+        int patch_size = (PixelMaxXY[1]-PixelMinXY[1]+1) * (PixelMaxXY[0]-PixelMinXY[0]+1);
+        left_patch_vec = (double *)malloc(sizeof(double)*patch_size);
+        right_patch_vec = (double *)malloc(sizeof(double)*patch_size);
+        left_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
+        right_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
         
         for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
         {
@@ -14898,72 +14898,72 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt,
                             if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
                                 pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                             {
-             					double dx;
-            					double dy;
-            					long int position;
+                                double dx;
+                                double dy;
+                                long int position;
 
                                 //interpolate left_patch
                                 dx = pos_col_left - (int) (pos_col_left);
                                 dy = pos_row_left - (int) (pos_row_left);
                                 position = (long int) (pos_col_left) + (long int) (pos_row_left) * LImagesize.width;
-								double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
                                 double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
                                 
                                 //interpolate right_patch
                                 dx = pos_col_right - (int) (pos_col_right);
                                 dy = pos_row_right - (int) (pos_row_right);
                                 position = (long int) (pos_col_right) + (long int) (pos_row_right) * RImagesize.width;
-								double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
                                 double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
                                 
                                 //end
 
-								left_patch_vec[Count_N] = left_patch;
-								left_mag_patch_vec[Count_N] = left_mag_patch;
-								right_patch_vec[Count_N] = right_patch;
-								right_mag_patch_vec[Count_N] = right_mag_patch;
+                                left_patch_vec[Count_N] = left_patch;
+                                left_mag_patch_vec[Count_N] = left_mag_patch;
+                                right_patch_vec[Count_N] = right_patch;
+                                right_mag_patch_vec[Count_N] = right_mag_patch;
                                 Count_N++;
-							}
+                            }
                         }  // if (rtn)
                     }  //  // end Col=PixelMinXY[0] loop
                 }  // end Row=PixelMinXY[1] loop
         
-				// Compute correlations
+                // Compute correlations
                 if(Count_N >= 1)
                 {
                     double temp_roh = 0;
                     double count_roh = 0;
-					double ncc_1 = Correlate(left_patch_vec, right_patch_vec, Count_N);
-					if (ncc_1 != -99)
-					{
+                    double ncc_1 = Correlate(left_patch_vec, right_patch_vec, Count_N);
+                    if (ncc_1 != -99)
+                    {
                         count_roh++;
                         temp_roh += ncc_1;
                     }
                         
-					double ncc_2 = Correlate(left_mag_patch_vec, right_mag_patch_vec, Count_N);
-					if (ncc_2 != -99)
+                    double ncc_2 = Correlate(left_mag_patch_vec, right_mag_patch_vec, Count_N);
+                    if (ncc_2 != -99)
                     {
                         count_roh++;
                         temp_roh += ncc_2;
                     }
-					
-					double ncc;
-					if (count_roh > 0)
-						ncc = temp_roh/count_roh;
-					else
-						ncc = -1;
+                    
+                    double ncc;
+                    if (count_roh > 0)
+                        ncc = temp_roh/count_roh;
+                    else
+                        ncc = -1;
 
-					sum_count_N += Count_N;
-					sum_NCC += ncc;
-					count_NCC++;
+                    sum_count_N += Count_N;
+                    sum_NCC += ncc;
+                    count_NCC++;
                 }
             }
         }  // end ti loop
 
-		free(left_patch_vec);
-		free(right_patch_vec);
-		free(left_mag_patch_vec);
-		free(right_mag_patch_vec);
+        free(left_patch_vec);
+        free(right_patch_vec);
+        free(left_mag_patch_vec);
+        free(right_mag_patch_vec);
         
         if(count_NCC > 0)
         {
@@ -16138,12 +16138,12 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
 
     FullTriangulation *triangulation = new FullTriangulation(width, height);
-	//double begin = omp_get_wtime();
+    //double begin = omp_get_wtime();
     printf("done s3\n");
     triangulation->Triangulate(points_ptrs, numofpts);
     printf("done triangulation\n");
-	//double end = omp_get_wtime();
-	//printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
+    //double end = omp_get_wtime();
+    //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
 
     vector<Tri> tris;
     vector<Tri>::iterator it_tr;
@@ -16344,8 +16344,8 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     {
         //index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
         INDEX col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
-	INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
-	index_in_ptslists[row * width + col] = t;
+    INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+    index_in_ptslists[row * width + col] = t;
     }
 
     GridPoint *grid_blunders = new GridPoint[numblunders];
@@ -16359,19 +16359,19 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
     #pragma omp parallel for
     for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
     
-	//double begin = omp_get_wtime();
+    //double begin = omp_get_wtime();
 
     oldTri->Retriangulate(blunder_ptrs, numblunders);
 
-	//double end = omp_get_wtime();
-	//printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+    //double end = omp_get_wtime();
+    //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
 
     vector<Tri> tris;
     vector<Tri>::iterator it_tr;
     *count_tri = (int)(oldTri->GetAllTris(&tris));
     std::size_t t = 0;
     for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
-    {	
+    {   
         int row, col;
 
         row = it_tr->pts[0].row;
@@ -17120,7 +17120,7 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,ui
                     }
                 }
                 //If a point was found to be a blunder in the current blunder detection, mark detectedBlunders index as true
-		detectedBlunders[index] = (pts[index].flag==1 || pts[index].flag==3);
+        detectedBlunders[index] = (pts[index].flag==1 || pts[index].flag==3);
             }
         }
          
@@ -17276,7 +17276,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
                   double DEM_resolution, double im_resolution, double ***RPCs,
                   CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
                   double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
-                  D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps)
+                  D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, char *filename_mps)
 {
     char *save_path = proinfo->save_filepath;
     uint32 num_triangles;
@@ -18831,7 +18831,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
         {
             int matlab_index    = k*temp_S.width + j;
            
-	    fprintf(outfile_min,"%f\t",SignedCharToDouble_result(nccresult[matlab_index].result0));
+        fprintf(outfile_min,"%f\t",SignedCharToDouble_result(nccresult[matlab_index].result0));
             fprintf(outfile_max,"%f\t",SignedCharToDouble_result(nccresult[matlab_index].result1));
             fprintf(outfile_h,"%d\t",nccresult[matlab_index].NumOfHeight); 
             //fprintf(outfile_roh,"%d\t",nccresult[matlab_index].max_WNCC_pos);
@@ -18958,7 +18958,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 uint8   Half_template_size;
                 double b_factor;
                 bool flag_boundary = false;
-				int i;
+                int i;
                 int count_pts = 0;
                 double sum_weight_X     = 0;
                 double sum_weight_Y     = 0;
@@ -19190,11 +19190,11 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                         if(pos_row_right-3 >= 0 && pos_row_right+3 < R_rowsize && pos_col_right-3 >= 0 && pos_col_right+3 < R_colsize &&
                            pos_row_left-3 >= 0 && pos_row_left+3 < L_rowsize && pos_col_left-3 >= 0 && pos_col_left+3 < L_colsize)
                         {
-             				double dx;
-            				double dy;
-            				long int position;
-							double left_patch;
-							double right_patch;
+                            double dx;
+                            double dy;
+                            long int position;
+                            double left_patch;
+                            double right_patch;
 
                             //interpolate left_patch
                             dx = pos_col_left - (int) (pos_col_left);
@@ -19203,11 +19203,11 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             
                             // Appears inter_flag is always == 1
                             if (inter_flag == 1) {
-								left_patch = InterpolatePatch(_leftimage, position, leftsize, dx, dy);
+                                left_patch = InterpolatePatch(_leftimage, position, leftsize, dx, dy);
                             } else {
                                 left_patch = (double) (_leftimage[position]);
                             }
-							left_patch_vecs[0][Count_N[0]] = left_patch;
+                            left_patch_vecs[0][Count_N[0]] = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -19216,11 +19216,11 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                             
                             // Appears inter_flag is always == 1
                             if (inter_flag == 1) {
-								right_patch = InterpolatePatch(_rightimage, position, rightsize, dx, dy);
+                                right_patch = InterpolatePatch(_rightimage, position, rightsize, dx, dy);
                             } else {
                                 right_patch = (double) (_rightimage[position]);
                             }
-							right_patch_vecs[0][Count_N[0]] = right_patch;
+                            right_patch_vecs[0][Count_N[0]] = right_patch;
                             
                             //end
                             Count_N[0]++;
@@ -19233,8 +19233,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                     {
-										left_patch_vecs[1][Count_N[1]] = left_patch;
-										right_patch_vecs[1][Count_N[1]] = right_patch;
+                                        left_patch_vecs[1][Count_N[1]] = left_patch;
+                                        right_patch_vecs[1][Count_N[1]] = right_patch;
                                         Count_N[1]++;
                                     }
                                 }
@@ -19244,8 +19244,8 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                                 {
                                     if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                     {
-										left_patch_vecs[2][Count_N[2]] = left_patch;
-										right_patch_vecs[2][Count_N[2]] = right_patch;
+                                        left_patch_vecs[2][Count_N[2]] = left_patch;
+                                        right_patch_vecs[2][Count_N[2]] = right_patch;
                                         Count_N[2]++;
                                     }
                                 }
@@ -19257,27 +19257,27 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
 
             if(Count_N[0] > 0)
             {
-				double count_rho = 0;
-				double temp_rho = 0;
-				int klim = 1;
+                double count_rho = 0;
+                double temp_rho = 0;
+                int klim = 1;
                 if(multi_flag == 1) klim = 3;
-				for (int k=0; k<klim; k++)
-				{
-					if (Count_N[k] > 0)
-					{
-						double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
-                		if (ncc != -99)
-						{
-							count_rho++;
-							temp_rho += ncc;
-						}
+                for (int k=0; k<klim; k++)
+                {
+                    if (Count_N[k] > 0)
+                    {
+                        double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
+                        if (ncc != -99)
+                        {
+                            count_rho++;
+                            temp_rho += ncc;
+                        }
                     }
                 }
 
                 if (count_rho > 0)
-					temp_rho = temp_rho/count_rho;
-				else
-					temp_rho = -1;
+                    temp_rho = temp_rho/count_rho;
+                else
+                    temp_rho = -1;
 
                 grid_index           = (mask_row+1)*3 + (mask_col+1);
                 if(grid_index < 9)
@@ -23344,75 +23344,75 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
 #pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sigma2_sum)// private (row_start,row_end)
         for(long int iter_count = row_start ; iter_count < row_end ; iter_count++)
             //for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
-		{
+        {
             //iter_count = row_end/2;
-			long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
-			long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
-			double fitted_Z = seeddem[iter_count];
-			float sigma;
-			
+            long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
+            long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
+            double fitted_Z = seeddem[iter_count];
+            float sigma;
+            
 
-			if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
-			{
-				//if(!check_smooth_iter)
-				//	printf("pts_pos %d\t%d\t%d\n",pts_row,pts_col,iter_count);
+            if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
+            {
+                //if(!check_smooth_iter)
+                //  printf("pts_pos %d\t%d\t%d\n",pts_row,pts_col,iter_count);
 
-				if(seeddem[iter_count] > -50 )
-				{
+                if(seeddem[iter_count] > -50 )
+                {
                     long int selected_count = 0;
-					sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
-					//if(!check_smooth_iter)
-					//	printf("sigma %f\t%f\n",sigma,fitted_Z);
+                    sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
+                    //if(!check_smooth_iter)
+                    //  printf("sigma %f\t%f\n",sigma,fitted_Z);
 
-					double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
+                    double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
 
-					//Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
+                    //Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
 
-					if(check_smooth_iter)
-					{
-						if(sigma < 20 && sigma > 0 && selected_count > 6)
-						{
-							smooth_DEM[iter_count] = fitted_Z;
-							//sum_fitted_Z += fitted_Z;
-							total_selected_points++;
-							sigma_sum += sigma;
-							sigma2_sum += (sigma*sigma);
-							//temp_sigma[iter_count] = sigma;
+                    if(check_smooth_iter)
+                    {
+                        if(sigma < 20 && sigma > 0 && selected_count > 6)
+                        {
+                            smooth_DEM[iter_count] = fitted_Z;
+                            //sum_fitted_Z += fitted_Z;
+                            total_selected_points++;
+                            sigma_sum += sigma;
+                            sigma2_sum += (sigma*sigma);
+                            //temp_sigma[iter_count] = sigma;
 
-							//printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-						}
-						else
-						{
-							smooth_DEM[iter_count] = seeddem[iter_count];
-							//temp_sigma[iter_count] = -9999;
-						}
-					}
-					else
-					{
-						if(sigma < 20 && sigma > 0 && selected_count > 6)
-						{
-							smooth_DEM[iter_count] = fitted_Z;
-							//sum_fitted_Z += fitted_Z;
-							total_selected_points++;
-							sigma_sum += sigma;
-							sigma2_sum += (sigma*sigma);
-							//temp_sigma[iter_count] = sigma;
-							//printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-						}
-						else
-						{
-							smooth_DEM[iter_count] = seeddem[iter_count];
-							//temp_sigma[iter_count] = -9999;
-						}
-					}
-				}
-				else
-				{
-					smooth_DEM[iter_count] = seeddem[iter_count];
-					//temp_sigma[iter_count] = -9999;
-				}
-			}
-		}
+                            //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
+                        }
+                        else
+                        {
+                            smooth_DEM[iter_count] = seeddem[iter_count];
+                            //temp_sigma[iter_count] = -9999;
+                        }
+                    }
+                    else
+                    {
+                        if(sigma < 20 && sigma > 0 && selected_count > 6)
+                        {
+                            smooth_DEM[iter_count] = fitted_Z;
+                            //sum_fitted_Z += fitted_Z;
+                            total_selected_points++;
+                            sigma_sum += sigma;
+                            sigma2_sum += (sigma*sigma);
+                            //temp_sigma[iter_count] = sigma;
+                            //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
+                        }
+                        else
+                        {
+                            smooth_DEM[iter_count] = seeddem[iter_count];
+                            //temp_sigma[iter_count] = -9999;
+                        }
+                    }
+                }
+                else
+                {
+                    smooth_DEM[iter_count] = seeddem[iter_count];
+                    //temp_sigma[iter_count] = -9999;
+                }
+            }
+        }
         printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     }
     
@@ -23451,496 +23451,496 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     int max_pts = 9;
     if(grid >= 8)
         max_pts = 7;
-    
+
     long int row_interval = 15;
-    
+
     col_pos = (long int)X;
     row_pos = (long int)Y;
-    
+
     double hist_th = 0.8;
     if(grid >= 8)
         hist_th = 0.9;
     else
         hist_th = 0.8;
-    
+
     bool check_std = false;
-    
+
     long int data_length = (long int)row_size*(long int)col_size;
     long int t_index = (long int)(row_pos*(long int)col_size + col_pos);
     double sigma = 999999;
     double MPP_th = 5;
     long int mask_interval = 1;
-    
+
     long int add_interval = 0;
     if(MPP > MPP_th)
         add_interval = 2;
     else if(MPP > MPP_th*2)
         add_interval = 3;
-    
+
     if(smooth_iter > 0)
-	{
-		long int pre_final_interval = (long int)Grid_info[t_index].lsf_kernel;
+    {
+        long int pre_final_interval = (long int)Grid_info[t_index].lsf_kernel;
 
-		if(add_interval > 0)
-		{
-			mask_interval = floor(pre_final_interval/5.0);
-			if(mask_interval <= 0)
-				mask_interval = 1;
-		}
-		else
-		{
-			if(grid < 1)
-				mask_interval = 2;
-		}
-		final_interval = (long int)Grid_info[t_index].lsf_kernel;
-	}
+        if(add_interval > 0)
+        {
+            mask_interval = floor(pre_final_interval/5.0);
+            if(mask_interval <= 0)
+                mask_interval = 1;
+        }
+        else
+        {
+            if(grid < 1)
+                mask_interval = 2;
+        }
+        final_interval = (long int)Grid_info[t_index].lsf_kernel;
+    }
     else
-	{
-		while (check_stop == 0)
-		{
-			*numpts = 0;
-			count1 = 0;
-			count2 = 0;
-			count3 = 0;
-			count4 = 0;
-			for(row = -interval;row <= interval;row++)
-			{
-				for(col = -interval;col <= interval ; col++)
-				{
-					long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-					if(grid_pos >= 0 && grid_pos < data_length && row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
-					{
+    {
+        while (check_stop == 0)
+        {
+            *numpts = 0;
+            count1 = 0;
+            count2 = 0;
+            count3 = 0;
+            count4 = 0;
+            for(row = -interval;row <= interval;row++)
+            {
+                for(col = -interval;col <= interval ; col++)
+                {
+                    long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+                    if(grid_pos >= 0 && grid_pos < data_length && row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
+                    {
 
-						if(input[grid_pos] > -100)
-						{
-							if(row >= 0 && row <=  interval && col >= 0 && col <=  interval)
-							{
-								count1++;
-								(*numpts)++;
-							}
-							else if (row >= 0 && row <=  interval && col <= 0 && col >= -interval)
-							{
-								count2++;
-								(*numpts)++;
-							}
-							else if (row < 0 && row >= -interval && col < 0 && col >= -interval)
-							{
-								count3++;
-								(*numpts)++;
-							}
-							else if (row < 0 && row >= -interval && col > 0 && col <=  interval)
-							{
-								count4++;
-								(*numpts)++;
-							}
-						}
-					}
-				}
-			}
+                        if(input[grid_pos] > -100)
+                        {
+                            if(row >= 0 && row <=  interval && col >= 0 && col <=  interval)
+                            {
+                                count1++;
+                                (*numpts)++;
+                            }
+                            else if (row >= 0 && row <=  interval && col <= 0 && col >= -interval)
+                            {
+                                count2++;
+                                (*numpts)++;
+                            }
+                            else if (row < 0 && row >= -interval && col < 0 && col >= -interval)
+                            {
+                                count3++;
+                                (*numpts)++;
+                            }
+                            else if (row < 0 && row >= -interval && col > 0 && col <=  interval)
+                            {
+                                count4++;
+                                (*numpts)++;
+                            }
+                        }
+                    }
+                }
+            }
 
-			if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
-			{
-				check_stop = 1;
-				final_interval = interval;
-				Grid_info[t_index].lsf_kernel = (unsigned char)final_interval;
-			}
-			else
-				interval = interval + 1;
-		}
-	}
-   
+            if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
+            {
+                check_stop = 1;
+                final_interval = interval;
+                Grid_info[t_index].lsf_kernel = (unsigned char)final_interval;
+            }
+            else
+                interval = interval + 1;
+        }
+    }
+
     double maxX_ptslists = -10000000;//final_interval*grid;
-	double maxY_ptslists = -10000000;//final_interval*grid;
-	double minX_ptslists =  10000000;//-final_interval*grid;
-	double minY_ptslists =  10000000;//-final_interval*grid;
-	double distX_ptslists = 0;//maxX_ptslists - minX_ptslists;
-	double distY_ptslists = 0;//maxY_ptslists - minY_ptslists;
-	double Scale_ptslists = 1000;
-   
-	vector<D3DPOINT> XY_save;
+    double maxY_ptslists = -10000000;//final_interval*grid;
+    double minX_ptslists =  10000000;//-final_interval*grid;
+    double minY_ptslists =  10000000;//-final_interval*grid;
+    double distX_ptslists = 0;//maxX_ptslists - minX_ptslists;
+    double distY_ptslists = 0;//maxY_ptslists - minY_ptslists;
+    double Scale_ptslists = 1000;
+
+    vector<D3DPOINT> XY_save;
     XY_save.clear();
     count = 0;
-	for(row = -final_interval;row <= final_interval;row+= mask_interval)
-	{
-		for(col = -final_interval;col <= final_interval ; col+= mask_interval)
-		{
-			long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-			long int grid_pos_col = (long int)((col_pos+col));
-			long int grid_pos_row = (long int)((row_pos+row));
+    for(row = -final_interval;row <= final_interval;row+= mask_interval)
+    {
+        for(col = -final_interval;col <= final_interval ; col+= mask_interval)
+        {
+            long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+            long int grid_pos_col = (long int)((col_pos+col));
+            long int grid_pos_row = (long int)((row_pos+row));
 
-			if(grid_pos >= 0 && grid_pos < data_length &&
-					grid_pos_row >= 0 && grid_pos_row < row_size && grid_pos_col >= 0 && grid_pos_col < col_size)
-			{
-				if(input[grid_pos] > - 100)
-				{
-					D3DPOINT temp;
-					temp.m_X = grid_pos_col*grid;
-					temp.m_Y = grid_pos_row*grid;
-					temp.m_Z = input[grid_pos];
-					temp.flag = true;
+            if(grid_pos >= 0 && grid_pos < data_length &&
+                    grid_pos_row >= 0 && grid_pos_row < row_size && grid_pos_col >= 0 && grid_pos_col < col_size)
+            {
+                if(input[grid_pos] > - 100)
+                {
+                    D3DPOINT temp;
+                    temp.m_X = grid_pos_col*grid;
+                    temp.m_Y = grid_pos_row*grid;
+                    temp.m_Z = input[grid_pos];
+                    temp.flag = true;
 
-					XY_save.push_back(temp);
+                    XY_save.push_back(temp);
 
-					count++;
-					if(maxX_ptslists < grid_pos_col*grid)
-						maxX_ptslists = grid_pos_col*grid;
-					if(maxY_ptslists < grid_pos_row*grid)
-						maxY_ptslists = grid_pos_row*grid;
-					if(minX_ptslists > grid_pos_col*grid)
-						minX_ptslists = grid_pos_col*grid;
-					if(minY_ptslists > grid_pos_row*grid)
-						minY_ptslists = grid_pos_row*grid;
-				}
-			}
-		}
-	}
-	
-	distX_ptslists = maxX_ptslists - minX_ptslists;
-	distY_ptslists = maxY_ptslists - minY_ptslists;
+                    count++;
+                    if(maxX_ptslists < grid_pos_col*grid)
+                        maxX_ptslists = grid_pos_col*grid;
+                    if(maxY_ptslists < grid_pos_row*grid)
+                        maxY_ptslists = grid_pos_row*grid;
+                    if(minX_ptslists > grid_pos_col*grid)
+                        minX_ptslists = grid_pos_col*grid;
+                    if(minY_ptslists > grid_pos_row*grid)
+                        minY_ptslists = grid_pos_row*grid;
+                }
+            }
+        }
+    }
+
+    distX_ptslists = maxX_ptslists - minX_ptslists;
+    distY_ptslists = maxY_ptslists - minY_ptslists;
     //printf("distX %f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\n",distX_ptslists,distY_ptslists,final_interval,XY_save.size(),count,*numpts,mask_interval,smooth_iter);
 
     double scale_factor_X = 1.0/distX_ptslists*Scale_ptslists;
     double scale_factor_Y = 1.0/distY_ptslists*Scale_ptslists;
-	double X_scaled = ((double)col_pos*grid - minX_ptslists)*scale_factor_X;
-	double Y_scaled = ((double)row_pos*grid - minY_ptslists)*scale_factor_Y;
-	double X_plane = ((double)col_pos*grid - minX_ptslists);
-	double Y_plane = ((double)row_pos*grid - minY_ptslists);
-	*numpts = 0;
-	if(count > 15)
-	{
-		GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
-		GMA_double *L_matrix = GMA_double_create(XY_save.size(), 1);
-		GMA_double *AT_matrix = GMA_double_create(3,XY_save.size());
-		GMA_double *ATA_matrix = GMA_double_create(3,3);
+    double X_scaled = ((double)col_pos*grid - minX_ptslists)*scale_factor_X;
+    double Y_scaled = ((double)row_pos*grid - minY_ptslists)*scale_factor_Y;
+    double X_plane = ((double)col_pos*grid - minX_ptslists);
+    double Y_plane = ((double)row_pos*grid - minY_ptslists);
+    *numpts = 0;
+    if(count > 15)
+    {
+        GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
+        GMA_double *L_matrix = GMA_double_create(XY_save.size(), 1);
+        GMA_double *AT_matrix = GMA_double_create(3,XY_save.size());
+        GMA_double *ATA_matrix = GMA_double_create(3,3);
 
-		GMA_double *ATAI_matrix = GMA_double_create(3,3);
-		GMA_double *ATL_matrix = GMA_double_create(3,1);
+        GMA_double *ATAI_matrix = GMA_double_create(3,3);
+        GMA_double *ATL_matrix = GMA_double_create(3,1);
 
-		GMA_double *X_matrix = GMA_double_create(3,1);
-		GMA_double *AX_matrix = GMA_double_create(XY_save.size(),1);
-		GMA_double *V_matrix = GMA_double_create(XY_save.size(),1);
+        GMA_double *X_matrix = GMA_double_create(3,1);
+        GMA_double *AX_matrix = GMA_double_create(XY_save.size(),1);
+        GMA_double *V_matrix = GMA_double_create(XY_save.size(),1);
 
-		//plane fitting
-		vector<D3DPOINT>::iterator it;
-		count = 0;
-		for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
-		{
-			A_matrix->val[count][0] = it->m_X-minX_ptslists;
-			A_matrix->val[count][1] = it->m_Y-minY_ptslists;
-			A_matrix->val[count][2] = 1.0;
+        //plane fitting
+        vector<D3DPOINT>::iterator it;
+        count = 0;
+        for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+        {
+            A_matrix->val[count][0] = it->m_X-minX_ptslists;
+            A_matrix->val[count][1] = it->m_Y-minY_ptslists;
+            A_matrix->val[count][2] = 1.0;
 
-			L_matrix->val[count][0] = it->m_Z;
-			count++;
-		}
+            L_matrix->val[count][0] = it->m_Z;
+            count++;
+        }
 
-		GMA_double_Tran(A_matrix,AT_matrix);
-		GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-		GMA_double_inv(ATA_matrix,ATAI_matrix);
-		GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-		GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-		GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-		GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+        GMA_double_Tran(A_matrix,AT_matrix);
+        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+        GMA_double_inv(ATA_matrix,ATAI_matrix);
+        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
 
-		double sum_V = 0;
-		for(row = 0; row < XY_save.size() ; row++)
-			sum_V += V_matrix->val[row][0];
+        double sum_V = 0;
+        for(row = 0; row < XY_save.size() ; row++)
+            sum_V += V_matrix->val[row][0];
 
-		if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
-		{
-			double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
-			if(plane_Z > -100 && plane_Z < 15000)
-			{
-				double N1 = X_matrix->val[0][0];
-				double N2 = X_matrix->val[1][0];
-				double N3 = 1.0;
+        if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
+        {
+            double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
+            if(plane_Z > -100 && plane_Z < 15000)
+            {
+                double N1 = X_matrix->val[0][0];
+                double N2 = X_matrix->val[1][0];
+                double N3 = 1.0;
 
-				double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-				double angle = acos(fabs(N3)/norm)*180/3.141592;
+                double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+                double angle = acos(fabs(N3)/norm)*180/3.141592;
 
-				if(angle <= 0 && angle >= -90)
-					angle = fabs(angle);
-				else if(angle <= -270 && angle >= -360)
-					angle = 360 + angle;
-				else if(angle >= 270 && angle <= 360)
-					angle = 360 - angle;
+                if(angle <= 0 && angle >= -90)
+                    angle = fabs(angle);
+                else if(angle <= -270 && angle >= -360)
+                    angle = 360 + angle;
+                else if(angle >= 270 && angle <= 360)
+                    angle = 360 - angle;
 
-				double sum = 0;
-				double min_Z = 99999999999;
-				double max_Z = -99999999999;
-				double temp_fitted_Z;
-				double diff_Z;
-				long int selected_count = 0;
-				long int hist[20] = {0};
-				for(row = 0; row < XY_save.size() ; row++)
-				{
-					int hist_index = (int)(std::abs(V_matrix->val[row][0]));
-					if(hist_index > 19)
-						hist_index = 19;
-					if(hist_index >= 0 && hist_index <= 19)
-						hist[hist_index]++;
-				}
+                double sum = 0;
+                double min_Z = 99999999999;
+                double max_Z = -99999999999;
+                double temp_fitted_Z;
+                double diff_Z;
+                long int selected_count = 0;
+                long int hist[20] = {0};
+                for(row = 0; row < XY_save.size() ; row++)
+                {
+                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
+                    if(hist_index > 19)
+                        hist_index = 19;
+                    if(hist_index >= 0 && hist_index <= 19)
+                        hist[hist_index]++;
+                }
 
-				int V_th = 20;
-				int hist_sum = 0;
-				double hist_rate;
-				bool check_V = true;
-				row = 0;
-				while(check_V && row < 20)
-				{
-					hist_sum += hist[row];
-					hist_rate = (double)hist_sum/(double)XY_save.size();
-					if(hist_rate > hist_th)
-					{
-						V_th = row;
-						check_V = false;
-					}
-					row++;
-				}
+                int V_th = 20;
+                int hist_sum = 0;
+                double hist_rate;
+                bool check_V = true;
+                row = 0;
+                while(check_V && row < 20)
+                {
+                    hist_sum += hist[row];
+                    hist_rate = (double)hist_sum/(double)XY_save.size();
+                    if(hist_rate > hist_th)
+                    {
+                        V_th = row;
+                        check_V = false;
+                    }
+                    row++;
+                }
 
-				count = 0;
-				vector<D3DPOINT> XY_selected;
-				for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
-				{
-					D3DPOINT temp;
-					if(std::abs(V_matrix->val[count][0]) < V_th+1)
-					{
-						temp.m_X = (it->m_X-minX_ptslists)*scale_factor_X;
-						temp.m_Y = (it->m_Y-minY_ptslists)*scale_factor_Y;
-						temp.m_Z = it->m_Z;
-						temp.flag = it->flag;
-						XY_selected.push_back(temp);
-					}
-					count++;
-				}
+                count = 0;
+                vector<D3DPOINT> XY_selected;
+                for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+                {
+                    D3DPOINT temp;
+                    if(std::abs(V_matrix->val[count][0]) < V_th+1)
+                    {
+                        temp.m_X = (it->m_X-minX_ptslists)*scale_factor_X;
+                        temp.m_Y = (it->m_Y-minY_ptslists)*scale_factor_Y;
+                        temp.m_Z = it->m_Z;
+                        temp.flag = it->flag;
+                        XY_selected.push_back(temp);
+                    }
+                    count++;
+                }
 
-				GMA_double_destroy(A_matrix);
-				GMA_double_destroy(L_matrix);
-				GMA_double_destroy(AT_matrix);
-				GMA_double_destroy(ATA_matrix);
-				GMA_double_destroy(ATAI_matrix);
-				GMA_double_destroy(ATL_matrix);
-				GMA_double_destroy(X_matrix);
-				GMA_double_destroy(AX_matrix);
-				GMA_double_destroy(V_matrix);
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
 
-				selected_count = XY_selected.size();
+                selected_count = XY_selected.size();
 
-				if(selected_count > 15)
-				{
-					A_matrix = GMA_double_create(selected_count, 6);
-					L_matrix = GMA_double_create(selected_count, 1);
-					AT_matrix = GMA_double_create(6,selected_count);
-					ATA_matrix = GMA_double_create(6,6);
+                if(selected_count > 15)
+                {
+                    A_matrix = GMA_double_create(selected_count, 6);
+                    L_matrix = GMA_double_create(selected_count, 1);
+                    AT_matrix = GMA_double_create(6,selected_count);
+                    ATA_matrix = GMA_double_create(6,6);
 
-					ATAI_matrix = GMA_double_create(6,6);
-					ATL_matrix = GMA_double_create(6,1);
+                    ATAI_matrix = GMA_double_create(6,6);
+                    ATL_matrix = GMA_double_create(6,1);
 
-					X_matrix = GMA_double_create(6,1);
-					AX_matrix = GMA_double_create(selected_count,1);
-					V_matrix = GMA_double_create(selected_count,1);
+                    X_matrix = GMA_double_create(6,1);
+                    AX_matrix = GMA_double_create(selected_count,1);
+                    V_matrix = GMA_double_create(selected_count,1);
 
-					count = 0;
-					for(it = XY_selected.begin() ; it != XY_selected.end() ; ++it)
-					{
-						A_matrix->val[count][0] = it->m_X*it->m_X;
-						A_matrix->val[count][1] = it->m_X*it->m_Y;
-						A_matrix->val[count][2] = it->m_Y*it->m_Y;
-						A_matrix->val[count][3] = it->m_X;
-						A_matrix->val[count][4] = it->m_Y;
-						A_matrix->val[count][5] = 1.0;
+                    count = 0;
+                    for(it = XY_selected.begin() ; it != XY_selected.end() ; ++it)
+                    {
+                        A_matrix->val[count][0] = it->m_X*it->m_X;
+                        A_matrix->val[count][1] = it->m_X*it->m_Y;
+                        A_matrix->val[count][2] = it->m_Y*it->m_Y;
+                        A_matrix->val[count][3] = it->m_X;
+                        A_matrix->val[count][4] = it->m_Y;
+                        A_matrix->val[count][5] = 1.0;
 
-						L_matrix->val[count][0] = it->m_Z;
-						count++;
-					}
+                        L_matrix->val[count][0] = it->m_Z;
+                        count++;
+                    }
 
-					GMA_double_Tran(A_matrix,AT_matrix);
-					GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-					GMA_double_inv(ATA_matrix,ATAI_matrix);
-					GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-					GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-					GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-					GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                    GMA_double_Tran(A_matrix,AT_matrix);
+                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                    GMA_double_inv(ATA_matrix,ATAI_matrix);
+                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
 
-					sum = 0;
-					min_Z = 99999999999;
-					max_Z = -99999999999;
-					count = 0;
-					vector<D3DPOINT>::iterator it_sel;
-					for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
-					{
-						sum += V_matrix->val[count][0] * V_matrix->val[count][0];
+                    sum = 0;
+                    min_Z = 99999999999;
+                    max_Z = -99999999999;
+                    count = 0;
+                    vector<D3DPOINT>::iterator it_sel;
+                    for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                    {
+                        sum += V_matrix->val[count][0] * V_matrix->val[count][0];
 
-						temp_fitted_Z = X_matrix->val[0][0]*it_sel->m_X*it_sel->m_X + X_matrix->val[1][0]*it_sel->m_X*it_sel->m_Y + 
-							X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
+                        temp_fitted_Z = X_matrix->val[0][0]*it_sel->m_X*it_sel->m_X + X_matrix->val[1][0]*it_sel->m_X*it_sel->m_Y + 
+                            X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
 
-						if(min_Z > temp_fitted_Z)
-							min_Z = temp_fitted_Z;
-						if(max_Z < temp_fitted_Z)
-							max_Z = temp_fitted_Z;
+                        if(min_Z > temp_fitted_Z)
+                            min_Z = temp_fitted_Z;
+                        if(max_Z < temp_fitted_Z)
+                            max_Z = temp_fitted_Z;
 
-						count++;
-					}
+                        count++;
+                    }
 
-					if(!isnan(sum) && sum > 0 )
-					{
-						sigma = sqrt(sum/(double)selected_count);
+                    if(!isnan(sum) && sum > 0 )
+                    {
+                        sigma = sqrt(sum/(double)selected_count);
 
-						double diff_Z = fabs(max_Z - min_Z);
+                        double diff_Z = fabs(max_Z - min_Z);
 
-						double A = X_matrix->val[0][0];
-						double B = X_matrix->val[2][0];
-						double C = X_matrix->val[3][0];
-						double D = X_matrix->val[4][0];
-						double E = X_matrix->val[1][0];
+                        double A = X_matrix->val[0][0];
+                        double B = X_matrix->val[2][0];
+                        double C = X_matrix->val[3][0];
+                        double D = X_matrix->val[4][0];
+                        double E = X_matrix->val[1][0];
 
-						double det = 4*A*B - E*E;
-						double det1 = D*E - 2*C*B;
-						double det2 = 2*A*D - C*E;
+                        double det = 4*A*B - E*E;
+                        double det1 = D*E - 2*C*B;
+                        double det2 = 2*A*D - C*E;
 
-						bool check_clinder = false;
-						if(det == 0 && det1 == det2)
-							check_clinder = true;
+                        bool check_clinder = false;
+                        if(det == 0 && det1 == det2)
+                            check_clinder = true;
 
-						if(!check_clinder)
-						{
-							*fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[1][0]*X_scaled*Y_scaled + X_matrix->val[2][0]*Y_scaled*Y_scaled +X_matrix->val[3][0]*X_scaled + X_matrix->val[4][0]*Y_scaled + X_matrix->val[5][0];
-						}
-						else
-						{
-							double sum_weight = 0;
-							double sum_weigtdist = 0;
-							double p = 1.5;
-							for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
-							{
-								double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
-								sum_weight += (1.0/pow(dist,p));
-								sum_weigtdist += (it_sel->m_Z/pow(dist,p));
-							}
+                        if(!check_clinder)
+                        {
+                            *fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[1][0]*X_scaled*Y_scaled + X_matrix->val[2][0]*Y_scaled*Y_scaled +X_matrix->val[3][0]*X_scaled + X_matrix->val[4][0]*Y_scaled + X_matrix->val[5][0];
+                        }
+                        else
+                        {
+                            double sum_weight = 0;
+                            double sum_weigtdist = 0;
+                            double p = 1.5;
+                            for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                            {
+                                double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+                                sum_weight += (1.0/pow(dist,p));
+                                sum_weigtdist += (it_sel->m_Z/pow(dist,p));
+                            }
 
-							if(sum_weight > 0)
-							{
-								*fitted_Z = sum_weigtdist/sum_weight;
-								sigma = 1;
-							}
-							else
-								sigma = 999999;
-						}
-					}
-					else
-					{
+                            if(sum_weight > 0)
+                            {
+                                *fitted_Z = sum_weigtdist/sum_weight;
+                                sigma = 1;
+                            }
+                            else
+                                sigma = 999999;
+                        }
+                    }
+                    else
+                    {
 
-						double sum_weight = 0;
-						double sum_weigtdist = 0;
-						double p = 1.5;
+                        double sum_weight = 0;
+                        double sum_weigtdist = 0;
+                        double p = 1.5;
 
-						for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
-						{
-							double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
-							sum_weight += (1.0/pow(dist,p));
-							sum_weigtdist += (it_sel->m_Z/pow(dist,p));
-						}
+                        for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                        {
+                            double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+                            sum_weight += (1.0/pow(dist,p));
+                            sum_weigtdist += (it_sel->m_Z/pow(dist,p));
+                        }
 
-						if(sum_weight > 0)
-						{
-							*fitted_Z = sum_weigtdist/sum_weight;
-							sigma = 1;
-						}
-						else
-							sigma = 999999;
-					}
+                        if(sum_weight > 0)
+                        {
+                            *fitted_Z = sum_weigtdist/sum_weight;
+                            sigma = 1;
+                        }
+                        else
+                            sigma = 999999;
+                    }
 
-					if(grid > 2)
-					{
-						if(angle < 10)
-							Grid_info[t_index].lsf_kernel = 4;
-						else if(angle < 20)
-							Grid_info[t_index].lsf_kernel = 3;
-						else if(angle < 30)
-							Grid_info[t_index].lsf_kernel = 2;
-						else if(Grid_info[t_index].lsf_kernel < 2)
-							Grid_info[t_index].lsf_kernel = 2;
-					}
-					else if(grid == 2)
-					{
-						if(angle < 10)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
-						else if(angle < 20)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
-						else if(angle < 30)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
-						else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
-					}
-					else if(grid == 1)
-					{
-						if(angle < 10)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
-						else if(angle < 20)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
-						else if(angle < 30)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
-						else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
-					}
-					else
-					{
-						if(angle < 10)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
-						else if(angle < 20)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
-						else if(angle < 30)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
-						else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
-							Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
-					}
+                    if(grid > 2)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = 4;
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = 3;
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = 2;
+                        else if(Grid_info[t_index].lsf_kernel < 2)
+                            Grid_info[t_index].lsf_kernel = 2;
+                    }
+                    else if(grid == 2)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
+                        else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
+                    }
+                    else if(grid == 1)
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
+                        else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
+                    }
+                    else
+                    {
+                        if(angle < 10)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
+                        else if(angle < 20)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
+                        else if(angle < 30)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
+                        else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
+                            Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
+                    }
 
-					GMA_double_destroy(A_matrix);
-					GMA_double_destroy(L_matrix);
-					GMA_double_destroy(AT_matrix);
-					GMA_double_destroy(ATA_matrix);
+                    GMA_double_destroy(A_matrix);
+                    GMA_double_destroy(L_matrix);
+                    GMA_double_destroy(AT_matrix);
+                    GMA_double_destroy(ATA_matrix);
 
-					GMA_double_destroy(ATAI_matrix);
-					GMA_double_destroy(ATL_matrix);
+                    GMA_double_destroy(ATAI_matrix);
+                    GMA_double_destroy(ATL_matrix);
 
-					GMA_double_destroy(X_matrix);
-					GMA_double_destroy(AX_matrix);
-					GMA_double_destroy(V_matrix);
+                    GMA_double_destroy(X_matrix);
+                    GMA_double_destroy(AX_matrix);
+                    GMA_double_destroy(V_matrix);
 
-					*numpts = selected_count;
-				}
-				else
-				{
-					sigma = 999999;
-					*numpts = 0;
-				}
-				XY_selected.clear();
-				vector<D3DPOINT>().swap(XY_selected);
-			}
-			else
-			{
-				GMA_double_destroy(A_matrix);
-				GMA_double_destroy(L_matrix);
-				GMA_double_destroy(AT_matrix);
-				GMA_double_destroy(ATA_matrix);
-				GMA_double_destroy(ATAI_matrix);
-				GMA_double_destroy(ATL_matrix);
-				GMA_double_destroy(X_matrix);
-				GMA_double_destroy(AX_matrix);
-				GMA_double_destroy(V_matrix);
+                    *numpts = selected_count;
+                }
+                else
+                {
+                    sigma = 999999;
+                    *numpts = 0;
+                }
+                XY_selected.clear();
+                vector<D3DPOINT>().swap(XY_selected);
+            }
+            else
+            {
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
 
-				sigma = 999999;
-				*numpts = 0;
-			}
-		}
-	}
-	else
-	{
+                sigma = 999999;
+                *numpts = 0;
+            }
+        }
+    }
+    else
+    {
         //printf("selected pts %d\n",XY_save.size());
-		sigma = 999999;
-	}
+        sigma = 999999;
+    }
 
     XY_save.clear();
-	vector<D3DPOINT>().swap(XY_save);
+    vector<D3DPOINT>().swap(XY_save);
 
     return sigma;
 }
@@ -24697,8 +24697,8 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
 // Return the correlation coefficient or -99 if undefined
 double Correlate(double *L, double *R, int N)
 {
-	double Lmean = 0;
-	double Rmean = 0;
+    double Lmean = 0;
+    double Rmean = 0;
     double rho;
     
     if(N > 0)
@@ -24738,7 +24738,7 @@ double Correlate(double *L, double *R, int N)
         rho = (double) -99;
     }
  
-	return rho;
+    return rho;
 }
 
 float Correlate_float(float *L, float *R, int N)
@@ -24791,13 +24791,13 @@ float Correlate_float(float *L, float *R, int N)
 // along with the image itself
 double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, double dx, double dy)
 {
-	double patch =
-		(double) (Image[position]) * (1 - dx) * (1 - dy) + 
-		(double) (Image[position + 1]) * dx * (1 - dy) +
-		(double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
-		(double) (Image[position + 1 + Imagesize.width]) * dx * dy;
+    double patch =
+        (double) (Image[position]) * (1 - dx) * (1 - dy) + 
+        (double) (Image[position + 1]) * dx * (1 - dy) +
+        (double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
+        (double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
-	return patch;
+    return patch;
 }
 
 
@@ -32416,12 +32416,12 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                         //exit(1);
                     }
                     if(proinfo.pyramid_level <= proinfo.end_level)
-					{
-						if(proinfo.pyramid_level >= 1)
-							proinfo.end_level = proinfo.pyramid_level - 1;
-						else
-							proinfo.end_level = proinfo.pyramid_level;
-					}
+                    {
+                        if(proinfo.pyramid_level >= 1)
+                            proinfo.end_level = proinfo.pyramid_level - 1;
+                        else
+                            proinfo.end_level = proinfo.pyramid_level;
+                    }
                     
                     if(proinfo.DEM_resolution < 50)
                         proinfo.end_level = 0;
@@ -32575,7 +32575,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
         }
     }
 
-	return 0;
+    return 0;
 }
 
 void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary, CSize Grid_size, double Grid_set)
@@ -33141,7 +33141,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                         if(level == 0 && iteration == 3)
                                         {
                                             //echo_print_nccresults_SDM(proinfo.save_filepath,1,1,level, iteration, nccresult, &Size_Grid2D, "final");
-                                        	const char *temp_str = {"final"};    
+                                            const char *temp_str = {"final"};    
                                             echoprint_Gridinfo_SDM(prc_level,proinfo,LBoundary,RBoundary, data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,temp_str);
                                             
                                             echoprint_adjustXYZ(prc_level, LBoundary,RBoundary,data_size_l[prc_level], SubImages_L, data_size_r[prc_level], SubImages_R,subBoundary,proinfo, proinfo.save_filepath,1,1,level,iteration,&Size_Grid2D,GridPT3,temp_str,grid_resolution,1);
@@ -34771,7 +34771,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, NCCresultSDM* nccresult, uint16 *Mag
                 }
                 else
                 {
-				/*
+                /*
                     D2DPOINT temp_GP,temp_GP_R;
                     D2DPOINT Left_Imagecoord;
                     D2DPOINT Right_Imagecoord;
