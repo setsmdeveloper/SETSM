@@ -23345,19 +23345,21 @@ void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_ste
         for(long int iter_count = row_start ; iter_count < row_end ; iter_count++)
             //for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
 		{
+            //iter_count = row_end/2;
 			long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
 			long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
 			double fitted_Z = seeddem[iter_count];
 			float sigma;
-			long int selected_count;
+			
 
 			if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
 			{
 				//if(!check_smooth_iter)
 				//	printf("pts_pos %d\t%d\t%d\n",pts_row,pts_col,iter_count);
 
-				if(seeddem[iter_count] > -50 && seeddem[iter_count] < 10000)
+				if(seeddem[iter_count] > -50 )
 				{
+                    long int selected_count = 0;
 					sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
 					//if(!check_smooth_iter)
 					//	printf("sigma %f\t%f\n",sigma,fitted_Z);
@@ -23445,7 +23447,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     int check_stop = 0;
     long int final_interval = 5;
     long int interval = 2;
-    long int count1,count2,count3,count4;
+    long int count1,count2,count3,count4,count;
     int max_pts = 9;
     if(grid >= 8)
         max_pts = 7;
@@ -23476,22 +23478,22 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
         add_interval = 3;
     
     if(smooth_iter > 0)
-    {
-        long int pre_final_interval = (long int)Grid_info[t_index].lsf_kernel;
-    
-        if(add_interval > 0)
-        {
-            mask_interval = floor(pre_final_interval/5.0);
-            if(mask_interval <= 0)
-                mask_interval = 1;
-        }
-        else
-        {
-            if(grid < 1)
-                mask_interval = 2;
-        }
-        final_interval = (long int)Grid_info[t_index].lsf_kernel;
-    }
+	{
+		long int pre_final_interval = (long int)Grid_info[t_index].lsf_kernel;
+
+		if(add_interval > 0)
+		{
+			mask_interval = floor(pre_final_interval/5.0);
+			if(mask_interval <= 0)
+				mask_interval = 1;
+		}
+		else
+		{
+			if(grid < 1)
+				mask_interval = 2;
+		}
+		final_interval = (long int)Grid_info[t_index].lsf_kernel;
+	}
     else
     {
         while (check_stop == 0)
@@ -23506,10 +23508,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 for(col = -interval;col <= interval ; col++)
                 {
                     long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-                    
-                    
-                    if(grid_pos >= 0 && grid_pos < data_length &&
-                       row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size /* && col != 0 && row != 0*/)// && radius > distance)
+                    if(grid_pos >= 0 && grid_pos < data_length && row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
                     {
                         
                         if(input[grid_pos] > -100)
@@ -23549,358 +23548,273 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
                 interval = interval + 1;
         }
     }
-    
-    if(!check_std)
-    {
-        double maxX_ptslists = -100000000;
-        double maxY_ptslists = -100000000;
-        double minX_ptslists =  100000000;
-        double minY_ptslists =  100000000;
-        double distX_ptslists, distY_ptslists;
-        double Scale_ptslists = 1000;
-        
-        *numpts = 0;
-        for(row = -final_interval;row <= final_interval;row+= mask_interval)
-        {
-            for(col = -final_interval;col <= final_interval ; col+= mask_interval)
-            {
-                long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-                long int grid_pos_col = (long int)((col_pos+col));
-                long int grid_pos_row = (long int)((row_pos+row));
-                
-                
-                if(grid_pos >= 0 && grid_pos < data_length &&
-                   row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
-                {
-                    
-                    if(input[grid_pos] > - 100)
-                    {
-                        (*numpts)++;
-                        
-                        if(maxX_ptslists < grid_pos_col*grid)
-                            maxX_ptslists = grid_pos_col*grid;
-                        if(maxY_ptslists < grid_pos_row*grid)
-                            maxY_ptslists = grid_pos_row*grid;
-                        if(minX_ptslists > grid_pos_col*grid)
-                            minX_ptslists = grid_pos_col*grid;
-                        if(minY_ptslists > grid_pos_row*grid)
-                            minY_ptslists = grid_pos_row*grid;
-                    }
-                }
-            }
-        }
-        
-        distX_ptslists = maxX_ptslists - minX_ptslists;
-        distY_ptslists = maxY_ptslists - minY_ptslists;
-        
-        double X_scaled = ((double)col_pos*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
-        double Y_scaled = ((double)row_pos*grid - minY_ptslists)/distY_ptslists*Scale_ptslists;
-        double X_plane = ((double)col_pos*grid - minX_ptslists);
-        double Y_plane = ((double)row_pos*grid - minY_ptslists);
-        
-        if((*numpts) > 15)
-        {
-            GMA_double *A_matrix = GMA_double_create(*numpts, 3);
-            GMA_double *L_matrix = GMA_double_create(*numpts, 1);
-            GMA_double *AT_matrix = GMA_double_create(3,*numpts);
-            GMA_double *ATA_matrix = GMA_double_create(3,3);
-            
-            GMA_double *ATAI_matrix = GMA_double_create(3,3);
-            GMA_double *ATL_matrix = GMA_double_create(3,1);
-            
-            GMA_double *X_matrix = GMA_double_create(3,1);
-            GMA_double *AX_matrix = GMA_double_create(*numpts,1);
-            GMA_double *V_matrix = GMA_double_create(*numpts,1);
-            
-            int count = 0;
-            D3DPOINT *XY_save = (D3DPOINT*)malloc(sizeof(D3DPOINT)*(*numpts));
-            
-            //plane fitting
-            for(row = -final_interval;row <= final_interval;row+=mask_interval)
-            {
-                for(col = -final_interval;col <= final_interval ; col+=mask_interval)
-                {
-                    long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-                    long int grid_pos_col = (long int)((col_pos+col));
-                    long int grid_pos_row = (long int)((row_pos+row));
-                    
-                    if(grid_pos >= 0 && grid_pos < data_length &&
-                       row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size )
-                    {
-                        if(input[grid_pos] > - 100)
-                        {
-                            double x,y,z;
-                            x = (grid_pos_col*grid - minX_ptslists)/distX_ptslists*Scale_ptslists;
-                            y = (grid_pos_row*grid - minY_ptslists)/distY_ptslists*Scale_ptslists;
-                            z = input[grid_pos];
-                      
-                            XY_save[count].m_X = x;
-                            XY_save[count].m_Y = y;
-                            XY_save[count].m_Z = z;
-                            XY_save[count].flag = 1;
-                            
-                            x = (grid_pos_col*grid - minX_ptslists);
-                            y = (grid_pos_row*grid - minY_ptslists);
-                            
-                            A_matrix->val[count][0] = x;
-                            A_matrix->val[count][1] = y;
-                            A_matrix->val[count][2] = 1.0;
-                            
-                            L_matrix->val[count][0] = z;
-                            count++;
-                        }
-                    }
-                }
-            }
-            
-            GMA_double_Tran(A_matrix,AT_matrix);
-            GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-            GMA_double_inv(ATA_matrix,ATAI_matrix);
-            GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-            GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-            GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-            GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-            
-			double sum_V = 0;
-			for(row = 0; row < *numpts ; row++)
-				sum_V += V_matrix->val[row][0];
+   
+    double maxX_ptslists = -10000000;//final_interval*grid;
+	double maxY_ptslists = -10000000;//final_interval*grid;
+	double minX_ptslists =  10000000;//-final_interval*grid;
+	double minY_ptslists =  10000000;//-final_interval*grid;
+	double distX_ptslists = 0;//maxX_ptslists - minX_ptslists;
+	double distY_ptslists = 0;//maxY_ptslists - minY_ptslists;
+	double Scale_ptslists = 1000;
+   
+	vector<D3DPOINT> XY_save;
+    XY_save.clear();
+    count = 0;
+	for(row = -final_interval;row <= final_interval;row+= mask_interval)
+	{
+		for(col = -final_interval;col <= final_interval ; col+= mask_interval)
+		{
+			long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+			long int grid_pos_col = (long int)((col_pos+col));
+			long int grid_pos_row = (long int)((row_pos+row));
 			
-			if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
+			if(grid_pos >= 0 && grid_pos < data_length &&
+			   grid_pos_row >= 0 && grid_pos_row < row_size && grid_pos_col >= 0 && grid_pos_col < col_size)
 			{
-				double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
-
-				if(plane_Z > -100 && plane_Z < 15000)
+				if(input[grid_pos] > - 100)
 				{
-					double N1 = X_matrix->val[0][0];
-					double N2 = X_matrix->val[1][0];
-					double N3 = 1.0;
+					D3DPOINT temp;
+					temp.m_X = grid_pos_col*grid;
+					temp.m_Y = grid_pos_row*grid;
+					temp.m_Z = input[grid_pos];
+					temp.flag = true;
 
-					double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
-					double angle = acos(fabs(N3)/norm)*180/3.141592;
+                    XY_save.push_back(temp);
+					
+                    count++;
+					if(maxX_ptslists < grid_pos_col*grid)
+						maxX_ptslists = grid_pos_col*grid;
+					if(maxY_ptslists < grid_pos_row*grid)
+						maxY_ptslists = grid_pos_row*grid;
+					if(minX_ptslists > grid_pos_col*grid)
+						minX_ptslists = grid_pos_col*grid;
+					if(minY_ptslists > grid_pos_row*grid)
+						minY_ptslists = grid_pos_row*grid;
+				}
+			}
+		}
+	}
+	
+	distX_ptslists = maxX_ptslists - minX_ptslists;
+	distY_ptslists = maxY_ptslists - minY_ptslists;
+    //printf("distX %f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\n",distX_ptslists,distY_ptslists,final_interval,XY_save.size(),count,*numpts,mask_interval,smooth_iter);
 
-					if(angle <= 0 && angle >= -90)
-						angle = fabs(angle);
-					else if(angle <= -270 && angle >= -360)
-						angle = 360 + angle;
-					else if(angle >= 270 && angle <= 360)
-						angle = 360 - angle;
+    double scale_factor_X = 1.0/distX_ptslists*Scale_ptslists;
+    double scale_factor_Y = 1.0/distY_ptslists*Scale_ptslists;
+	double X_scaled = ((double)col_pos*grid - minX_ptslists)*scale_factor_X;
+	double Y_scaled = ((double)row_pos*grid - minY_ptslists)*scale_factor_Y;
+	double X_plane = ((double)col_pos*grid - minX_ptslists);
+	double Y_plane = ((double)row_pos*grid - minY_ptslists);
+	*numpts = 0;
+	if(count > 15)
+	{
+     	GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
+		GMA_double *L_matrix = GMA_double_create(XY_save.size(), 1);
+		GMA_double *AT_matrix = GMA_double_create(3,XY_save.size());
+		GMA_double *ATA_matrix = GMA_double_create(3,3);
+		
+		GMA_double *ATAI_matrix = GMA_double_create(3,3);
+		GMA_double *ATL_matrix = GMA_double_create(3,1);
+		
+		GMA_double *X_matrix = GMA_double_create(3,1);
+		GMA_double *AX_matrix = GMA_double_create(XY_save.size(),1);
+		GMA_double *V_matrix = GMA_double_create(XY_save.size(),1);
+		
+		//plane fitting
+		vector<D3DPOINT>::iterator it;
+        count = 0;
+		for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+		{
+				A_matrix->val[count][0] = it->m_X-minX_ptslists;
+				A_matrix->val[count][1] = it->m_Y-minY_ptslists;
+				A_matrix->val[count][2] = 1.0;
 
+				L_matrix->val[count][0] = it->m_Z;
+				count++;
+		}
+		
+		GMA_double_Tran(A_matrix,AT_matrix);
+		GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+		GMA_double_inv(ATA_matrix,ATAI_matrix);
+		GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+		GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+		GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+		GMA_double_sub(AX_matrix,L_matrix,V_matrix);
 
-					//printf("vector %f\t%f\t%f\t norm %f\tangle %f\n",N1,N2,N3,norm,angle);
+		double sum_V = 0;
+		for(row = 0; row < XY_save.size() ; row++)
+			sum_V += V_matrix->val[row][0];
+		
+		if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
+		{
+			double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
+			if(plane_Z > -100 && plane_Z < 15000)
+			{
+				double N1 = X_matrix->val[0][0];
+				double N2 = X_matrix->val[1][0];
+				double N3 = 1.0;
 
-					double sum = 0;
-					double min_Z = 99999999999;
-					double max_Z = -99999999999;
-					double temp_fitted_Z;
-					double diff_Z;
-					long int selected_count = 0;
-					long int hist[20] = {0};
-					for(row = 0; row < *numpts ; row++)
+				double norm  = sqrt(N1*N1 + N2*N2 + N3*N3);
+				double angle = acos(fabs(N3)/norm)*180/3.141592;
+
+				if(angle <= 0 && angle >= -90)
+					angle = fabs(angle);
+				else if(angle <= -270 && angle >= -360)
+					angle = 360 + angle;
+				else if(angle >= 270 && angle <= 360)
+					angle = 360 - angle;
+
+				double sum = 0;
+				double min_Z = 99999999999;
+				double max_Z = -99999999999;
+				double temp_fitted_Z;
+				double diff_Z;
+				long int selected_count = 0;
+				long int hist[20] = {0};
+				for(row = 0; row < XY_save.size() ; row++)
+				{
+					int hist_index = (int)(std::abs(V_matrix->val[row][0]));
+					if(hist_index > 19)
+						hist_index = 19;
+					if(hist_index >= 0 && hist_index <= 19)
+						hist[hist_index]++;
+				}
+
+				int V_th = 20;
+				int hist_sum = 0;
+				double hist_rate;
+				bool check_V = true;
+				row = 0;
+				while(check_V && row < 20)
+				{
+					hist_sum += hist[row];
+					hist_rate = (double)hist_sum/(double)XY_save.size();
+					if(hist_rate > hist_th)
 					{
-						int hist_index = (int)(std::abs(V_matrix->val[row][0]));
-						if(hist_index > 19)
-							hist_index = 19;
-						if(hist_index >= 0 && hist_index <= 19)
-							hist[hist_index]++;
+						V_th = row;
+						check_V = false;
+					}
+					row++;
+				}
+
+				count = 0;
+				vector<D3DPOINT> XY_selected;
+				for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+				{
+					D3DPOINT temp;
+					if(std::abs(V_matrix->val[count][0]) < V_th+1)
+					{
+						temp.m_X = (it->m_X-minX_ptslists)*scale_factor_X;
+						temp.m_Y = (it->m_Y-minY_ptslists)*scale_factor_Y;
+						temp.m_Z = it->m_Z;
+						temp.flag = it->flag;
+						XY_selected.push_back(temp);
+					}
+					count++;
+				}
+                
+				GMA_double_destroy(A_matrix);
+				GMA_double_destroy(L_matrix);
+				GMA_double_destroy(AT_matrix);
+				GMA_double_destroy(ATA_matrix);
+				GMA_double_destroy(ATAI_matrix);
+				GMA_double_destroy(ATL_matrix);
+				GMA_double_destroy(X_matrix);
+				GMA_double_destroy(AX_matrix);
+				GMA_double_destroy(V_matrix);
+
+				selected_count = XY_selected.size();
+
+				if(selected_count > 15)
+				{
+					A_matrix = GMA_double_create(selected_count, 6);
+					L_matrix = GMA_double_create(selected_count, 1);
+					AT_matrix = GMA_double_create(6,selected_count);
+					ATA_matrix = GMA_double_create(6,6);
+
+					ATAI_matrix = GMA_double_create(6,6);
+					ATL_matrix = GMA_double_create(6,1);
+
+					X_matrix = GMA_double_create(6,1);
+					AX_matrix = GMA_double_create(selected_count,1);
+					V_matrix = GMA_double_create(selected_count,1);
+
+					count = 0;
+					for(it = XY_selected.begin() ; it != XY_selected.end() ; ++it)
+					{
+						A_matrix->val[count][0] = it->m_X*it->m_X;
+						A_matrix->val[count][1] = it->m_X*it->m_Y;
+						A_matrix->val[count][2] = it->m_Y*it->m_Y;
+						A_matrix->val[count][3] = it->m_X;
+						A_matrix->val[count][4] = it->m_Y;
+						A_matrix->val[count][5] = 1.0;
+
+						L_matrix->val[count][0] = it->m_Z;
+						count++;
 					}
 
-					int V_th = 20;
-					int hist_sum = 0;
-					double hist_rate;
-					bool check_V = true;
-					row = 0;
-					while(check_V && row < 20)
+                 	GMA_double_Tran(A_matrix,AT_matrix);
+					GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+					GMA_double_inv(ATA_matrix,ATAI_matrix);
+					GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+					GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+					GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+					GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+
+					sum = 0;
+					min_Z = 99999999999;
+					max_Z = -99999999999;
+					count = 0;
+                    vector<D3DPOINT>::iterator it_sel;
+					for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
 					{
-						hist_sum += hist[row];
-						hist_rate = (double)hist_sum/(double)(*numpts);
-						if(hist_rate > hist_th)// && hist_sum > 6)
+						sum += V_matrix->val[count][0] * V_matrix->val[count][0];
+
+						temp_fitted_Z = X_matrix->val[0][0]*it_sel->m_X*it_sel->m_X + X_matrix->val[1][0]*it_sel->m_X*it_sel->m_Y + 
+                        X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
+
+						if(min_Z > temp_fitted_Z)
+							min_Z = temp_fitted_Z;
+						if(max_Z < temp_fitted_Z)
+							max_Z = temp_fitted_Z;
+
+						count++;
+					}
+
+					if(!isnan(sum) && sum > 0 )
+					{
+						sigma = sqrt(sum/(double)selected_count);
+						
+						double diff_Z = fabs(max_Z - min_Z);
+
+						double A = X_matrix->val[0][0];
+						double B = X_matrix->val[2][0];
+						double C = X_matrix->val[3][0];
+						double D = X_matrix->val[4][0];
+						double E = X_matrix->val[1][0];
+
+						double det = 4*A*B - E*E;
+						double det1 = D*E - 2*C*B;
+						double det2 = 2*A*D - C*E;
+
+						bool check_clinder = false;
+						if(det == 0 && det1 == det2)
+							check_clinder = true;
+
+						if(!check_clinder)
 						{
-							V_th = row;
-							check_V = false;
+							*fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[1][0]*X_scaled*Y_scaled + X_matrix->val[2][0]*Y_scaled*Y_scaled +X_matrix->val[3][0]*X_scaled + X_matrix->val[4][0]*Y_scaled + X_matrix->val[5][0];
 						}
-						row++;
-					}
-
-					for(row = 0; row < *numpts ; row++)
-					{
-						if(std::abs(V_matrix->val[row][0]) >= V_th+1)
-							XY_save[row].flag = 0;
 						else
 						{
-							selected_count++;
-						}
-					}
-
-					GMA_double_destroy(A_matrix);
-					GMA_double_destroy(L_matrix);
-					GMA_double_destroy(AT_matrix);
-					GMA_double_destroy(ATA_matrix);
-					GMA_double_destroy(ATAI_matrix);
-					GMA_double_destroy(ATL_matrix);
-					GMA_double_destroy(X_matrix);
-					GMA_double_destroy(AX_matrix);
-					GMA_double_destroy(V_matrix);
-
-					if(selected_count > 15)
-					{
-						A_matrix = GMA_double_create(selected_count, 6);
-						L_matrix = GMA_double_create(selected_count, 1);
-						AT_matrix = GMA_double_create(6,selected_count);
-						ATA_matrix = GMA_double_create(6,6);
-
-						ATAI_matrix = GMA_double_create(6,6);
-						ATL_matrix = GMA_double_create(6,1);
-
-						X_matrix = GMA_double_create(6,1);
-						AX_matrix = GMA_double_create(selected_count,1);
-						V_matrix = GMA_double_create(selected_count,1);
-
-						count = 0;
-
-						for(row = 0; row < *numpts ; row++)
-						{
-							if(XY_save[row].flag == 1)
-							{
-								A_matrix->val[count][0] = XY_save[row].m_X*XY_save[row].m_X;
-								A_matrix->val[count][1] = XY_save[row].m_X*XY_save[row].m_Y;
-								A_matrix->val[count][2] = XY_save[row].m_Y*XY_save[row].m_Y;
-								A_matrix->val[count][3] = XY_save[row].m_X;
-								A_matrix->val[count][4] = XY_save[row].m_Y;
-								A_matrix->val[count][5] = 1.0;
-
-								L_matrix->val[count][0] = XY_save[row].m_Z;
-								count++;
-							}
-						}
-
-						GMA_double_Tran(A_matrix,AT_matrix);
-						GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-						GMA_double_inv(ATA_matrix,ATAI_matrix);
-						GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
-						GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
-						GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-						GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-
-						//*numpts = selected_count;
-
-						sum = 0;
-						min_Z = 99999999999;
-						max_Z = -99999999999;
-						count = 0;
-						for(row = 0; row < *numpts ; row++)
-						{
-							if(XY_save[row].flag == 1)
-							{
-								sum += V_matrix->val[count][0] * V_matrix->val[count][0];
-
-
-								temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
-									X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
-
-								if(min_Z > temp_fitted_Z)
-									min_Z = temp_fitted_Z;
-								if(max_Z < temp_fitted_Z)
-									max_Z = temp_fitted_Z;
-
-								count++;
-							}
-						}
-
-						if(sum > 0 && *numpts > 15 && !isnan(sum))
-						{
-							sigma = sqrt(sum/(double)(*numpts));
-
-							if(isnan(sigma))
-							{
-								printf("sum numpts %f\t%ld\tplane %f\t%f\t%f\t%f\n",sum,*numpts,plane_Z,N1,N2,N3);
-
-								count = 0;
-								for(row = 0; row < *numpts ; row++)
-								{
-									if(XY_save[row].flag == 1)
-									{
-										double t_sum = V_matrix->val[count][0] * V_matrix->val[count][0];
-
-
-										temp_fitted_Z = X_matrix->val[0][0]*XY_save[row].m_X*XY_save[row].m_X + X_matrix->val[0][1]*XY_save[row].m_X*XY_save[row].m_Y + X_matrix->val[0][2]*XY_save[row].m_Y*XY_save[row].m_Y +
-											X_matrix->val[0][3]*XY_save[row].m_X + X_matrix->val[0][4]*XY_save[row].m_Y + X_matrix->val[0][5];
-
-										printf("id %d\tt_sum %f\tV_matrix %Lf\temp_fitted_Z %f\n",row,t_sum,V_matrix->val[row][0],temp_fitted_Z);
-
-										count++;
-									}
-								}
-
-								exit(1);
-							}
-
-							double diff_Z = fabs(max_Z - min_Z);
-
-							double A = X_matrix->val[0][0];
-							double B = X_matrix->val[0][2];
-							double C = X_matrix->val[0][3];
-							double D = X_matrix->val[0][4];
-							double E = X_matrix->val[0][1];
-
-							double det = 4*A*B - E*E;
-							double det1 = D*E - 2*C*B;
-							double det2 = 2*A*D - C*E;
-							double xm = -(2*B*C - D*E)/det;
-							double ym = -(2*A*D - C*E)/det;
-							double diff_xm = (fabs(xm - X_scaled))/Scale_ptslists*distX_ptslists/grid;
-							double diff_ym = (fabs(ym - Y_scaled))/Scale_ptslists*distY_ptslists/grid;
-
-							bool check_clinder = false;
-							if(det == 0 && det1 == det2)
-								check_clinder = true;
-
-							bool check_center_peak = false;
-
-							if(!check_clinder && !check_center_peak)
-							{
-
-								*fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[0][1]*X_scaled*Y_scaled + X_matrix->val[0][2]*Y_scaled*Y_scaled +
-									X_matrix->val[0][3]*X_scaled + X_matrix->val[0][4]*Y_scaled + X_matrix->val[0][5];
-							}
-							else
-							{
-								double sum_weight = 0;
-								double sum_weigtdist = 0;
-								double p = 1.5;
-								for(row = 0; row < *numpts ; row++)
-								{
-									if(XY_save[row].flag == 1)
-									{
-										double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
-										sum_weight += (1.0/pow(dist,p));
-										sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
-									}
-								}
-
-								if(sum_weight > 0)
-								{
-									*fitted_Z = sum_weigtdist/sum_weight;
-									sigma = 1;
-								}
-								else
-									sigma = 999999;
-							}
-						}
-						else
-						{
-
 							double sum_weight = 0;
 							double sum_weigtdist = 0;
 							double p = 1.5;
-
-							for(row = 0; row < *numpts ; row++)
+							for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
 							{
-								if(XY_save[row].flag == 1)
-								{
-									double dist = sqrt((XY_save[row].m_X - X_scaled)*(XY_save[row].m_X - X_scaled) + (XY_save[row].m_Y - Y_scaled)*(XY_save[row].m_Y - Y_scaled));
-									sum_weight += (1.0/pow(dist,p));
-									sum_weigtdist += XY_save[row].m_Z/pow(dist,p);
-								}
+								double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+								sum_weight += (1.0/pow(dist,p));
+								sum_weigtdist += (it_sel->m_Z/pow(dist,p));
 							}
 
 							if(sum_weight > 0)
@@ -23911,98 +23825,123 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 							else
 								sigma = 999999;
 						}
-
-						if(grid > 2)
-						{
-							if(angle < 10)
-								Grid_info[t_index].lsf_kernel = 4;
-							else if(angle < 20)
-								Grid_info[t_index].lsf_kernel = 3;
-							else if(angle < 30)
-								Grid_info[t_index].lsf_kernel = 2;
-							else if(Grid_info[t_index].lsf_kernel < 2)
-								Grid_info[t_index].lsf_kernel = 2;
-						}
-						else if(grid == 2)
-						{
-							if(angle < 10)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
-							else if(angle < 20)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
-							else if(angle < 30)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
-							else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
-						}
-						else if(grid == 1)
-						{
-							if(angle < 10)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
-							else if(angle < 20)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
-							else if(angle < 30)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
-							else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
-						}
-						else
-						{
-							if(angle < 10)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
-							else if(angle < 20)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
-							else if(angle < 30)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
-							else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
-								Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
-						}
-
-						GMA_double_destroy(A_matrix);
-						GMA_double_destroy(L_matrix);
-						GMA_double_destroy(AT_matrix);
-						GMA_double_destroy(ATA_matrix);
-
-						GMA_double_destroy(ATAI_matrix);
-						GMA_double_destroy(ATL_matrix);
-
-						GMA_double_destroy(X_matrix);
-						GMA_double_destroy(AX_matrix);
-						GMA_double_destroy(V_matrix);
-
-						*numpts = selected_count;
 					}
 					else
 					{
-						sigma = 999999;
-						*numpts = 0;
+
+						double sum_weight = 0;
+						double sum_weigtdist = 0;
+						double p = 1.5;
+
+						for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+						{
+							double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+							sum_weight += (1.0/pow(dist,p));
+							sum_weigtdist += (it_sel->m_Z/pow(dist,p));
+						}
+
+						if(sum_weight > 0)
+						{
+							*fitted_Z = sum_weigtdist/sum_weight;
+							sigma = 1;
+						}
+						else
+							sigma = 999999;
 					}
-				}
-				else
-				{
+
+					if(grid > 2)
+					{
+						if(angle < 10)
+							Grid_info[t_index].lsf_kernel = 4;
+						else if(angle < 20)
+							Grid_info[t_index].lsf_kernel = 3;
+						else if(angle < 30)
+							Grid_info[t_index].lsf_kernel = 2;
+						else if(Grid_info[t_index].lsf_kernel < 2)
+							Grid_info[t_index].lsf_kernel = 2;
+					}
+					else if(grid == 2)
+					{
+						if(angle < 10)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval);
+						else if(angle < 20)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval);
+						else if(angle < 30)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(3 + add_interval);
+						else if(Grid_info[t_index].lsf_kernel < 2 + add_interval)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(2 + add_interval);
+					}
+					else if(grid == 1)
+					{
+						if(angle < 10)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*2);
+						else if(angle < 20)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*2);
+						else if(angle < 30)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(5 + add_interval*2);
+						else if(Grid_info[t_index].lsf_kernel < 4 + add_interval*2)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(4 + add_interval*2);
+					}
+					else
+					{
+						if(angle < 10)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(9 + add_interval*3);
+						else if(angle < 20)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(8 + add_interval*3);
+						else if(angle < 30)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(7 + add_interval*3);
+						else if(Grid_info[t_index].lsf_kernel < 6 + add_interval*3)
+							Grid_info[t_index].lsf_kernel = (unsigned char)(6 + add_interval*3);
+					}
+
 					GMA_double_destroy(A_matrix);
 					GMA_double_destroy(L_matrix);
 					GMA_double_destroy(AT_matrix);
 					GMA_double_destroy(ATA_matrix);
+
 					GMA_double_destroy(ATAI_matrix);
 					GMA_double_destroy(ATL_matrix);
+
 					GMA_double_destroy(X_matrix);
 					GMA_double_destroy(AX_matrix);
 					GMA_double_destroy(V_matrix);
 
+					*numpts = selected_count;
+				}
+				else
+				{
 					sigma = 999999;
 					*numpts = 0;
 				}
+				XY_selected.clear();
+				vector<D3DPOINT>().swap(XY_selected);
 			}
-			free(XY_save);
-			
-        }
-        else
-        {
-            sigma = 999999;
-        }
-        
-    }
-    
+			else
+			{
+				GMA_double_destroy(A_matrix);
+				GMA_double_destroy(L_matrix);
+				GMA_double_destroy(AT_matrix);
+				GMA_double_destroy(ATA_matrix);
+				GMA_double_destroy(ATAI_matrix);
+				GMA_double_destroy(ATL_matrix);
+				GMA_double_destroy(X_matrix);
+				GMA_double_destroy(AX_matrix);
+				GMA_double_destroy(V_matrix);
+
+				sigma = 999999;
+				*numpts = 0;
+			}
+		}
+	}
+	else
+	{
+        //printf("selected pts %d\n",XY_save.size());
+		sigma = 999999;
+	}
+
+    XY_save.clear();
+	vector<D3DPOINT>().swap(XY_save);
+
     return sigma;
 }
 
