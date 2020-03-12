@@ -23495,59 +23495,59 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 		final_interval = (long int)Grid_info[t_index].lsf_kernel;
 	}
     else
-    {
-        while (check_stop == 0)
-        {
-            *numpts = 0;
-            count1 = 0;
-            count2 = 0;
-            count3 = 0;
-            count4 = 0;
-            for(row = -interval;row <= interval;row++)
-            {
-                for(col = -interval;col <= interval ; col++)
-                {
-                    long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
-                    if(grid_pos >= 0 && grid_pos < data_length && row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
-                    {
-                        
-                        if(input[grid_pos] > -100)
-                        {
-                            if(row >= 0 && row <=  interval && col >= 0 && col <=  interval)
-                            {
-                                count1++;
-                                (*numpts)++;
-                            }
-                            else if (row >= 0 && row <=  interval && col <= 0 && col >= -interval)
-                            {
-                                count2++;
-                                (*numpts)++;
-                            }
-                            else if (row < 0 && row >= -interval && col < 0 && col >= -interval)
-                            {
-                                count3++;
-                                (*numpts)++;
-                            }
-                            else if (row < 0 && row >= -interval && col > 0 && col <=  interval)
-                            {
-                                count4++;
-                                (*numpts)++;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
-            {
-                check_stop = 1;
-                final_interval = interval;
-                Grid_info[t_index].lsf_kernel = (unsigned char)final_interval;
-            }
-            else
-                interval = interval + 1;
-        }
-    }
+	{
+		while (check_stop == 0)
+		{
+			*numpts = 0;
+			count1 = 0;
+			count2 = 0;
+			count3 = 0;
+			count4 = 0;
+			for(row = -interval;row <= interval;row++)
+			{
+				for(col = -interval;col <= interval ; col++)
+				{
+					long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
+					if(grid_pos >= 0 && grid_pos < data_length && row_pos+row >= 0 && row_pos+row < row_size && col_pos+col >= 0 && col_pos+col < col_size)
+					{
+
+						if(input[grid_pos] > -100)
+						{
+							if(row >= 0 && row <=  interval && col >= 0 && col <=  interval)
+							{
+								count1++;
+								(*numpts)++;
+							}
+							else if (row >= 0 && row <=  interval && col <= 0 && col >= -interval)
+							{
+								count2++;
+								(*numpts)++;
+							}
+							else if (row < 0 && row >= -interval && col < 0 && col >= -interval)
+							{
+								count3++;
+								(*numpts)++;
+							}
+							else if (row < 0 && row >= -interval && col > 0 && col <=  interval)
+							{
+								count4++;
+								(*numpts)++;
+							}
+						}
+					}
+				}
+			}
+
+			if (interval >= row_interval || ((*numpts) > max_pts && count1 > 2 && count2 > 2 && count3 > 2 && count4 > 2))
+			{
+				check_stop = 1;
+				final_interval = interval;
+				Grid_info[t_index].lsf_kernel = (unsigned char)final_interval;
+			}
+			else
+				interval = interval + 1;
+		}
+	}
    
     double maxX_ptslists = -10000000;//final_interval*grid;
 	double maxY_ptslists = -10000000;//final_interval*grid;
@@ -23567,9 +23567,9 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 			long int grid_pos = (long int)((row_pos+row)*(long int)col_size + (col_pos+col));
 			long int grid_pos_col = (long int)((col_pos+col));
 			long int grid_pos_row = (long int)((row_pos+row));
-			
+
 			if(grid_pos >= 0 && grid_pos < data_length &&
-			   grid_pos_row >= 0 && grid_pos_row < row_size && grid_pos_col >= 0 && grid_pos_col < col_size)
+					grid_pos_row >= 0 && grid_pos_row < row_size && grid_pos_col >= 0 && grid_pos_col < col_size)
 			{
 				if(input[grid_pos] > - 100)
 				{
@@ -23579,9 +23579,9 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 					temp.m_Z = input[grid_pos];
 					temp.flag = true;
 
-                    XY_save.push_back(temp);
-					
-                    count++;
+					XY_save.push_back(temp);
+
+					count++;
 					if(maxX_ptslists < grid_pos_col*grid)
 						maxX_ptslists = grid_pos_col*grid;
 					if(maxY_ptslists < grid_pos_row*grid)
@@ -23608,31 +23608,31 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 	*numpts = 0;
 	if(count > 15)
 	{
-     	GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
+		GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
 		GMA_double *L_matrix = GMA_double_create(XY_save.size(), 1);
 		GMA_double *AT_matrix = GMA_double_create(3,XY_save.size());
 		GMA_double *ATA_matrix = GMA_double_create(3,3);
-		
+
 		GMA_double *ATAI_matrix = GMA_double_create(3,3);
 		GMA_double *ATL_matrix = GMA_double_create(3,1);
-		
+
 		GMA_double *X_matrix = GMA_double_create(3,1);
 		GMA_double *AX_matrix = GMA_double_create(XY_save.size(),1);
 		GMA_double *V_matrix = GMA_double_create(XY_save.size(),1);
-		
+
 		//plane fitting
 		vector<D3DPOINT>::iterator it;
-        count = 0;
+		count = 0;
 		for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
 		{
-				A_matrix->val[count][0] = it->m_X-minX_ptslists;
-				A_matrix->val[count][1] = it->m_Y-minY_ptslists;
-				A_matrix->val[count][2] = 1.0;
+			A_matrix->val[count][0] = it->m_X-minX_ptslists;
+			A_matrix->val[count][1] = it->m_Y-minY_ptslists;
+			A_matrix->val[count][2] = 1.0;
 
-				L_matrix->val[count][0] = it->m_Z;
-				count++;
+			L_matrix->val[count][0] = it->m_Z;
+			count++;
 		}
-		
+
 		GMA_double_Tran(A_matrix,AT_matrix);
 		GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
 		GMA_double_inv(ATA_matrix,ATAI_matrix);
@@ -23644,7 +23644,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 		double sum_V = 0;
 		for(row = 0; row < XY_save.size() ; row++)
 			sum_V += V_matrix->val[row][0];
-		
+
 		if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
 		{
 			double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
@@ -23712,7 +23712,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 					}
 					count++;
 				}
-                
+
 				GMA_double_destroy(A_matrix);
 				GMA_double_destroy(L_matrix);
 				GMA_double_destroy(AT_matrix);
@@ -23753,7 +23753,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 						count++;
 					}
 
-                 	GMA_double_Tran(A_matrix,AT_matrix);
+					GMA_double_Tran(A_matrix,AT_matrix);
 					GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
 					GMA_double_inv(ATA_matrix,ATAI_matrix);
 					GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
@@ -23765,13 +23765,13 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 					min_Z = 99999999999;
 					max_Z = -99999999999;
 					count = 0;
-                    vector<D3DPOINT>::iterator it_sel;
+					vector<D3DPOINT>::iterator it_sel;
 					for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
 					{
 						sum += V_matrix->val[count][0] * V_matrix->val[count][0];
 
 						temp_fitted_Z = X_matrix->val[0][0]*it_sel->m_X*it_sel->m_X + X_matrix->val[1][0]*it_sel->m_X*it_sel->m_Y + 
-                        X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
+							X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
 
 						if(min_Z > temp_fitted_Z)
 							min_Z = temp_fitted_Z;
@@ -23784,7 +23784,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 					if(!isnan(sum) && sum > 0 )
 					{
 						sigma = sqrt(sum/(double)selected_count);
-						
+
 						double diff_Z = fabs(max_Z - min_Z);
 
 						double A = X_matrix->val[0][0];
