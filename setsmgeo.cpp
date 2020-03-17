@@ -419,7 +419,7 @@ uint8 ReadGeotiff_bits(char *filename)
     return bits;
 }
 
-CSize ReadGeotiff_info(char *filename, double *minX, double *maxY, double *grid_size)
+CSize ReadGeotiff_info(const char *filename, double *minX, double *maxY, double *grid_size)
 {
     TIFF *tif;
     CSize image_size;

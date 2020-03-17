@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include "git_description.h"
+#include <iostream>
 
 #ifdef BUILDMPI
 #include "mpi.h"
@@ -48,6 +49,26 @@ const char setsm_version[] = "4.2.0";
 
 int main(int argc,char *argv[])
 {
+    /*
+    D2DPOINT dp(1.23,2.34);
+    F2DPOINT fp;
+    fp = dp;
+    std::cout << fp.m_X << fp.m_Y << std::endl;
+    
+    D3DPOINT dp2;
+    dp2 = dp;
+    std::cout << dp2.m_X << dp2.m_Y << std::endl;
+    exit(1);
+    
+    /*
+    printf("TransParam %d\n",sizeof(TransParam));
+    printf("NCCresult %d\n",sizeof(NCCresult));
+    printf("URGID %d\n",sizeof(UGRID));
+    printf("VOXEL %d\n",sizeof(VOXEL));
+    printf("LSFinfo %d\n",sizeof(LSFINFO));
+    printf("LevelInfo %d\n",sizeof(LevelInfo));
+    exit(1);
+*/
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
@@ -678,7 +699,7 @@ int main(int argc,char *argv[])
                         }
                     }
                     
-                    DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,smooth_DEM);
+                    DEM_STDKenel_LSF(Grid_info, &sigma_avg, &sigma_std,seeddem,smooth_DEM,grid_size,s_iter,DEM_size, MPP_stereo_angle);
                     
                     if(sigma_avg > max_std)
                     {
@@ -2213,7 +2234,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 if (ori_minmaxHeight[1] >9000) {
                     ori_minmaxHeight[1] = 9000;
                 }
-                
+                if (ori_minmaxHeight[0] < -100)
+                    ori_minmaxHeight[0] = -100;
                 
                 if(!args.check_ortho)
                 {
@@ -2528,17 +2550,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 SetTiles_RA(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
                                             &iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);
                                 
-                                iter_row_start  = 1;
-                                iter_row_end    = iter_row_start+1;
-                                t_col_start     = 1;
-                                t_col_end       = t_col_start + 1;
-                                
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
-                                final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
-                                                                 subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
-                                                                 RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                                 Limagesize,param,total_count,ori_minmaxHeight,Boundary,RA_row_iter,RA_col_iter,(double)convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                                
+                                final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2673,10 +2688,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if(!args.check_gridonly)
                             {
                                 
-                                final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,
-                                                                 subX,subY,bin_angle,Hinterval,Image_res,Res, Imageparams[0], Imageparams,
-                                                                 RPCs, pre_DEM_level, DEM_level,    NumOfIAparam, check_tile_array,Hemisphere,tile_array,
-                                                                 Limagesize,param,total_count,ori_minmaxHeight,Boundary,1,1,(double)convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                                final_iteration = Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
                                 
                             }
     #ifdef BUILDMPI
@@ -2955,7 +2967,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         {
                                             ST = time(0);
                                             
-                                            LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,tile_row);
+                                            LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,tile_row);
                                             
                                             ET = time(0);
                                             gap = difftime(ET,ST);
@@ -3063,7 +3075,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 {
                                     ST = time(0);
                                     
-                                    LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,param, Hemisphere, MPP_stereo_angle, proinfo->DEM_resolution,0);
+                                    LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,0);
                                     
                                     ET = time(0);
                                     gap = difftime(ET,ST);
@@ -3193,18 +3205,15 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 }
 #endif
 
-int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uint16 buffer_area,uint8 iter_row_start, uint8 iter_row_end,uint8 t_col_start,uint8 t_col_end,
-                   double subX,double subY,double bin_angle,double Hinterval,double *Image_res,double *Res, double *Imageparam_ref, double **Imageparams,
-                   double ***RPCs, uint8 pre_DEM_level, uint8 DEM_level,    uint8 NumOfIAparam, bool check_tile_array,bool Hemisphere,bool* tile_array,
-                   CSize *Imagesizes,TransParam param,int total_count,double *ori_minmaxHeight,double *Boundary, int row_iter, int col_iter, double CA,double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile)
+int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile)
 {
 #ifdef BUILDMPI
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 #endif
+
     int final_iteration = -1;
-    bool lower_level_match;
     int row,col;
     int* RA_count = (int*)calloc(sizeof(int),proinfo->number_of_images);
     
@@ -3214,9 +3223,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     int length = 0;
     int count_tri;
     
-    for(row = iter_row_start; row < iter_row_end ; row+=row_iter)
+    for(row = iter_row_start; row < iter_row_end ; row++)
     {
-        for(col = t_col_start ; col < t_col_end ; col+= col_iter)
+        for(col = t_col_start ; col < t_col_end ; col++)
         {
             iterations[2*length] = row;
             iterations[2*length+1] = col;
@@ -3243,62 +3252,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
             continue;
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
-        
-        char save_file[500];
-        char **Subsetfilename;
-        char *filename;
-        
-        FILE *fid = NULL;
-        FILE *fid_header = NULL;
-        FILE *fid_RAinfo = NULL;
-        
-        double minmaxHeight[2];
-        double subBoundary[4];
-        double **t_Imageparams;
-        
-        D2DPOINT *Startpos_ori;
-        CSize *Subsetsize;
-        double total_memory = 0.0;
-        
-        Subsetfilename = (char**)malloc(sizeof(char*)*proinfo->number_of_images);
-        t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
-        Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
-        Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
-        
-        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-        {
-            t_Imageparams[ti] = (double*)calloc(sizeof(double),2);
-            Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
-        }
-        
-        double TIN_resolution = proinfo->DEM_resolution;
-        /*if (proinfo->IsRA)
-         {
-         TIN_resolution = RA_resolution;
-         }
-         else
-         {
-         TIN_resolution = proinfo->DEM_resolution;
-         }
-         */
         bool check_cal = false;
         bool check_cal_2 = false;
         if(proinfo->IsRA)
             check_cal = true;
-        else {
-            
+        else 
+        {
             char check_file[500];
             sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo->save_filepath,row,col);
-            FILE* pcheckFile;
-            pcheckFile = fopen(check_file,"r");
+            FILE* pcheckFile = fopen(check_file,"r");
             if(!pcheckFile)
                 check_cal = true;
             else
                 fclose(pcheckFile);
             
-            FILE* pcheckFile_2;
             sprintf(check_file,"%s/txt/matched_BR_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
-            pcheckFile_2 = fopen(check_file,"r");
+            FILE* pcheckFile_2 = fopen(check_file,"r");
             if(!pcheckFile_2)
                 check_cal_2 = true;
             else
@@ -3310,8 +3279,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
         if(check_cal || check_cal_2)
         {
             printf("start cal tile\n");
-            total_count += 1;
-            
+
+            FILE *fid = NULL;
+            FILE *fid_header = NULL;
+
+            D2DPOINT *Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
+            CSize *Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
+
+            char **Subsetfilename = (char**)malloc(sizeof(char*)*proinfo->number_of_images);
+            double **t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            {
+                t_Imageparams[ti] = (double*)calloc(sizeof(double),2);
+                Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
+            }
+
+            char save_file[500]; 
             if(proinfo->IsRA)
             {
                 if(!proinfo->check_checktiff)
@@ -3320,7 +3303,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     fid         = fopen(save_file,"w");
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
-                    
+
                     sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
                 }
@@ -3332,66 +3315,54 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     t_Imageparams[ti][0]    = Imageparams[ti][0];
                     t_Imageparams[ti][1]    = Imageparams[ti][1];
                 }
-                
+
                 if(!proinfo->check_checktiff)
                 {
                     sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
-                    
+
                     sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
-                    
                 }
             }
-            
-            minmaxHeight[0]     = ori_minmaxHeight[0];
-            minmaxHeight[1]     = ori_minmaxHeight[1];
-            //minmaxHeight[0]       -= 100;
-            if(minmaxHeight[0] < -100)
-                minmaxHeight[0] = -100;
-            
+
+            double subBoundary[4];
             printf("minmaxH = %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
             SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
-            
+
             printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
-            
-            
+
             //set subset image filenames
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
             {
-                filename = GetFileName(proinfo->Imagefilename[ti]);
+                char *filename = GetFileName(proinfo->Imagefilename[ti]);
                 filename = remove_ext(filename);
                 sprintf(Subsetfilename[ti],"%s/%s_subset_%d_%d.raw",proinfo->tmpdir,filename,row,col);
                 free(filename);
             }
-            
+
             printf("subsetimage\n");
-            
+
             double RA_memory = 0;
             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
             {
                 printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
-                
+
                 CSize t_Imagesize;
-                double tmp_mem = 0;
-                //GetImageSize(proinfo->Imagefilename[ti],&t_Imagesize);
                 t_Imagesize.width = (subBoundary[2] - subBoundary[0])/0.7;
                 t_Imagesize.height = (subBoundary[3] - subBoundary[1])/0.7;
                 long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
-                tmp_mem += (sizeof(uint16)*data_length);
-                tmp_mem += (sizeof(uint16)*data_length);
-                tmp_mem += (sizeof(int16)*data_length);
-                tmp_mem += (sizeof(uint8)*data_length);
-                if(tmp_mem > RA_memory)
-                    RA_memory = tmp_mem;
-                
+                RA_memory += (sizeof(uint16)*data_length)*2;
+                RA_memory += (sizeof(int16)*data_length);
+                RA_memory += (sizeof(uint8)*data_length);
+
                 proinfo->check_selected_image[ti] = true;
             }
-            
+
             RA_memory = RA_memory/1024.0/1024.0/1024.0;
-            
+
             if(proinfo->IsRA)
             {
                 printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
@@ -3401,52 +3372,38 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     exit(1);
                 }
             }
-            
-            if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,
-                           Startpos_ori,Subsetfilename,Subsetsize,fid,proinfo->check_checktiff))
+
+            if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetfilename,Subsetsize,fid,proinfo->check_checktiff))
             {
                 printf("Completion of subsetImage!!\n");
-                
+
                 if( check_kernel_size(proinfo, Subsetsize, Template_size, pyramid_step))
                 {
-                    double pre_3sigma= 1000;
-                    double pre_mean = 1000;
-                    double ratio = 0;
+                    double total_memory = 0.0;
                     double py_resolution = 0;
                     double grid_resolution = 0;
                     double pre_grid_resolution = 0;
-                    
-                    bool flag_start, dem_update_flag;
-                    
+                    bool lower_level_match = true;
+
+                    bool flag_start = false;
+
                     int level             = pyramid_step;
                     if(proinfo->check_Matchtag)
                     {
                         level   = 0;
                         printf("reprocessing Matchtag\n");
                     }
-                    
-                    uint8 sub_total_count   = 0;
-                    
+
                     CSize Size_Grid2D, pre_Size_Grid2D;
-                    
                     CSize **data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
-                    
                     UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
-                    
-                    
+
                     time_t PreST = 0, PreET = 0;
-                    double Pregab;
-                    
-                    lower_level_match   = true;
-                    flag_start          = false;
-                    if(proinfo->IsRA)
-                        dem_update_flag     = false;
-                    else
-                        dem_update_flag     = true;
-                    
-                    
+                    double Pregab = 0;
+
                     Size_Grid2D.height  = 0;
                     Size_Grid2D.width   = 0;
+                    pre_Size_Grid2D = Size_Grid2D;
                     if(!proinfo->check_Matchtag)
                     {
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -3455,7 +3412,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+1));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level);
-                                
+
                                 for (int ttt = 0 ; ttt < level+1 ;ttt++)
                                     printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
                             }
@@ -3474,23 +3431,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                         }
                     }
-                    sub_total_count = CalTotalIteration(DEM_level,level);
-                    
+
                     PreST = time(0);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing start!!\n",row,iter_row_end,col,t_col_end);
-                    
+
                     if(proinfo->check_Matchtag)
-                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,Subsetsize, data_size_lr, fid);
+                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr, fid);
                     else
-                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,Subsetsize,data_size_lr, fid);
-                    
+                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,data_size_lr, fid);
+
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-                    
+
                     PreST = time(0);
                     printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
-                    
+
                     int blunder_selected_level;
                     int pre_blunder_selected_level;
                     if(proinfo->DEM_resolution == 8)
@@ -3503,17 +3459,16 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         pre_blunder_selected_level = 1;
                     else
                         pre_blunder_selected_level = 0;
-                    
-                    
+
+
                     int final_level_iteration = 1;
                     if(proinfo->check_Matchtag)
                         final_level_iteration = 2;
-                    
-                    int total_matching_candidate_pts = 0;
+
                     double matching_rate = 0;
                     bool check_matching_rate = false;
                     double th_mr = 0.05;
-                    
+
                     bool check_RA_divide = false;
                     double tilesize_RA = 20000;
                     double lengthOfX = subBoundary[2] - subBoundary[0];
@@ -3547,31 +3502,32 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                         }
                     }
-                    
+
                     printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
-                    
-                    int Py_combined_level = 0;
-                    while(lower_level_match && level >= DEM_level)
+
+                    const int Py_combined_level = 0;
+                    while(lower_level_match && level >= 0)
                     {
+
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
-                        
+
                         if(proinfo->IsRA && check_new_subBoundary_RA)
                         {
                             preBoundary[0] = subBoundary[0];
                             preBoundary[1] = subBoundary[1];
                             preBoundary[2] = subBoundary[2];
                             preBoundary[3] = subBoundary[3];
-                            
+
                             subBoundary[0] = new_subBoundary_RA[0];
                             subBoundary[1] = new_subBoundary_RA[1];
                             subBoundary[2] = new_subBoundary_RA[2];
                             subBoundary[3] = new_subBoundary_RA[3];
-                            
+
                             RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,0,0);
-                            
+
                             subsetImage(proinfo,param,NumOfIAparam,RPCs,Imageparams,subBoundary,minmaxHeight,
-                                        Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
-                            
+                                    Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
+
                             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                             {
                                 if(proinfo->check_selected_image[ti])
@@ -3579,35 +3535,34 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     SetPySizes(data_size_lr[ti], Subsetsize[ti], level+1);
                                 }
                             }
-                            
-                            Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,Subsetsize, data_size_lr,fid);
+                            Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr,fid);
                         }
                         
                         printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
-                        
+
                         double Th_roh, Th_roh_min, Th_roh_start, Th_roh_next;
                         double minH_mps, maxH_mps;
                         double minH_grid, maxH_grid;
                         double MPP;
                         double MPP_simgle_image;
                         double MPP_stereo_angle = 1;
-                        
+
                         uint8 iteration;
-                        
+
                         D2DPOINT *Startpos = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
                         D2DPOINT *BStartpos= (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-                        
+
                         uint16 **SubImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                         uint8  **SubOriImages = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
                         uint16 **SubMagImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                         uint16 **SubImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                         uint16 **SubMagImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        
-                        
-                        D2DPOINT *Startpos_next;
-                        uint16 **SubImages_next;
-                        uint8  **SubOriImages_next;
-                        uint16 **SubMagImages_next;
+
+
+                        D2DPOINT *Startpos_next = NULL;
+                        uint16 **SubImages_next = NULL;
+                        uint8  **SubOriImages_next = NULL;
+                        uint16 **SubMagImages_next = NULL;
                         if(level > Py_combined_level)
                         {
                             Startpos_next = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
@@ -3615,31 +3570,28 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             SubOriImages_next = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
                             SubMagImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                         }
-                        
-                        D2DPOINT *Grid_wgs;
-                        D2DPOINT *GridPT;
-                        
+
                         if(level >= pyramid_step)
                             blunder_selected_level = level;
                         else if(level >= 2)
                             blunder_selected_level = level + 1;
                         else
                             blunder_selected_level = level + 1;
-                        
+
                         printf("selected_bl %d\n",blunder_selected_level);
                         
                         SetThs(proinfo,level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start);
-                        
+
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
                             Startpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level));
                             Startpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(level));
-                            
+
                             BStartpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(blunder_selected_level));
                             BStartpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(blunder_selected_level));
-                            
+
                             printf("Startpos %f\t%f\t%f\t%f\t%f\t%f\n",Startpos_ori[ti].m_X,Startpos_ori[ti].m_Y,Startpos[ti].m_X,Startpos[ti].m_Y,BStartpos[ti].m_X,BStartpos[ti].m_Y);
-                            
+
                             if(level > Py_combined_level)
                             {
                                 Startpos_next[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level-1));
@@ -3647,32 +3599,65 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                         }
                         
+                        LevelInfo levelinfo = {NULL};
+
+                        levelinfo.py_Images = SubImages;
+                        levelinfo.py_MagImages = SubMagImages;
+                        levelinfo.py_OriImages = SubOriImages;
+                        
+                        levelinfo.py_BImages = SubImages_B;
+                        levelinfo.py_BMagImages = SubMagImages_B;
+                        
+                        levelinfo.py_Images_next = SubImages_next;
+                        levelinfo.py_OriImages_next = SubOriImages_next;
+                        levelinfo.py_MagImages_next = SubMagImages_next;
+                        
+                        levelinfo.py_Startpos = Startpos;
+                        levelinfo.py_BStartpos = BStartpos;
+                        levelinfo.py_Startpos_next = Startpos_next;
+                        
+                        levelinfo.RPCs = RPCs;
+                        levelinfo.Boundary = subBoundary;
+                        levelinfo.Pyramid_step = &level;
+                        levelinfo.py_Sizes = data_size_lr;
+                        levelinfo.Template_size = &Template_size;
+                        levelinfo.ImageAdjust = t_Imageparams;
+                        levelinfo.param = &param;
+                        levelinfo.NumOfIAparam = &NumOfIAparam;
+                        levelinfo.bin_angle = &bin_angle;
+                        levelinfo.blunder_selected_level = &blunder_selected_level;
+                        levelinfo.Py_combined_level = &Py_combined_level;
+
+                        printf("levelinfo %d\t%d\n",*levelinfo.Pyramid_step,*levelinfo.blunder_selected_level);
+
+                        D2DPOINT *GridPT = NULL;
                         if(proinfo->IsRA)
                         {
-                            dem_update_flag         = false;
                             py_resolution           = Image_res[0]*pwrtwo(pyramid_step+1);
                             grid_resolution         = Image_res[0]*pwrtwo(pyramid_step+1);
-                            
+
                             printf("RA grid size %f\n",py_resolution);
-                            
-                            //if(!flag_start)
-                            {
-                                GridPT                  = SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
-                                
-                                printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
-                            }
+
+                            GridPT                  = SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
+
+                            printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
                         }
                         else
-                            GridPT  = SetGrids(proinfo,&dem_update_flag, flag_start, level, final_level_iteration, proinfo->resolution, &Size_Grid2D, proinfo->pre_DEMtif,proinfo->priori_DEM_tif, proinfo->DEM_resolution, minmaxHeight,&py_resolution, &grid_resolution, subBoundary);
-                        
+                            GridPT  = SetGrids(proinfo, level, final_level_iteration, proinfo->resolution, &Size_Grid2D, proinfo->DEM_resolution, &py_resolution, &grid_resolution, subBoundary);
+
+                        const long int Grid_length = (long int)Size_Grid2D.width*(long int)Size_Grid2D.height;
+                        levelinfo.Size_Grid2D = &Size_Grid2D;
+                        levelinfo.Grid_length = &Grid_length;
+                        levelinfo.GridPts = GridPT;
+
                         if(!flag_start)
                         {
                             printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo->pre_DEMtif,proinfo->priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
                             if (GridPT3)
                                 free(GridPT3);
-                            GridPT3 = SetGrid3PT(proinfo,param, dem_update_flag, flag_start, Size_Grid2D, Th_roh, level, minmaxHeight,subBoundary,grid_resolution,proinfo->metafilename);
+                            GridPT3 = SetGrid3PT(proinfo,param, Size_Grid2D, Th_roh, minmaxHeight,subBoundary,grid_resolution);
                         }
-                        
+
                         if(flag_start)
                         {
                             if(proinfo->IsRA)
@@ -3680,9 +3665,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 if(check_new_subBoundary_RA)
                                 {
                                     GridPT3 = ResizeGirdPT3_RA(proinfo, pre_Size_Grid2D, Size_Grid2D, preBoundary,subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
-                                    
+
                                     check_new_subBoundary_RA = false;
-                                    
+
                                     printf("start ResizeGridPT3 with newBoundry pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
                                 }
                                 else
@@ -3697,24 +3682,19 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 GridPT3 = ResizeGirdPT3(proinfo, pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
                             }
                         }
-                        
+
                         printf("end start ResizeGridPT3 minmax height %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
-                        
+
                         pre_Size_Grid2D.width = Size_Grid2D.width;
                         pre_Size_Grid2D.height = Size_Grid2D.height;
                         pre_grid_resolution = grid_resolution;
-                        
+
                         fprintf(fid,"level = %d, Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
-                        
+
                         fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
-                        
-                        double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
-                        double left_mag_var_B, left_mag_avg_B, right_mag_var_B, right_mag_avg_B;
-                        right_mag_var = 0;
-                        right_mag_avg = 0;
-                        
+
                         printf("load subimages\n");
-                        
+
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
                             if(proinfo->check_selected_image[ti])
@@ -3722,137 +3702,95 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 printf("load subimage %d\n",ti);
                                 SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
                                 SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                                SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level,&left_mag_var,&left_mag_avg);
-                                
+                                SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+
                                 SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-                                SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level,&left_mag_var_B,&left_mag_avg_B);
-                                
+                                SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
+
                                 if(level > Py_combined_level)
                                 {
                                     SubImages_next[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
                                     SubOriImages_next[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                                    SubMagImages_next[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1,&left_mag_var,&left_mag_avg);
+                                    SubMagImages_next[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
                                 }
                             }
                         }
-                        printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
-                        
-                        double mag_avg = (left_mag_avg + right_mag_avg)/2.0;
-                        double mag_var = (left_mag_var + right_mag_var)/2.0;
-                        
                         printf("load subimages blunder_selected_level\n");
-                        
-                        total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
-                        
-                        Grid_wgs = ps2wgs(param,Size_Grid2D.width*Size_Grid2D.height,GridPT);
-                        
+
+                        D2DPOINT *Grid_wgs = ps2wgs(param,Grid_length,GridPT);
+                        levelinfo.Grid_wgs = Grid_wgs;
+
                         if(proinfo->pre_DEMtif && !flag_start)
                         {
                             if(proinfo->check_Matchtag)
                             {
-                                ratio = VerticalLineLocus_seeddem(proinfo,SubMagImages_B,grid_resolution, Image_res[0], RPCs,
-                                                                  Imagesizes, data_size_lr, SubImages_B, Template_size,
-                                                                  Size_Grid2D, param, GridPT, Grid_wgs, GridPT3,
-                                                                  NumOfIAparam, t_Imageparams, blunder_selected_level, BStartpos,
-                                                                  proinfo->save_filepath, row, col, 1,1,subBoundary,minmaxHeight,proinfo->seedDEMsigma);
-                                
-                                /*ratio = VerticalLineLocus_seeddem(proinfo,SubMagImages,grid_resolution, Image_res[0], RPCs,
-                                 Imagesizes, data_size_lr, SubImages, Template_size,
-                                 Size_Grid2D, param, GridPT, Grid_wgs, GridPT3,
-                                 NumOfIAparam, t_Imageparams, level, Startpos,
-                                 proinfo->save_filepath, row, col, 1,1,subBoundary,minmaxHeight,proinfo->seedDEMsigma);*/
-                                
+                                VerticalLineLocus_seeddem(proinfo,SubMagImages_B,grid_resolution, Image_res[0], RPCs,data_size_lr, SubImages_B, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, blunder_selected_level, BStartpos, subBoundary,minmaxHeight);
                                 printf("check_matchtag ortho_ncc\n");
-                                
-                                //NCCresult *seed_nccresult;
-                                
-                                //echoprint_Gridinfo(proinfo,seed_nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"seed");
-                                
                             }
                             else
                             {
-                                ratio = VerticalLineLocus_seeddem(proinfo,SubMagImages,grid_resolution, Image_res[0], RPCs,
-                                                                  Imagesizes, data_size_lr, SubImages, Template_size,
-                                                                  Size_Grid2D, param, GridPT, Grid_wgs, GridPT3,
-                                                                  NumOfIAparam, t_Imageparams, level, Startpos,
-                                                                  proinfo->save_filepath, row, col, 1,1,subBoundary,minmaxHeight,proinfo->seedDEMsigma);
+                                VerticalLineLocus_seeddem(proinfo,SubMagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, SubImages, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, level, Startpos, subBoundary,minmaxHeight);
                             }
-                            printf("ratio %f\n",ratio);
                         }
-                        /*
-                         if(ratio > 70)
-                         {
-                         if(!proinfo->check_Matchtag)
-                         SetThs_ratio(level, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start,proinfo->pre_DEMtif,proinfo->IsRA,proinfo->DEM_resolution);
-                         
-                         printf("%f \t %f\n",Th_roh,Th_roh_min);
-                         }
-                         */
+
                         iteration       = 1;
                         if(level == 0)
                             iteration = final_level_iteration;
-                        
+
                         int pre_matched_pts=10;
                         double matching_change_rate = 100;
-                        double rate_th = 0.00999999;
+                        const double rate_th = 0.00999999;
                         int max_iteration = 9;
                         float mem_th = 5;
                         if(level <= 1)
                             mem_th = 10;
-                        
-                        NCCresult *nccresult;
-                        nccresult = (NCCresult*)calloc(sizeof(NCCresult),Size_Grid2D.width*Size_Grid2D.height);
-                        
-                        VOXEL **grid_voxel;
-                        
-                        double height_step = GetHeightStep(level,Image_res[0]);
-                        
+
+                        const double height_step = GetHeightStep(level,Image_res[0]);
+                        levelinfo.height_step = &height_step;
+                        levelinfo.grid_resolution = &grid_resolution;
+                        levelinfo.minmaxHeight = minmaxHeight;
+
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
-                        double level_total_memory =  CalMemorySize(proinfo,Size_Grid2D,data_size_lr,GridPT3,level,height_step,subBoundary,&minimum_memory,Image_res[0],iteration,blunder_selected_level,Py_combined_level,level,minmaxHeight,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,Imagesizes,data_size_lr);
-                        
+                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,Py_combined_level,minmaxHeight);
+
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
-                        
+
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
                             printf("System memory is not enough to run SETSM. Please reduce tilesize or assign more physical memory!!\n");
                             exit(1);
                         }
-                        
+
                         if(!check_matching_rate)
                         {
-                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - mem_th  /*|| (level == 0 && proinfo->DEM_resolution < 2)*/))
+                            if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - mem_th  ))
                             {
                                 check_matching_rate = true;
                             }
                         }
-                        /*if(!check_matching_rate)
-                         {
-                         if(level == 0 && iteration == 3 && proinfo->DEM_resolution < 1)
-                         check_matching_rate = true;
-                         }
-                         */
+                        
                         if(proinfo->check_Matchtag && proinfo->DEM_resolution < 2)
                             check_matching_rate = true;
-                        
+
+                        VOXEL **grid_voxel = NULL;
                         if(!check_matching_rate)
                             grid_voxel = (VOXEL**)calloc(sizeof(VOXEL*),Size_Grid2D.width*Size_Grid2D.height);
-                        
-                        
+
                         if(proinfo->sensor_type == SB)
                         {
                             if(proinfo->IsRA)
                             {
-                                CalMPP_8(level,Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                                CalMPP_8(Size_Grid2D, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
                             }
                             else
                             {
                                 if(proinfo->DEM_resolution <= 4)
-                                    CalMPP(level,Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                                    CalMPP(level,Size_Grid2D, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
                                 else
-                                    CalMPP_8(level,Size_Grid2D, param, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
+                                    CalMPP_8(Size_Grid2D, Grid_wgs, NumOfIAparam, t_Imageparams, minmaxHeight, RPCs, CA, mean_product_res, Image_res[0], &MPP_simgle_image, &MPP_stereo_angle);
                             }
                         }
                         else
@@ -3860,27 +3798,28 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             MPP_simgle_image = proinfo->resolution*1.5;
                             MPP_stereo_angle = MPP_simgle_image;
                         }
-                        
+
                         *stereo_angle_accuracy = MPP_stereo_angle;
-                        
+
                         printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
-                        
-                        int Accessable_grid;
+
+                        NCCresult *nccresult = (NCCresult*)calloc(sizeof(NCCresult),Grid_length);
+                        levelinfo.check_matching_rate = &check_matching_rate;
                         bool level_check_matching_rate = false;
                         while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
                         {
                             if(level == 0 &&  iteration == 3)
                                 matching_change_rate = 0.001;
-                            
+
                             printf("%f \t %f\n",Th_roh,Th_roh_min);
-                            
+
                             double pre_3sigma, pre_mean;
                             double Th_roh_update = 0;
-                            
+
                             NCCflag flag;
-                            
+
                             BL blunder_param;
-                            
+
                             char filename_mps[500];
                             char filename_mps_asc[500];
                             char filename_mps_mid[500];
@@ -3888,25 +3827,24 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             char filename_mps_pre[500];
                             char filename_mps_anchor[500];
                             char filename_mps_aft[500];
-                            
+
                             char filename_tri[500];
                             char v_temp_path[500];
-                            
+
                             int count_results[2];
                             int count_results_anchor[2];
                             int count_MPs;
                             int count_blunder;
-                            bool update_flag = false;
                             bool check_ortho_cal = false;
-                            
+
                             uint8 ortho_level = 2;
                             if(proinfo->DEM_resolution >= 8)
                                 ortho_level = 3;
-                            
+
                             if(level >= ortho_level)
                             {
                                 check_ortho_cal = true;
-                                
+
                                 if(level == 2 && iteration > 5)
                                     check_ortho_cal = false;
                             }
@@ -3914,14 +3852,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 check_ortho_cal = false;
                             }
-                            
+
                             //if(level <= proinfo->SGM_py)
                             //    check_ortho_cal = false;
-                            
+
                             printf("ortho level = %d\n",ortho_level);
-                            
+
                             pre_3sigma  = 0;    pre_mean    = 0;
-                            
+
                             if(level > 1)
                             {
                                 flag.rotate_flag     = 1;       flag.multi_flag      = 1;       flag.multi_flag_sum  = 1;       flag.inter_flag      = 1;
@@ -3930,18 +3868,18 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 flag.rotate_flag     = 1;       flag.multi_flag      = 1;       flag.multi_flag_sum  = 1;       flag.inter_flag      = 1;
                             }
-                            
+
                             if(iteration > 1)
                                 flag.weight_flag     = 1;
                             else
                                 flag.weight_flag     = 0;
-                            
+
                             fprintf(fid,"Starting computation of NCC\n iteration = %u\tTh_roh = %f\tTh_roh_start = %f\tGrid size %d %d\n",
                                     iteration, Th_roh,Th_roh_start,Size_Grid2D.width,Size_Grid2D.height);
-                            
+
                             for( int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                 printf("sub size %d\t%d\n",data_size_lr[ti][level].width,data_size_lr[ti][level].height);
-                            
+
                             if(proinfo->IsRA)
                             {
                                 sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
@@ -3952,20 +3890,19 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             {
                                 sprintf(filename_mps,"%s/txt/matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_asc,"%s/txt/matched_pts_%d_%d_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration);
-                                
+
                                 sprintf(filename_mps_fin,"%s/txt/matched_pts_%d_%d_%d_%d_fin.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_aft,"%s/txt/matched_pts_%d_%d_%d_%d_aft.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_anchor,"%s/txt/matched_pts_%d_%d_%d_%d_anchor.txt",proinfo->save_filepath,row,col,level,iteration);
                             }
-                            
+
                             sprintf(filename_tri,"%s/grid_voxel_height_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                             sprintf(v_temp_path,"%s/tmp/vv_tmp",proinfo->save_filepath);
-                            
+
                             printf("template size =%d\n",Template_size);
-                            
-                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"init");
-                            
+
+
                             double Memory = 0;
                             size_t GridPT_size  = (sizeof(D2DPOINT)*Size_Grid2D.height*Size_Grid2D.width);
                             Memory += (double)((GridPT_size)*3);
@@ -3979,14 +3916,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             size_t voxel_all_size = (sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
                             Memory += (double)(voxel_all_size);
                             printf("voxel_all_size %f\n",(double)(voxel_all_size)/1024.0/1024.0/1024.0);
-                            
+
                             if(!check_matching_rate)
                             {
                                 //FILE* t_fid_c = fopen(filename_tri,"w");
-                                
+
                                 size_t voxel_size = 0;
-                                InitializeVoxel(grid_voxel,Size_Grid2D, height_step, GridPT3, nccresult,iteration,level,proinfo->DEM_resolution,proinfo,RPCs,t_Imageparams,Startpos,GridPT,Grid_wgs,Imagesizes,data_size_lr,minmaxHeight);
-                                
+                                InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration);
+
                                 for(long int t_r = 0 ; t_r < Size_Grid2D.height ; t_r++)
                                 {
                                     for(long int t_c = 0 ; t_c < Size_Grid2D.width ; t_c++)
@@ -3998,74 +3935,66 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             //fprintf(t_fid_c,"%d\t",nccresult[t_index].NumOfHeight);
                                         }
                                         /*else
-                                         {
-                                         if(grid_voxel[t_index])
-                                         free(grid_voxel[t_index]);
-                                         }*/
+                                          {
+                                          if(grid_voxel[t_index])
+                                          free(grid_voxel[t_index]);
+                                          }*/
                                     }
                                     //fprintf(t_fid_c,"\n");
                                 }
                                 //fclose(t_fid_c);
-                                
+
                                 voxel_all_size += voxel_size;
                                 printf("Done grid_voxel initialize. memory size %f\n",(double)(voxel_all_size)/1024.0/1024.0/1024.0);
                             }
-                            
+
                             printf("all memeory %f\n",(Memory+(double)(voxel_all_size))/1024.0/1024.0/1024.0);
-                            
-                            Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,SubMagImages,grid_resolution, Image_res[0],RPCs,Imagesizes,data_size_lr,SubImages,Template_size,Size_Grid2D,
-                                                                param,GridPT,Grid_wgs,GridPT3,flag,NumOfIAparam,t_Imageparams,minmaxHeight,level,Startpos,iteration,SubOriImages,bin_angle,1,0,fid,true,Hemisphere,
-                                                                row,col,subBoundary,v_temp_path,mag_avg,mag_var,Startpos_next,SubImages_next,SubOriImages_next,SubMagImages_next,Py_combined_level,check_matching_rate,height_step);
-                            
-                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"verticalline");
-                            
+
+                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration);
+
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
-                            
+
                             if(!check_matching_rate)
                             {
                                 if(level == 0 && iteration > 1 && proinfo->DEM_resolution >= 2)
                                 {
                                     fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
-                                    
+
                                     printf("header file write %d\t%d\n",level,iteration);
                                 }
-                                
-                                int MaxNumberofHeightVoxel = (int)((minmaxHeight[1] - minmaxHeight[0])/height_step);
-                                
+
+                                const int MaxNumberofHeightVoxel = (int)((minmaxHeight[1] - minmaxHeight[0])/height_step);
+
                                 AWNCC(proinfo,grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel);
                                 printf("Done AWNCC\n");
                             }
-                            
-                            
-                            //void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str)
-                            //echo_print_nccresults(proinfo->save_filepath,row,col,level,iteration,nccresult,&Size_Grid2D,(char*)"inter");
-                            
+
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
-                            
+
                             minH_mps = 1000000;
                             maxH_mps = -1000000;
-                            
+
                             if(level >= 5)
                                 MPP = MPP_simgle_image;
                             else if(MPP_stereo_angle > 5)
                                 MPP = MPP_stereo_angle;
                             else
                                 MPP = MPP_simgle_image;
-                            
+
                             vector<D3DPOINT> MatchedPts_list;
-                            
+
                             count_MPs = SelectMPs(proinfo,nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
-                                                  iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
+                                    iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
-                            
-                            
+
+
                             D3DPOINT *ptslists = NULL;
-                            
+
                             vector<D3DPOINT>::iterator it;
                             vector<D3DPOINT> MatchedPts_list_mps;
                             vector<D3DPOINT> MatchedPts_list_blunder;
                             vector<D3DPOINT> MatchedPts_list_anchor;
-                            
+
                             if (check_ortho_cal && proinfo->IsRA != 1)
                             {
                                 //anchor points
@@ -4076,14 +4005,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     ptslists[i] = *it;
                                     i++;
                                 }
-                                
+
                                 count_blunder = DecisionMPs(proinfo,false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,
-                                                            Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                                            param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
+                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
+                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
+                                        param, Grid_wgs,GridPT,
+                                        NumOfIAparam, t_Imageparams, BStartpos,
+                                        row,col,SubOriImages,blunder_selected_level,ptslists);
                                 int tcnt;
                                 count_results_anchor[0] = 0;
                                 for(tcnt=0;tcnt<count_MPs;tcnt++)
@@ -4095,18 +4024,18 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     }
                                     ptslists[tcnt].flag = 0;
                                 }
-                                
+
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
-                                
+
                                 //blunder detection
                                 count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,
-                                                            Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                                            param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
-                                
+                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
+                                        param, Grid_wgs,GridPT,
+                                        NumOfIAparam, t_Imageparams, BStartpos,
+                                        row,col,SubOriImages,blunder_selected_level,ptslists);
+
                                 count_results[0] = 0;
                                 for(tcnt=0;tcnt<count_MPs;tcnt++)
                                 {
@@ -4114,14 +4043,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     {
                                         MatchedPts_list_blunder.push_back(ptslists[tcnt]);
                                         count_results[0]++;
-                                        
+
                                         if(minH_mps > ptslists[tcnt].m_Z)
                                             minH_mps        = ptslists[tcnt].m_Z;
                                         if(maxH_mps < ptslists[tcnt].m_Z)
                                             maxH_mps       = ptslists[tcnt].m_Z;
                                     }
                                 }
-                                
+
                                 free(ptslists);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
@@ -4134,15 +4063,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     ptslists[i] = *it;
                                     i++;
                                 }
-                                
+
                                 count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,
-                                                            Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                            SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                                            Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                                            param, Grid_wgs,GridPT,
-                                                            NumOfIAparam, t_Imageparams, BStartpos,
-                                                            row,col,SubOriImages,blunder_selected_level,ptslists);
-                                
+                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
+                                        param, Grid_wgs,GridPT,
+                                        NumOfIAparam, t_Imageparams, BStartpos,
+                                        row,col,SubOriImages,blunder_selected_level,ptslists);
+
                                 count_results[0] = 0;
                                 for(int tcnt=0;tcnt<count_MPs;tcnt++)
                                 {
@@ -4150,36 +4079,36 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     {
                                         MatchedPts_list_mps.push_back(ptslists[tcnt]);
                                         count_results[0]++;
-                                        
+
                                         if(minH_mps > ptslists[tcnt].m_Z)
                                             minH_mps        = ptslists[tcnt].m_Z;
                                         if(maxH_mps < ptslists[tcnt].m_Z)
                                             maxH_mps       = ptslists[tcnt].m_Z;
                                     }
                                 }
-                                
+
                                 count_MPs       = count_results[0];
-                                
+
                                 free(ptslists);
                                 printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                             }
-                            
+
                             MatchedPts_list.clear();
                             vector<D3DPOINT>().swap(MatchedPts_list);
-                            
+
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
-                            
+
                             printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
-                                   count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
-                            
-                            
+                                    count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
+
+
                             //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"decisionmps");
-                            
+
                             if(lower_level_match)
                             {
                                 FILE* survey;
                                 int i;
-                                
+
                                 if(check_ortho_cal && proinfo->IsRA != 1)
                                 {
                                     printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
@@ -4192,17 +4121,17 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 }
                                 //else
                                 //survey  = fopen(filename_mps,"r");
-                                
+
                                 blunder_param.Boundary  = subBoundary;
                                 blunder_param.gridspace = grid_resolution;
                                 blunder_param.height_check_flag = true;
                                 blunder_param.Hinterval = Hinterval;
                                 blunder_param.iteration = iteration;
                                 blunder_param.Pyramid_step = level;
-                                
+
                                 blunder_param.Size_Grid2D.width = Size_Grid2D.width;
                                 blunder_param.Size_Grid2D.height = Size_Grid2D.height;
-                                
+
                                 int TIN_split_level = 0;
                                 if (grid_resolution <= 8)
                                 {
@@ -4210,22 +4139,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         TIN_split_level = 0;
                                     else if(grid_resolution <= 4)
                                         TIN_split_level = 2;
-                                    
+
                                     if(fabs(subBoundary[2] - subBoundary[0]) > 10000 || fabs(subBoundary[3] - subBoundary[1]) > 10000)
                                         TIN_split_level = 2;
                                 }
-                                
+
                                 if(proinfo->IsRA)
                                 {
                                     TIN_split_level = 4;
                                 }
-                                
+
                                 printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
                                 count_MPs = MatchedPts_list_mps.size();
-                                
+
                                 vector<UI3DPOINT> t_trilists;
                                 vector<UI3DPOINT>::iterator it_tri;
-                                
+
                                 if(level == 0 && iteration == 3)
                                 {
                                     //F3DPOINT *ptslists;
@@ -4237,17 +4166,17 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     minmaxBR[3] = -10000000;
                                     minmaxBR[4] = 100000;
                                     minmaxBR[5] = -100000;
-                                    
+
                                     i = 0;
                                     for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                     {
                                         ptslists[i] = *it;
-                                        
+
                                         if(minmaxBR[0] > ptslists[i].m_X)
                                             minmaxBR[0]     = ptslists[i].m_X;
                                         if(minmaxBR[1] > ptslists[i].m_Y)
                                             minmaxBR[1]     = ptslists[i].m_Y;
-                                        
+
                                         if(minmaxBR[2] < ptslists[i].m_X)
                                             minmaxBR[2]     = ptslists[i].m_X;
                                         if(minmaxBR[3] < ptslists[i].m_Y)
@@ -4258,79 +4187,79 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             minmaxBR[5] = ptslists[i].m_Z;
                                         i++;
                                     }
-                                    
+
                                     MatchedPts_list_mps.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_mps);
-                                    
+
                                     /*
-                                     i = 0;
-                                     //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
-                                     F3DPOINT pts_tmp;
-                                     while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&pts_tmp.m_X,&pts_tmp.m_Y,&pts_tmp.m_Z,&pts_tmp.flag)) != EOF )
-                                     {
-                                     if(pts_tmp.m_X >= subBoundary[0] && pts_tmp.m_X <= subBoundary[2] && pts_tmp.m_Y >= subBoundary[1] && pts_tmp.m_Y <= subBoundary[3])
-                                     {
-                                     ptslists[i].m_X = pts_tmp.m_X;
-                                     ptslists[i].m_Y = pts_tmp.m_Y;
-                                     ptslists[i].m_Z = pts_tmp.m_Z;
-                                     
-                                     if(minmaxBR[0] > ptslists[i].m_X)
-                                     minmaxBR[0]     = ptslists[i].m_X;
-                                     if(minmaxBR[1] > ptslists[i].m_Y)
-                                     minmaxBR[1]     = ptslists[i].m_Y;
-                                     
-                                     if(minmaxBR[2] < ptslists[i].m_X)
-                                     minmaxBR[2]     = ptslists[i].m_X;
-                                     if(minmaxBR[3] < ptslists[i].m_Y)
-                                     minmaxBR[3]     = ptslists[i].m_Y;
-                                     if(minmaxBR[4] > ptslists[i].m_Z)
-                                     minmaxBR[4] = ptslists[i].m_Z;
-                                     if(minmaxBR[5] < ptslists[i].m_Z)
-                                     minmaxBR[5] = ptslists[i].m_Z;
-                                     }
-                                     i++;
-                                     
-                                     }
-                                     fclose(survey);
-                                     */
+                                       i = 0;
+                                    //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                    F3DPOINT pts_tmp;
+                                    while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&pts_tmp.m_X,&pts_tmp.m_Y,&pts_tmp.m_Z,&pts_tmp.flag)) != EOF )
+                                    {
+                                    if(pts_tmp.m_X >= subBoundary[0] && pts_tmp.m_X <= subBoundary[2] && pts_tmp.m_Y >= subBoundary[1] && pts_tmp.m_Y <= subBoundary[3])
+                                    {
+                                    ptslists[i].m_X = pts_tmp.m_X;
+                                    ptslists[i].m_Y = pts_tmp.m_Y;
+                                    ptslists[i].m_Z = pts_tmp.m_Z;
+
+                                    if(minmaxBR[0] > ptslists[i].m_X)
+                                    minmaxBR[0]     = ptslists[i].m_X;
+                                    if(minmaxBR[1] > ptslists[i].m_Y)
+                                    minmaxBR[1]     = ptslists[i].m_Y;
+
+                                    if(minmaxBR[2] < ptslists[i].m_X)
+                                    minmaxBR[2]     = ptslists[i].m_X;
+                                    if(minmaxBR[3] < ptslists[i].m_Y)
+                                    minmaxBR[3]     = ptslists[i].m_Y;
+                                    if(minmaxBR[4] > ptslists[i].m_Z)
+                                    minmaxBR[4] = ptslists[i].m_Z;
+                                    if(minmaxBR[5] < ptslists[i].m_Z)
+                                    minmaxBR[5] = ptslists[i].m_Z;
+                                    }
+                                    i++;
+
+                                    }
+                                    fclose(survey);
+                                    */
                                     FILE *pFile = fopen(filename_mps,"wb");
                                     fwrite(ptslists,sizeof(D3DPOINT),count_MPs,pFile);
                                     fclose(pFile);
                                     /*
-                                    FILE *pFile_a = fopen(filename_mps_asc,"w");
-                                     for(i=0;i<count_MPs;i++)
-                                     {
-                                     //if(ptslists[i].flag != 1)
-                                     {
-                                     //if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
-                                     fprintf(pFile_a,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-                                     }
-                                     }
-                                     fclose(pFile_a);
+                                       FILE *pFile_a = fopen(filename_mps_asc,"w");
+                                       for(i=0;i<count_MPs;i++)
+                                       {
+                                    //if(ptslists[i].flag != 1)
+                                    {
+                                    //if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
+                                    fprintf(pFile_a,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                    }
+                                    }
+                                    fclose(pFile_a);
                                     */
-                                    
-                                    
+
+
                                     if(!proinfo->IsRA)
                                     {
                                         FILE *fid_BR;
                                         FILE *fid_count;
-                                        
+
                                         char save_file[500];
                                         sprintf(save_file,"%s/txt/matched_BR_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                                         fid_BR  = fopen(save_file,"w");
                                         fprintf(fid_BR,"%f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
                                         fclose(fid_BR);
-                                        
+
                                         sprintf(save_file,"%s/txt/count_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                                         fid_count  = fopen(save_file,"w");
-                                        
+
                                         fprintf(fid_count,"%d\n",count_MPs);
                                         fclose(fid_count);
-                                        
-                                        echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,update_flag,&Size_Grid2D,GridPT3,(char*)"final");
+
+                                        echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,0,&Size_Grid2D,GridPT3,(char*)"final");
                                     }
                                     free(ptslists);
-                                    
+
                                     matching_change_rate = 0.001;
                                 }
                                 else
@@ -4338,16 +4267,16 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     if(check_ortho_cal && proinfo->IsRA != 1)
                                     {
                                         //D3DPOINT *ptslists;
-                                        
+
                                         //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
                                         double minY_ptslists =  100000000;
                                         int i;
-                                        
+
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                        
+
                                         i = 0;
                                         for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
@@ -4361,30 +4290,30 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
-                                         i = 0;
-                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-                                         {
-                                         if(level == 4)
-                                         {
-                                         ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
-                                         }
-                                         
-                                         i++;
-                                         }
-                                         
-                                         fclose(survey);
-                                         */
+                                           i = 0;
+                                           while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                           {
+                                           if(level == 4)
+                                           {
+                                           ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                           }
+
+                                           i++;
+                                           }
+
+                                           fclose(survey);
+                                           */
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
-                                        
+
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                        
+
                                         FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
-                                        
+
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                        
+
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4393,36 +4322,36 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
-                                        
+
                                         /*
-                                         i = 0;
-                                         for(i=0;i<count_tri;i++)
-                                         {
-                                         trilists[i].m_X = t_trilists[i].m_X;
-                                         trilists[i].m_Y = t_trilists[i].m_Y;
-                                         trilists[i].m_Z = t_trilists[i].m_Z;
-                                         }
-                                         
-                                         free(t_trilists);
-                                         */
-                                        
+                                           i = 0;
+                                           for(i=0;i<count_tri;i++)
+                                           {
+                                           trilists[i].m_X = t_trilists[i].m_X;
+                                           trilists[i].m_Y = t_trilists[i].m_Y;
+                                           trilists[i].m_Z = t_trilists[i].m_Z;
+                                           }
+
+                                           free(t_trilists);
+                                           */
+
                                         fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
-                                        
+
                                         printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
-                                        
-                                        count_results[0] = Ortho_blunder(proinfo,ptslists, count_MPs, trilists,count_tri, update_flag,&minH_grid,&maxH_grid,blunder_param,
-                                                                         SubMagImages,SubImages,
-                                                                         grid_resolution, Image_res[0],RPCs,
-                                                                         data_size_lr,Size_Grid2D,param,NumOfIAparam,
-                                                                         t_Imageparams,minmaxHeight,level,MPP_simgle_image,
-                                                                         Startpos,iteration,GridPT3,filename_mps);
+
+                                        count_results[0] = Ortho_blunder(proinfo,ptslists, count_MPs, trilists,count_tri, 0,&minH_grid,&maxH_grid,blunder_param,
+                                                SubMagImages,SubImages,
+                                                grid_resolution, Image_res[0],RPCs,
+                                                data_size_lr,Size_Grid2D,param,NumOfIAparam,
+                                                t_Imageparams,minmaxHeight,level,MPP_simgle_image,
+                                                Startpos,iteration,GridPT3,filename_mps);
                                         free(trilists);
-                                        
+
                                         printf("end ortho_blunder %d\n",count_results[0]);
-                                        
+
                                         int matched_pts = 0;
                                         i = 0;
-                                        
+
                                         if(level == 4)
                                         {
                                             vector<D3DPOINT> ortho_list;
@@ -4434,11 +4363,11 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                     matched_pts++;
                                                 }
                                             }
-                                            
+
                                             free(ptslists);
                                             count_MPs = matched_pts;
                                             ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                            
+
                                             i = 0;
                                             for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
                                             {
@@ -4448,29 +4377,29 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
                                         }
-                                        
+
                                         printf("load ortho_blunder pts %d\n",count_MPs);
-                                        
+
                                         //survey  = fopen(filename_mps,"r");
                                         /*
-                                         while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
-                                         {
-                                         i++;
-                                         }
-                                         fclose(survey);
-                                         */
+                                           while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                           {
+                                           i++;
+                                           }
+                                           fclose(survey);
+                                           */
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
-                                        
+
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                        
+
                                         //Save triangulation and delete it since we will not use it
                                         FullTriangulation *origTri_2 = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max2,&count_tri, grid_resolution);
                                         delete origTri_2;
-                                        
-                                        
+
+
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                        
+
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4480,46 +4409,46 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         /*
-                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                         i = 0;
-                                         for(i=0;i<count_tri;i++)
-                                         {
-                                         trilists[i].m_X = t_trilists[i].m_X;
-                                         trilists[i].m_Y = t_trilists[i].m_Y;
-                                         trilists[i].m_Z = t_trilists[i].m_Z;
-                                         }
-                                         
-                                         free(t_trilists);
-                                         */
-                                        
+                                           trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                           i = 0;
+                                           for(i=0;i<count_tri;i++)
+                                           {
+                                           trilists[i].m_X = t_trilists[i].m_X;
+                                           trilists[i].m_Y = t_trilists[i].m_Y;
+                                           trilists[i].m_Z = t_trilists[i].m_Z;
+                                           }
+
+                                           free(t_trilists);
+                                           */
+
                                         count_blunder = DecisionMPs_setheight(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
-                                                                              Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                                              SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                                                              Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                                                              param, Grid_wgs,GridPT,
-                                                                              NumOfIAparam, t_Imageparams, BStartpos,
-                                                                              proinfo->save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages,blunder_selected_level);
-                                        
+                                                Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
+                                                SubMagImages_B,grid_resolution, Image_res[0],RPCs,
+                                                Imagesizes,data_size_lr,SubImages_B,Template_size,
+                                                param, Grid_wgs,GridPT,
+                                                NumOfIAparam, t_Imageparams, BStartpos,
+                                                proinfo->save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages,blunder_selected_level);
+
                                         printf("end decision_setheight\n");
-                                        
+
                                         if(pre_matched_pts == 0)
                                             matching_change_rate = 0;
                                         else
                                             matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-                                        
+
                                         matching_rate = count_MPs/(double)(Accessable_grid);
-                                        
+
                                         printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
                                         pre_matched_pts = count_MPs;
-                                        
+
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                         {
                                             level_check_matching_rate = true;
                                         }
-                                        
+
                                         if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
-                                        
+
                                         if(level == 0)
                                         {
                                             if(proinfo->DEM_resolution < 2)
@@ -4527,29 +4456,29 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             if(iteration > 2)
                                                 matching_change_rate = 0.001;
                                         }
-                                        
+
                                         if(level <= 1)
                                         {
                                             if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
-                                        
+
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
-                                        
+
                                         if(proinfo->DEM_resolution >= 8)
                                         {
                                             matching_change_rate = 0.001;
                                         }
                                         /*
-                                         if(proinfo->pre_DEMtif)
-                                         {
-                                         if(level >= 4)
-                                         matching_change_rate = 0.001;
-                                         }
-                                         */
+                                           if(proinfo->pre_DEMtif)
+                                           {
+                                           if(level >= 4)
+                                           matching_change_rate = 0.001;
+                                           }
+                                           */
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
-                                        
+
                                         if(Th_roh >= Th_roh_min)
                                         {
                                             if(level == 0)
@@ -4570,42 +4499,33 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                     Th_roh_update       = (double)(Th_roh - 0.10);
                                                 else
                                                     Th_roh_update       = (double)(Th_roh - 0.06);
-                                                
+
                                             }
                                         }
-                                        
+
                                         printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
-                                        
+
                                         bool check_level_end = false;
                                         if(level != 0)
                                         {
                                             if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
                                             {
                                                 check_level_end = true;
-                                                
-                                                if(dem_update_flag)
-                                                    update_flag     = true;
-                                                else
-                                                    update_flag     = false;
                                             }
-                                            else
-                                                update_flag         = false;
                                         }
-                                        else
-                                            update_flag             = false;
-                                        
+
                                         if(level == 0)
                                         {
                                             if(MPP_stereo_angle > 5)
                                                 MPP = MPP_stereo_angle;
                                             else
                                                 MPP = MPP_simgle_image;
-                                            
+
                                             if(proinfo->DEM_resolution < 2)
-                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif, minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif, minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             else
-                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-                                            
+                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
                                             printf("update GridPT3\n");
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
@@ -4619,8 +4539,8 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             }
                                             else
                                                 MPP = MPP_simgle_image;
-                                            
-                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
+                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             printf("update GridPT3\n");
                                         }
                                         else
@@ -4638,28 +4558,28 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             {
                                                 MPP = MPP_simgle_image;
                                             }
-                                            
-                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
+                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                         }
-                                        
+
                                         free(trilists);
                                         free(ptslists);
-                                        
+
                                         final_iteration = iteration;
                                     }
                                     else
                                     {
                                         //D3DPOINT *ptslists;
-                                        
+
                                         //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
                                         double minY_ptslists =  100000000;
                                         int i;
-                                        
+
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                        
+
                                         i = 0;
                                         for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
@@ -4669,27 +4589,27 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
-                                         i = 0;
-                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-                                         {
-                                         i++;
-                                         }
-                                         fclose(survey);
-                                         */
-                                        
+                                           i = 0;
+                                           while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                           {
+                                           i++;
+                                           }
+                                           fclose(survey);
+                                           */
+
                                         UI3DPOINT *trilists;
-                                        
+
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
-                                        
+
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                                        
+
                                         //Save triangulation and delete it since we will not use it
                                         FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
-                                        
+
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                        
+
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4698,31 +4618,31 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                         }
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
-                                        
+
                                         /*
-                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                         i = 0;
-                                         for(i=0;i<count_tri;i++)
-                                         {
-                                         trilists[i].m_X = t_trilists[i].m_X;
-                                         trilists[i].m_Y = t_trilists[i].m_Y;
-                                         trilists[i].m_Z = t_trilists[i].m_Z;
-                                         }
-                                         
-                                         free(t_trilists);
-                                         */
-                                        
+                                           trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                           i = 0;
+                                           for(i=0;i<count_tri;i++)
+                                           {
+                                           trilists[i].m_X = t_trilists[i].m_X;
+                                           trilists[i].m_Y = t_trilists[i].m_Y;
+                                           trilists[i].m_Z = t_trilists[i].m_Z;
+                                           }
+
+                                           free(t_trilists);
+                                           */
+
                                         if(pre_matched_pts == 0)
                                             matching_change_rate = 0;
                                         else
                                             matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-                                        
+
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_results[0];
-                                        
+
                                         if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
-                                        
+
                                         if(level == 0)
                                         {
                                             if(proinfo->DEM_resolution < 2)
@@ -4730,27 +4650,27 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             if(iteration > 2)
                                                 matching_change_rate = 0.001;
                                         }
-                                        
+
                                         if(level <= 1)
                                         {
                                             if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
-                                        
+
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
-                                        
+
                                         if(proinfo->DEM_resolution >= 8)
                                         {
                                             matching_change_rate = 0.001;
                                         }
                                         /*
-                                         if(proinfo->pre_DEMtif)
-                                         {
-                                         if(level >= 4)
-                                         matching_change_rate = 0.001;
-                                         }
-                                         */
+                                           if(proinfo->pre_DEMtif)
+                                           {
+                                           if(level >= 4)
+                                           matching_change_rate = 0.001;
+                                           }
+                                           */
                                         if(Th_roh >= Th_roh_min)
                                         {
                                             if(level == 0)
@@ -4773,34 +4693,25 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                     Th_roh_update       = (double)(Th_roh - 0.06);
                                             }
                                         }
-                                        
+
                                         matching_rate = count_MPs/(double)(Accessable_grid);
                                         printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
-                                        
+
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                         {
                                             level_check_matching_rate = true;
                                         }
-                                        
+
                                         bool check_level_end = false;
-                                        
+
                                         if(level != 0)
                                         {
                                             if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
                                             {
                                                 check_level_end = true;
-                                                
-                                                if(dem_update_flag)
-                                                    update_flag     = true;
-                                                else
-                                                    update_flag     = false;
                                             }
-                                            else
-                                                update_flag         = false;
                                         }
-                                        else
-                                            update_flag             = false;
-                                        
+
                                         if(level == 0)
                                         {
                                             if(MPP_stereo_angle > 5)
@@ -4809,17 +4720,13 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                 MPP = MPP_simgle_image;
                                             if(proinfo->DEM_resolution < 2)
                                             {
-                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-                                                
-                                                //Pre_GridPT3     = SetHeightRange_cp(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+                                                Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             }
                                             else
                                             {
-                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-                                                
-                                                //GridPT3         = SetHeightRange_cp(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+                                                GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             }
-                                            
+
                                             printf("update GridPT3\n");
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
@@ -4833,10 +4740,9 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             }
                                             else
                                                 MPP = MPP_simgle_image;
-                                            
-                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-                                            
-                                            //Pre_GridPT3     = SetHeightRange_cp(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
+                                            Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
                                             printf("update GridPT3\n");
                                         }
                                         else
@@ -4854,20 +4760,18 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                             {
                                                 MPP = MPP_simgle_image;
                                             }
-                                            
-                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-                                            
-                                            //GridPT3     = SetHeightRange_cp(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,update_flag,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
+
+                                            GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                         }
-                                        
+
                                         free(trilists);
-                                        
+
                                         if(proinfo->IsRA && level <= 3)
                                         {
                                             int RA_iter_counts = 0;
                                             RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
-                                                                         Template_size, SubImages, data_size_lr, SubOriImages, param,
-                                                                         bin_angle, pyramid_step, Hemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
+                                                    Template_size, SubImages, data_size_lr, SubOriImages, param,
+                                                    bin_angle, pyramid_step, param.bHemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
                                             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                             {
                                                 if(proinfo->check_selected_image[ti])
@@ -4876,18 +4780,19 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                     printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
                                                 }
                                             }
-                                            
+
                                             if (level <= 1)
                                             {
+                                                char save_file[500];
                                                 //sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath,row,col);
                                                 sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath);
-                                                fid_RAinfo  = fopen(save_file,"w");
+                                                FILE *fid_RAinfo  = fopen(save_file,"w");
                                                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                                     fprintf(fid_RAinfo,"%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
                                                 fclose(fid_RAinfo);
                                             }
                                         }
-                                        
+
                                         if(proinfo->IsRA)
                                         {
                                             if(check_RA_divide)
@@ -4898,21 +4803,21 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                     double t_X,t_Y,t_Z;
                                                     //bool t_flag;
                                                     int* t_count = (int*)calloc(sizeof(int),total_tile);
-                                                    
+
                                                     for(int k=0;k<count_MPs;k++)
                                                     {
                                                         //fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
                                                         t_X = ptslists[k].m_X;
                                                         t_Y = ptslists[k].m_Y;
                                                         t_Z = ptslists[k].m_Z;
-                                                        
+
                                                         int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
                                                         int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
-                                                        
+
                                                         t_count[t_col+division_X*t_row] ++;
                                                     }
                                                     //fclose(fid_pts);
-                                                    
+
                                                     int saved_count = 0;
                                                     int selected_X = 0;
                                                     int selected_Y = 0;
@@ -4926,67 +4831,67 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                                             selected_X  = k % division_X;
                                                         }
                                                         total_count += t_count[k];
-                                                        
+
                                                         //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
                                                     }
                                                     printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
                                                     printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
-                                                           subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
-                                                    
+                                                            subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+
                                                     fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-                                                    
+
                                                     new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
                                                     new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
                                                     new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
                                                     new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
-                                                    
+
                                                     check_new_subBoundary_RA = true;
                                                     check_RA_divide = false;
-                                                    
+
                                                     free(t_count);
-                                                    
+
                                                 }
                                             }
                                         }
-                                        
+
                                         free(ptslists);
                                     }
                                 }
-                                
+
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",row,col,level,iteration);
-                                
+
                                 fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\tmatching_rate = %f\n",
                                         row,col,level,iteration,count_MPs,minH_grid,maxH_grid,matching_rate);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-                                       row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
+                                        row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
                                 //matching_rate = (double)count_results[0]/(double)total_matching_candidate_pts;
-                                
+
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
                             /*
-                             if (level == 0 && iteration == 3)
-                             {
-                             remove(filename_mps_pre);
-                             if(level >= ortho_level && proinfo->IsRA != 1)
-                             {
-                             remove(filename_mps_aft);
-                             remove(filename_mps_fin);
-                             remove(filename_mps_anchor);
-                             
-                             }
-                             }
-                             else
-                             {
-                             remove(filename_mps);
-                             remove(filename_mps_pre);
-                             if(level >= ortho_level && proinfo->IsRA != 1)
-                             {
-                             remove(filename_mps_aft);
-                             remove(filename_mps_fin);
-                             remove(filename_mps_anchor);
-                             }
-                             }
-                             */
+                               if (level == 0 && iteration == 3)
+                               {
+                               remove(filename_mps_pre);
+                               if(level >= ortho_level && proinfo->IsRA != 1)
+                               {
+                               remove(filename_mps_aft);
+                               remove(filename_mps_fin);
+                               remove(filename_mps_anchor);
+
+                               }
+                               }
+                               else
+                               {
+                               remove(filename_mps);
+                               remove(filename_mps_pre);
+                               if(level >= ortho_level && proinfo->IsRA != 1)
+                               {
+                               remove(filename_mps_aft);
+                               remove(filename_mps_fin);
+                               remove(filename_mps_anchor);
+                               }
+                               }
+                               */
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -4994,14 +4899,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             else if(level == 0)
                                 iteration++;
-                            
+
                             if(level == 0)
                             {
                                 if(proinfo->DEM_resolution >= 2)
                                     Th_roh          = (double)(Th_roh - 0.10);
                                 else
                                     Th_roh          = (double)(Th_roh - 0.50);
-                                
+
                                 if(iteration > 3)
                                     Th_roh          = (double)(Th_roh - 0.50);
                             }
@@ -5018,7 +4923,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 else
                                     Th_roh          = (double)(Th_roh - 0.06);
                             }
-                            
+
                             if(lower_level_match)
                             {
                                 if(Th_roh < Th_roh_min && matching_change_rate > rate_th)
@@ -5040,7 +4945,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     }
                                 }
                             }
-                            
+
                             if (!lower_level_match && Th_roh < Th_roh_min)
                             {
                                 if(level > 0)
@@ -5050,15 +4955,15 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     Th_roh_min = 0.4;
                                 }
                             }
-                            
+
                             if(level == 0)
                                 final_level_iteration = iteration;
-                            
+
                             printf("lower_level_match %d\tmatching change rate %f\tTh_roh %f\t%f\n",lower_level_match,matching_change_rate,Th_roh,Th_roh_min);
-                            
+
                             printf("Memory : System %f\t SETSM required %f\n",proinfo->System_memory, total_memory);
                         }
-                        
+
                         if(flag_start)
                         {
                             double min_after, max_after;
@@ -5077,7 +4982,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                     min_after = minH_grid;
                                 if(max_after < maxH_grid)
                                     max_after = maxH_grid;
-                                
+
                                 minmaxHeight[0]     = min_after;
                                 minmaxHeight[1]     = max_after;
                             }
@@ -5085,14 +4990,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
                                     row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
                         }
-                        
+
                         printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%%) = %4.2f%% !!\n",row,iter_row_end,col,t_col_end,(double)(pyramid_step+1 - level)/(double)(pyramid_step+1)*100);
-                        
+
                         if(proinfo->IsRA)
                         {
                             //if(!lower_level_match || level < DEM_level)
                             free(GridPT);
-                            
+
                             if(!lower_level_match)
                             {
                                 lower_level_match   = true;
@@ -5108,10 +5013,10 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             }
                             free(GridPT);
                         }
-                        
+
                         printf("release Grid_wgs, nccresult\n");
                         free(Grid_wgs);
-                        
+
                         if(!check_matching_rate)
                         {
 #pragma omp parallel for //schedule(guided)
@@ -5126,12 +5031,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             free(grid_voxel);
                             printf("free grid_voxel\n");
                         }
-                        
+
                         if(!check_matching_rate)
                             check_matching_rate = level_check_matching_rate;
-                        
+
                         free(nccresult);
-                        
+
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
                             if(proinfo->check_selected_image[ti])
@@ -5140,12 +5045,12 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                                 free(SubImages[ti]);
                                 free(SubImages_B[ti]);
                                 free(SubOriImages[ti]);
-                                
-                                
+
+
                                 printf("release subimage Mag\n\n\n");
                                 free(SubMagImages[ti]);
                                 free(SubMagImages_B[ti]);
-                                
+
                                 if(level > Py_combined_level)
                                 {
                                     free(SubImages_next[ti]);
@@ -5158,14 +5063,14 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                         free(SubImages);
                         free(SubImages_B);
                         free(SubOriImages);
-                        
+
                         printf("release subimage Mag\n\n\n");
                         free(SubMagImages);
                         free(SubMagImages_B);
-                        
+
                         free(Startpos);
                         free(BStartpos);
-                        
+
                         if(level > Py_combined_level)
                         {
                             free(Startpos_next);
@@ -5173,35 +5078,35 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                             free(SubOriImages_next);
                             free(SubMagImages_next);
                         }
-                        
+
                         if(level > 0)
                             level   = level - 1;
-                        
+
                         if(level == 0 && final_level_iteration == 4)
                             level = -1;
-                        
+
                     }
                     printf("relese data size\n");
-                    
+
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         if(proinfo->check_selected_image[ti])
                             free(data_size_lr[ti]);
                     free(data_size_lr);
-                    
+
                     free(GridPT3);
-                    
+
                     printf("release GridTP3\n");
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-                    
+
                 }
             }
             fclose(fid);
             fclose(fid_header);
-            
+
             RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,pyramid_step,0);
-            
+
             if(proinfo->IsRA)
             {
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -5214,21 +5119,22 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
                     }
                 }
             }
-        }
-        
-        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-        {
-            if(proinfo->check_selected_image[ti])
+
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
-                free(Subsetfilename[ti]);
-                free(t_Imageparams[ti]);
+                if(proinfo->check_selected_image[ti])
+                {
+                    free(Subsetfilename[ti]);
+                    free(t_Imageparams[ti]);
+                }
             }
+
+            free(Subsetfilename);
+            free(t_Imageparams);
+            free(Startpos_ori);
+            free(Subsetsize);
         }
         
-        free(Subsetfilename);
-        free(t_Imageparams);
-        free(Startpos_ori);
-        free(Subsetsize);
     }
     
     free(iterations);
@@ -5254,7 +5160,7 @@ int Matching_SETSM(ProInfo *proinfo,uint8 pyramid_step, uint8 Template_size, uin
     return final_iteration;
 }
 
-double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *GridPT3,  int level, double height_step, double *subBoundary, double *minimum_memory,double im_resolution, uint8 iteration,int blunder_selected_level,int Py_combined_level,int pyramid_step,double *minmaxHeight,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes)
+double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *GridPT3, double *minimum_memory, const uint8 iteration,const int Py_combined_level,const double *minmaxHeight)
 {
     double Memory = 0;
     
@@ -5262,34 +5168,36 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     double oriimage = 0;
     double magimage = 0;
     
-    //printf("%d\t%d\n",Py_combined_level,blunder_selected_level);
-    for(int ti = 0 ; ti < info->number_of_images ; ti++)
+    const int level = *(plevelinfo.Pyramid_step);
+    const int blunder_selected_level = *(plevelinfo.blunder_selected_level);
+    printf("%d\t%d\n",level,blunder_selected_level);
+    for(int ti = 0 ; ti < info->number_of_images ; ti++)    
     {
-        //printf("data size %d\t%d\t%d\t%d\t%d\t%d\n",data_size[ti][level].height,data_size[ti][level].width,data_size[ti][blunder_selected_level].height,data_size[ti][blunder_selected_level].width,data_size[ti][level-1].height,data_size[ti][level-1].width);
-        image += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
-        oriimage += (double)((sizeof(uint8)*data_size[ti][level].height*data_size[ti][level].width) );
-        magimage += (double)((sizeof(uint16)*data_size[ti][level].height*data_size[ti][level].width) );
-        
-        image += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
-        magimage += (double)((sizeof(uint16)*data_size[ti][blunder_selected_level].height*data_size[ti][blunder_selected_level].width) );
+        const long int data_length_ti = plevelinfo.py_Sizes[ti][level].height * plevelinfo.py_Sizes[ti][level].width;
+        image += (double)((sizeof(uint16)*data_length_ti) );
+        oriimage += (double)((sizeof(uint8)*data_length_ti) );
+        magimage += (double)((sizeof(uint16)*data_length_ti) );
+        const long int data_length_ti_B = plevelinfo.py_Sizes[ti][blunder_selected_level].height * plevelinfo.py_Sizes[ti][blunder_selected_level].width;
+        image += (double)((sizeof(uint16)*data_length_ti_B) );
+        magimage += (double)((sizeof(uint16)*data_length_ti_B) );
     
         if(level > Py_combined_level)
         {
-            image += (double)((sizeof(uint16)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
-            oriimage += (double)((sizeof(uint8)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
-            magimage += (double)((sizeof(uint16)*data_size[ti][level-1].height*data_size[ti][level-1].width) );
+            image += (double)((sizeof(uint16)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
+            oriimage += (double)((sizeof(uint8)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
+            magimage += (double)((sizeof(uint16)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
         }
     }
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += (image + oriimage + magimage);
     //printf("memory 1 %f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage);
-    long int GridPT  = (double)(sizeof(D2DPOINT)*Size_Grid2D.height*Size_Grid2D.width);
+    long int GridPT  = (double)(sizeof(D2DPOINT)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT)*3;
     //printf("memory 2 %f\n",Memory);
-    long int GridPT3_size = (double)(sizeof(UGRID)*Size_Grid2D.height*Size_Grid2D.width);
+    long int GridPT3_size = (double)(sizeof(UGRID)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT3_size);
     //printf("memory 3 %f\n",Memory);
-    long int nccresult_size = (double)(sizeof(NCCresult)*Size_Grid2D.width*Size_Grid2D.height);
+    long int nccresult_size = (double)(sizeof(NCCresult)*(*(plevelinfo.Grid_length)));
     Memory += (nccresult_size);
     //printf("memory 4 %f\n",Memory);
     
@@ -5302,20 +5210,20 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
         int sub_imagesize_w_next, sub_imagesize_h_next;
         double all_im_cd = 0;
         double all_im_cd_next = 0;
-        im_resolution = im_resolution*pwrtwo(level);
+        double im_resolution = info->resolution*pwrtwo(level);
         double im_resolution_next;
         long int sub_imagesize_total_next;
         
         if(level > 0)
             im_resolution_next = im_resolution*pwrtwo(level-1);
         
-        sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-        sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+        sub_imagesize_w = (int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
+        sub_imagesize_h = (int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
         
         if(level > 0)
         {
-            sub_imagesize_w_next = (int)((subBoundary[2] - subBoundary[0])/im_resolution_next)+1;
-            sub_imagesize_h_next = (int)((subBoundary[3] - subBoundary[1])/im_resolution_next)+1;
+            sub_imagesize_w_next = (int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution_next)+1;
+            sub_imagesize_h_next = (int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution_next)+1;
             sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
         }
         
@@ -5323,9 +5231,9 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
         
         for(int ti = 0 ; ti < info->number_of_images ; ti++)
         {
-            all_im_cd += (double)(sizeof(F2DPOINT)*sub_imagesize_total);
+            all_im_cd += (double)(sizeof(D2DPOINT)*sub_imagesize_total);
             if(level > 0)
-                all_im_cd_next += (double)(sizeof(F2DPOINT)*sub_imagesize_total_next);
+                all_im_cd_next += (double)(sizeof(D2DPOINT)*sub_imagesize_total_next);
         }
         Memory += (all_im_cd + all_im_cd_next);
     }
@@ -5333,34 +5241,34 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
     
     if(!info->IsRA)
     {
-        long int grid_voxel = (double)(sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
-        grid_voxel += (double)(sizeof(float)*Size_Grid2D.width*Size_Grid2D.height);
-        for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
+        long int grid_voxel = (double)(sizeof(VOXEL)*(*(plevelinfo.Grid_length)));
+        grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
+        for(long int t_i = 0 ; t_i < (*(plevelinfo.Grid_length)); t_i++)
         {
-        if(check_image_boundary(info,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
+        if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
             {
                 bool check_blunder_cell = true;
                 double th_height = 1000;
                 
-                if ( pyramid_step >= 2)
+                if ( level >= 2)
                     check_blunder_cell = false;
                 else if( GridPT3[t_i].Matched_flag != 0)
                 {
                     if(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight > 0)
                     {
-                        if(pyramid_step <= 1)
+                        if(level <= 1)
                         {
                             if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
                                 check_blunder_cell = false;
                         }
                         
-                        if(pyramid_step == 1)
+                        if(level == 1)
                         {
                             if((abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < 1000))
                                 check_blunder_cell = false;
                         }
                         
-                        if(pyramid_step == 0)
+                        if(level == 0)
                         {
                             if(abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight) < th_height)
                                 check_blunder_cell = false;
@@ -5370,7 +5278,7 @@ double CalMemorySize(ProInfo *info, CSize Size_Grid2D,CSize** data_size, UGRID *
                 
                 if(!check_blunder_cell)
                 {
-                    int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
+                    const int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/(*(plevelinfo.height_step)));
                     
                     if(NumberofHeightVoxel > 0 )
                     {
@@ -5853,7 +5761,7 @@ void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *p
     
     printf("%f %f %f %f %f\n",param->sa,param->sb,param->e2,param->e2cuadrada,param->c);
     double Lat = minLat;
-    char direction[10];
+    char direction[2];
     
     if(param->projection == 3)
     {
@@ -6044,20 +5952,18 @@ void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *
 }
 
 
-void SetPySizes(CSize *data_size_lr, CSize Subsetsize, int level)
+void SetPySizes(CSize *data_size_lr, const CSize Subsetsize, const int level)
 {
-    int i;
-
     data_size_lr[0].height       = Subsetsize.height;
     data_size_lr[0].width        = Subsetsize.width;
-    for(i=0;i<level;i++)
+    for(int i=0;i<level;i++)
     {
         data_size_lr[i+1].width  = data_size_lr[i].width/2;
         data_size_lr[i+1].height = data_size_lr[i].height/2;
     }
 }
 
-void SetThs(ProInfo *proinfo,int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start)
+void SetThs(const ProInfo *proinfo,const int level, const int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start)
 {
     if(proinfo->IsRA)
     {
@@ -6396,128 +6302,64 @@ void SetThs_ratio(int level, double *Th_roh, double *Th_roh_min, double *Th_roh_
     }
 }
 
-D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int level, int final_level_iteration, double resolution, CSize *Size_Grid2D, bool pre_DEMtif, char *priori_DEM_tif, double DEM_resolution, double *minmaxHeight,
-                   double *py_resolution, double *grid_resolution, double *subBoundary)
+D2DPOINT *SetGrids(const ProInfo *info, const int level, const int final_level_iteration, const double resolution, CSize *Size_Grid2D, const double DEM_resolution, double *py_resolution, double *grid_resolution, const double *subBoundary)
 {
     *py_resolution   = (double)(resolution*pwrtwo(level));
     *grid_resolution = *py_resolution;
     
-    double R_resolution = 4*(*py_resolution);
-    
     printf("pre resolution %f\t level %d\t final_level_iteration %d\n",*py_resolution,level,final_level_iteration);
     
-    
-    
-    if(*dem_update_flag)
+    if(*py_resolution > 32)//low-res original imagery
     {
-        if(*py_resolution > 32)//low-res original imagery
+        *py_resolution = (int)(*py_resolution/4.0);
+        *grid_resolution = *py_resolution;
+    }
+    else
+    {
+        if(resolution >= 0.4)
         {
-            *py_resolution = (int)(*py_resolution/4.0);
-            *grid_resolution = *py_resolution;
-        }
-        else
-        {
-            if(resolution >= 0.4)
+            if(level > 0)
             {
-                /*if(level >= 3)
+                if((*py_resolution)*3 > DEM_resolution) //low-res DEM more than 8m
                 {
-                    
-                }
-                else*/ if(level > 0)
-                {
-                    /*if(DEM_resolution >= 2)
+                    if(DEM_resolution > 8)
                     {
-                        if(R_resolution > DEM_resolution)
-                        {
-                            if(R_resolution > 8)
-                                *py_resolution = 8;
-                            else
-                                *py_resolution   = R_resolution;
-                        }
-                        else
-                            *py_resolution = DEM_resolution;
-                    }
-                    else
-                    {*/
-                        if((*py_resolution)*3 > DEM_resolution) //low-res DEM more than 8m
-                        {
-                            if(DEM_resolution > 8)
-                            {
-                                *py_resolution = DEM_resolution;
-                            }
-                            else
-                            {
-                                if((*py_resolution)*3 > 8)
-                                    *py_resolution = 8;
-                                else
-                                    *py_resolution   = (*py_resolution)*3;
-                            }
-                        }
-                        else
-                            *py_resolution = DEM_resolution;
-                    //}
-                }
-                else if(level == 0)
-                {
-                    if(DEM_resolution >= 2)
                         *py_resolution = DEM_resolution;
+                    }
                     else
                     {
-                        if(final_level_iteration == 1)
-                        {
-                            if(*py_resolution < 2)
-                            {
-                                if((*py_resolution)*4 > DEM_resolution)
-                                    *py_resolution   = (*py_resolution)*4;
-                                else
-                                    *py_resolution   = DEM_resolution;
-                            }
-                            else
-                            {
-                                *py_resolution = DEM_resolution;
-                            }
-                        }
-                        else if(final_level_iteration == 2)
-                        {
-                            if(*py_resolution < 2)
-                            {
-                                if((*py_resolution)*2 > DEM_resolution)
-                                    *py_resolution   = (*py_resolution)*2;
-                                else
-                                    *py_resolution   = DEM_resolution;
-                            }
-                            else
-                            {
-                                *py_resolution = DEM_resolution;
-                            }
-                        }
+                        if((*py_resolution)*3 > 8)
+                            *py_resolution = 8;
                         else
-                            *py_resolution   = DEM_resolution;
+                            *py_resolution   = (*py_resolution)*3;
                     }
-                    
                 }
+                else
+                    *py_resolution = DEM_resolution;
             }
-            else
+            else if(level == 0)
             {
                 if(DEM_resolution >= 2)
                     *py_resolution = DEM_resolution;
                 else
                 {
-                    /*if(level > 0)
+                    if(final_level_iteration == 1)
                     {
-                        if(*py_resolution < DEM_resolution)
-                            *py_resolution = DEM_resolution;
-                    }
-                    else*/ if(level == 0)
-                    {
-                        if(final_level_iteration == 1)
+                        if(*py_resolution < 2)
                         {
                             if((*py_resolution)*4 > DEM_resolution)
                                 *py_resolution   = (*py_resolution)*4;
                             else
                                 *py_resolution   = DEM_resolution;
                         }
-                        else if(final_level_iteration == 2)
+                        else
+                        {
+                            *py_resolution = DEM_resolution;
+                        }
+                    }
+                    else if(final_level_iteration == 2)
+                    {
+                        if(*py_resolution < 2)
                         {
                             if((*py_resolution)*2 > DEM_resolution)
                                 *py_resolution   = (*py_resolution)*2;
@@ -6525,32 +6367,60 @@ D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int le
                                 *py_resolution   = DEM_resolution;
                         }
                         else
+                        {
+                            *py_resolution = DEM_resolution;
+                        }
+                    }
+                    else
+                        *py_resolution   = DEM_resolution;
+                }
+                
+            }
+        }
+        else
+        {
+            if(DEM_resolution >= 2)
+                *py_resolution = DEM_resolution;
+            else
+            {
+                if(level == 0)
+                {
+                    if(final_level_iteration == 1)
+                    {
+                        if((*py_resolution)*4 > DEM_resolution)
+                            *py_resolution   = (*py_resolution)*4;
+                        else
                             *py_resolution   = DEM_resolution;
                     }
+                    else if(final_level_iteration == 2)
+                    {
+                        if((*py_resolution)*2 > DEM_resolution)
+                            *py_resolution   = (*py_resolution)*2;
+                        else
+                            *py_resolution   = DEM_resolution;
+                    }
+                    else
+                        *py_resolution   = DEM_resolution;
                 }
             }
         }
-        
-        /*double temp_v = *py_resolution*10.0;
-        temp_v = ceil(temp_v/5.0);
-        *py_resolution = temp_v*5.0/10.0;
-        */
-        //full computation
-        if(info->check_full_cal)
-        {
-            *py_resolution   = (double)(resolution*pwrtwo(level));
-            *grid_resolution = *py_resolution;
-        }
-        
-        if(*py_resolution < DEM_resolution)
-            *py_resolution = DEM_resolution;
-        
-        *grid_resolution = *py_resolution;
-        
-        
-        Size_Grid2D->width  = (int)(ceil((double)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
-        Size_Grid2D->height = (int)(ceil((double)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
     }
+    
+    //full computation
+    if(info->check_full_cal)
+    {
+        *py_resolution   = (double)(resolution*pwrtwo(level));
+        *grid_resolution = *py_resolution;
+    }
+    
+    if(*py_resolution < DEM_resolution)
+        *py_resolution = DEM_resolution;
+    
+    *grid_resolution = *py_resolution;
+    
+    
+    Size_Grid2D->width  = (int)(ceil((double)(subBoundary[2] - subBoundary[0])/(*grid_resolution) ));
+    Size_Grid2D->height = (int)(ceil((double)(subBoundary[3] - subBoundary[1])/(*grid_resolution) ));
  
     printf("DEM resolution %f\tresolution %f\t size %d\t%d\n",DEM_resolution,*py_resolution,Size_Grid2D->width,Size_Grid2D->height);
     D2DPOINT *GridPT = SetDEMGrid(subBoundary, *grid_resolution, *grid_resolution, Size_Grid2D);
@@ -6558,39 +6428,32 @@ D2DPOINT *SetGrids(ProInfo *info, bool *dem_update_flag, bool flag_start, int le
     return GridPT;
 }
 
-UGRID *SetGrid3PT(ProInfo *proinfo,TransParam param, bool dem_update_flag, bool flag_start, CSize Size_Grid2D, double Th_roh, int level, double *minmaxHeight,double *subBoundary,double py_resolution,char* metafilename)
+UGRID *SetGrid3PT(const ProInfo *proinfo,const TransParam param, const CSize Size_Grid2D, const double Th_roh, double *minmaxHeight, const double *subBoundary,const double py_resolution)
 {
-    UGRID *GridPT3;
-    int total_grid_counts, i;
+    UGRID *GridPT3 = NULL;
+    long int total_grid_counts = (long)Size_Grid2D.height*(long)Size_Grid2D.width;
 
-    if(!flag_start)
+    total_grid_counts       = Size_Grid2D.height*Size_Grid2D.width;
+    GridPT3                 = (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
+
+#pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight,Th_roh)
+    for(long int i=0;i<total_grid_counts;i++)
     {
-        
-        total_grid_counts       = Size_Grid2D.height*Size_Grid2D.width;
-        GridPT3                 = (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
+        GridPT3[i].Matched_flag     = 0;
+        GridPT3[i].roh              = DoubleToSignedChar_grid(Th_roh);
+        GridPT3[i].anchor_flag      = 0;
+        for(int ti=0;ti<MaxNCC;ti++)
+            GridPT3[i].ortho_ncc[ti]        = 0;
+        GridPT3[i].Mean_ortho_ncc   = 0;
 
-#pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight,Th_roh) private(i)
-        for(i=0;i<total_grid_counts;i++)
-        {
-            GridPT3[i].Matched_flag     = 0;
-            GridPT3[i].roh              = DoubleToSignedChar_grid(Th_roh);
-            GridPT3[i].anchor_flag      = 0;
-            //GridPT3[i].Matched_height   = -1000.0;
-            for(int ti=0;ti<MaxNCC;ti++)
-                GridPT3[i].ortho_ncc[ti]        = 0;
-            GridPT3[i].Mean_ortho_ncc   = 0;
-            //GridPT3[i].angle            = 0;
-//          GridPT3[i].false_h_count    = 0;
-
-            GridPT3[i].minHeight        = floor(minmaxHeight[0] - 0.5);
-            GridPT3[i].maxHeight        = ceil(minmaxHeight[1] + 0.5);
-            GridPT3[i].Height           = -1000.0;
-        }
-        if(proinfo->pre_DEMtif)
-        {
-            printf("seedem load\n");
-            SetHeightWithSeedDEM(proinfo,param, GridPT3,subBoundary,Size_Grid2D,py_resolution,minmaxHeight);
-        }
+        GridPT3[i].minHeight        = floor(minmaxHeight[0] - 0.5);
+        GridPT3[i].maxHeight        = ceil(minmaxHeight[1] + 0.5);
+        GridPT3[i].Height           = -1000.0;
+    }
+    if(proinfo->pre_DEMtif)
+    {
+        printf("seedem load\n");
+        SetHeightWithSeedDEM(proinfo,param, GridPT3,subBoundary,Size_Grid2D,py_resolution,minmaxHeight);
     }
 
     return GridPT3;
@@ -6631,7 +6494,7 @@ int  CalTotalIteration(uint8 DEM_level,int level)
     return sub_total_count;
 }
 
-char* remove_ext(char* mystr)
+char* remove_ext(const char* mystr)
 {
     char *retstr;
     char *lastdot;
@@ -6657,8 +6520,6 @@ char* GetFileName(char file_path[])
         {
             file_name = file_path+1;
         }
-        else
-        { }
             
         file_path++;
                
@@ -6717,8 +6578,8 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 }
 
 
-bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 NumofIAparam, double **RPCs, double *ImageParam, char *ImageFilename, CSize Imagesize,
-                     double *subBoundary, double *minmaxHeight, int *cols, int *rows)
+bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 NumofIAparam, const double * const *RPCs,const double *ImageParam, char *ImageFilename, CSize Imagesize,
+                     const double *subBoundary,const double *minmaxHeight,long int *cols,long int *rows)
 {
     bool ret = false;
 
@@ -6836,7 +6697,7 @@ bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 N
 }
         
 
-uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size, bool check_checktiff)
+uint16 *Readtiff(char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, bool check_checktiff)
 {
     uint16 *out;
     FILE *bin;
@@ -7051,14 +6912,13 @@ uint16 *Readtiff(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *
 }
 
 
-float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
+float *Readtiff_DEM(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size)
 {
     float *out;
     FILE *bin;
     int check_ftype = 1; // 1 = tif, 2 = bin 
     TIFF *tif = NULL;
-    char *ext;
-    ext = strrchr(filename,'.');
+    const char *ext = strrchr(filename,'.');
     
     if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
@@ -7336,7 +7196,7 @@ float *Readtiff_DEM(char *filename, CSize *Imagesize, int *cols, int *rows, CSiz
     return out;
 }
 
-unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size)
+unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size)
 {
     unsigned char *out;
     FILE *bin;
@@ -7613,7 +7473,7 @@ unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize, int *cols, int *r
     return out;
 }
 
-void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_area, int col, int row, double *subBoundary)
+void SetSubBoundary(const double *Boundary, const double subX, const double subY, const double buffer_area, const int col, const int row, double *subBoundary)
 {
     subBoundary[0]      = Boundary[0] + subX*(col - 1) - buffer_area;
     subBoundary[1]      = Boundary[1] + subY*(row - 1) - buffer_area;
@@ -7635,22 +7495,19 @@ void SetSubBoundary(double *Boundary, double subX, double subY, double buffer_ar
         subBoundary[3] = Boundary[3];
 }
 
-D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size_2D)
+D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D)
 {
-    D2DPOINT *GridPT;
+    D2DPOINT *GridPT = NULL;
 
-    //if(Size_2D->height == 0)
-    {
-        Size_2D->width  = (int)(ceil((double)(Boundary[2] - Boundary[0])/Grid_x));
-        Size_2D->height = (int)(ceil((double)(Boundary[3] - Boundary[1])/Grid_y));
-    }
-    
-    GridPT  = (D2DPOINT*)malloc(sizeof(D2DPOINT)*Size_2D->height*Size_2D->width);
+    Size_2D->width  = (int)(ceil((double)(Boundary[2] - Boundary[0])/Grid_x));
+    Size_2D->height = (int)(ceil((double)(Boundary[3] - Boundary[1])/Grid_y));
+
+    GridPT  = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(long int)Size_2D->height*(long int)Size_2D->width);
 #pragma omp parallel for schedule(guided)
-    for(int row = 0 ; row < Size_2D->height ; row++)
-        for(int col = 0; col < Size_2D->width ; col++)
+    for(long int row = 0 ; row < Size_2D->height ; row++)
+        for(long int col = 0; col < Size_2D->width ; col++)
         {
-            int index = row*Size_2D->width + col;
+            long int index = row*(long int)Size_2D->width + col;
             GridPT[index].m_X = Boundary[0] + col*Grid_x;
             GridPT[index].m_Y = Boundary[1] + row*Grid_y;
         }
@@ -7659,23 +7516,15 @@ D2DPOINT *SetDEMGrid(double *Boundary, double Grid_x, double Grid_y, CSize *Size
 }
 
 
-void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double *Boundary, CSize Grid_size, double Grid_set, double *minmaxHeight)
+void SetHeightWithSeedDEM(const ProInfo *proinfo,const TransParam param, UGRID *Grid, const double *Boundary, const CSize Grid_size, const double Grid_set, double *minmaxHeight)
 {
-    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0, a_minX = 0, a_maxX = 0, a_minY = 0, a_maxY = 0;
-    CSize seeddem_size;
-    char* hdr_path;
-    FILE *bin;
-    TIFF *tif;
-    char save_DEMfile[500];
-    char *GIMP_path = proinfo->priori_DEM_tif;
-    double seedDEM_sigma = proinfo->seedDEMsigma;
+    const char *GIMP_path = proinfo->priori_DEM_tif;
     int IsRA = proinfo->IsRA;
-    char* metafilename = proinfo->metafilename;
-    
+    const char* metafilename = proinfo->metafilename;
+
     int check_ftype = 1; // 1 = tif, 2 = raw
-    char *ext;
-    ext = strrchr(GIMP_path,'.');
-    
+    const char *ext = strrchr(GIMP_path,'.');
+
     if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
         check_ftype = 1;
@@ -7684,12 +7533,13 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     {
         check_ftype = 2;
     }
-    
-    double oriminH = minmaxHeight[0];
-    double orimaxH = minmaxHeight[1];
-    
+
+    const double oriminH = minmaxHeight[0];
+    const double orimaxH = minmaxHeight[1];
+
     printf("oriminmaxH %f\t%f\n",oriminH,orimaxH);
-    
+
+    double seedDEM_sigma = proinfo->seedDEMsigma;
     if(!proinfo->check_Matchtag)
     {
         if(seedDEM_sigma < 10)
@@ -7701,12 +7551,15 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                 seedDEM_sigma = 50;
         }
     }
-    
+
     printf("ttt1 %f\n",seedDEM_sigma);
-    
-    FILE* pFile_meta;
-    pFile_meta  = fopen(metafilename,"r");
+
+    FILE *pFile_meta  = fopen(metafilename,"r");
     printf("meta file = %s\n",metafilename);
+
+
+    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
+    CSize seeddem_size;
     if(pFile_meta)
     {
         char bufstr[500];
@@ -7740,7 +7593,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
         }
         else if(check_ftype == 2)
         {
-            hdr_path = remove_ext(GIMP_path);
+            char* hdr_path = remove_ext(GIMP_path);
             sprintf(hdr_path,"%s.hdr",hdr_path);
 
             printf("hdr path %s\n",hdr_path);
@@ -7748,10 +7601,10 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
             free(hdr_path);
         }
     }
-    
+
     maxX    = minX + grid_size*((double)seeddem_size.width);
     minY    = maxY - grid_size*((double)seeddem_size.height);
-    
+
     printf("%d\n",seeddem_size.width);
     printf("%d\n",seeddem_size.height);
     printf("%f\n",minX);
@@ -7760,29 +7613,26 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     printf("%f\n",maxY);
     printf("%f\n",grid_size);
 
+    double a_minX = 0, a_maxX = 0, a_minY = 0, a_maxY = 0;
     if(minX > (double)Boundary[0])
         a_minX = minX;
-    else {
+    else 
         a_minX = (double)Boundary[0];
-    }
-    if (maxX < (double)Boundary[2]) {
+
+    if (maxX < (double)Boundary[2]) 
         a_maxX = maxX;
-    }
-    else {
+    else 
         a_maxX = (double)Boundary[2];
-    }
 
     if(minY > (double)Boundary[1])
         a_minY = minY;
-    else {
+    else 
         a_minY = (double)Boundary[1];
-    }
-    if (maxY < (double)Boundary[3]) {
+
+    if (maxY < (double)Boundary[3]) 
         a_maxY = maxY;
-    }
-    else {
+    else 
         a_maxY = (double)Boundary[3];
-    }
 
     double total_minH = 999999;
     double total_maxH = -999999;
@@ -7791,28 +7641,24 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
     if ( (a_minX < a_maxX) && (a_minY < a_maxY))
     {
         printf("seeddem cal %f\n",seedDEM_sigma);
-        int row,col;
-        
+
         if(check_ftype == 2)
         {
-            float *seeddem = NULL;
-            bin = fopen(GIMP_path,"rb");
-            seeddem = (float*)malloc(sizeof(float)*seeddem_size.width*seeddem_size.height);
-            fread(seeddem,sizeof(float),seeddem_size.width*seeddem_size.height,bin);
-            
-            for (row = 0; row < Grid_size.height; row ++) {
-                for (col = 0; col < Grid_size.width; col ++) {
-                    int index_grid = row*Grid_size.width + col;
-                    double t_x,t_y;
-                    int index_seeddem;
-                    int row_seed, col_seed;
-                    
-                    t_x = Boundary[0] + col*Grid_set;
-                    t_y = Boundary[1] + row*Grid_set;
-                    col_seed = floor((t_x - minX)/grid_size);
-                    row_seed = floor((maxY - t_y)/grid_size);
-                    index_seeddem = row_seed*seeddem_size.width + col_seed;
-                    if(index_seeddem >= 0 && index_seeddem < seeddem_size.width*seeddem_size.height)
+            FILE *bin = fopen(GIMP_path,"rb");
+            float *seeddem = (float*)malloc(sizeof(float)*(long int)seeddem_size.width*(long int)seeddem_size.height);
+            fread(seeddem,sizeof(float),(long int)seeddem_size.width*(long int)seeddem_size.height,bin);
+
+            for (long int row = 0; row < Grid_size.height; row ++) 
+            {
+                for (long col = 0; col < Grid_size.width; col ++) 
+                {
+                    long int index_grid = row*(long int)Grid_size.width + col;
+                    double t_x = Boundary[0] + col*Grid_set;
+                    double t_y = Boundary[1] + row*Grid_set;
+                    long int col_seed = floor((t_x - minX)/grid_size);
+                    long int row_seed = floor((maxY - t_y)/grid_size);
+                    long int index_seeddem = row_seed*seeddem_size.width + col_seed;
+                    if(index_seeddem >= 0 && index_seeddem < (long int)seeddem_size.width*(long int)seeddem_size.height)
                     {
                         if(seeddem[index_seeddem] > -1000)
                         {
@@ -7822,99 +7668,74 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                     Grid[index_grid].minHeight = floor(minmaxHeight[0]);
                                 else
                                     Grid[index_grid].minHeight = floor(seeddem[index_seeddem] - seedDEM_sigma - 0.5);
-                                
+
                                 if(minmaxHeight[1] < (int)(seeddem[index_seeddem] + seedDEM_sigma + 0.5))
                                     Grid[index_grid].maxHeight = ceil(minmaxHeight[1]);
                                 else
                                     Grid[index_grid].maxHeight = ceil(seeddem[index_seeddem] + seedDEM_sigma + 0.5);
-                                
-                                Grid[index_grid].Height        = seeddem[index_seeddem];
 
-                                if(proinfo->check_Matchtag)
-                                {
-                                    //Grid[index_grid].Matched_flag = 1;
-                                    //Grid[index_grid].roh          = 0.1;
-                                }
+                                Grid[index_grid].Height        = seeddem[index_seeddem];
                             }
                             else
                             {
                                 Grid[index_grid].minHeight      = floor(minmaxHeight[0] - 0.5);
                                 Grid[index_grid].maxHeight      = ceil(minmaxHeight[1] + 0.5);
                                 Grid[index_grid].Height         = -1000.0;
-                                
-                                //printf("null seed %f\n",seeddem[index_seeddem]);
                             }
-                            
+
                             if(seeddem[index_seeddem] >= oriminH && seeddem[index_seeddem] <= orimaxH)
                             {
                                 if(total_minH > seeddem[index_seeddem] -seedDEM_sigma)
                                     total_minH = seeddem[index_seeddem] -seedDEM_sigma;
-                                
+
                                 if(total_maxH < seeddem[index_seeddem] +seedDEM_sigma)
                                     total_maxH = seeddem[index_seeddem] +seedDEM_sigma;
-                                
-                                
                             }
                         }
-                        else {
+                        else 
+                        {
                             Grid[index_grid].minHeight = -9999;
                             Grid[index_grid].maxHeight = -9999;
                         }
                     }
-                    else
-                    {
-                        //printf("out of seeddem\n");
-                    }
-                    
                 }
             }
-            
+
             minmaxHeight[0] = total_minH;
             minmaxHeight[1] = total_maxH;
-            
+
             free(seeddem);
         }
         else
         {
-            float *seeddem = NULL;
-            int cols[2];
-            int rows[2];
+            long int cols[2];
+            long int rows[2];
             CSize data_size;
 
             CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
             LImagesize->width = seeddem_size.width;
             LImagesize->height = seeddem_size.height;
-            
-            /*
-            cols[0] = (int)((a_minX - minX)/grid_size + 0.5);
-            cols[1] = (int)((a_maxX - minX)/grid_size + 0.5);
-            
-            rows[0] = (int)((maxY - a_maxY)/grid_size + 0.5);
-            rows[1] = (int)((maxY - a_minY)/grid_size + 0.5);
-            */
+
             cols[0] = 0;
             cols[1] = seeddem_size.width;
-            
+
             rows[0] = 0;
             rows[1] = seeddem_size.height;
-            
-            seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
+
+            float *seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
             printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
-            
-            for (row = 0; row < Grid_size.height; row ++) {
-                for (col = 0; col < Grid_size.width; col ++) {
-                    int index_grid = row*Grid_size.width + col;
-                    double t_x,t_y;
-                    int index_seeddem;
-                    int row_seed, col_seed;
-                    
-                    t_x = Boundary[0] + col*Grid_set;
-                    t_y = Boundary[1] + row*Grid_set;
-                    col_seed = floor((t_x - minX)/grid_size);// - cols[0];
-                    row_seed = floor((maxY - t_y)/grid_size);// - rows[0];
-                    
-                    index_seeddem = row_seed*data_size.width + col_seed;
-                    if(index_seeddem >= 0 && index_seeddem < data_size.width*data_size.height)
+
+            for (long int row = 0; row < Grid_size.height; row ++) 
+            {
+                for (long int col = 0; col < Grid_size.width; col ++) 
+                {
+                    long int index_grid = row*(long int)Grid_size.width + col;
+                    double t_x = Boundary[0] + col*Grid_set;
+                    double t_y = Boundary[1] + row*Grid_set;
+                    long int col_seed = floor((t_x - minX)/grid_size);
+                    long int row_seed = floor((maxY - t_y)/grid_size);
+                    long int index_seeddem = row_seed*data_size.width + col_seed;
+                    if(index_seeddem >= 0 && index_seeddem < (long int)data_size.width*(long int)data_size.height)
                     {
                         if(seeddem[index_seeddem] > -1000)
                         {
@@ -7924,19 +7745,13 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                     Grid[index_grid].minHeight = floor(minmaxHeight[0]);
                                 else
                                     Grid[index_grid].minHeight = floor(seeddem[index_seeddem] - seedDEM_sigma - 0.5);
-                                
+
                                 if(minmaxHeight[1] < (int)(seeddem[index_seeddem] + seedDEM_sigma + 0.5))
                                     Grid[index_grid].maxHeight = ceil(minmaxHeight[1]);
                                 else
                                     Grid[index_grid].maxHeight = ceil(seeddem[index_seeddem] + seedDEM_sigma + 0.5);
-                                
+
                                 Grid[index_grid].Height        = seeddem[index_seeddem];
-                                
-                                if(proinfo->check_Matchtag)
-                                {
-                                    //Grid[index_grid].Matched_flag = 1;
-                                    //Grid[index_grid].roh          = 0.1;
-                                }
                             }
                             else
                             {
@@ -7944,36 +7759,34 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                 Grid[index_grid].maxHeight      = ceil(minmaxHeight[1] + 0.5);
                                 Grid[index_grid].Height         = -1000.0;
                             }
-                            
+
                             if(seeddem[index_seeddem] >= oriminH && seeddem[index_seeddem] <= orimaxH)
                             {
                                 if(total_minH > seeddem[index_seeddem] -seedDEM_sigma)
                                     total_minH = seeddem[index_seeddem] -seedDEM_sigma;
-                                
+
                                 if(total_maxH < seeddem[index_seeddem] +seedDEM_sigma)
                                     total_maxH = seeddem[index_seeddem] +seedDEM_sigma;
                             }
                         }
-                        else {
+                        else 
+                        {
                             Grid[index_grid].minHeight = -9999;
                             Grid[index_grid].maxHeight = -9999;
                         }
-
                     }
-                    
                 }
             }
-            
+
             minmaxHeight[0] = total_minH;
             minmaxHeight[1] = total_maxH;
-            
+
             free(seeddem);
         }
         printf("seeddem end\n");
         printf("%f %f\n",minmaxHeight[0],minmaxHeight[1]);
     }
 }
-
 
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
 {
@@ -8819,8 +8632,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
 }
 
 
-bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, double ***RPCs, double **ImageParams,
-                 double *subBoundary, double *minmaxHeight, D2DPOINT *Startpos, char **SubsetImage, CSize *Subsetsize, FILE *fid,bool check_checktiff)
+bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff)
 {
     bool ret = false;
 
@@ -8832,7 +8644,7 @@ bool subsetImage(ProInfo *proinfo, TransParam transparam, uint8 NumofIAparam, do
 
         if(GetImageSize(proinfo->Imagefilename[ti],&Imagesize))
         {
-            int Lcols[2], Lrows[2];
+            long int Lcols[2], Lrows[2];
             if(GetsubareaImage(proinfo,ti,transparam,NumofIAparam,RPCs[ti],ImageParams[ti],proinfo->Imagefilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
             {
                 uint16 *leftimage;
@@ -9147,127 +8959,122 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs) {
     
 }
 
-D2DPOINT *ps2wgs(TransParam _param, int _numofpts, D2DPOINT *_ps) {
-    int m_NumOfPts = _numofpts;
-    
-    if(_param.projection == 1)
+D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT *_ps)
+{
+    const long int m_NumOfPts = _numofpts;
+   
+    if(m_NumOfPts > 0)
     {
-        bool m_bHemisphere = _param.bHemisphere;
-        double a = _param.a;
-        double e = _param.e;
-        double phi_c = _param.phi_c;
-        double lambda_0 = _param.lambda_0;
-        
-        int pm = _param.pm;
-        double t_c = _param.t_c;
-        double m_c = _param.m_c;
-            
-        D2DPOINT *m_sWGS;
-        
-        if (m_NumOfPts > 0) {
-            m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
-        } else {
-            return false;
-        }
-        
-        double e2 = e * e;
-        double e4 = e2 * e2;
-        double e6 = e2 * e4;
-        double e8 = e4 * e4;
-        
+        if(_param.projection == 1)
+        {
+            const bool m_bHemisphere = _param.bHemisphere;
+            const double a = _param.a;
+            const double e = _param.e;
+            const double phi_c = _param.phi_c;
+            const double lambda_0 = _param.lambda_0;
+
+            const int pm = _param.pm;
+            const double t_c = _param.t_c;
+            const double m_c = _param.m_c;
+
+            D2DPOINT *m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts); 
+
+            const double e2 = e * e;
+            const double e4 = e2 * e2;
+            const double e6 = e2 * e4;
+            const double e8 = e4 * e4;
+
 #pragma omp parallel for schedule(guided)
-        for (int i = 0; i < m_NumOfPts; i++) {
-          double x = _ps[i].m_X * pm;
-          double y = _ps[i].m_Y * pm;
-            
-          double rho = sqrt(pow(x, 2) + pow(y, 2));
-            double t = rho * t_c / (a * m_c);
-            
-            double chi = PI / 2 - 2 * atan(t);
-            double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
-                (7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
-            
-            double lambda = lambda_0 + atan2(x, -y);
-            phi = pm * phi;
-            lambda = pm * lambda;
-            
-            if (lambda > PI) {
-                lambda = lambda - 2 * PI;
-            } else if (lambda < -PI) {
-                lambda = lambda + 2 * PI;
+            for (int i = 0; i < m_NumOfPts; i++) 
+            {
+                const double x = _ps[i].m_X * pm;
+                const double y = _ps[i].m_Y * pm;
+
+                const double rho = sqrt(pow(x, 2) + pow(y, 2));
+                const double t = rho * t_c / (a * m_c);
+
+                const double chi = PI / 2 - 2 * atan(t);
+                double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
+                    (7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
+
+                double lambda = lambda_0 + atan2(x, -y);
+                phi = pm * phi;
+                lambda = pm * lambda;
+
+                if (lambda > PI) {
+                    lambda = lambda - 2 * PI;
+                } else if (lambda < -PI) {
+                    lambda = lambda + 2 * PI;
+                }
+
+                m_sWGS[i].m_Y = RadToDeg * phi;
+                m_sWGS[i].m_X = RadToDeg * lambda;
             }
-            
-            m_sWGS[i].m_Y = RadToDeg * phi;
-            m_sWGS[i].m_X = RadToDeg * lambda;
+
+            return m_sWGS;
         }
-            
-        return m_sWGS;
+        else
+        {
+            const int hemis = _param.pm; //1 = north, -1 = south
+            const double sa = _param.sa;
+            const double sb = _param.sb;
+            const double e2 = _param.e2;
+            const double e2cuadrada = _param.e2cuadrada;
+            const double c = _param.c;
+
+            D2DPOINT *m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
+
+#pragma omp parallel for schedule(guided)
+            for (int i = 0; i < m_NumOfPts; i++)
+            {
+                const double x = _ps[i].m_X;
+                const double y = _ps[i].m_Y;
+
+                const double X = x - 500000;
+                double Y = y;
+                if (hemis < 0)
+                    Y = Y - 10000000;
+
+                const int S = ( ( _param.zone* 6 ) - 183 );
+                const double lat =  Y / ( 6366197.724 * 0.9996 );
+                const double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
+                const double a = X / v;
+
+
+                const double a1 = sin( 2* lat );
+                const double a2 = a1* ( cos(lat)*cos(lat) );
+                const double j2 = lat + ( a1 / 2.0 );
+                const double j4 = ( ( 3 * j2 ) + a2 ) / 4.0;
+                const double j6 = ( ( 5 * j4 ) + ( a2 * ( cos(lat)*cos(lat) )) ) / 3;
+                const double alfa = ( 3 / 4.0 ) * e2cuadrada;
+                const double beta = ( 5 / 3.0 ) * alfa * alfa;
+                const double gama = ( 35 / 27.0 ) * alfa * alfa * alfa;
+                const double Bm = 0.9996 * c * ( lat - alfa * j2 + beta * j4 - gama * j6 );
+                const double b = ( Y - Bm ) / v;
+                const double Epsi = ( ( e2cuadrada * a *a ) / 2.0 ) * ( cos(lat)*cos(lat) );
+                const double Eps = a * ( 1 - ( Epsi / 3.0 ) );
+                const double nab = ( b * ( 1 - Epsi ) ) + lat;
+                const double senoheps = ( exp(Eps) - exp(-Eps) ) / 2;
+                const double Delt = atan(senoheps / (cos(nab) ) );
+                const double TaO = atan(cos(Delt) * tan(nab));
+                const double longitude = (Delt * (180/PI) ) + S;
+
+                const double latitude = ( lat + ( 1 + e2cuadrada * (cos(lat)*cos(lat)) - ( 3/2.0 )* e2cuadrada * sin(lat) * cos(lat) * ( TaO - lat ) )* ( TaO - lat ) ) * (180/PI);
+
+                m_sWGS[i].m_Y = latitude;
+                m_sWGS[i].m_X = longitude;
+            }
+            return m_sWGS;
+        }
     }
     else
     {
-        int hemis = _param.pm; //1 = north, -1 = south
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
-        double e2cuadrada = _param.e2cuadrada;
-        double c = _param.c;
-            
-        D2DPOINT *m_sWGS;
-        
-        if (m_NumOfPts > 0) {
-            m_sWGS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
-        } else {
-            return false;
-        }
-        
-        
-#pragma omp parallel for schedule(guided)
-        for (int i = 0; i < m_NumOfPts; i++) {
-            
-            double x = _ps[i].m_X;
-            double y = _ps[i].m_Y;
-            
-            double X = x - 500000;
-            double Y = y;
-            if (hemis < 0)
-                Y = Y - 10000000;
-            
-            int S = ( ( _param.zone* 6 ) - 183 );
-            double lat =  Y / ( 6366197.724 * 0.9996 );
-            double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
-            double a = X / v;
-            
-            
-            double a1 = sin( 2* lat );
-            double a2 = a1* ( cos(lat)*cos(lat) );
-            double j2 = lat + ( a1 / 2.0 );
-            double j4 = ( ( 3 * j2 ) + a2 ) / 4.0;
-            double j6 = ( ( 5 * j4 ) + ( a2 * ( cos(lat)*cos(lat) )) ) / 3;
-            double alfa = ( 3 / 4.0 ) * e2cuadrada;
-            double beta = ( 5 / 3.0 ) * alfa * alfa;
-            double gama = ( 35 / 27.0 ) * alfa * alfa * alfa;
-            double Bm = 0.9996 * c * ( lat - alfa * j2 + beta * j4 - gama * j6 );
-            double b = ( Y - Bm ) / v;
-            double Epsi = ( ( e2cuadrada * a *a ) / 2.0 ) * ( cos(lat)*cos(lat) );
-            double Eps = a * ( 1 - ( Epsi / 3.0 ) );
-            double nab = ( b * ( 1 - Epsi ) ) + lat;
-            double senoheps = ( exp(Eps) - exp(-Eps) ) / 2;
-            double Delt = atan(senoheps / (cos(nab) ) );
-            double TaO = atan(cos(Delt) * tan(nab));
-            double longitude = (Delt * (180/PI) ) + S;
-            
-            double latitude = ( lat + ( 1 + e2cuadrada * (cos(lat)*cos(lat)) - ( 3/2.0 )* e2cuadrada * sin(lat) * cos(lat) * ( TaO - lat ) )* ( TaO - lat ) ) * (180/PI);
-            
-            m_sWGS[i].m_Y = latitude;
-            m_sWGS[i].m_X = longitude;
-        }
-        return m_sWGS;
-        
+        return NULL;
     }
-    
 }
 
-D2DPOINT ps2wgs_single(TransParam _param, D2DPOINT _ps) {
+D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps) 
+{
     if(_param.projection == 1)
     {
         bool m_bHemisphere = _param.bHemisphere;
@@ -9282,35 +9089,33 @@ D2DPOINT ps2wgs_single(TransParam _param, D2DPOINT _ps) {
         D2DPOINT m_sWGS;
         D2DPOINT m_sPS = _ps;
         
-        {
-            double e2 = e * e;
-            double e4 = e2 * e2;
-            double e6 = e2 * e4;
-            double e8 = e4 * e4;
-            
-            m_sPS.m_X = m_sPS.m_X * pm;
-            m_sPS.m_Y = m_sPS.m_Y * pm;
-            
-            double rho = sqrt(pow(m_sPS.m_X, 2) + pow(m_sPS.m_Y, 2));
-            double t = rho * t_c / (a * m_c);
-            
-            double chi = PI / 2 - 2 * atan(t);
-            double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
-                (7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
-            
-            double lambda = lambda_0 + atan2(m_sPS.m_X, -m_sPS.m_Y);
-            phi = pm * phi;
-            lambda = pm * lambda;
-            
-            if (lambda > PI) {
-                lambda = lambda - 2 * PI;
-            } else if (lambda < -PI) {
-                lambda = lambda + 2 * PI;
-            }
-            
-            m_sWGS.m_Y = RadToDeg * phi;
-            m_sWGS.m_X = RadToDeg * lambda;
+        double e2 = e * e;
+        double e4 = e2 * e2;
+        double e6 = e2 * e4;
+        double e8 = e4 * e4;
+        
+        m_sPS.m_X = m_sPS.m_X * pm;
+        m_sPS.m_Y = m_sPS.m_Y * pm;
+        
+        double rho = sqrt(pow(m_sPS.m_X, 2) + pow(m_sPS.m_Y, 2));
+        double t = rho * t_c / (a * m_c);
+        
+        double chi = PI / 2 - 2 * atan(t);
+        double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
+            (7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
+        
+        double lambda = lambda_0 + atan2(m_sPS.m_X, -m_sPS.m_Y);
+        phi = pm * phi;
+        lambda = pm * lambda;
+        
+        if (lambda > PI) {
+            lambda = lambda - 2 * PI;
+        } else if (lambda < -PI) {
+            lambda = lambda + 2 * PI;
         }
+        
+        m_sWGS.m_Y = RadToDeg * phi;
+        m_sWGS.m_X = RadToDeg * lambda;
         
         return m_sWGS;
     }
@@ -9487,7 +9292,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps) {
     
 }
 
-D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imageparam, uint16 _numofpts, D3DPOINT *_GP)
+D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP)
 {
     D2DPOINT *IP;
     
@@ -9566,19 +9371,11 @@ D2DPOINT* GetObjectToImageRPC(double **_rpc, uint8 _numofparam, double *_imagepa
     return IP;
 }
 
-D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_imageparam, D3DPOINT _GP)
+D2DPOINT GetObjectToImageRPC_single(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)
 {
-    D2DPOINT IP;
-    
-    int j;
-    
-
-    double L, P, H, Line, Samp, deltaP, deltaR;
-    double Coeff[4];
-
-    L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
-    P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
-    H       = (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+    double L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+    double P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+    double H       = (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
     
     if(L < -10.0 || L > 10.0)
     {
@@ -9600,7 +9397,8 @@ D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_i
         P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     }
     
-    for(j=0;j<4;j++)
+    double Coeff[4];
+    for(int j=0;j<4;j++)
     {
         Coeff[j]    = _rpc[j+2][0]*1.0          + _rpc[j+2][1]*L            + _rpc[j+2][2]*P
             + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
@@ -9611,12 +9409,13 @@ D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_i
             + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
     }
 
-    Line     = ((Coeff[0]/Coeff[1])*_rpc[1][0] + _rpc[0][0]); //Line
-    Samp     = ((Coeff[2]/Coeff[3])*_rpc[1][1] + _rpc[0][1]); //Sample
+    double Line     = ((Coeff[0]/Coeff[1])*_rpc[1][0] + _rpc[0][0]); //Line
+    double Samp     = ((Coeff[2]/Coeff[3])*_rpc[1][1] + _rpc[0][1]); //Sample
 
-    deltaP      = _imageparam[0];
-    deltaR      = _imageparam[1];
+    double deltaP      = _imageparam[0];
+    double deltaR      = _imageparam[1];
 
+    D2DPOINT IP;
     IP.m_Y      = deltaP + Line;
     IP.m_X      = deltaR + Samp;
 
@@ -9635,98 +9434,82 @@ D2DPOINT GetObjectToImageRPC_single(double **_rpc, uint8 _numofparam, double *_i
     return IP;
 }
 
-D2DPOINT GetObjectToImageRPC_single_mpp(double **_rpc, uint8 _numofparam, double *_imageparam, D3DPOINT _GP)
+D2DPOINT GetObjectToImageRPC_single_mpp(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)
 {
-    D2DPOINT IP;
-    
-    int j;
-    
-    
     double L, P, H, Line, Samp, deltaP, deltaR;
     double Coeff[4];
-    
+
     L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
     P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     H       = (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
-    
+
     if(L < -10.0 || L > 10.0)
     {
         if(_GP.m_X > 0)
             _GP.m_X = _GP.m_X - 360;
         else
             _GP.m_X = _GP.m_X + 360;
-        
+
         L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
     }
-    
+
     if(P < -10.0 || P > 10.0)
     {
         if(_GP.m_Y > 0)
             _GP.m_Y = _GP.m_Y - 360;
         else
             _GP.m_Y = _GP.m_Y + 360;
-        
+
         P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
     }
-    
-    for(j=0;j<4;j++)
+
+    for(int j=0;j<4;j++)
     {
         Coeff[j]    = _rpc[j+2][0]*1.0          + _rpc[j+2][1]*L            + _rpc[j+2][2]*P
-        + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
-        + _rpc[j+2][6]*P*H          + _rpc[j+2][7]*L*L          + _rpc[j+2][8]*P*P
-        + _rpc[j+2][9]*H*H          + _rpc[j+2][10]*(P*L)*H     + _rpc[j+2][11]*(L*L)*L
-        + _rpc[j+2][12]*(L*P)*P     + _rpc[j+2][13]*(L*H)*H     + _rpc[j+2][14]*(L*L)*P
-        + _rpc[j+2][15]*(P*P)*P     + _rpc[j+2][16]*(P*H)*H     + _rpc[j+2][17]*(L*L)*H
-        + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
+            + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
+            + _rpc[j+2][6]*P*H          + _rpc[j+2][7]*L*L          + _rpc[j+2][8]*P*P
+            + _rpc[j+2][9]*H*H          + _rpc[j+2][10]*(P*L)*H     + _rpc[j+2][11]*(L*L)*L
+            + _rpc[j+2][12]*(L*P)*P     + _rpc[j+2][13]*(L*H)*H     + _rpc[j+2][14]*(L*L)*P
+            + _rpc[j+2][15]*(P*P)*P     + _rpc[j+2][16]*(P*H)*H     + _rpc[j+2][17]*(L*L)*H
+            + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
     }
-    
+
     Line     = ((Coeff[0]/Coeff[1])*_rpc[1][0] + _rpc[0][0]); //Line
     Samp     = ((Coeff[2]/Coeff[3])*_rpc[1][1] + _rpc[0][1]); //Sample
-    
+
     deltaP      = _imageparam[0];
     deltaR      = _imageparam[1];
-    
+
+    D2DPOINT IP;
     IP.m_Y      = deltaP + Line;
     IP.m_X      = deltaR + Samp;
-    
+
     return IP;
 }
 
-void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py_level, CSize *Subsetsize, CSize **data_size_lr, FILE *fid)
+void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid)
 {
-    char t_str[500];
-    FILE *pFile_raw, *pFile_check_file;
-    char* filename_py;
-    
-    uint8 count = 0;
-    for(count = 0; count<proinfo->number_of_images ; count++)
+    for(uint8 count = 0; count<proinfo->number_of_images ; count++)
     {
-        pFile_raw   = fopen(Subsetfile[count],"rb");
-        filename_py     = GetFileName(Subsetfile[count]);
+
+        char t_str[500];
+        FILE *pFile_raw   = fopen(Subsetfile[count],"rb");
+        char *filename_py     = GetFileName(Subsetfile[count]);
         filename_py     = remove_ext(filename_py);
 
         sprintf(t_str,"%s/%s_py_5.raw",save_path,filename_py);
-        pFile_check_file    = fopen(t_str,"rb");
+        FILE *pFile_check_file    = fopen(t_str,"rb");
 
         if(pFile_raw && !pFile_check_file && proinfo->check_selected_image[count])
         {
-            int i;
-            
-            FILE *pFile;
-            uint16 **pyimg;
-            uint16 **magimg;
-            int16  **dirimg;
-            uint8  **oriimg;
-            CSize *data_size;
-            
-            pyimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
-            magimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
-            dirimg = (int16**)malloc(sizeof(int16*)*(py_level+1));
-            oriimg = (uint8**)malloc(sizeof(uint8*)*(py_level+1));
-            data_size = (CSize*)malloc(sizeof(CSize)*(py_level+1));
+            uint16 **pyimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
+            uint16 **magimg = (uint16**)malloc(sizeof(uint16*)*(py_level+1));
+            int16 **dirimg = (int16**)malloc(sizeof(int16*)*(py_level+1));
+            uint8 **oriimg = (uint8**)malloc(sizeof(uint8*)*(py_level+1));
+            CSize *data_size = (CSize*)malloc(sizeof(CSize)*(py_level+1));
 
             fprintf(fid,"image %d\tlevel = 0\t width = %d\theight = %d\n",count,data_size_lr[count][0].width,data_size_lr[count][0].height);
-            for(i=0;i<py_level+1;i++)
+            for(int i=0;i<py_level+1;i++)
                 data_size[i]        = data_size_lr[count][i];
             
             long int data_length = (long int)data_size[0].height*(long int)data_size[0].width;
@@ -9741,7 +9524,7 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
             Orientation(data_size[0],magimg[0],dirimg[0],15,oriimg[0]);
             
             sprintf(t_str,"%s/%s_py_0.raw",save_path,filename_py);
-            pFile   = fopen(t_str,"wb");
+            FILE *pFile   = fopen(t_str,"wb");
             fwrite(pyimg[0],sizeof(uint16),data_length,pFile);
             fclose(pFile);
             
@@ -9759,7 +9542,7 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
             fclose(pFile);
             free(oriimg[0]);
 
-            for(i=0;i<py_level;i++)
+            for(int i=0;i<py_level;i++)
             {
                 pyimg[i+1] = CreateImagePyramid(pyimg[i],data_size[i],9,(double)(1.5));
                 free(pyimg[i]);
@@ -9814,21 +9597,19 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
 
         free(filename_py);
     }
-
 }
 
-uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level)
+uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level)
 {
-    uint16 *out = NULL;//(uint16*)malloc(sizeof(uint16));
-    FILE *pFile;
-    char *filename_py;
-    char t_str[500];
+    uint16 *out = NULL;
 
-    filename_py     = GetFileName(subsetfile);
+    char t_str[500];
+    char *filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,py_level);
     free(filename_py);
-    pFile           = fopen(t_str,"rb");
+
+    FILE *pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out         = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
@@ -9839,18 +9620,16 @@ uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uin
     return out;
 }
 
-uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level)
+uint8* LoadPyramidOriImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level)
 {
-    uint8 *out = NULL;//(uint8*)malloc(sizeof(uint8));
-    FILE *pFile;
-    char *filename_py;
+    uint8 *out = NULL;
     char t_str[500];
-
-    filename_py     = GetFileName(subsetfile);
+    char *filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,py_level);
     free(filename_py);
-    pFile           = fopen(t_str,"rb");
+    
+    FILE *pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint8*)malloc(sizeof(uint8)*data_size.height*data_size.width);
@@ -9862,18 +9641,16 @@ uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, u
 }
 
 
-uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level, double *val, double *avg)
+uint16* LoadPyramidMagImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level)
 {
-    uint16 *out = NULL;//(uint16*)malloc(sizeof(uint16));
-    FILE *pFile;
-    char *filename_py;
+    uint16 *out = NULL;
     char t_str[500];
-
-    filename_py     = GetFileName(subsetfile);
+    char *filename_py     = GetFileName(subsetfile);
     filename_py     = remove_ext(filename_py);
     sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,py_level);
     free(filename_py);
-    pFile           = fopen(t_str,"rb");
+    
+    FILE *pFile           = fopen(t_str,"rb");
     if(pFile)
     {
         out     = (uint16*)malloc(sizeof(uint16)*data_size.height*data_size.width);
@@ -9881,29 +9658,6 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
         fclose(pFile);
     }
 
-
-    double sum = 0;
-    int count = 0;
-    double residual = 0;
-    for(int i=0;i<data_size.height;i++)
-    {
-        for(int j=0;j<data_size.width;j++)
-        {
-            sum += out[i*data_size.width + j];
-            count++;
-        }
-    }
-    *avg          = sum/count;
-    
-    for(int i=0;i<data_size.height;i++)
-    {
-        for(int j=0;j<data_size.width;j++)
-        {
-            residual += (out[i*data_size.width + j] - *avg)*(out[i*data_size.width + j] - *avg);
-        }
-    }
-    *val          = sqrt((double)residual/count);
-    
     return out;
 }
 
@@ -10105,7 +9859,7 @@ uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size
     return result_img;
 }
 
-void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir)
+void MakeSobelMagnitudeImage(const CSize _img_size, const uint16* _src_image, uint16* _dist_mag_image, int16* _dir)
 {
     int hy[3][3] , hx[3][3];
     
@@ -10130,18 +9884,13 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
     hy[2][1]=-2;
     hy[2][2]=-1;
 
-    
-    
 #pragma omp parallel for
     for(long int i=0;i<_img_size.height;i++)
     {
-        int16 _gx, _gy;
         for(long int j=0;j<_img_size.width;j++)
         {
             if(j == 0 || j == _img_size.width-1 || i == 0 || i == _img_size.height-1)
             {
-                _gx = 0;
-                _gy = 0;
                 _dist_mag_image[i*_img_size.width + j] = 0;
                 _dir[i*_img_size.width + j] = 0;
             }
@@ -10157,87 +9906,95 @@ void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_
 
                 double temp_ptr=sqrt(temp_ptr_X*temp_ptr_X + temp_ptr_Y*temp_ptr_Y);
 
-                _gx = (int16)(temp_ptr_X + 0.5);
-                _gy = (int16)(temp_ptr_Y + 0.5);                            
                 _dir[i*_img_size.width + j]= (int16)(floor(atan2(temp_ptr_Y,temp_ptr_X)*RadToDeg));
                 _dist_mag_image[i*_img_size.width + j] = (uint16)(temp_ptr+0.5);
-                
-                
             }
         }
     }
-    
 }
 
 
-void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs)
+void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, const uint8 Template_size, uint8* plhs)
 {
     //Procedure
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int Half_template_size = Template_size / 2;
-    
-    long int main_col, main_row;
-    main_col = imagesize.width;
-    main_row = imagesize.height;
-    
+
+    long int main_col = imagesize.width;
+    long int main_row = imagesize.height;
+
     //malloc gu_weight_pre_computed matrix
     int size = 2 * Half_template_size - 1;
     double **gu_weight_pre_computed = (double **) malloc(size * sizeof(double *));
-    for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++) {
+    for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++)
         gu_weight_pre_computed[Half_template_size - 1 + row] = (double *) malloc(size * sizeof(double));
-    }
+
     // calculate gu_weight_pre_computed values
-    for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++) {
-        for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++) {
+    for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++)
+    {
+        for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
+        {
             double angle_sigma = 1.5;
             gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col] = exp(-(double) (row * row + col * col) / (2 * angle_sigma * angle_sigma));
         }
     }
+
+    const int bin_count = 18;
 #pragma omp parallel for
-    for (long int mask_row = 0; mask_row < main_row; mask_row++) {
-        for (long int mask_col = 0; mask_col < main_col; mask_col++) {
-            const double sub_ratio = 18.0 / 4.0;
-            const double bin_angle = 360.0 / 18.0;
-            double bin[18] = {0.0};
+    for (long int mask_row = 0; mask_row < main_row; mask_row++) 
+    {
+        for (long int mask_col = 0; mask_col < main_col; mask_col++) 
+        {
+            const double sub_ratio = (double)bin_count / 4.0;
+            const double bin_angle = 360.0 / (double)bin_count;
+            double bin[bin_count] = {0.0};
             double sub_bin[4] = {0.0};
-            
+
             //calulation of major direction, refering to SIFT descriptor based on gradient
-            for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++) {
-                for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++) {
+            for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++) 
+            {
+                for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++) 
+                {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
                     long int radius2 = (row * row + col * col);
                     long int pixel_row = mask_row + row;
                     long int pixel_col = mask_col + col;
-                    if (radius2 <= (Half_template_size - 1) * (Half_template_size - 1) && pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1) {
-                        double mag, theta;
-                        mag = Gmag[pixel_row * main_col + pixel_col];
-                        theta = (double) (Gdir[pixel_row * main_col + pixel_col]);
-                        
-                        if (theta < 0) {
+                    if (radius2 <= (Half_template_size - 1) * (Half_template_size - 1) && pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1) 
+                    {
+                        double mag = Gmag[pixel_row * main_col + pixel_col];
+                        double theta = (double) (Gdir[pixel_row * main_col + pixel_col]);
+
+                        if (theta < 0)
                             theta += 360;
-                        }
+                        else if(theta > 360)
+                            theta -= 360;
+
                         long int index = (long int) (theta / bin_angle);
-                        if (index >= 18) {
-                            printf("ERROR: Orientation array out of bounds access\n");
+                        if (index >= 0 && index < 18)
+                        {
+                            bin[index] += mag * gu_weight;
+                            sub_bin[(int) (index / sub_ratio)] += mag * gu_weight;
                         }
-                        bin[index] += mag * gu_weight;
-                        sub_bin[(int) (index / sub_ratio)] += mag * gu_weight;
                     }
                 }
             }
-            
+
             double max_th = -100;
             int sub_th = 0, th = 0;
-            for (int i = 0; i < 4; i++) {
-                if (sub_bin[i] > max_th) {
+            for (int i = 0; i < 4; i++) 
+            {
+                if (sub_bin[i] > max_th)
+                {
                     max_th = sub_bin[i];
                     sub_th = i;
                 }
             }
-            
+
             max_th = -100;
-            for (int i = (int) (sub_th * sub_ratio); i < (int) (sub_th * sub_ratio + sub_ratio); i++) {
-                if (bin[i] > max_th) {
+            for (int i = (int) (sub_th * sub_ratio); i < (int) (sub_th * sub_ratio + sub_ratio); i++) 
+            {
+                if (bin[i] > max_th) 
+                {
                     max_th = bin[i];
                     th = i;
                 }
@@ -10246,16 +10003,14 @@ void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size
         }
     }
     // free all of gu_weight_pre_computed
-    for (int j = 0; j < size; j++) {
-        if (gu_weight_pre_computed[j]) {
+    for (int j = 0; j < size; j++)
+    {
+        if (gu_weight_pre_computed[j])
             free(gu_weight_pre_computed[j]);
-        }
     }
-    
-    if (gu_weight_pre_computed) {
+
+    if (gu_weight_pre_computed) 
         free(gu_weight_pre_computed);
-        
-    }
 }
 
 // temporary, 1st and 2nd image
@@ -10275,7 +10030,7 @@ void CalMPP_pair(double CA,double mean_product_res, double im_resolution, double
     printf("mpp = %f\n",*MPP_stereo_angle);
 }
 
-void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+void CalMPP(const uint8 level,const CSize Size_Grid2D,const D2DPOINT* Grid_wgs,const uint8 NumofIAparam, const double * const *ImageAdjust, const double* minmaxHeight, const double * const * const *RPCs,const double CA,const double mean_product_res, double const im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
 {
     D2DPOINT temp_p1, temp_p2;
     D3DPOINT temp_GrP;
@@ -10283,9 +10038,7 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
     temp_LIA[0] = ImageAdjust[0][0];
     temp_LIA[1] = ImageAdjust[0][1];
     
-    int numofpts;
-    
-    numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    const long int numofpts = (long int)Size_Grid2D.height*(const long int)Size_Grid2D.width;
     
     temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
     temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
@@ -10296,7 +10049,7 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
-    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    const double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
@@ -10305,7 +10058,7 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
-    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    const double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
@@ -10321,13 +10074,11 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
             *MPP_simgle_image = right_mpp;
     }
     
-    printf("mpp = %f\n",*MPP_simgle_image);
-    
-    double ccdsize = 0.00001;
-    double scale = ccdsize/0.5;
-    double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
-    double BH_ratio = mean_product_res*2/convergence_mpp;
-    double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
+    const double ccdsize = 0.00001;
+    const double scale = ccdsize/0.5;
+    const double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+    const double BH_ratio = mean_product_res*2/convergence_mpp;
+    const double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
     
     printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
     if(level > 2)
@@ -10338,18 +10089,13 @@ void CalMPP(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs
         *MPP_simgle_image = sigmaZ;
     }
         
-    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
-    
-    //if(*MPP_simgle_image < im_resolution*2)
-    //    *MPP_simgle_image = im_resolution*2;
-    
     if(*MPP_stereo_angle < im_resolution*1.5)
         *MPP_stereo_angle = im_resolution*1.5;
     
     printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
 }
 
-void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_wgs,uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, double ***RPCs,double CA,double mean_product_res, double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
+void CalMPP_8(const CSize Size_Grid2D, const D2DPOINT* Grid_wgs,const uint8 NumofIAparam, const double * const *ImageAdjust, const double* minmaxHeight,const double * const * const *RPCs,const double CA,const double mean_product_res, const double im_resolution, double *MPP_simgle_image, double *MPP_stereo_angle)
 {
     D2DPOINT temp_p1, temp_p2;
     D3DPOINT temp_GrP;
@@ -10357,9 +10103,7 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
     temp_LIA[0] = ImageAdjust[0][0];
     temp_LIA[1] = ImageAdjust[0][1];
     
-    int numofpts;
-    
-    numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    const long int numofpts = (long int)Size_Grid2D.height*(long int)Size_Grid2D.width;
     
     temp_GrP.m_X = Grid_wgs[(int)(numofpts/2)].m_X;
     temp_GrP.m_Y = Grid_wgs[(int)(numofpts/2)].m_Y;
@@ -10370,7 +10114,7 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[0],NumofIAparam,temp_LIA,temp_GrP);
     
-    double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    const double left_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
     temp_GrP.m_Z = minmaxHeight[0];
     temp_GrP.flag = 0;
@@ -10379,7 +10123,7 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
     temp_GrP.m_Z = minmaxHeight[1];
     temp_p2     = GetObjectToImageRPC_single_mpp(RPCs[1],NumofIAparam,ImageAdjust[1],temp_GrP);
     
-    double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
+    const double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
     printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
@@ -10395,22 +10139,15 @@ void CalMPP_8(uint8 level, CSize Size_Grid2D, TransParam param, D2DPOINT* Grid_w
             *MPP_simgle_image = right_mpp;
     }
     
-    printf("mpp = %f\n",*MPP_simgle_image);
-    
-    double ccdsize = 0.00001;
-    double scale = ccdsize/0.5;
-    double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
-    double BH_ratio = mean_product_res*2/convergence_mpp;
-    double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
+    const double ccdsize = 0.00001;
+    const double scale = ccdsize/0.5;
+    const double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+    const double BH_ratio = mean_product_res*2/convergence_mpp;
+    const double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
     
     printf("scale = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,convergence_mpp,BH_ratio,sigmaZ);
     if(sigmaZ > 1)
         *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
-    
-    printf("mpp = %f\t mpr = %f\n",*MPP_simgle_image,*MPP_stereo_angle);
-    
-    //if(*MPP_simgle_image < im_resolution*2)
-    //    *MPP_simgle_image = im_resolution*2;
     
     if(*MPP_stereo_angle < im_resolution*2.0)
         *MPP_stereo_angle = im_resolution*2.0;
@@ -10450,18 +10187,20 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
     return HS;
 }
 
-void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, UGRID *GridPT3, NCCresult* nccresult, int iteration, uint8 pyramid_step, double DEM_resolution,ProInfo *proinfo,double ***RPCs,double **ImageAdjust,D2DPOINT *Startpos,D2DPOINT* GridPts, D2DPOINT* Grid_wgs,CSize *Imagesizes_ori,CSize **Imagesizes, double* minmaxHeight)
+void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration)
 {
+    const double height_step = *plevelinfo.height_step;
+    const uint8 pyramid_step = *plevelinfo.Pyramid_step;
 #pragma omp parallel for schedule(guided)
-    for(long int t_i = 0 ; t_i < Size_Grid2D.width*Size_Grid2D.height ; t_i++)
+    for(long int t_i = 0 ; t_i < *plevelinfo.Grid_length; t_i++)
     {
-       if(check_image_boundary(proinfo,RPCs,2,ImageAdjust,Startpos,GridPts[t_i],Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,Imagesizes_ori,Imagesizes,7,pyramid_step))
+       if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
         {
             int change_step_min = 0;
             int change_step_max = 0;
             bool check_blunder_cell = true;
             double th_height = 1000;
-            if(DEM_resolution <= 4)
+            if(proinfo->DEM_resolution <= 4)
                 th_height = 500;
             
             if(proinfo->check_Matchtag || iteration == 1)
@@ -10484,14 +10223,14 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         {
                             if(iteration > 1)
                             {
-                                if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
+                                if(GridPT3[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && GridPT3[t_i].minHeight >= plevelinfo.minmaxHeight[0] && nccresult[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && nccresult[t_i].minHeight >= plevelinfo.minmaxHeight[0])
                                     check_blunder_cell = false;
                                 else
                                       check_blunder_cell = true;
                             }
                             else
                             {
-                                if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
+                                if(GridPT3[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && GridPT3[t_i].minHeight >= plevelinfo.minmaxHeight[0])
                                     check_blunder_cell = false;
                                 else
                                     check_blunder_cell = true;
@@ -10552,8 +10291,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
             if(!check_blunder_cell)
             {
             
-                //if((pyramid_step >= 3 ) || iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
-                if(iteration == 1 || (pyramid_step == 0 && DEM_resolution < 2))
+                if(iteration == 1 || (pyramid_step == 0 && proinfo->DEM_resolution < 2))
                 {
                     nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
                     nccresult[t_i].maxHeight = GridPT3[t_i].maxHeight;
@@ -10581,7 +10319,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                 }
                 else
                 {
-                    int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
+                    const int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/height_step);
                     //new search height
                     if(nccresult[t_i].NumOfHeight == 0 && NumberofHeightVoxel > 0)
                     {
@@ -10607,8 +10345,6 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                             
                             if(pyramid_step == 0 && abs(nccresult[t_i].maxHeight - nccresult[t_i].minHeight) > th_height)
                                 nccresult[t_i].check_height_change = false;
-                            //else
-                            //    nccresult[t_i].check_height_change = false;
                         }
                         else
                         {
@@ -10622,7 +10358,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                     nccresult[t_i].minHeight = floor(nccresult[t_i].minHeight - change_step_min*height_step);
                     nccresult[t_i].maxHeight = ceil(nccresult[t_i].maxHeight + change_step_max*height_step);
                     
-                    int NumberofHeightVoxel = (int)((float)(nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
+                    const int NumberofHeightVoxel = (int)((float)(nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
                     
                     if(NumberofHeightVoxel > 0 )
                     {
@@ -10638,10 +10374,7 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         
                         for(int h = 0 ; h < NumberofHeightVoxel ; h++)
                         {
-                            //grid_voxel[t_i][h].WNCC = -1.0;
                             grid_voxel[t_i][h].flag_cal = true;
-                            //grid_voxel[t_i][h].height = (float)(nccresult[t_i].minHeight + h*height_step);
-                            //grid_voxel[t_i][h].SSD = 0;
                             grid_voxel[t_i][h].INCC = DoubleToSignedChar_voxel(-1);
                         }
                     }
@@ -10657,13 +10390,6 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
                         nccresult[t_i].check_height_change = false;
                     }
                 }
-               /*
-                if(nccresult[t_i].NumOfHeight == 0)
-                {
-                    if(grid_voxel[t_i])
-                        free(grid_voxel[t_i]);
-                }
-                 */
             }
             else
             {
@@ -10716,90 +10442,62 @@ void InitializeVoxel(VOXEL **grid_voxel,CSize Size_Grid2D, double height_step, U
 
 }
 
-int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult, uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs, CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-                       CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT* Grid_wgs, UGRID *GridPT3, NCCflag flag,
-                       uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, D2DPOINT *Startpos, uint8 iteration, uint8 **ori_images,
-                       double bin_angle, uint8 NumOfCompute, uint8 peak_level, FILE* fid, bool IsPar, bool Hemisphere, uint8 tile_row, uint8 tile_col, double* Boundary,
-                       char* tmpdir, double mag_avg,double mag_var,D2DPOINT *Startpos_next,uint16 **SubImages_next,uint8 **SubOriImages_next,uint16 **SubMagImages_next,int Py_combined_level, bool check_matching_rate, double height_step)
+int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration)
 {
-    bool check_matchtag = proinfo->check_Matchtag;
-    char* save_filepath = proinfo->save_filepath;
-    bool pre_DEMtif = proinfo->pre_DEMtif;
-    bool IsRA = proinfo->IsRA;
-    int Accessable_grid = 0;
+    const bool check_matchtag = proinfo->check_Matchtag;
+    const char* save_filepath = proinfo->save_filepath;
+    const bool pre_DEMtif = proinfo->pre_DEMtif;
+    const bool IsRA = proinfo->IsRA;
+    long int Accessable_grid = 0;
     
+    const int Pyramid_step = *(plevelinfo.Pyramid_step);
+    int Template_size = *(plevelinfo.Template_size);
     if(Pyramid_step >= 1)
     {
         double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
-        if(Template_size < t_Template_size)
+        int t_Template_size = (int)((template_area/(proinfo->resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
+        if(*(plevelinfo.Template_size) < t_Template_size)
             Template_size = t_Template_size;
         
         printf("VerticalLineLocus : t Template_size %d\t%d\n",t_Template_size,Template_size);
     }
     
     int Half_template_size = (int)(Template_size/2);
+    const double subBoundary[4] = {plevelinfo.Boundary[0], plevelinfo.Boundary[1], plevelinfo.Boundary[2], plevelinfo.Boundary[3]};
     
-    double subBoundary[4];
-
-    double h_divide;
-    //double height_step;
-    
-    D2DPOINT temp_p1, temp_p2;
-    D3DPOINT temp_GrP;
-    double temp_LIA[2] = {0,0};
-    
-    int numofpts;
-    
-    int pixel_buffer = 1000;
-    int GNCC_level  = 3;
     bool check_ortho = false;
-    int Mag_th = 0;
-    double ncc_alpha, ncc_beta;
-    int TH_N = 0;
+    const int TH_N = 0;
     if(Pyramid_step == 3)
-    {
         Half_template_size = Half_template_size - 1;
-        //TH_N = 6;
-
-    }
-    else if(Pyramid_step < 3)// && Pyramid_step == 0)
-    {
+    else if(Pyramid_step < 3)
         Half_template_size = Half_template_size - 2;
-        //TH_N = 2;
-    }
     
-    subBoundary[0]    = Boundary[0];
-    subBoundary[1]    = Boundary[1];
-    subBoundary[2]    = Boundary[2];
-    subBoundary[3]    = Boundary[3];
+    const long int numofpts = *(plevelinfo.Grid_length);
     
-    numofpts = Size_Grid2D.height*Size_Grid2D.width;
-    
-    double im_resolution_next;
     bool check_combined_WNCC = false;
     bool check_combined_WNCC_INCC = false;
     
-    if(!IsRA && ((Pyramid_step > Py_combined_level)))// && iteration%2 == 0) || (Pyramid_step >= 1 && iteration  > 1)))
+    if(!IsRA && ((Pyramid_step > (*plevelinfo.Py_combined_level))))
         check_combined_WNCC = true;
     
-    //if(check_combined_WNCC && ( (Pyramid_step >= 2 && iteration%2 == 1) || (Pyramid_step == 1 && iteration%2 == 0) /*|| (Pyramid_step == 1 && iteration  > 1)*/ ) )
     if(check_combined_WNCC && ( (Pyramid_step >= 1 && iteration%2 == 0) ) )
         check_combined_WNCC_INCC = true;
     
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\n",check_combined_WNCC,check_combined_WNCC_INCC);
     
+    double im_resolution_next = proinfo->resolution;
+    double im_resolution = proinfo->resolution;
     if(check_combined_WNCC)
-        im_resolution_next = im_resolution*pwrtwo(Pyramid_step-1);
+        im_resolution_next = proinfo->resolution*pwrtwo(Pyramid_step-1);
     
-    im_resolution = im_resolution*pwrtwo(Pyramid_step);
+    im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
     
     
     if((Pyramid_step == 4 && iteration == 1) || IsRA == true)
         check_ortho = false;
     else
         check_ortho = true;
-       
+    
     if(pre_DEMtif && !(Pyramid_step == 4 && iteration == 1))
         check_ortho = true;
     
@@ -10810,137 +10508,131 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
         check_ortho = true;
     
     //orthoimage pixel information save
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
-    F2DPOINT **all_im_cd_next;
+    D2DPOINT **all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
+    D2DPOINT **all_im_cd_next = NULL;
     if(check_combined_WNCC)
-    {
-        all_im_cd_next = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
-    }
+        all_im_cd_next = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
     
-    int sub_imagesize_w, sub_imagesize_h;
-    int sub_imagesize_w_next, sub_imagesize_h_next;
+    long int sub_imagesize_w, sub_imagesize_h;
+    long int sub_imagesize_w_next, sub_imagesize_h_next;
     
     if(check_ortho)
     {
-        sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-        sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+        SetOrthoImageCoord(proinfo, plevelinfo, GridPT3, check_combined_WNCC, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
         
-        if(check_combined_WNCC)
         {
-            sub_imagesize_w_next = (int)((subBoundary[2] - subBoundary[0])/im_resolution_next)+1;
-            sub_imagesize_h_next = (int)((subBoundary[3] - subBoundary[1])/im_resolution_next)+1;
-        }
-        
-        printf("imsize %d %d %u %u\n",sub_imagesize_w,sub_imagesize_h,Size_Grid2D.width,Size_Grid2D.height);
-
-        long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
-        long int sub_imagesize_total_next;
-        if(check_combined_WNCC)
-            sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
-        
-        printf("sub_imagesize_total %ld\n",sub_imagesize_total);
-        
-        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-        {
-            if(proinfo->check_selected_image[ti])
-            {
-                all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-                if (all_im_cd[ti] == NULL)
-                {
-                    printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-                    exit(1);
-                }
-                
-                if(check_combined_WNCC)
-                {
-                    all_im_cd_next[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total_next);
-                    if (all_im_cd_next[ti] == NULL)
-                    {
-                        printf("ERROR: Out of memory - all_left_im_cd_next is NULL\n");
-                        exit(1);
-                    }
-                }
-            }
-        }
-        
-#pragma omp parallel for schedule(guided)
-        for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-        {
-            int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-            int pts_col = iter_count % sub_imagesize_w;
-            int pt_index;
-            double t_X, t_Y;
-            int t_col, t_row, t_col_next, t_row_next;
-            long int pt_index_im;
-           
-            t_X     = subBoundary[0] + pts_col*im_resolution;
-            t_Y     = subBoundary[1] + pts_row*im_resolution;
-           
-            t_col   = (int)((t_X - subBoundary[0])/DEM_resolution);
-            t_row   = (int)((t_Y - subBoundary[1])/DEM_resolution);
-           
-            pt_index    = t_row*Size_Grid2D.width + t_col;
-            pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-           
-            
-            long int pt_index_im_next;
+            sub_imagesize_w = (long int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
+            sub_imagesize_h = (long int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
             
             if(check_combined_WNCC)
             {
-                t_col_next   = (int)((t_X - subBoundary[0])/im_resolution_next);
-                t_row_next   = (int)((t_Y - subBoundary[1])/im_resolution_next);
-             
-                pt_index_im_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
+                sub_imagesize_w_next = (long int)((subBoundary[2] - subBoundary[0])/im_resolution_next)+1;
+                sub_imagesize_h_next = (long int)((subBoundary[3] - subBoundary[1])/im_resolution_next)+1;
             }
             
-            if(pt_index < Size_Grid2D.width * Size_Grid2D.height && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+            printf("imsize %d %d %u %u\n",sub_imagesize_w,sub_imagesize_h,plevelinfo.Size_Grid2D->width,plevelinfo.Size_Grid2D->height);
+            
+            const long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+            long int sub_imagesize_total_next;
+            if(check_combined_WNCC)
+                sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
+            
+            printf("sub_imagesize_total %ld\n",sub_imagesize_total);
+            
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
-                if(GridPT3[pt_index].Height != -1000)
+                if(proinfo->check_selected_image[ti])
                 {
-                    D3DPOINT temp_GP;
-                    D2DPOINT temp_GP_p;
-                    D2DPOINT Imagecoord;
-                    D2DPOINT Imagecoord_py;
-                   
-                    if(proinfo->sensor_type == SB)
+                    all_im_cd[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
+                    if (all_im_cd[ti] == NULL)
                     {
-                        temp_GP_p.m_X = t_X;
-                        temp_GP_p.m_Y = t_Y;
-                       
-                        temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                        temp_GP.m_X   = temp_GP_p.m_X;
-                        temp_GP.m_Y   = temp_GP_p.m_Y;
+                        printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
+                        exit(1);
                     }
-                    else
-                    {
-                        temp_GP.m_X   = t_X;
-                        temp_GP.m_Y   = t_Y;
-                    }
-                    temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
                     
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    if(check_combined_WNCC)
                     {
-                        if(proinfo->check_selected_image[ti])
+                        all_im_cd_next[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total_next);
+                        if (all_im_cd_next[ti] == NULL)
                         {
-                            if(proinfo->sensor_type == SB)
-                                Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
-                            else
-                            {
-                                D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
-                                Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
-                            }
-                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
+                            printf("ERROR: Out of memory - all_left_im_cd_next is NULL\n");
+                            exit(1);
+                        }
+                    }
+                }
+            }
+            
+#pragma omp parallel for schedule(guided)
+            for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
+            {
+                long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
+                long int pts_col = iter_count % sub_imagesize_w;
+                
+                double t_X     = subBoundary[0] + pts_col*im_resolution;
+                double t_Y     = subBoundary[1] + pts_row*im_resolution;
+                
+                long int t_col   = (long int)((t_X - subBoundary[0])/(*plevelinfo.grid_resolution));
+                long int t_row   = (long int)((t_Y - subBoundary[1])/(*plevelinfo.grid_resolution));
+                
+                long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
+                long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+                
+                
+                long int t_col_next, t_row_next;
+                long int pt_index_im_next;
+                if(check_combined_WNCC)
+                {
+                    t_col_next   = (long int)((t_X - subBoundary[0])/im_resolution_next);
+                    t_row_next   = (long int)((t_Y - subBoundary[1])/im_resolution_next);
+                    
+                    pt_index_im_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
+                }
+                
+                if(pt_index < numofpts && t_col < plevelinfo.Size_Grid2D->width && t_row < plevelinfo.Size_Grid2D->height)
+                {
+                    if(GridPT3[pt_index].Height != -1000)
+                    {
+                        D3DPOINT temp_GP;
+                        D2DPOINT temp_GP_p;
+                        
+                        if(proinfo->sensor_type == SB)
+                        {
+                            temp_GP_p.m_X = t_X;
+                            temp_GP_p.m_Y = t_Y;
                             
-                            all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
-                            all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
-                            
-                            if(check_combined_WNCC)
+                            temp_GP     = ps2wgs_single(*plevelinfo.param,temp_GP_p);
+                        }
+                        else
+                        {
+                            temp_GP.m_X   = t_X;
+                            temp_GP.m_Y   = t_Y;
+                        }
+                        temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
+                        
+                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                        {
+                            if(proinfo->check_selected_image[ti])
                             {
-                                Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos_next[ti],Pyramid_step-1);
-                                if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
+                                D2DPOINT Imagecoord;
+                                D2DPOINT Imagecoord_py;
+                                if(proinfo->sensor_type == SB)
+                                    Imagecoord      = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP);
+                                else
                                 {
-                                    all_im_cd_next[ti][pt_index_im_next].m_X = Imagecoord_py.m_X;
-                                    all_im_cd_next[ti][pt_index_im_next].m_Y = Imagecoord_py.m_Y;
+                                    D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                                    Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+                                }
+                                Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos[ti],Pyramid_step);
+                                
+                                all_im_cd[ti][pt_index_im] = Imagecoord_py;
+                                
+                                if(check_combined_WNCC)
+                                {
+                                    Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos_next[ti],Pyramid_step-1);
+                                    if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
+                                    {
+                                        all_im_cd_next[ti][pt_index_im_next] = Imagecoord_py;
+                                    }
                                 }
                             }
                         }
@@ -10950,7 +10642,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
         }
     }
     
-    
+    double ncc_alpha, ncc_beta;
     if(Pyramid_step >= 4)
     {
         ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
@@ -10972,52 +10664,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     else
         ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
     
-    /*
-    if(pre_DEMtif)
-    {
-        if (Pyramid_step == 4) {
-            ncc_alpha = 0.9 - ((4-Pyramid_step)*0.3 + (iteration-1)*0.05);
-            if(ncc_alpha < 0.7)
-                ncc_alpha = 0.7;
-        }
-        else if(Pyramid_step == 3)
-        {
-            ncc_alpha = 1.0 - ((4-Pyramid_step)*0.3 + (iteration-1)*0.05);
-            if(ncc_alpha < 0.5)
-                ncc_alpha = 0.5;
-        }
-        else if(Pyramid_step == 2)
-        {
-            ncc_alpha = 1.0 - (0.4 + (iteration-1)*0.05);
-            if(ncc_alpha < 0.4)
-                ncc_alpha = 0.4;
-        }
-        else
-            ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
-    }
-    */
     if(ncc_alpha < 0.1)
         ncc_alpha = 0.1;
-    
-    
-    
-    double kernal_w[3];
-    kernal_w[1] = 0.3;
-    kernal_w[0] = 0.3;
-    kernal_w[2] = 0.4;
-    if(Pyramid_step >= 2)
-    {
-        if(iteration < 5)
-        {
-            kernal_w[0] = 0.3 - (iteration-1)*0.02;
-            kernal_w[2] = 0.4 + (iteration-1)*0.02;
-        }
-        else
-        {
-            kernal_w[0] = 0.2;
-            kernal_w[2] = 0.5;
-        }
-    }
     
     if(IsRA == 1)
         ncc_alpha = 1.0;
@@ -11025,26 +10673,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     ncc_beta = 1.0 - ncc_alpha;
     
     printf("ncc_alpha ncc_beta %f %f\n",ncc_alpha,ncc_beta);
+    printf("height step %f\n",*plevelinfo.height_step);
     
-    if(Pyramid_step >= 3)
-        h_divide = 2;
-    else if(Pyramid_step == 2)
-    {
-        h_divide = 2;
-    }
-    else if(Pyramid_step == 1)
-        h_divide = 2;
-    else {
-        h_divide = 2;
-    }
-    
-    //height_step = (double)(im_resolution/h_divide);
-    
-    //if(height_step > 3)
-    //    height_step = 3;
-    
-    printf("height step %f\n",height_step);
-
     int sum_data2 = 0;
     int sum_data = 0;
     
@@ -11059,8 +10689,8 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
         double *right_patch_next_vecs[3];
         double *left_mag_patch_next_vecs[3];
         double *right_mag_patch_next_vecs[3];
-        int max_half_template = max(Half_template_size,Template_size/2);
-        int patch_size = (2*max_half_template+1) * (2*max_half_template+1);
+        //const int max_half_template = max(Half_template_size,Template_size/2);
+        const int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
         for (int k=0; k<3; k++)
         {
             left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
@@ -11072,68 +10702,30 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
             left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
             right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
         }
-
+        
 #pragma omp for schedule(guided) reduction(+:sum_data2, sum_data,Accessable_grid)
-        for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+        for(long int iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
-            int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-            int pts_col = iter_count % Size_Grid2D.width;
-            int pt_index = pts_row*Size_Grid2D.width + pts_col;
-      
+            long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
+            long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
+            long int pt_index = pts_row*(long int)plevelinfo.Size_Grid2D->width + pts_col;
+            
             if(nccresult[pt_index].check_height_change)
                 sum_data2++;
             else
                 sum_data++;
             
-            double pre_rho  = -1.0;
-            double pre_INCC_roh = -1.0;
-            double pre_GNCC_roh = -1.0;
-            double max_1stroh = -1.0;
-            double max_2ndroh = -1.0;
-            double max_1stheight = - 1000;
-            double max_2ndheight = -1000;
-            
-            
-            float pre_height= 0.0;
-            int direction   = 0;
-            bool check_rho  = false;
-            
-            int count_height;
-            int NumOfHeights;
-            int start_H, end_H;
-            int i,j;
-            double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
-            //if(Pyramid_step == 4 || Pyramid_step <= 1)
-            //    ortho_th = -100;
-            
-            //if(IsRA || check_matching_rate)
+            const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+            const int start_H     = GridPT3[pt_index].minHeight;
+            const int end_H       = GridPT3[pt_index].maxHeight;
+     
+            if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
             {
-                start_H     = GridPT3[pt_index].minHeight;
-                end_H       = GridPT3[pt_index].maxHeight;
-            }
-            /*
-            else
-            {
-                start_H     = nccresult[pt_index].minHeight;
-                end_H       = nccresult[pt_index].maxHeight;
-            }
-             */
-            //printf("start end h %d\t%d\t%d\t%d\n",pts_row,pts_col,start_H,end_H);
-            if(check_image_boundary(proinfo,RPCs,NumofIAparam,ImageAdjust,Startpos,GridPts[pt_index],Grid_wgs[pt_index],start_H,end_H,Imagesizes_ori,Imagesizes,Half_template_size,Pyramid_step))
-            {
-                char t_temp_path[500];
                 bool check_blunder_cell = false;
-                double th_height = 1000;
-                if(proinfo->DEM_resolution <= 4)
-                    th_height = 1000;
+                const double th_height = 1000;
+                const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
                 
-                //if(GridPT3[pt_index].Matched_flag == 0)
-                //    h_divide = 2;
-                
-                
-                NumOfHeights = (int)((end_H -  start_H)/height_step);
-                
-                if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
+                if(IsRA || (*plevelinfo.check_matching_rate))
                 {
                     nccresult[pt_index].check_height_change = true;
                     nccresult[pt_index].NumOfHeight = NumOfHeights;
@@ -11151,7 +10743,7 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                         {
                             if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
                                 check_blunder_cell = false;
-                             else
+                            else
                                 check_blunder_cell = true;
                         }
                         else if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
@@ -11162,1040 +10754,299 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     else
                         check_blunder_cell = true;
                 }
-                /*
-                if(!IsRA)
-                {
-                    if(Pyramid_step == 1)
-                    {
-                        if(iteration > 1)
-                        {
-                            if ( (GridPT3[pt_index].Matched_flag != 0)  && (fabs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000) )
-                                check_blunder_cell = false;
-                            else
-                                check_blunder_cell = true;
-                        }
-                        else
-                            check_blunder_cell = false;
-                    }
-                }
-                */
                 
                 if(Pyramid_step <= 1)
                 {
-                    if(GridPT3[pt_index].maxHeight > minmaxHeight[1] || GridPT3[pt_index].minHeight < minmaxHeight[0])
-                    {
+                    if(GridPT3[pt_index].maxHeight > plevelinfo.minmaxHeight[1] || GridPT3[pt_index].minHeight < plevelinfo.minmaxHeight[0])
                         check_blunder_cell = true;
-                    }
                 }
                 
                 if(check_matchtag && iteration  <= 2)
                 {
                     check_blunder_cell = false;
-                    if(GridPT3[pt_index].maxHeight > minmaxHeight[1] || GridPT3[pt_index].minHeight < minmaxHeight[0])
-                    {
+                    if(GridPT3[pt_index].maxHeight > plevelinfo.minmaxHeight[1] || GridPT3[pt_index].minHeight < plevelinfo.minmaxHeight[0])
                         check_blunder_cell = true;
-                    }
                     else if( (abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) > 1000) )
                         check_blunder_cell = true;
                 }
                 
                 if(!check_blunder_cell && nccresult[pt_index].NumOfHeight > 0)
                 {
-                    double max_WNCC = -100;
-                    int max_WNCC_pos = -1;
-                    int reference_id = 0;
-                    
-                    //ortho one time
-                    
-                    double temp_GNCC_roh = 0;
-                    double sum_GNCC_multi = 0;
-                    double count_GNCC = 0;
-                    
-                    Accessable_grid ++;
-                    
-                    //GNCC computation
                     for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
                     {
                         if(proinfo->check_selected_image[ti])
                         {
-                            int Count_N_ortho[3] = {0};
-                            int Count_N_ortho_next[3] = {0};
-
-                            CSize LImagesize, RImagesize;
-                            CSize LImagesize_next, RImagesize_next;
+                            const int reference_id = 0;
+                            double sum_GNCC_multi = 0; //peak find
+                            double count_GNCC = 0;//peak find
+                            Accessable_grid ++;
                             
-                            LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-                            LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
-                            RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                            RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+                            SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,ti,Half_template_size,patch_size);
                             
-                            if(check_combined_WNCC)
-                            {
-                                LImagesize_next.width  = Imagesizes[reference_id][Pyramid_step-1].width;
-                                LImagesize_next.height = Imagesizes[reference_id][Pyramid_step-1].height;
-                                RImagesize_next.width  = Imagesizes[ti][Pyramid_step-1].width;
-                                RImagesize_next.height = Imagesizes[ti][Pyramid_step-1].height;
-                            }
+                            SetKernel rsetkernel_next(left_patch_next_vecs,left_mag_patch_next_vecs,right_patch_next_vecs,right_mag_patch_next_vecs,reference_id,ti,Half_template_size,patch_size);
                             
+                            //GNCC computation
                             if(check_ortho && SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[ti]) > ortho_th)
                             {
+                                int Count_N_ortho[3] = {0};
+                                int Count_N_ortho_next[3] = {0};
+                                
                                 for(int row = -Half_template_size; row <= Half_template_size ; row++)
                                 {
                                     for(int col = -Half_template_size; col <= Half_template_size ; col++)
                                     {
-                                        int radius2  =  row*row + col*col;
+                                        const int radius2  =  row*row + col*col;
                                         if(radius2 <= (Half_template_size+1)*(Half_template_size+1))
                                         {
-                                            double pos_row_left_ortho = -100;
-                                            double pos_col_left_ortho = -100;
-                                            double pos_row_right_ortho= -100;
-                                            double pos_col_right_ortho= -100;
+                                            const double t_X     = plevelinfo.GridPts[pt_index].m_X + col*im_resolution;
+                                            const double t_Y     = plevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
                                             
-                                            double pos_row_left_ortho_next = -100;
-                                            double pos_col_left_ortho_next = -100;
-                                            double pos_row_right_ortho_next= -100;
-                                            double pos_col_right_ortho_next= -100;
+                                            long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
+                                            long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
+                                            long int pt_index_temp = t_row*sub_imagesize_w + t_col;
                                             
-                                            long int pt_index_temp,pt_index_dem,pt_index_temp_next;
-                                            double t_X, t_Y;
-                                            int t_col, t_row, tt_col, tt_row,t_col_next, t_row_next;
+                                            const long int tt_col  = (long int)((t_X - subBoundary[0])/(*plevelinfo.grid_resolution));
+                                            const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*plevelinfo.grid_resolution));
+                                            const long int pt_index_dem  = tt_row*(long int)plevelinfo.Size_Grid2D->width + tt_col;
                                             
-                                            t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                                            t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
-                                            
-                                            t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                                            t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
-                                            
-                                            tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                                            tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
-                                            
-                                            pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
-                                            pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
-                                            
-                                            if(check_combined_WNCC)
-                                            {
-                                                t_col_next   = (int)((t_X - subBoundary[0])/im_resolution_next);
-                                                t_row_next   = (int)((t_Y - subBoundary[1])/im_resolution_next);
-                                                pt_index_temp_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
-                                            }
-                                            
-                                            if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                                               t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h &&
-                                               pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                                               tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                                               all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                            if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < numofpts && tt_col >= 0 && tt_col < plevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < plevelinfo.Size_Grid2D->height && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                             {
                                                 if(GridPT3[pt_index_dem].Height != -1000)
                                                 {
-                                                    pos_row_left_ortho  = all_im_cd[reference_id][pt_index_temp].m_Y;
-                                                    pos_col_left_ortho  = all_im_cd[reference_id][pt_index_temp].m_X;
-                                                    pos_row_right_ortho = all_im_cd[ti][pt_index_temp].m_Y;
-                                                    pos_col_right_ortho = all_im_cd[ti][pt_index_temp].m_X;
-                                            
-                                                    if(check_combined_WNCC)
-                                                    {
-                                                        if(pt_index_temp_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
-                                                        {
-                                                            pos_row_left_ortho_next  = all_im_cd_next[reference_id][pt_index_temp_next].m_Y;
-                                                            pos_col_left_ortho_next  = all_im_cd_next[reference_id][pt_index_temp_next].m_X;
-                                                            pos_row_right_ortho_next = all_im_cd_next[ti][pt_index_temp_next].m_Y;
-                                                            pos_col_right_ortho_next = all_im_cd_next[ti][pt_index_temp_next].m_X;
-                                                        }
-                                                    }
-                                                    double pos_row_left = pos_row_left_ortho;
-                                                    double pos_col_left = pos_col_left_ortho;
-                                                    double pos_row_right= pos_row_right_ortho;
-                                                    double pos_col_right= pos_col_right_ortho;
+                                                    D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
+                                                    D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                                     
-                                                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                       pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                                    {
-                                                        double dx;
-                                                        double dy;
-                                                        long int position;
-
-                                                        //interpolate left_patch
-                                                        dx          =  pos_col_left - (int)(pos_col_left);
-                                                        dy          =  pos_row_left - (int)(pos_row_left);
-                                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-                                                        double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                                        double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
-                                                        
-                                                        //interpolate right_patch
-                                                        dx          =  pos_col_right - (int)(pos_col_right);
-                                                        dy          =  pos_row_right - (int)(pos_row_right);
-                                                        position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
-                                                        double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                                        double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
-                                                        
-                                                        //end
-                                                        
-                                                        if(left_patch > 0 && right_patch > 0)
-                                                        {
-                                                            left_patch_vecs[0][Count_N_ortho[0]] = left_patch;
-                                                            left_mag_patch_vecs[0][Count_N_ortho[0]] = left_mag_patch;
-                                                            right_patch_vecs[0][Count_N_ortho[0]] = right_patch;
-                                                            right_mag_patch_vecs[0][Count_N_ortho[0]] = right_mag_patch;
-                                                            Count_N_ortho[0]++;
-                                                            
-                                                            int size_1, size_2;
-                                                            size_1        = (int)(Half_template_size/2);
-                                                            if(radius2 <= (Half_template_size - size_1 + 1)*(Half_template_size - size_1 + 1))
-                                                            {
-                                                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                                {
-                                                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                                    {
-                                                                        left_patch_vecs[1][Count_N_ortho[1]] = left_patch;
-                                                                        left_mag_patch_vecs[1][Count_N_ortho[1]] = left_mag_patch;
-                                                                        right_patch_vecs[1][Count_N_ortho[1]] = right_patch;
-                                                                        right_mag_patch_vecs[1][Count_N_ortho[1]] = right_mag_patch;
-                                                                        Count_N_ortho[1]++;
-                                                                    }
-                                                                }
-                                                            }
-                                                            
-                                                            size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                            if(radius2 <= (Half_template_size - size_2 + 1)*(Half_template_size - size_2 + 1))
-                                                            {
-                                                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                                {
-                                                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                                    {
-                                                                        left_patch_vecs[2][Count_N_ortho[2]] = left_patch;
-                                                                        left_mag_patch_vecs[2][Count_N_ortho[2]] = left_mag_patch;
-                                                                        right_patch_vecs[2][Count_N_ortho[2]] = right_patch;
-                                                                        right_mag_patch_vecs[2][Count_N_ortho[2]] = right_mag_patch;
-                                                                        Count_N_ortho[2]++;
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
+                                                    SetVecKernelValue(plevelinfo, rsetkernel,false, row, col, pos_left,pos_right, radius2, Count_N_ortho);
+                                                    
                                                     if(check_combined_WNCC)
                                                     {
-                                                        double pos_row_left = pos_row_left_ortho_next;
-                                                        double pos_col_left = pos_col_left_ortho_next;
-                                                        double pos_row_right= pos_row_right_ortho_next;
-                                                        double pos_col_right= pos_col_right_ortho_next;
+                                                        t_col   = (long int)((t_X - subBoundary[0])/im_resolution_next);
+                                                        t_row   = (long int)((t_Y - subBoundary[1])/im_resolution_next);
+                                                        pt_index_temp = t_row*sub_imagesize_w_next + t_col;
                                                         
-                                                        if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
-                                                           pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
+                                                        if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w_next*sub_imagesize_h_next && t_col < sub_imagesize_w_next && t_row < sub_imagesize_h_next)
                                                         {
-                                                            double dx;
-                                                            double dy;
-                                                            long int position;
-
-                                                            //interpolate left_patch
-                                                            dx          =  pos_col_left - (int)(pos_col_left);
-                                                            dy          =  pos_row_left - (int)(pos_row_left);
-                                                            position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
-                                                            double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                            double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                        
-                                                            //interpolate right_patch
-                                                            dx          =  pos_col_right - (int)(pos_col_right);
-                                                            dy          =  pos_row_right - (int)(pos_row_right);
-                                                            position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
-                                                            double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
-                                                            double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
-                                                        
-                                                            //end
+                                                            pos_left  = all_im_cd_next[reference_id][pt_index_temp];
+                                                            pos_right = all_im_cd_next[ti][pt_index_temp];
                                                             
-                                                            if(left_patch > 0 && right_patch > 0)
-                                                            {
-                                                                left_patch_next_vecs[0][Count_N_ortho_next[0]] = left_patch;
-                                                                left_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = left_mag_patch;
-                                                                right_patch_next_vecs[0][Count_N_ortho_next[0]] = right_patch;
-                                                                right_mag_patch_next_vecs[0][Count_N_ortho_next[0]] = right_mag_patch;
-                                                                Count_N_ortho_next[0]++;
-                                                                
-                                                                int size_1, size_2;
-                                                                size_1        = (int)(Half_template_size/2);
-                                                                if(radius2 <= (Half_template_size - size_1 + 1)*(Half_template_size - size_1 + 1))
-                                                                {
-                                                                    if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                                    {
-                                                                        if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                                        {
-                                                                            left_patch_next_vecs[1][Count_N_ortho_next[1]] = left_patch;
-                                                                            left_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = left_mag_patch;
-                                                                            right_patch_next_vecs[1][Count_N_ortho_next[1]] = right_patch;
-                                                                            right_mag_patch_next_vecs[1][Count_N_ortho_next[1]] = right_mag_patch;
-                                                                            Count_N_ortho_next[1]++;
-                                                                        }
-                                                                    }
-                                                                }
-                                                                
-                                                                size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                                if(radius2 <= (Half_template_size - size_2 + 1)*(Half_template_size - size_2 + 1))
-                                                                {
-                                                                    if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                                    {
-                                                                        if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                                        {
-                                                                            left_patch_next_vecs[2][Count_N_ortho_next[2]] = left_patch;
-                                                                            left_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = left_mag_patch;
-                                                                            right_patch_next_vecs[2][Count_N_ortho_next[2]] = right_patch;
-                                                                            right_mag_patch_next_vecs[2][Count_N_ortho_next[2]] = right_mag_patch;
-                                                                            Count_N_ortho_next[2]++;
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
+                                                            SetVecKernelValue(plevelinfo, rsetkernel_next,true, row, col, pos_left, pos_right, radius2, Count_N_ortho_next);
                                                         }
-                                                    }  // if(check_combined_WNCC)
+                                                    }
                                                 }
                                             }
                                         }  // if(radius2 <= ...
                                     }  // end col loop
                                 }  // end row loop
-
+                                
                                 // Compute correlations
-                                if(Count_N_ortho[0] > TH_N && Count_N_ortho[1] > TH_N && Count_N_ortho[2] > TH_N)
-                                {
-                                    double temp_roh = 0;
-                                    double count_roh = 0;
-                                    for (int k=0; k<3; k++)
-                                    {
-                                        double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N_ortho[k]);
-                                        if (ncc != -99)
-                                        {
-                                            count_roh++;
-                                            temp_roh += ncc;
-                                        }
-                            
-                                        double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N_ortho[k]);
-                                        if (ncc_mag != -99)
-                                        {
-                                            count_roh++;
-                                            temp_roh += ncc_mag;
-                                        }
-                                    }
-                                    if (count_roh>0)
-                                    {
-                                        temp_GNCC_roh = temp_roh/count_roh;
-                                        sum_GNCC_multi += temp_GNCC_roh;
-                                        count_GNCC ++;
-                                    }
-                                    //else
-                                    //  temp_GNCC_roh = -1;
-                                    
-                                    //sum_GNCC_multi += temp_GNCC_roh;
-                                    //count_GNCC ++;
-                                    //check_ortho_com = true;
-                                }
-                                                    
+                                ComputeMultiNCC(rsetkernel, false, TH_N, Count_N_ortho, count_GNCC,  sum_GNCC_multi);
+                                
                                 if(check_combined_WNCC)
-                                {
-                                    // Compute correlations
-                                    if(Count_N_ortho_next[0] > TH_N && Count_N_ortho_next[1] > TH_N && Count_N_ortho_next[2] > TH_N)
-                                    {
-                                        double temp_roh = 0;
-                                        double count_roh = 0;
-                                        for (int k=0; k<3; k++)
-                                        {
-                                            double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_ortho_next[k]);
-                                            if (ncc != -99)
-                                            {
-                                                count_roh++;
-                                                temp_roh += ncc;
-                                            }
-
-                                            double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_ortho_next[k]);
-                                            if (ncc_mag != -99)
-                                            {
-                                                count_roh++;
-                                                temp_roh += ncc_mag;
-                                            }
-                                        }
-                                        if (count_roh>0)
-                                        {
-                                            temp_GNCC_roh = temp_roh/count_roh;
-                                            sum_GNCC_multi += temp_GNCC_roh;
-                                            count_GNCC ++;
-                                        }
-                                        //else
-                                        //  temp_GNCC_roh = -1;
-                                        
-                                        //sum_GNCC_multi += temp_GNCC_roh;
-                                        //count_GNCC ++;
-                                        
-                                        //check_ortho_com = true;
-                                    }
-                                }  // if(check_combined_WNCC)
-                            }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
-                            if(count_GNCC > 0)
-                                nccresult[pt_index].GNCC = DoubleToSignedChar_result(sum_GNCC_multi/count_GNCC);
-                            else
-                                nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
-                        }
-                    }  // end ti loop
-                    
-                    //INCC computation
-                    //printf("pt_index %d\tGridPT3[pt_index].NumOfHeight %d\n",pt_index,GridPT3[pt_index].NumOfHeight);
-                    if(IsRA || nccresult[pt_index].check_height_change || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
-                    {
-                        for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
-                        {
-                            float iter_height;
-                            
-                            if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
-                                iter_height = start_H + grid_voxel_hindex*height_step;
-                            else
-                                iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*height_step;
-                                //iter_height = grid_voxel[pt_index][grid_voxel_hindex].height;
-                            //grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
-                            //printf("no calculation %d\n",pt_index);
-                        /*}
-                        else
-                        for(count_height = 0 ; count_height < NumOfHeights ; count_height++)
-                        {*/
-                            if(iter_height >= start_H && iter_height <= end_H)
-                            {
-                                //int grid_voxel_hindex = count_height;
+                                    ComputeMultiNCC(rsetkernel_next, true , TH_N, Count_N_ortho_next, count_GNCC,  sum_GNCC_multi);
                                 
-                                //double iter_height;
-                                
-                                //iter_height     = grid_voxel[pt_index][grid_voxel_hindex].height;
-                                //printf("hindex %d\titer height %f\t",grid_voxel_hindex,iter_height);
-                                //iter_height     = start_H + count_height*height_step;
-                                
-                                
-                                if(grid_voxel_hindex == 0)
-                                {
-                                    nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
-                                    nccresult[pt_index].result2 = -1000;
-                                    nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
-                                    nccresult[pt_index].result3 = -1000;
-                                    nccresult[pt_index].result4 = 0;
-                                }
-                                
-                                double temp_LIA[2];
-                                
-
-                                D3DPOINT temp_GP[1];
-                                D2DPOINT Ref_Imagecoord[1];
-                                D2DPOINT Ref_Imagecoord_py[1];
-                                D2DPOINT Ref_Imagecoord_py_next[1];
-                                double sum_INCC_multi = 0;
-                                
-                                double count_INCC = 0;
-                                
-                                double Sum_intensity_diff = 0;
-                                double Sum_mag_diff = 0;
-
-                                //WNCC peak variables
-                                double temp_rho;
-                                int grid_index;
-                                double diff_rho;
-                                int t_direction;
-
-                                
-                                temp_GP[0].m_Z = (double)iter_height;
-                                
-                                //reference image point
-                                temp_LIA[0] = ImageAdjust[reference_id][0];
-                                temp_LIA[1] = ImageAdjust[reference_id][1];
-                                
-                                if(proinfo->sensor_type == SB)
-                                {
-                                    temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
-                                    temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
-                                    Ref_Imagecoord[0]      = GetObjectToImageRPC_single(RPCs[reference_id],NumofIAparam,temp_LIA,temp_GP[0]);
-                                }
+                                if(count_GNCC > 0)
+                                    nccresult[pt_index].GNCC = DoubleToSignedChar_result(sum_GNCC_multi/count_GNCC);
                                 else
-                                {
-                                    temp_GP[0].m_X = GridPts[pt_index].m_X;
-                                    temp_GP[0].m_Y = GridPts[pt_index].m_Y;
-                                    D2DPOINT photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[reference_id],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[reference_id].m_Rm);
-                                    Ref_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
-                                }
-                                Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos[reference_id],Pyramid_step);
+                                    nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
+                            }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
+                            
+                            
+                            //INCC computation
+                            if(IsRA || nccresult[pt_index].check_height_change || (*plevelinfo.check_matching_rate) || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
+                            {
+                                double pre_rho  = -1.0;
+                                float pre_height= 0.0;
+                                int direction   = 0;
+                                bool check_rho  = false;
+                                double max_WNCC = -100;
                                 
-                                if(check_combined_WNCC_INCC)
+                                for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                                 {
-                                    Ref_Imagecoord_py_next[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],Startpos_next[reference_id],Pyramid_step-1);
-                                }
-                                
-                                // target image point and ncc
-                                for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
-                                {
-                                    if(proinfo->check_selected_image[ti])
+                                    float iter_height;
+                                    
+                                    if(IsRA || (*plevelinfo.check_matching_rate ))
+                                        iter_height = start_H + grid_voxel_hindex*(*plevelinfo.height_step);
+                                    else
+                                        iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*(*plevelinfo.height_step);
+                                    
+                                    if(iter_height >= start_H && iter_height <= end_H)
                                     {
-                                        D2DPOINT Tar_Imagecoord[1], Tar_Imagecoord_py[1],Tar_Imagecoord_py_next[1];
-                                        CSize LImagesize, RImagesize;
-                                        CSize LImagesize_next, RImagesize_next;
-                                        
-                                        LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-                                        LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
-                                        RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                                        RImagesize.height = Imagesizes[ti][Pyramid_step].height;
-                                        
-                                        if(check_combined_WNCC_INCC)
+                                        if(grid_voxel_hindex == 0)
                                         {
-                                            LImagesize_next.width  = Imagesizes[reference_id][Pyramid_step-1].width;
-                                            LImagesize_next.height = Imagesizes[reference_id][Pyramid_step-1].height;
-                                            RImagesize_next.width  = Imagesizes[ti][Pyramid_step-1].width;
-                                            RImagesize_next.height = Imagesizes[ti][Pyramid_step-1].height;
+                                            nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
+                                            nccresult[pt_index].result2 = -1000;
+                                            nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
+                                            nccresult[pt_index].result3 = -1000;
+                                            nccresult[pt_index].result4 = 0;
                                         }
                                         
+                                        const CSize LImagesize(plevelinfo.py_Sizes[reference_id][Pyramid_step]);
+                                        const CSize RImagesize(plevelinfo.py_Sizes[ti][Pyramid_step]);
+                                        
+                                        // Image point setting
+                                        const double temp_LIA[2] = {plevelinfo.ImageAdjust[reference_id][0], plevelinfo.ImageAdjust[reference_id][1]};
+                                        
+                                        D2DPOINT Ref_Imagecoord[1], Ref_Imagecoord_py[1];
+                                        D2DPOINT Tar_Imagecoord[1], Tar_Imagecoord_py[1];
+                                        D3DPOINT temp_GP[1];
+                                        D2DPOINT photo;
+                                        temp_GP[0].m_Z = (double)iter_height;
                                         if(proinfo->sensor_type == SB)
                                         {
-                                            temp_GP[0].m_X = Grid_wgs[pt_index].m_X;
-                                            temp_GP[0].m_Y = Grid_wgs[pt_index].m_Y;
-                                            Tar_Imagecoord[0]     = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP[0]);
+                                            temp_GP[0] = plevelinfo.Grid_wgs[pt_index];
+                                            
+                                            Ref_Imagecoord[0]      = GetObjectToImageRPC_single(plevelinfo.RPCs[reference_id],*plevelinfo.NumOfIAparam,temp_LIA,temp_GP[0]);
+                                            
+                                            Tar_Imagecoord[0]     = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP[0]);
                                         }
                                         else
                                         {
-                                            temp_GP[0].m_X = GridPts[pt_index].m_X;
-                                            temp_GP[0].m_Y = GridPts[pt_index].m_Y;
-                                            D2DPOINT photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                                            temp_GP[0] = plevelinfo.GridPts[pt_index];
+                                            
+                                            photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[reference_id],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[reference_id].m_Rm);
+                                            Ref_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
+                                            
+                                            photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
                                             Tar_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
                                         }
-                                        Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos[ti],Pyramid_step);
-                                        if(check_combined_WNCC_INCC)
-                                            Tar_Imagecoord_py_next[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],Startpos_next[ti],Pyramid_step-1);
-                                
-                                        int ori_diff,ori_diff_next;
-                                
-                                        bool check_py_image_pt = (int)Ref_Imagecoord_py[0].m_Y >= 0 && (int)Ref_Imagecoord_py[0].m_Y < LImagesize.height && (int)Ref_Imagecoord_py[0].m_X >= 0 && (int)Ref_Imagecoord_py[0].m_X < LImagesize.width &&
-                                        (int)Tar_Imagecoord_py[0].m_Y >= 0 && (int)Tar_Imagecoord_py[0].m_Y < RImagesize.height && (int)Tar_Imagecoord_py[0].m_X >= 0 && (int)Tar_Imagecoord_py[0].m_X < RImagesize.width;
                                         
+                                        Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],plevelinfo.py_Startpos[reference_id],Pyramid_step);
+                                        Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],plevelinfo.py_Startpos[ti],Pyramid_step);
+                                        
+                                        const bool check_py_image_pt = (int)Ref_Imagecoord_py[0].m_Y >= 0 && (int)Ref_Imagecoord_py[0].m_Y + 1 < LImagesize.height && (int)Ref_Imagecoord_py[0].m_X >= 0 && (int)Ref_Imagecoord_py[0].m_X + 1 < LImagesize.width && (int)Tar_Imagecoord_py[0].m_Y >= 0 && (int)Tar_Imagecoord_py[0].m_Y + 1 < RImagesize.height && (int)Tar_Imagecoord_py[0].m_X >= 0 && (int)Tar_Imagecoord_py[0].m_X + 1< RImagesize.width;
+                                        
+                                        // image point setting for next level
                                         bool check_py_image_pt_next = true;
+                                        D2DPOINT Ref_Imagecoord_py_next[1];
+                                        CSize LImagesize_next, RImagesize_next;
+                                        D2DPOINT Tar_Imagecoord_py_next[1];
                                         if(check_combined_WNCC_INCC)
-                                            check_py_image_pt_next = (int)Ref_Imagecoord_py_next[0].m_Y >= 0 && (int)Ref_Imagecoord_py_next[0].m_Y < LImagesize_next.height && (int)Ref_Imagecoord_py_next[0].m_X >= 0 && (int)Ref_Imagecoord_py_next[0].m_X < LImagesize_next.width &&
-                                        (int)Tar_Imagecoord_py_next[0].m_Y >= 0 && (int)Tar_Imagecoord_py_next[0].m_Y < RImagesize_next.height && (int)Tar_Imagecoord_py_next[0].m_X >= 0 && (int)Tar_Imagecoord_py_next[0].m_X < RImagesize_next.width;
+                                        {
+                                            LImagesize_next = plevelinfo.py_Sizes[reference_id][Pyramid_step-1];
+                                            RImagesize_next = plevelinfo.py_Sizes[ti][Pyramid_step-1];
+                                            
+                                            Ref_Imagecoord_py_next[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],plevelinfo.py_Startpos_next[reference_id],Pyramid_step-1);
+                                            
+                                            Tar_Imagecoord_py_next[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],plevelinfo.py_Startpos_next[ti],Pyramid_step-1);
+                                            
+                                            check_py_image_pt_next = (int)Ref_Imagecoord_py_next[0].m_Y >= 0 && (int)Ref_Imagecoord_py_next[0].m_Y + 1 < LImagesize_next.height && (int)Ref_Imagecoord_py_next[0].m_X >= 0 && (int)Ref_Imagecoord_py_next[0].m_X + 1 < LImagesize_next.width && (int)Tar_Imagecoord_py_next[0].m_Y >= 0 && (int)Tar_Imagecoord_py_next[0].m_Y + 1 < RImagesize_next.height && (int)Tar_Imagecoord_py_next[0].m_X >= 0 && (int)Tar_Imagecoord_py_next[0].m_X + 1< RImagesize_next.width;
+                                        }
                                         
                                         if(check_py_image_pt && check_py_image_pt_next)
                                         {
-                                            ori_diff = ori_images[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] -
-                                            ori_images[ti][          (int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
+                                            //orientation diff setting
+                                            const int ori_diff = plevelinfo.py_OriImages[reference_id][(int)Ref_Imagecoord_py[0].m_Y*LImagesize.width + (int)Ref_Imagecoord_py[0].m_X] - plevelinfo.py_OriImages[ti][(int)Tar_Imagecoord_py[0].m_Y*RImagesize.width + (int)Tar_Imagecoord_py[0].m_X];
                                             
+                                            int ori_diff_next = 0;
                                             if(check_combined_WNCC_INCC)
-                                                ori_diff_next = SubOriImages_next[reference_id][(int)Ref_Imagecoord_py_next[0].m_Y*LImagesize_next.width + (int)Ref_Imagecoord_py_next[0].m_X] -
-                                                SubOriImages_next[ti][          (int)Tar_Imagecoord_py_next[0].m_Y*RImagesize_next.width + (int)Tar_Imagecoord_py_next[0].m_X];
-                                            else
-                                                ori_diff_next = 0;
+                                                ori_diff_next = plevelinfo.py_OriImages_next[reference_id][(int)Ref_Imagecoord_py_next[0].m_Y*LImagesize_next.width + (int)Ref_Imagecoord_py_next[0].m_X] - plevelinfo.py_OriImages_next[ti][(int)Tar_Imagecoord_py_next[0].m_Y*RImagesize_next.width + (int)Tar_Imagecoord_py_next[0].m_X];
                                             
-                                            double Left_CR, Left_CC, Right_CR, Right_CC, diff_theta, diff_theta_next;
-                                            double Left_CR_next, Left_CC_next, Right_CR_next, Right_CC_next;
+                                            double diff_theta  = (double)(ori_diff);
+                                            if(check_combined_WNCC_INCC)
+                                                diff_theta = (diff_theta + (double)(ori_diff_next)) / 2.0;
+                                            
                                             bool check_orientation = false;
-                                            
-                                            
-                                            Left_CR     = Ref_Imagecoord_py[0].m_Y;
-                                            Left_CC     = Ref_Imagecoord_py[0].m_X;
-                                            Right_CR    = Tar_Imagecoord_py[0].m_Y;
-                                            Right_CC    = Tar_Imagecoord_py[0].m_X;
-                                            
-                                            if(check_combined_WNCC_INCC)
-                                            {
-                                                Left_CR_next     = Ref_Imagecoord_py_next[0].m_Y;
-                                                Left_CC_next     = Ref_Imagecoord_py_next[0].m_X;
-                                                Right_CR_next    = Tar_Imagecoord_py_next[0].m_Y;
-                                                Right_CC_next    = Tar_Imagecoord_py_next[0].m_X;
-                                            }
-                                            
-                                            diff_theta  = (double)(ori_diff);
-                                            if(check_combined_WNCC_INCC)
-                                            {
-                                                diff_theta_next = (double)(ori_diff_next);
-                                                diff_theta = (diff_theta + diff_theta_next) / 2.0;
-                                            }
                                             
                                             if(IsRA != 1)
                                             {
-                                                if(Pyramid_step >= 3 && diff_theta*bin_angle < 90 && diff_theta*bin_angle > - 90)
+                                                if(Pyramid_step >= 3 && diff_theta*(*plevelinfo.bin_angle) < 90 && diff_theta*(*plevelinfo.bin_angle) > - 90)
                                                     check_orientation = true;
                                                 else if(Pyramid_step <= 2)
-                                                {
                                                     check_orientation = true;
-                                                    
-                                                }
                                             }
                                             else
-                                            {
                                                 check_orientation = true;
-                                            }
-                                            //check_orientation = true;
-                                            //if(Pyramid_step <= proinfo->SGM_py)
-                                            //    check_orientation = true;
                                             
+                                            //INCC computation
                                             if(check_orientation)
                                             {
-                                                double rot_theta = 0.0;
-                                                
+                                                double sum_INCC_multi = 0;
+                                                double count_INCC = 0;
                                                 int Count_N[3] = {0};
                                                 int Count_N_next[3] = {0};
                                                 
-                                                double t_intensity_diff = 0;
-                                                double t_mag_diff = 0;
-
-                                                double temp_INCC_roh = 0;
-                                                //double temp_GNCC_roh = 0;
-                                                                                    
-                                                uint16 mag_center_l, mag_center_r;
+                                                const double rot_theta = (double)(diff_theta*(*plevelinfo.bin_angle)*PI/180.0);
+                                                const double cos0 = cos(-rot_theta);
+                                                const double sin0 = sin(-rot_theta);
                                                 
-                                                if(flag.rotate_flag)
-                                                    rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
-                                                
-                                                double cos0 = cos(-rot_theta);
-                                                double sin0 = sin(-rot_theta);
-                                                
-                                                //INCC
-                                                //if(nccresult[pt_index].check_height_change || check_matching_rate || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
+                                                for(int row = -Half_template_size; row <= Half_template_size ; row++)
                                                 {
-                                                    for(int row = -Half_template_size; row <= Half_template_size ; row++)
+                                                    for(int col = -Half_template_size; col <= Half_template_size ; col++)
                                                     {
-                                                        for(int col = -Half_template_size; col <= Half_template_size ; col++)
+                                                        int radius2  =  row*row + col*col;
+                                                        if(radius2 <= (Half_template_size + 1)*(Half_template_size + 1))
                                                         {
-                                                            int radius2  =  row*row + col*col;
-                                                            if(radius2 <= (Half_template_size + 1)*(Half_template_size + 1))
-                                                            {
-                                                                double pos_row_left      = (Left_CR + row);
-                                                                double pos_col_left      = (Left_CC + col);
-                                                                
-                                                                double temp_col        = (cos0*col - sin0*row);
-                                                                double temp_row        = (sin0*col + cos0*row);
-                                                                double pos_row_right     = (Right_CR + temp_row);
-                                                                double pos_col_right     = (Right_CC + temp_col);
-                                                                
-                                                                if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                                    pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                                                {
-                                                                    double dx;
-                                                                    double dy;
-                                                                    long int position;
-
-                                                                    //interpolate left_patch
-                                                                    dx          =  pos_col_left - (int)(pos_col_left);
-                                                                    dy          =  pos_row_left - (int)(pos_row_left);
-                                                                    position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-                                                                    double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                                                    double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
-                                                                     
-                                                                    //interpolate right_patch
-                                                                    dx          =  pos_col_right - (int)(pos_col_right);
-                                                                    dy          =  pos_row_right - (int)(pos_row_right);
-                                                                    position = (long int) pos_col_right + (long int) pos_row_right * RImagesize.width;
-                                                                    double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                                                    double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
-                                                                    
-                                                                    //end
-                                                                    
-                                                                    if(left_patch > 0 && right_patch > 0)
-                                                                    {
-                                                                        left_patch_vecs[0][Count_N[0]] = left_patch;
-                                                                        left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-                                                                        right_patch_vecs[0][Count_N[0]] = right_patch;
-                                                                        right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
-                                                                        Count_N[0]++;
-
-                                                                        t_intensity_diff += (left_patch - right_patch)*(left_patch - right_patch);
-                                                                        t_mag_diff += (left_mag_patch - right_mag_patch)*(left_mag_patch - right_mag_patch);
-                                                                        
-                                                                        int size_1, size_2;
-                                                                        size_1        = (int)(Half_template_size/2);
-                                                                        if(radius2 <= (Half_template_size - size_1 + 1)*(Half_template_size - size_1 + 1))
-                                                                        {
-                                                                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                                            {
-                                                                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                                                {
-                                                                                    left_patch_vecs[1][Count_N[1]] = left_patch;
-                                                                                    left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                                                                                    right_patch_vecs[1][Count_N[1]] = right_patch;
-                                                                                    right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
-                                                                                    Count_N[1]++;
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                                        if(radius2 <= (Half_template_size - size_2 + 1)*(Half_template_size - size_2 + 1))
-                                                                        {
-                                                                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                                            {
-                                                                                if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                                                {
-                                                                                    left_patch_vecs[2][Count_N[2]] = left_patch;
-                                                                                    left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                                                                                    right_patch_vecs[2][Count_N[2]] = right_patch;
-                                                                                    right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
-                                                                                    Count_N[2]++;
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        if(row == 0 && col == 0)
-                                                                        {
-                                                                            mag_center_l = left_patch;
-                                                                            mag_center_r = right_patch;
-                                                                            
-                                                                        }
-                                                                    }
-                                                                }
-
-                                                                if(check_combined_WNCC_INCC)
-                                                                {
-                                                                    double pos_row_left      = (Left_CR_next + row);
-                                                                    double pos_col_left      = (Left_CC_next + col);
-                                                                    
-                                                                    double temp_col        = (cos0*col - sin0*row);
-                                                                    double temp_row        = (sin0*col + cos0*row);
-                                                                    double pos_row_right     = (Right_CR_next + temp_row);
-                                                                    double pos_col_right     = (Right_CC_next + temp_col);
-                                                                    
-                                                                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize_next.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize_next.width &&
-                                                                       pos_row_left >= 0 && pos_row_left+1   < LImagesize_next.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize_next.width)
-                                                                    {
-                                                                        double dx;
-                                                                        double dy;
-                                                                        long int position;
-
-                                                                        //interpolate left_patch
-                                                                        dx          =  pos_col_left - (int)(pos_col_left);
-                                                                        dy          =  pos_row_left - (int)(pos_row_left);
-                                                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize_next.width;
-                                                                        double left_patch = InterpolatePatch(SubImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                                        double left_mag_patch = InterpolatePatch(SubMagImages_next[reference_id], position, LImagesize_next, dx, dy);
-                                                                        
-                                                                        //interpolate right_patch
-                                                                        dx          =  pos_col_right - (int)(pos_col_right);
-                                                                        dy          =  pos_row_right - (int)(pos_row_right);
-                                                                        position = (long int) pos_col_right + (long int) pos_row_right * RImagesize_next.width;
-                                                                        double right_patch = InterpolatePatch(SubImages_next[ti], position, RImagesize_next, dx, dy);
-                                                                        double right_mag_patch = InterpolatePatch(SubMagImages_next[ti], position, RImagesize_next, dx, dy);
-                                                                        
-                                                                        //end
-                                                                        
-                                                                        if(left_patch > 0 && right_patch > 0)
-                                                                        {
-                                                                            left_patch_next_vecs[0][Count_N_next[0]] = left_patch;
-                                                                            left_mag_patch_next_vecs[0][Count_N_next[0]] = left_mag_patch;
-                                                                            right_patch_next_vecs[0][Count_N_next[0]] = right_patch;
-                                                                            right_mag_patch_next_vecs[0][Count_N_next[0]] = right_mag_patch;
-                                                                            Count_N_next[0]++;
-                                                                            
-                                                                            //t_intensity_diff += (left_patch - right_patch)*(left_patch - right_patch);
-                                                                            //t_mag_diff += (left_mag_patch - right_mag_patch)*(left_mag_patch - right_mag_patch);
-                                                                            
-                                                                            int size_1, size_2;
-                                                                            size_1        = (int)(Half_template_size/2);
-                                                                            if(radius2 <= (Half_template_size - size_1 + 1)*(Half_template_size - size_1 + 1))
-                                                                            {
-                                                                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                                                {
-                                                                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                                                    {
-                                                                                        left_patch_next_vecs[1][Count_N_next[1]] = left_patch;
-                                                                                        left_mag_patch_next_vecs[1][Count_N_next[1]] = left_mag_patch;
-                                                                                        right_patch_next_vecs[1][Count_N_next[1]] = right_patch;
-                                                                                        right_mag_patch_next_vecs[1][Count_N_next[1]] = right_mag_patch;
-                                                                                        Count_N_next[1]++;
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                            
-                                                                            size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                                            if(radius2 <= (Half_template_size - size_2 + 1)*(Half_template_size - size_2 + 1))
-                                                                            {
-                                                                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                                                {
-                                                                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                                                    {
-                                                                                        left_patch_next_vecs[2][Count_N_next[2]] = left_patch;
-                                                                                        left_mag_patch_next_vecs[2][Count_N_next[2]] = left_mag_patch;
-                                                                                        right_patch_next_vecs[2][Count_N_next[2]] = right_patch;
-                                                                                        right_mag_patch_next_vecs[2][Count_N_next[2]] = right_mag_patch;
-                                                                                        Count_N_next[2]++;
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                            
-                                                                            if(row == 0 && col == 0)
-                                                                            {
-                                                                                mag_center_l = left_patch;
-                                                                                mag_center_r = right_patch;
-                                                                                
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }  // if(check_combined_WNCC_INCC)
-                                                            }
-                                                        }  // end col loop
-                                                    }  // end row loop
-
-                                                    // Compute correlations
-                                                    if(Count_N[0] > TH_N && Count_N[1] > TH_N && Count_N[2] > TH_N)
-                                                    {
-                                                        double temp_roh = 0;
-                                                        double count_roh = 0;
-                                                        for (int k=0; k<3; k++)
-                                                        {
-                                                            double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-                                                            if (ncc != -99)
-                                                            {
-                                                                count_roh++;
-                                                                temp_roh += ncc;
-                                                            }
-
-                                                            double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-                                                            if (ncc_mag != -99)
-                                                            {
-                                                                count_roh++;
-                                                                temp_roh += ncc_mag;
-                                                            }
-                                                        }
-
-                                                        if (count_roh > 0)
-                                                        {
-                                                            temp_INCC_roh = temp_roh/count_roh;
-                                                            sum_INCC_multi += temp_INCC_roh;
-                                                            count_INCC ++;
-                                                        }
-                                                        //else
-                                                        //  temp_INCC_roh = -1;
-                                                        
-                                                        //sum_INCC_multi += temp_INCC_roh;
-                                                        //count_INCC ++;
-                                                        
-                                                        if(!check_matching_rate && !IsRA)
-                                                            grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
-                                                    }
-                                                    
-                                                    if(check_combined_WNCC_INCC)
-                                                    {
-                                                        if(Count_N_next[0] > TH_N && Count_N_next[1] > TH_N && Count_N_next[2] > TH_N)
-                                                        {
-                                                            double temp_roh = 0;
-                                                            double count_roh = 0;
-                                                            for (int k=0; k<3; k++)
-                                                            {
-                                                                double ncc = Correlate(left_patch_next_vecs[k], right_patch_next_vecs[k], Count_N_next[k]);
-                                                                if (ncc != -99)
-                                                                {
-                                                                    count_roh++;
-                                                                    temp_roh += ncc;
-                                                                }
-
-                                                                double ncc_mag = Correlate(left_mag_patch_next_vecs[k], right_mag_patch_next_vecs[k], Count_N_next[k]);
-                                                                if (ncc_mag != -99)
-                                                                {
-                                                                    count_roh++;
-                                                                    temp_roh += ncc_mag;
-                                                                }
-                                                            }
-
-                                                            if (count_roh > 0)
-                                                            {
-                                                                temp_INCC_roh = temp_roh/count_roh;
-                                                                //sum_INCC_multi += temp_INCC_roh;
-                                                                //count_INCC ++;
-                                                            }
-                                                            else
-                                                                temp_INCC_roh = -1;
+                                                            D2DPOINT pos_left(Ref_Imagecoord_py[0].m_X + col,Ref_Imagecoord_py[0].m_Y + row);
+                                                            D2DPOINT temp_pos(cos0*col - sin0*row, sin0*col + cos0*row);
+                                                            D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
                                                             
-                                                            sum_INCC_multi += temp_INCC_roh;
-                                                            count_INCC ++;
+                                                            SetVecKernelValue(plevelinfo, rsetkernel,false, row, col, pos_left,pos_right, radius2, Count_N);
                                                             
-                                                            //if(!IsRA && ( Pyramid_step > 0 || (Pyramid_step == 0 && proinfo->DEM_resolution >= 2)))
-                                                            //    grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
+                                                            if(check_combined_WNCC_INCC)
+                                                            {
+                                                                D2DPOINT pos_left_next(Ref_Imagecoord_py_next[0].m_X + col,Ref_Imagecoord_py_next[0].m_Y + row);
+                                                                D2DPOINT temp_pos_next(cos0*col - sin0*row, sin0*col + cos0*row);
+                                                                D2DPOINT pos_right_next(Tar_Imagecoord_py_next[0].m_X + temp_pos_next.m_X,Tar_Imagecoord_py_next[0].m_Y + temp_pos_next.m_Y);
+                                                                
+                                                                SetVecKernelValue(plevelinfo, rsetkernel_next,true, row, col, pos_left_next, pos_right_next, radius2, Count_N_next);
+                                                                
+                                                            }  // if(check_combined_WNCC_INCC)
                                                         }
-                                                    }
-                                                    if(IsRA || check_matching_rate /*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
-                                                    {
-                                                    
-                                                    }
-                                                    else
-                                                    {
-                                                        if(count_INCC > 0)
-                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(sum_INCC_multi/count_INCC);
-                                                        else
-                                                            grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(-1.0);
-                                                    }
+                                                    }  // end col loop
+                                                }  // end row loop
+                                                
+                                                // Compute correlations
+                                                ComputeMultiNCC(rsetkernel, false, TH_N, Count_N, count_INCC,  sum_INCC_multi);
+                                                if(Count_N[0] > TH_N && Count_N[1] > TH_N && Count_N[2] > TH_N)
+                                                {
+                                                    if(!(*plevelinfo.check_matching_rate) && !IsRA)
+                                                        grid_voxel[pt_index][grid_voxel_hindex].flag_cal = true;
                                                 }
+                                                
+                                                if(check_combined_WNCC_INCC)
+                                                    ComputeMultiNCC(rsetkernel_next, true, TH_N, Count_N_next, count_INCC,  sum_INCC_multi);
+                                                
+                                                if(IsRA || (*plevelinfo.check_matching_rate )) //no 3D Voxel structure
+                                                {
+                                                    
+                                                }
+                                                else
+                                                {
+                                                    if(count_INCC > 0)
+                                                        grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(sum_INCC_multi/count_INCC);
+                                                    else
+                                                        grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(-1.0);
+                                                }
+                                                
+                                                //find peak position
+                                                double temp_rho;
+                                                if(check_ortho && count_GNCC > 0) // GNCC check
+                                                    temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
+                                                else
+                                                {
+                                                    if(count_INCC > 0)
+                                                        temp_rho = sum_INCC_multi/count_INCC;
+                                                    else
+                                                        temp_rho = -1.0;
+                                                }
+                                                
+                                                FindPeakNcc(*plevelinfo.Pyramid_step, iteration, pt_index, temp_rho, iter_height, check_rho, pre_rho, pre_height, direction, max_WNCC, nccresult);
                                             }
                                             else
                                             {
-                                                if(!check_matching_rate && !IsRA)
+                                                if(!(*plevelinfo.check_matching_rate) && !IsRA)
                                                     grid_voxel[pt_index][grid_voxel_hindex].flag_cal = false;
                                             }
                                         }
-                                    }
-                                }  // end ti loop
-                                
-                                //if(IsRA || check_matching_rate || nccresult[pt_index].check_height_change/*|| (Pyramid_step == 0 && proinfo->DEM_resolution < 2)*/)
-                                {
-                                    //find peak position
-                                    if(check_ortho && count_GNCC > 0)
-                                        temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
-                                    else
-                                    {
-                                        if(count_INCC > 0)
-                                            temp_rho = sum_INCC_multi/count_INCC;
-                                        else
-                                            temp_rho = -1.0;
-                                    }
-                                    
-                                     grid_index           = pt_index;
-                                     
-                                     
-                                     if(temp_rho >= 0 && pre_rho >= 0)
-                                         diff_rho = temp_rho - pre_rho;
-                                     else if(temp_rho < 0 && pre_rho < 0)
-                                         diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
-                                     else if(temp_rho >= 0 && pre_rho < 0)
-                                         diff_rho = 1;
-                                     else
-                                         diff_rho = -1;
-                                     
-                                     if(diff_rho > 0)
-                                         t_direction = 1;
-                                     else if(diff_rho < 0)
-                                         t_direction = -1;
-                                     else
-                                         t_direction = 0;
-                                     
-                                     if(!check_rho)
-                                     {
-                                         check_rho   = true;
-                                         t_direction = -1;
-                                     }
-                                     else if(pre_rho != -1)
-                                     {
-                                         bool check_peak = false;
-                                         
-                                         if (Pyramid_step == 0 && iteration == 3)
-                                         {
-                                             if(direction > 0 && t_direction < 0 )
-                                                 check_peak = true;
-                                         }
-                                         else if(Pyramid_step == 4 && iteration < 3)
-                                         {
-                                             if (direction > 0 && t_direction < 0)
-                                                 check_peak = true;
-                                         }
-                                         else
-                                         {
-                                             if (direction > 0 && t_direction < 0)
-                                                 check_peak = true;
-                                         }
-                                     
-                                         if( check_peak )
-                                         {
-                                             if(nccresult[grid_index].result4 < 10)
-                                                 nccresult[grid_index].result4 += 1;
-                                             if(nccresult[grid_index].result0 < DoubleToSignedChar_result(pre_rho))
-                                             {
-                                                 double temp_1;
-                                                 float temp_2;
-                                                 temp_1 = SignedCharToDouble_result(nccresult[grid_index].result0);
-                                                 nccresult[grid_index].result0 = DoubleToSignedChar_result(pre_rho);
-                                             
-                                                 temp_2 = nccresult[grid_index].result2;
-                                                 nccresult[grid_index].result2 = pre_height;
-                                             
-                                                 //nccresult[grid_index].INCC = pre_INCC_roh;
-                                                 //nccresult[grid_index].GNCC = pre_GNCC_roh;
-                                             
-                                                 if(nccresult[grid_index].result1 < DoubleToSignedChar_result(temp_1))
-                                                 {
-                                                     nccresult[grid_index].result1 = DoubleToSignedChar_result(temp_1);
-                                                     nccresult[grid_index].result3 = temp_2;
-                                                 }
-                                             }
-                                             else
-                                             {
-                                                 if(nccresult[grid_index].result1 < DoubleToSignedChar_result(pre_rho))
-                                                 {
-                                                     nccresult[grid_index].result1 = DoubleToSignedChar_result(pre_rho);
-                                                     nccresult[grid_index].result3 = pre_height;
-                                                 }
-                                             }
-                                         }
-                                     }
-                                     
-                                     pre_rho                = temp_rho;
-                                     
-                                     pre_height             = iter_height;
-                                     direction              = t_direction;
-                                     
-                                     //pre_INCC_roh           = sum_INCC_multi/count_INCC;
-                                     //pre_GNCC_roh           = sum_GNCC_multi/count_GNCC;
-                                    
-                                    if(max_WNCC < temp_rho)
-                                    {
-                                        max_WNCC = temp_rho;
-                                        max_WNCC_pos = grid_voxel_hindex;
-                                    }
-                                     //nccresult[grid_index].roh_count ++;
-                                }/*
-                                else
-                                {
-                                    //grid_voxel[pt_index][grid_voxel_hindex].INCC = sum_INCC_multi/count_INCC;
-                                    if(check_ortho && count_GNCC > 0)
-                                    {
-                                        if(count_INCC > 0)
-                                            temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
-                                        else
-                                            temp_rho = sum_GNCC_multi/count_GNCC;
-                                    } 
-                                    else
-                                    {
-                                        if(count_INCC > 0)
-                                            temp_rho = sum_INCC_multi/count_INCC;
-                                        else
-                                            temp_rho = -1.0;
-                                    }
-                                      
-                                    if(temp_rho > 1.0)
-                                        temp_rho = 1.0;
-                                    if(temp_rho < -1.0)
-                                        temp_rho = -1.0;
-                                    
-                            
-                                    if(grid_voxel[pt_index][grid_voxel_hindex].flag_cal && nccresult[pt_index].check_height_change)
-                                    {
-                                        //grid_voxel[pt_index][grid_voxel_hindex].WNCC = temp_rho;
-
-                                        //grid_voxel[pt_index][grid_voxel_hindex].SSD = (int)(Sum_intensity_diff/count_INCC);
-                                    
-                                        //if(grid_voxel[pt_index][grid_voxel_hindex].SSD < 1)
-                                        //    grid_voxel[pt_index][grid_voxel_hindex].SSD = 1;
-                                    
-                                        if(max_WNCC < temp_rho)
-                                        {
-                                            max_WNCC = temp_rho;
-                                            max_WNCC_pos = grid_voxel_hindex;
-                                        }
-                                    }
-                                }
-                                  */
-                            }//check_height_change
-                            /*else
-                            {
-                                printf("verticallinelocus %f\t%d\t%d\t%d\t%d\n",iter_height,nccresult[pt_index].minHeight,GridPT3[pt_index].minHeight,nccresult[pt_index].maxHeight,GridPT3[pt_index].maxHeight);
-                                exit(1);
-                            }*/
-                        }// end iter_height loop
-                        //if(!IsRA)
-                        {
-                            if(nccresult[pt_index].check_height_change)
-                            {
-                                nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
-                                //nccresult[pt_index].max_WNCC_pos = max_WNCC_pos;
-                            }
+                                    }//end iter_height loop
+                                }// end grid_voxel_hindex loop
+                                if(nccresult[pt_index].check_height_change)
+                                    nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
+                            }//end INCC computation
                         }
-                    }  // end grid_voxel_hindex loop
-                }
-                //printf("id inside boundary %d\t%d\n",pts_row,pts_col);
-            }
-            else
-            {
-                //printf("id out of boundary %d\t%d\n",pts_row,pts_col);
-            }
+                    }  // end ti loop
+                }//end check blunder cell
+            }//end check_image_boundary
         } // end omp for
         for (int k=0; k<3; k++)
         {
@@ -12212,7 +11063,6 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
     
     printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
     
-    
     if(check_ortho)
     {
         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -12227,22 +11077,351 @@ int VerticalLineLocus(VOXEL **grid_voxel, ProInfo *proinfo, NCCresult* nccresult
                     if(all_im_cd_next[ti])
                         free(all_im_cd_next[ti]);
                 }
-                    
             }
         }
     }
-
+    
     if (all_im_cd)
         free(all_im_cd);
-
+    
     if(check_combined_WNCC)
     {
         if (all_im_cd_next)
             free(all_im_cd_next);
     }
-
+    
     return Accessable_grid;
 }  // end VerticalLineLocus
+
+void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **all_im_cd, D2DPOINT **all_im_cd_next)
+{
+    sub_imagesize_w = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
+    sub_imagesize_h = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
+    
+    if(check_combined_WNCC)
+    {
+        sub_imagesize_w_next = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution_next)+1;
+        sub_imagesize_h_next = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution_next)+1;
+    }
+    
+    printf("imsize %d %d %u %u\n",sub_imagesize_w,sub_imagesize_h,plevelinfo.Size_Grid2D->width,plevelinfo.Size_Grid2D->height);
+    
+    const long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+    long int sub_imagesize_total_next;
+    if(check_combined_WNCC)
+        sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
+    
+    printf("sub_imagesize_total %ld\n",sub_imagesize_total);
+    
+    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    {
+        if(proinfo->check_selected_image[ti])
+        {
+            all_im_cd[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
+            if (all_im_cd[ti] == NULL)
+            {
+                printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
+                exit(1);
+            }
+            
+            if(check_combined_WNCC)
+            {
+                all_im_cd_next[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total_next);
+                if (all_im_cd_next[ti] == NULL)
+                {
+                    printf("ERROR: Out of memory - all_left_im_cd_next is NULL\n");
+                    exit(1);
+                }
+            }
+        }
+    }
+    
+#pragma omp parallel for schedule(guided)
+    for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
+    {
+        long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
+        long int pts_col = iter_count % sub_imagesize_w;
+        
+        double t_X     = plevelinfo.Boundary[0] + pts_col*im_resolution;
+        double t_Y     = plevelinfo.Boundary[1] + pts_row*im_resolution;
+        
+        long int t_col   = (long int)((t_X - plevelinfo.Boundary[0])/(*plevelinfo.grid_resolution));
+        long int t_row   = (long int)((t_Y - plevelinfo.Boundary[1])/(*plevelinfo.grid_resolution));
+        
+        long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
+        long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+        
+        
+        long int t_col_next, t_row_next;
+        long int pt_index_im_next;
+        if(check_combined_WNCC)
+        {
+            t_col_next   = (long int)((t_X - plevelinfo.Boundary[0])/im_resolution_next);
+            t_row_next   = (long int)((t_Y - plevelinfo.Boundary[1])/im_resolution_next);
+            
+            pt_index_im_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
+        }
+        
+        if(pt_index < *plevelinfo.Grid_length && t_col < plevelinfo.Size_Grid2D->width && t_row < plevelinfo.Size_Grid2D->height)
+        {
+            if(GridPT3[pt_index].Height != -1000)
+            {
+                D3DPOINT temp_GP;
+                D2DPOINT temp_GP_p;
+                
+                if(proinfo->sensor_type == SB)
+                {
+                    temp_GP_p.m_X = t_X;
+                    temp_GP_p.m_Y = t_Y;
+                    
+                    temp_GP     = ps2wgs_single(*plevelinfo.param,temp_GP_p);
+                }
+                else
+                {
+                    temp_GP.m_X   = t_X;
+                    temp_GP.m_Y   = t_Y;
+                }
+                temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
+                
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    if(proinfo->check_selected_image[ti])
+                    {
+                        D2DPOINT Imagecoord;
+                        D2DPOINT Imagecoord_py;
+                        if(proinfo->sensor_type == SB)
+                            Imagecoord      = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP);
+                        else
+                        {
+                            D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                            Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+                        }
+                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+                        
+                        all_im_cd[ti][pt_index_im] = Imagecoord_py;
+                        
+                        if(check_combined_WNCC)
+                        {
+                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos_next[ti],*plevelinfo.Pyramid_step - 1);
+                            if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
+                            {
+                                all_im_cd_next[ti][pt_index_im_next] = Imagecoord_py;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool check_next, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
+{
+    CSize LImagesize, RImagesize;
+    if(!check_next)
+    {
+        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step];
+        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step];
+    }
+    else
+    {
+        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step - 1];
+        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step - 1];
+    }
+    
+    if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
+    {
+        const long int position = (long int) pos_left.m_X + (long int) pos_left.m_Y *(long int)LImagesize.width;
+        const long int position_right = (long int) pos_right.m_X + (long int) pos_right.m_Y *(long int)RImagesize.width;
+        
+        
+        double left_patch, left_mag_patch, right_patch, right_mag_patch;
+        
+        double dx          =  pos_left.m_X - (int)(pos_left.m_X);
+        double dy          =  pos_left.m_Y - (int)(pos_left.m_Y);
+        double dx_r        =  pos_right.m_X - (int)(pos_right.m_X);
+        double dy_r        =  pos_right.m_Y - (int)(pos_right.m_Y);
+        
+        if(!check_next)
+        {
+            //interpolate left_patch
+            left_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.reference_id], position, LImagesize, dx, dy);
+            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.reference_id], position,LImagesize, dx, dy);
+        
+            //interpolate right_patch
+            right_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+        }
+        else
+        {
+            //interpolate left_patch
+            left_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.reference_id], position, LImagesize, dx, dy);
+            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.reference_id], position,LImagesize, dx, dy);
+        
+            //interpolate right_patch
+            right_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+        }
+            
+        if(left_patch > 0 && right_patch > 0)
+        {
+            rkernel.left_patch_vecs[0][Count_N[0]] = left_patch;
+            rkernel.left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
+            rkernel.right_patch_vecs[0][Count_N[0]] = right_patch;
+            rkernel.right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
+            Count_N[0]++;
+            
+            const int size_1        = (int)(rkernel.Half_template_size/2);
+            if(radius2 <= (rkernel.Half_template_size - size_1 + 1)*(rkernel.Half_template_size - size_1 + 1))
+            {
+                if(row >= -rkernel.Half_template_size + size_1 && row <= rkernel.Half_template_size - size_1)
+                {
+                    if(col >= -rkernel.Half_template_size + size_1 && col <= rkernel.Half_template_size - size_1)
+                    {
+                        rkernel.left_patch_vecs[1][Count_N[1]] = left_patch;
+                        rkernel.left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
+                        rkernel.right_patch_vecs[1][Count_N[1]] = right_patch;
+                        rkernel.right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
+                        Count_N[1]++;
+                    }
+                }
+            }
+            
+            const int size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+            if(radius2 <= (rkernel.Half_template_size - size_2 + 1)*(rkernel.Half_template_size - size_2 + 1))
+            {
+                if(row >= -rkernel.Half_template_size + size_2 && row <= rkernel.Half_template_size - size_2)
+                {
+                    if(col >= -rkernel.Half_template_size + size_2 && col <= rkernel.Half_template_size - size_2)
+                    {
+                        rkernel.left_patch_vecs[2][Count_N[2]] = left_patch;
+                        rkernel.left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
+                        rkernel.right_patch_vecs[2][Count_N[2]] = right_patch;
+                        rkernel.right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
+                        Count_N[2]++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void ComputeMultiNCC(SetKernel &rsetkernel, const bool check_next, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi)
+{
+    if(Count_N[0] > Th_rho && Count_N[1] > Th_rho && Count_N[2] > Th_rho)
+    {
+        double temp_roh = 0;
+        double count_roh = 0;
+        double temp_NCC_roh;
+        
+        for (int k=0; k<3; k++)
+        {
+            const double ncc = Correlate(rsetkernel.left_patch_vecs[k], rsetkernel.right_patch_vecs[k], Count_N[k]);
+            if (ncc != -99)
+            {
+                count_roh++;
+                temp_roh += ncc;
+            }
+            
+            const double ncc_mag = Correlate(rsetkernel.left_mag_patch_vecs[k], rsetkernel.right_mag_patch_vecs[k], Count_N[k]);
+            if (ncc_mag != -99)
+            {
+                count_roh++;
+                temp_roh += ncc_mag;
+            }
+        }
+        if (count_roh > 0)
+        {
+            temp_NCC_roh = temp_roh/count_roh;
+            sum_NCC_multi += temp_NCC_roh;
+            count_NCC ++;
+        }
+    }
+}
+
+
+void FindPeakNcc(const int Pyramid_step, const int iteration, const long int grid_index, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, float &pre_height, int &direction, double &max_WNCC, NCCresult *nccresult)
+{
+    double diff_rho;
+    int t_direction;
+    if(temp_rho >= 0 && pre_rho >= 0)
+        diff_rho = temp_rho - pre_rho;
+    else if(temp_rho < 0 && pre_rho < 0)
+        diff_rho = -(fabs(temp_rho) - fabs(pre_rho));
+    else if(temp_rho >= 0 && pre_rho < 0)
+        diff_rho = 1;
+    else
+        diff_rho = -1;
+    
+    if(diff_rho > 0)
+        t_direction = 1;
+    else if(diff_rho < 0)
+        t_direction = -1;
+    else
+        t_direction = 0;
+    
+    if(!check_rho)
+    {
+        check_rho   = true;
+        t_direction = -1;
+    }
+    else if(pre_rho != -1)
+    {
+        bool check_peak = false;
+        
+        if (Pyramid_step == 0 && iteration == 3)
+        {
+            if(direction > 0 && t_direction < 0 )
+                check_peak = true;
+        }
+        else if(Pyramid_step == 4 && iteration < 3)
+        {
+            if (direction > 0 && t_direction < 0)
+                check_peak = true;
+        }
+        else
+        {
+            if (direction > 0 && t_direction < 0)
+                check_peak = true;
+        }
+        
+        if( check_peak )
+        {
+            if(nccresult[grid_index].result4 < 10)
+                nccresult[grid_index].result4 += 1;
+            if(nccresult[grid_index].result0 < DoubleToSignedChar_result(pre_rho))
+            {
+                double temp_1 = SignedCharToDouble_result(nccresult[grid_index].result0);
+                nccresult[grid_index].result0 = DoubleToSignedChar_result(pre_rho);
+                
+                float temp_2 = nccresult[grid_index].result2;
+                nccresult[grid_index].result2 = pre_height;
+                
+                if(nccresult[grid_index].result1 < DoubleToSignedChar_result(temp_1))
+                {
+                    nccresult[grid_index].result1 = DoubleToSignedChar_result(temp_1);
+                    nccresult[grid_index].result3 = temp_2;
+                }
+            }
+            else
+            {
+                if(nccresult[grid_index].result1 < DoubleToSignedChar_result(pre_rho))
+                {
+                    nccresult[grid_index].result1 = DoubleToSignedChar_result(pre_rho);
+                    nccresult[grid_index].result3 = pre_height;
+                }
+            }
+        }
+    }
+    
+    pre_rho                = temp_rho;
+    pre_height             = iter_height;
+    direction              = t_direction;
+    
+    if(max_WNCC < temp_rho)
+        max_WNCC = temp_rho;
+}
 
 //void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index, FILE* pfile)
 void SGM_start_pos(long total_grid_size,NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, long pt_index, bool check_ortho, double ncc_alpha, double ncc_beta, float* LHcost_pre,float **SumCost, double ortho_th, int pair_index,double height_step_interval)
@@ -13792,66 +12971,24 @@ void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level
     
 }
 
-double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
-                                 CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-                                 CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-                                 uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
-                                 char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary, double* minmaxHeight, double seedDEMsigma)
+void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagImages, const double DEM_resolution, const double ori_im_resolution, const double * const * const *RPCs, const CSize * const *Imagesizes, const uint16 * const *Images, uint8 Template_size, const CSize Size_Grid2D, const TransParam param, const D2DPOINT* GridPts, UGRID *GridPT3, const uint8 NumofIAparam, const double * const *ImageAdjust, const uint8 Pyramid_step, const D2DPOINT *Startpos, const double* Boundary, const double* minmaxHeight)
 {
-    printf("minmax %f %f\n",minmaxHeight[0],minmaxHeight[1]);
-    
-    int Half_template_size;
-    //double* nccresult1;
-    //double* orthoheight;
-    
-    //if(Pyramid_step >= 1)
-    {
-        double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
-        if(Template_size < t_Template_size)
-            Template_size = t_Template_size;
-        
-        printf("VerticalLineLocus_seeddem : t Template_size %d\t%d\n",t_Template_size,Template_size);
-    }
-    
-    Half_template_size = (int)(Template_size/2.0);
-    
-    double subBoundary[4];
-    
-    double h_divide;
-    double height_step;
-    
-    D2DPOINT temp_p1, temp_p2;
-    D3DPOINT temp_GrP;
-    double temp_LIA[2] = {0,0};
-    
-    int numofpts;
+    double template_area = 5.0;
+    int t_Template_size = (int)((template_area/(ori_im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
+    if(Template_size < t_Template_size)
+        Template_size = t_Template_size;
+
+    int Half_template_size = (int)(Template_size/2.0);
+    double subBoundary[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
     F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
-    
-    int sub_imagesize_w, sub_imagesize_h;
-    int pixel_buffer = 1000;
-    int GNCC_level  = 3;
-    bool check_ortho = false;
-    int Mag_th = 0;
-    double ncc_alpha, ncc_beta;
-    
-    subBoundary[0]    = Boundary[0];
-    subBoundary[1]    = Boundary[1];
-    subBoundary[2]    = Boundary[2];
-    subBoundary[3]    = Boundary[3];
-    
-    numofpts = Size_Grid2D.height*Size_Grid2D.width;
-    
-    //nccresult1 = (double*)calloc(sizeof(double),numofpts);
-    //orthoheight    = (double*)calloc(sizeof(double),numofpts);
-    
-    im_resolution = im_resolution*pwrtwo(Pyramid_step);
-    
-    sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-    sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
+    long int numofpts = Size_Grid2D.height*Size_Grid2D.width;
+    double im_resolution = ori_im_resolution*pwrtwo(Pyramid_step);
+    int sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
+    int sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
     long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+
     printf("sub_imagesize_total %ld\n",sub_imagesize_total);
-    
+
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
@@ -13864,41 +13001,34 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
             }
         }
     }
-    
+
 #pragma omp parallel for schedule(guided)
     for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
     {
-        int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-        int pts_col = iter_count % sub_imagesize_w;
-        int pt_index;
-        double t_X, t_Y;
-        int t_col, t_row;
-        long int pt_index_im;
-        
-        t_X     = subBoundary[0] + pts_col*im_resolution;
-        t_Y     = subBoundary[1] + pts_row*im_resolution;
-        
-        t_col   = (int)((t_X - subBoundary[0])/DEM_resolution);
-        t_row   = (int)((t_Y - subBoundary[1])/DEM_resolution);
-        
-        pt_index    = t_row*Size_Grid2D.width + t_col;
-        pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-        
-        if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-           t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
+        long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
+        long int pts_col = iter_count % sub_imagesize_w;
+
+        double t_X     = subBoundary[0] + pts_col*im_resolution;
+        double t_Y     = subBoundary[1] + pts_row*im_resolution;
+
+        long int t_col   = (long int)((t_X - subBoundary[0])/DEM_resolution);
+        long int t_row   = (long int)((t_Y - subBoundary[1])/DEM_resolution);
+
+        long int pt_index    = t_row*(long int)Size_Grid2D.width + t_col;
+        long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+
+        if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 && t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
         {
             if(GridPT3[pt_index].Height != -1000)
             {
                 D3DPOINT temp_GP;
                 D2DPOINT temp_GP_p;
-                D2DPOINT Imagecoord;
-                D2DPOINT Imagecoord_py;
-                
+
                 if(proinfo->sensor_type == SB)
                 {
                     temp_GP_p.m_X = t_X;
                     temp_GP_p.m_Y = t_Y;
-                    
+
                     temp_GP_p     = ps2wgs_single(param,temp_GP_p);
                     temp_GP.m_X   = temp_GP_p.m_X;
                     temp_GP.m_Y   = temp_GP_p.m_Y;
@@ -13909,11 +13039,13 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                     temp_GP.m_Y   = t_Y;
                 }
                 temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
-                
+
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
                     if(proinfo->check_selected_image[ti])
                     {
+                        D2DPOINT Imagecoord;
+
                         if(proinfo->sensor_type == SB)
                             Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
                         else
@@ -13921,8 +13053,9 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
                             D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
                             Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
                         }
-                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
-                        
+
+                        D2DPOINT Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
+
                         all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
                         all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
                     }
@@ -13930,236 +13063,221 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
             }
         }
     }
-    
+
     int count_total = 0;
     int count_low = 0;
 #pragma omp parallel
     {
-// Make patch vectors thread private rather than private to each loop iteration
-    double *left_patch_vecs[3];
-    double *right_patch_vecs[3];
-    double *left_mag_patch_vecs[3];
-    double *right_mag_patch_vecs[3];
-    int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-    for (int k=0; k<3; k++)
-    {
-        left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-    }
-
-#pragma omp for reduction(+:count_low, count_total) schedule(guided)
-    for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
-    {
-        int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-        int pts_col = iter_count % Size_Grid2D.width;
-        int pt_index;
-        pt_index = pts_row*Size_Grid2D.width + pts_col;
-        
-        int reference_id = 0;
-        CSize LImagesize, RImagesize;
-        
-        LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-        LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
-        
-        if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
+        // Make patch vectors thread private rather than private to each loop iteration
+        double *left_patch_vecs[3];
+        double *right_patch_vecs[3];
+        double *left_mag_patch_vecs[3];
+        double *right_mag_patch_vecs[3];
+        int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
+        for (int k=0; k<3; k++)
         {
-            for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
+            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
+        }
+
+        long int data_length = (long)Size_Grid2D.height*(long)Size_Grid2D.width;
+#pragma omp for reduction(+:count_low, count_total) schedule(guided)
+        for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
+        {
+            long int pts_row = (long int)(floor(iter_count/Size_Grid2D.width));
+            long int pts_col = iter_count % Size_Grid2D.width;
+            long int pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
+
+            int reference_id = 0;
+            CSize LImagesize, RImagesize;
+
+            LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
+            LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
+
+            if(pt_index < data_length && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
             {
-                if(proinfo->check_selected_image[ti])
+                for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
                 {
-                    RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                    RImagesize.height = Imagesizes[ti][Pyramid_step].height;
-                    
-                    int Count_N[3] = {0};
-                    
-                    double nccresult = -10.0;
-                    //nccresult1[pt_index] = -10.0;
-                    
-                    if(GridPT3[pt_index].Height != -1000)
-                        count_total+=1;
-                    
-                    for(int row = -Half_template_size; row <= Half_template_size ; row++)
+                    if(proinfo->check_selected_image[ti])
                     {
-                        for(int col = -Half_template_size; col <= Half_template_size ; col++)
+                        RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
+                        RImagesize.height = Imagesizes[ti][Pyramid_step].height;
+
+                        int Count_N[3] = {0};
+
+                        double nccresult = -10.0;
+
+                        if(GridPT3[pt_index].Height != -1000)
+                            count_total+=1;
+
+                        for(long int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
-                            double pos_row_left = -100;
-                            double pos_col_left = -100;
-                            double pos_row_right= -100;
-                            double pos_col_right= -100;
-                            
-                            long int pt_index_temp,pt_index_dem;
-                            double t_X, t_Y;
-                            int t_col, t_row, tt_col, tt_row;
-                            
-                            t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                            t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
-                            
-                            t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                            t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
-                            
-                            tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                            tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
-                            
-                            pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
-                            pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
-                            
-                            if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                               t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
-                               pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                               tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                                all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                            for(long int col = -Half_template_size; col <= Half_template_size ; col++)
                             {
-                                if(GridPT3[pt_index_dem].Height != -1000)
+                                double t_X     = GridPts[pt_index].m_X + col*im_resolution;
+                                double t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+
+                                long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
+                                long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
+
+                                long int tt_col  = (long int)((t_X - subBoundary[0])/DEM_resolution);
+                                long int tt_row  = (long int)((t_Y - subBoundary[1])/DEM_resolution);
+
+                                long int pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
+                                long int pt_index_dem  = tt_row*(long int)Size_Grid2D.width + tt_col;
+
+                                if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
+                                        t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
+                                        pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
+                                        tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
+                                        all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                 {
-                                    pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
-                                    pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
-                                    pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
-                                    pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
-                                    
-                                    if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                        pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                    if(GridPT3[pt_index_dem].Height != -1000)
                                     {
-                                        double dx;
-                                        double dy;
-                                        long int position;
+                                        double pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
+                                        double pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
+                                        double pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
+                                        double pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
 
-                                        //interpolate left_patch
-                                        dx = pos_col_left - (int) (pos_col_left);
-                                        dy = pos_row_left - (int) (pos_row_left);
-                                        position = (long int) pos_col_left + (long int) pos_row_left * LImagesize.width;
-                                        double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                        double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
-                                        
-                                        //interpolate right_patch
-                                        dx = pos_col_right - (int) (pos_col_right);
-                                        dy = pos_row_right - (int) (pos_row_right);
-                                        position = (long int) (pos_col_right) + (long int) pos_row_right * RImagesize.width;
-                                        double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                        double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
-                                        
-                                        //end interpolation
-
-                                        left_patch_vecs[0][Count_N[0]] = left_patch;
-                                        left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-                                        right_patch_vecs[0][Count_N[0]] = right_patch;
-                                        right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
-                                        Count_N[0]++;
-                                        
-                                        int size_1, size_2;
-                                        size_1        = (int)(Half_template_size/2);
-                                        if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                        if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
+                                                pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
                                         {
-                                            if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                            double dx;
+                                            double dy;
+                                            long int position;
+
+                                            //interpolate left_patch
+                                            dx = pos_col_left - (int) (pos_col_left);
+                                            dy = pos_row_left - (int) (pos_row_left);
+                                            position = (long int) pos_col_left + (long int) pos_row_left * (long int)LImagesize.width;
+                                            double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
+                                            double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
+
+                                            //interpolate right_patch
+                                            dx = pos_col_right - (int) (pos_col_right);
+                                            dy = pos_row_right - (int) (pos_row_right);
+                                            position = (long int) (pos_col_right) + (long int) pos_row_right * (long int)RImagesize.width;
+                                            double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
+                                            double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
+
+                                            //end interpolation
+
+                                            left_patch_vecs[0][Count_N[0]] = left_patch;
+                                            left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
+                                            right_patch_vecs[0][Count_N[0]] = right_patch;
+                                            right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
+                                            Count_N[0]++;
+
+                                            int size_1        = (int)(Half_template_size/2);
+                                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
                                             {
-                                                left_patch_vecs[1][Count_N[1]] = left_patch;
-                                                left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                                                right_patch_vecs[1][Count_N[1]] = right_patch;
-                                                right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
-                                                Count_N[1]++;
+                                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
+                                                {
+                                                    left_patch_vecs[1][Count_N[1]] = left_patch;
+                                                    left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
+                                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                                    right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
+                                                    Count_N[1]++;
+                                                }
                                             }
-                                        }
-                                        
-                                        size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                        if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                        {
-                                            if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+
+                                            int size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
                                             {
-                                                left_patch_vecs[2][Count_N[2]] = left_patch;
-                                                left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                                                right_patch_vecs[2][Count_N[2]] = right_patch;
-                                                right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
-                                                Count_N[2]++;
+                                                if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
+                                                {
+                                                    left_patch_vecs[2][Count_N[2]] = left_patch;
+                                                    left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
+                                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                                    right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
+                                                    Count_N[2]++;
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        } // end col loop
-                    } // end row loop
-                    
-                    // Compute correlations
-                    if(Count_N[0] > 0)
-                    {
-                        double temp_roh = 0;
-                        double count_roh = 0;
-                        for (int k=0; k<3; k++)
+                            } // end col loop
+                        } // end row loop
+
+                        // Compute correlations
+                        if(Count_N[0] > 0)
                         {
-                            double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-                            if (ncc != -99)
+                            double temp_roh = 0;
+                            double count_roh = 0;
+                            for (int k=0; k<3; k++)
                             {
-                                count_roh++;
-                                temp_roh += ncc;
+                                double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
+                                if (ncc != -99)
+                                {
+                                    count_roh++;
+                                    temp_roh += ncc;
+                                }
+
+                                double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
+                                if (ncc_mag != -99)
+                                {
+                                    count_roh++;
+                                    temp_roh += ncc_mag;
+                                }
+                            }
+                            if (count_roh > 0)
+                                nccresult = temp_roh/count_roh;
+                            else
+                                nccresult = -1;
+                        }
+                        else 
+                        {
+                            nccresult = -1;
+                        }
+                        //nccresult1[pt_index] = nccresult;
+
+                        if(nccresult < 0.3)
+                        {
+                            if(!proinfo->check_Matchtag)
+                            {
+                                GridPT3[pt_index].minHeight     -= 100;
+                                if(GridPT3[pt_index].minHeight < minmaxHeight[0])
+                                    GridPT3[pt_index].minHeight     = floor(minmaxHeight[0]);
+                                GridPT3[pt_index].maxHeight     += 100;
+                                if(GridPT3[pt_index].maxHeight > minmaxHeight[1])
+                                    GridPT3[pt_index].maxHeight     = ceil(minmaxHeight[1]);
+
+                                if(nccresult < 0.1)
+                                {
+                                    GridPT3[pt_index].minHeight  = -9999;
+                                    GridPT3[pt_index].maxHeight  = -9999;
+                                }
                             }
 
-                            double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-                            if (ncc_mag != -99)
-                            {
-                                count_roh++;
-                                temp_roh += ncc_mag;
-                            }
+                            if(nccresult > -1)
+                                count_low += 1;
                         }
-                        if (count_roh > 0)
-                            nccresult = temp_roh/count_roh;
-                        else
-                            nccresult = -1;
-                    }
-                    else 
-                    {
-                        nccresult = -1;
-                    }
-                    //nccresult1[pt_index] = nccresult;
-                    
-                    if(nccresult < 0.3)
-                    {
-                        if(!proinfo->check_Matchtag)
+
+                        GridPT3[pt_index].ortho_ncc[ti] = DoubleToSignedChar_grid(nccresult);
+
+
+                        if(proinfo->check_Matchtag)
                         {
-                            GridPT3[pt_index].minHeight     -= 100;
-                            if(GridPT3[pt_index].minHeight < minmaxHeight[0])
-                                GridPT3[pt_index].minHeight     = floor(minmaxHeight[0]);
-                            GridPT3[pt_index].maxHeight     += 100;
-                            if(GridPT3[pt_index].maxHeight > minmaxHeight[1])
-                                GridPT3[pt_index].maxHeight     = ceil(minmaxHeight[1]);
-                        
-                            if(nccresult < 0.1)
-                            {
-                                GridPT3[pt_index].minHeight  = -9999;
-                                GridPT3[pt_index].maxHeight  = -9999;
-                            }
+                            if(nccresult >= 0.2)
+                                GridPT3[pt_index].roh   = DoubleToSignedChar_grid(nccresult);
+                            else
+                                GridPT3[pt_index].roh   = DoubleToSignedChar_grid(-0.2);
                         }
-                        
-                        if(nccresult > -1)
-                            count_low += 1;
                     }
-                    
-                    GridPT3[pt_index].ortho_ncc[ti] = DoubleToSignedChar_grid(nccresult);
-                    
-                    
-                    if(proinfo->check_Matchtag)
-                    {
-                        if(nccresult >= 0.2)
-                            GridPT3[pt_index].roh   = DoubleToSignedChar_grid(nccresult);
-                        else
-                            GridPT3[pt_index].roh   = DoubleToSignedChar_grid(-0.2);
-                    }
-                    
-                    //GridPT3[pt_index].Mean_ortho_ncc = nccresult - 0.2;
-                    //printf("row col %d\t%d\t%f\n",pts_row,pts_col,GridPT3[pt_index].roh);
-                }
-            } // end ti loop
+                } // end ti loop
+            }
+        } // end omp for
+
+        // free thread-private vectors
+        for (int k=0; k<3; k++)
+        {
+            free(left_patch_vecs[k]);
+            free(right_patch_vecs[k]);
+            free(left_mag_patch_vecs[k]);
+            free(right_mag_patch_vecs[k]);
         }
-        
-    } // end omp for
-    
-    // free thread-private vectors
-    for (int k=0; k<3; k++)
-    {
-        free(left_patch_vecs[k]);
-        free(right_patch_vecs[k]);
-        free(left_mag_patch_vecs[k]);
-        free(right_mag_patch_vecs[k]);
-    }
     } // end omp parallel
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
@@ -14171,19 +13289,11 @@ double VerticalLineLocus_seeddem(ProInfo *proinfo,uint16 **MagImages, double DEM
     }
     if (all_im_cd)
         free(all_im_cd);
-    
-    //free(orthoheight);
-    //free(nccresult1);
+
     printf("%d %d\n",count_low,count_total);
-    
-    return (double)(count_low)/(double)(count_total)*100;
 }
 
-bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagImages, double DEM_resolution, double im_resolution, double ***RPCs,
-                               CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-                               CSize Size_Grid2D, TransParam param, D2DPOINT* GridPts, D2DPOINT *Grid_wgs, UGRID *GridPT3,
-                               uint8 NumofIAparam, double **ImageAdjust, uint8 Pyramid_step, D2DPOINT *Startpos,
-                               char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,double* Boundary,uint8 **ori_images, int blunder_selected_level, bool bblunder)
+bool VerticalLineLocus_blunder(const ProInfo *proinfo,float* nccresult, const uint16 * const *MagImages, double DEM_resolution, double im_resolution, const double * const * const *RPCs, const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, uint8 Template_size, CSize Size_Grid2D, TransParam param,const D2DPOINT* GridPts,const D2DPOINT *Grid_wgs, UGRID *GridPT3, uint8 NumofIAparam, const double * const *ImageAdjust, uint8 Pyramid_step,const D2DPOINT *Startpos,const char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,const double* Boundary,const uint8 * const *ori_images, int blunder_selected_level, bool bblunder)
 {
     //uint16* orthoimage_l, *orthoimage_r;
     
@@ -14223,21 +13333,12 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagIm
     
     double subBoundary[4];
     
-    double h_divide;
-    double height_step;
-    
-    D2DPOINT temp_p1, temp_p2;
-    D3DPOINT temp_GrP;
-    double temp_LIA[2] = {0,0};
     
     int numofpts;
     F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
     
     int sub_imagesize_w, sub_imagesize_h;
-    int pixel_buffer = 1000;
-    int GNCC_level  = 3;
     bool check_ortho = false;
-    int Mag_th = 0;
     
     subBoundary[0]    = Boundary[0];
     subBoundary[1]    = Boundary[1];
@@ -14602,11 +13703,11 @@ bool VerticalLineLocus_blunder(ProInfo *proinfo,float* nccresult, uint16 **MagIm
 
 int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
                              uint16 **MagImages, uint16 **Images,
-                             double DEM_resolution, double im_resolution, double ***RPCs,
+                             double DEM_resolution, double im_resolution, const double * const * const *RPCs,
                              CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
                              double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
                              D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,
-                             double* boundary,double *F_sncc)
+                             const double* boundary,double *F_sncc)
 {
     double h_divide;
     double height_step;
@@ -15021,7 +14122,7 @@ D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
     
 }
 
-D2DPOINT OriginalToPyramid_single(D2DPOINT InCoord, D2DPOINT Startpos, uint8 Pyramid_step)
+D2DPOINT OriginalToPyramid_single(const D2DPOINT InCoord, const D2DPOINT Startpos, const uint8 Pyramid_step)
 {
     D2DPOINT out;
 
@@ -15541,21 +14642,14 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
     return count_MPs;
 }
 
-int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-                uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps, double Hinterval,
-                bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-                uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
-                CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-                TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-                uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
-                uint8 tile_row, uint8 tile_col, uint8 **ori_images, int blunder_selected_level,D3DPOINT *ptslists)
+int DecisionMPs(const ProInfo *proinfo,const bool flag_blunder,const int count_MPs_input,const double* Boundary, UGRID *GridPT3,const uint8 Pyramid_step,const double grid_resolution, const uint8 iteration, const CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps,const double Hinterval, bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight,const uint16 * const *MagImages,const double DEM_resolution, double im_resolution,const double * const * const *RPCs,const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, const uint8 Template_size,const TransParam param,const D2DPOINT* Grid_wgs, const D2DPOINT* GridPts,const uint8 NumofIAparam,const double * const *ImageAdjust,const D2DPOINT *Startpos,const uint8 tile_row,const uint8 tile_col,const uint8 * const *ori_images,const int blunder_selected_level,D3DPOINT *ptslists)
 {
-    char *filename_tri = proinfo->save_filepath;
-    char* save_filepath = proinfo->save_filepath;
-    int pre_DEMtif = proinfo->pre_DEMtif;
-    int IsRA = proinfo->IsRA;
-    double seedDEMsigma = proinfo->seedDEMsigma;
-    double f_demsize = proinfo->DEM_resolution;
+    const char *filename_tri = proinfo->save_filepath;
+    const char* save_filepath = proinfo->save_filepath;
+    const int pre_DEMtif = proinfo->pre_DEMtif;
+    const int IsRA = proinfo->IsRA;
+    const double seedDEMsigma = proinfo->seedDEMsigma;
+    const double f_demsize = proinfo->DEM_resolution;
     
     uint16 count            = 0;
     *p_flag             = true;
@@ -15969,8 +15063,8 @@ int DecisionMPs(ProInfo *proinfo,bool flag_blunder,int count_MPs_input, double* 
 int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
                           uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
                           bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-                          uint16 **MagImages,double DEM_resolution, double im_resolution, double ***RPCs,
-                          CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
+                          uint16 **MagImages,double DEM_resolution, double im_resolution, const double * const * const *RPCs,
+                          const CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
                           TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
                           uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
                           char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level)
@@ -16421,7 +15515,6 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,ui
         double small_th = 0;
         int count_small = 0;
         uint8 max_nodes;
-        double *boundary;
         CSize gridsize;
         //uint32 **savenode;
         //savenode will now be a pointer to a uint
@@ -16467,7 +15560,7 @@ bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,ui
             }
         }
         
-        boundary    = BL_param.Boundary;
+        const double *boundary    = BL_param.Boundary;
         gridsize.width  = BL_param.Size_Grid2D.width;
         gridsize.height = BL_param.Size_Grid2D.height;
             
@@ -17273,7 +16366,7 @@ int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,do
 
 int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param,
                   uint16 **MagImages, uint16 **Images,
-                  double DEM_resolution, double im_resolution, double ***RPCs,
+                  double DEM_resolution, double im_resolution, const double * const * const*RPCs,
                   CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam,
                   double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel,
                   D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, char *filename_mps)
@@ -17282,7 +16375,6 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
     uint32 num_triangles;
     int i;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step = Pyramid_step;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -17297,7 +16389,7 @@ int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris
     pyramid_step    = BL_param.Pyramid_step;
     iteration       = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width  = BL_param.Size_Grid2D.width;
     gridsize.height = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;
@@ -17603,7 +16695,6 @@ UGRID* SetHeightRange_cp(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif
     uint32 num_triangles;
     int i, tcnt;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step, iteration;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -17619,7 +16710,7 @@ UGRID* SetHeightRange_cp(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif
     pyramid_step    = BL_param.Pyramid_step;
     iteration       = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width  = BL_param.Size_Grid2D.width;
     gridsize.height = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;
@@ -17679,7 +16770,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
     uint32 num_triangles;
     int i, tcnt;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step, iteration;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -17696,7 +16786,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, d
     pyramid_step    = BL_param.Pyramid_step;
     iteration       = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width  = BL_param.Size_Grid2D.width;
     gridsize.height = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;
@@ -18409,21 +17499,21 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double*
     return resize_GridPT3;
 }
 
-UGRID* ResizeGirdPT3_RA(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* preBoundary,double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
+UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize resize_Size,const double* preBoundary,const double* Boundary, const D2DPOINT *resize_Grid, UGRID *preGridPT3, const double pre_gridsize,const double* minmaxheight)
 {
     
     UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
     
-    for(int row=0;row<resize_Size.height;row++)
+    for(long int row=0;row<resize_Size.height;row++)
     {
-        for(int col=0;col<resize_Size.width;col++)
+        for(long int col=0;col<resize_Size.width;col++)
         {
-            long int index = row*resize_Size.width + col;
+            long int index = row*(long int)resize_Size.width + col;
             double X = resize_Grid[index].m_X;
             double Y = resize_Grid[index].m_Y;
-            int pos_c = (int)((X - preBoundary[0])/pre_gridsize);
-            int pos_r = (int)((Y - preBoundary[1])/pre_gridsize);
-            long int pre_index = pos_r*preSize.width + pos_c;
+            long int pos_c = (long int)((X - preBoundary[0])/pre_gridsize);
+            long int pos_r = (long int)((Y - preBoundary[1])/pre_gridsize);
+            long int pre_index = pos_r*(long int)preSize.width + pos_c;
             if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height)
             {
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
@@ -18438,8 +17528,6 @@ UGRID* ResizeGirdPT3_RA(ProInfo *proinfo, CSize preSize, CSize resize_Size, doub
                         resize_GridPT3[index].ortho_ncc[ti]     = preGridPT3[pre_index].ortho_ncc[ti];
                 }
                 resize_GridPT3[index].Mean_ortho_ncc=preGridPT3[pre_index].Mean_ortho_ncc;
-                //resize_GridPT3[index].angle         = preGridPT3[pre_index].angle;
-                //              resize_GridPT3[index].false_h_count = 0;
             }
             else
             {
@@ -18454,8 +17542,6 @@ UGRID* ResizeGirdPT3_RA(ProInfo *proinfo, CSize preSize, CSize resize_Size, doub
                     if(proinfo->check_selected_image[ti])
                         resize_GridPT3[index].ortho_ncc[ti]     = 0;
                 }
-                //resize_GridPT3[index].angle         = 0;
-                //              resize_GridPT3[index].false_h_count = 0;
             }
         }
     }
@@ -18469,12 +17555,11 @@ UGRID* ResizeGirdPT3_RA(ProInfo *proinfo, CSize preSize, CSize resize_Size, doub
     return resize_GridPT3;
 }
 
-bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update)
+bool SetHeightRange_blunder(const double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update)
 {
     uint32 num_triangles;
     int i, tcnt;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step, iteration;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -18489,7 +17574,7 @@ bool SetHeightRange_blunder(double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI
     pyramid_step    = BL_param.Pyramid_step;
     iteration       = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width  = BL_param.Size_Grid2D.width;
     gridsize.height = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;
@@ -18866,7 +17951,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     //fclose(outcount);
 }
 
-int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, double ***RPCs, double **ImageAdjust, NCCflag _flag,
+int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos,const double * const * const *RPCs, double **ImageAdjust, NCCflag _flag,
                 uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
                 double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir, D3DPOINT* ptslists)
 {
@@ -19363,7 +18448,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
     return check_pt;
 }
 
-bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, int pyramid_step)
+bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize, const int Template_size, const int pyramid_step)
 {
     bool ret = false;
     int count_image = 0;
@@ -19393,88 +18478,68 @@ bool check_kernel_size(ProInfo *proinfo, CSize *Subsetsize, int Template_size, i
     return ret;
 }
 
-bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, double **imageparam, D2DPOINT *Startpos,
-                          D2DPOINT pos_xy_m, D2DPOINT pos_xy, double minH, double maxH, CSize *Imagesizes_ori, CSize **sizes, int H_template_size, int pyramid_step)
+bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size)
 {
     bool check = true;
-
-    bool bleft_s, bright_s, bleft_e, bright_e;
     int selected_images = 0;
-    
-    D3DPOINT temp_gp;
-    D2DPOINT temp;
-    double Imageparam_ref[2] = {0.0};
-
-    //int buff_pixel = 1*pow(2,pyramid_step);
-    int buff_pixel = 1;
+    const int buff_pixel = 1;
     bool check_reference = true;
     
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
         {
+            bool bleft_s, bright_s, bleft_e, bright_e;
+            D3DPOINT temp_gp;
+            D2DPOINT temp;
+            D2DPOINT photo;    
+            
             //min height
             temp_gp.m_Z = minH;
             if(proinfo->sensor_type == SB)
             {
                 temp_gp.m_X = pos_xy.m_X;
                 temp_gp.m_Y = pos_xy.m_Y;
-                temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
             }
             else
             {
                 temp_gp.m_X = pos_xy_m.m_X;
                 temp_gp.m_Y = pos_xy_m.m_Y;
-                
-                D2DPOINT photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+
+                photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
                 temp            = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
             }
-            temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
-            
-            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
-               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height- H_template_size -buff_pixel)
+            temp        = OriginalToPyramid_single(temp,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+
+            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].width - H_template_size -buff_pixel && temp.m_Y > H_template_size +buff_pixel && temp.m_Y < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].height- H_template_size -buff_pixel)
                 bleft_s     = true;
             else
                 bleft_s     = false;
 
-            /*
-            if(temp.m_X > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_X < Imagesizes_ori[ti].width - H_template_size*pow(2,pyramid_step) -buff_pixel &&
-               temp.m_Y > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_Y < Imagesizes_ori[ti].height - H_template_size*pow(2,pyramid_step) -buff_pixel)
-                bleft_s     = true;
-            else
-                bleft_s     = false;
-            */
-            
             //max height
             temp_gp.m_Z = maxH;
             if(proinfo->sensor_type == SB)
             {
                 temp_gp.m_X = pos_xy.m_X;
                 temp_gp.m_Y = pos_xy.m_Y;
-                temp        = GetObjectToImageRPC_single(rpc[ti],numofparam,imageparam[ti],temp_gp);
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
             }
             else
             {
                 temp_gp.m_X = pos_xy_m.m_X;
                 temp_gp.m_Y = pos_xy_m.m_Y;
-                
-                D2DPOINT photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+
+                photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
                 temp            = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
             }
-            temp        = OriginalToPyramid_single(temp,Startpos[ti],pyramid_step);
-            
-            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < sizes[ti][pyramid_step].width - H_template_size -buff_pixel &&
-               temp.m_Y > H_template_size +buff_pixel && temp.m_Y < sizes[ti][pyramid_step].height- H_template_size -buff_pixel)
+            temp        = OriginalToPyramid_single(temp,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+
+            if(temp.m_X > H_template_size +buff_pixel && temp.m_X < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].width - H_template_size -buff_pixel && temp.m_Y > H_template_size +buff_pixel && temp.m_Y < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].height- H_template_size -buff_pixel)
                 bleft_e     = true;
             else
                 bleft_e     = false;
-            /*
-            if(temp.m_X > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_X < Imagesizes_ori[ti].width - H_template_size*pow(2,pyramid_step) -buff_pixel &&
-               temp.m_Y > H_template_size*pow(2,pyramid_step) +buff_pixel && temp.m_Y < Imagesizes_ori[ti].height - H_template_size*pow(2,pyramid_step) -buff_pixel)
-                bleft_e     = true;
-            else 
-                bleft_e     = false;
-            */
+            
             if( bleft_s && bleft_e)
                 selected_images++;
             else if(ti == 0)
@@ -19492,22 +18557,15 @@ bool check_image_boundary(ProInfo *proinfo,double ***rpc, uint8 numofparam, doub
             check   = false;
     }
 
-    //check   = true;
-    
     return check;
 
 }
-void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_level, bool flag)
-{
-    int status;
-    int count;
 
-    char *filename_py;
-    char t_str[500];
+void RemoveFiles(const ProInfo *proinfo, const char *save_path, char **filename, const int py_level, const bool flag)
+{
     int start_lv, end_lv;
 
     start_lv    = py_level;
-    
     if(flag)
         end_lv      = py_level - 1;
     else
@@ -19523,14 +18581,13 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
     {
         if(proinfo->check_selected_image[ti])
         {
-            for(count = py_level ; count >= 0 ; count--)
+            for(int count = py_level ; count >= 0 ; count--)
             {
-                bool bfile = false;
-
-                filename_py     = GetFileName(filename[ti]);
+                char *filename_py     = GetFileName(filename[ti]);
+                char t_str[500];
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d.raw",save_path,filename_py,count);
-                status = remove(t_str);
+                int status = remove(t_str);
                 free(filename_py);
 
                 filename_py     = GetFileName(filename[ti]);
@@ -19538,13 +18595,13 @@ void RemoveFiles(ProInfo *proinfo, char *save_path, char **filename, int py_leve
                 sprintf(t_str,"%s/%s_py_%d_ori.raw",save_path,filename_py,count);
                 status = remove(t_str);
                 free(filename_py);
-                
+
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s_py_%d_mag.raw",save_path,filename_py,count);
                 status = remove(t_str);
                 free(filename_py);
-         
+
                 filename_py     = GetFileName(filename[ti]);
                 filename_py     = remove_ext(filename_py);
                 sprintf(t_str,"%s/%s.raw",save_path,filename_py);
@@ -23219,8 +22276,8 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
     }
     else
     {
-        int cols[2];
-        int rows[2];
+        long int cols[2];
+        long int rows[2];
         CSize data_size;
         
         CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
@@ -23276,8 +22333,8 @@ unsigned char* GetMatchtagValue(char *GIMP_path,CSize seeddem_size)
     }
     else
     {
-        int cols[2];
-        int rows[2];
+        long int cols[2];
+        long int rows[2];
         CSize data_size;
         
         CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
@@ -23312,138 +22369,57 @@ float UnsingedCharToFloat_lsf(float val)
 }
 
 
-void DEM_STDKenel_LSF(CSize seeddem_size, bool check_smooth_iter, double MPP_stereo_angle, LSFINFO *Grid_info, double* sigma_average,double* sigma_std, int smooth_iteration,double grid_size,float *seeddem, float *smooth_DEM)
+void DEM_STDKenel_LSF(LSFINFO *Grid_info, double* sigma_average,double* sigma_std, float *seeddem, float *smooth_DEM, const double grid_size, const int smooth_iteration,const CSize seeddem_size, const double MPP_stereo_angle)
 {
-    long int i,j;
-    
-    double sigma_th = MPP_stereo_angle/2.0 + MPP_stereo_angle*0.1*smooth_iteration;
     long int total_selected_points = 0;
     double sigma_sum = 0;
     double sigma2_sum = 0;
     long int data_length = (long int)seeddem_size.width*(long int)seeddem_size.height;
-    //float *temp_sigma = (float*)malloc(sizeof(float)*data_length);
-    //double sum_fitted_Z = 0;
     
-    printf("sigma_th = %f\tMPP %f\n",sigma_th,MPP_stereo_angle);
-    int row_interval = 20;
-    //for(long int row_iter = 0 ; row_iter < seeddem_size.height - row_interval ; row_iter += row_interval)
+#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sigma2_sum)
+    for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
     {
-        /*
-         printf("processing line %d/%d\n",row_iter,seeddem_size.height);
-         long int row_start = row_iter*seeddem_size.width;
-         long int row_end = (row_iter + row_interval)*seeddem_size.width;
-         if(row_iter >= seeddem_size.height - 2*row_interval && row_iter < seeddem_size.height - row_interval)
-         {
-         row_end = data_length;
-         }
-         printf("processing line %ld/%d\t%ld\t%ld\n",row_iter,seeddem_size.height,row_start,row_end);
-         */
-        long int row_start = 0;
-        long int row_end = data_length;
-        
-#pragma omp parallel for schedule(guided) reduction(+:sigma_sum, total_selected_points, sigma2_sum)// private (row_start,row_end)
-        for(long int iter_count = row_start ; iter_count < row_end ; iter_count++)
-            //for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
+        long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
+        long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
+        double fitted_Z = seeddem[iter_count];
+        float sigma;
+
+        if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
         {
-            //iter_count = row_end/2;
-            long int pts_row = (long int)(floor(iter_count/(double)seeddem_size.width));
-            long int pts_col = (long int)(iter_count % (long int)seeddem_size.width);
-            double fitted_Z = seeddem[iter_count];
-            float sigma;
-            
-
-            if(pts_col >= 0 && pts_col < seeddem_size.width && pts_row >= 0 && pts_row < seeddem_size.height)
+            if(seeddem[iter_count] > -50 )
             {
-                //if(!check_smooth_iter)
-                //  printf("pts_pos %d\t%d\t%d\n",pts_row,pts_col,iter_count);
+                long int selected_count = 0;
+                sigma = (float)LocalSurfaceFitting_DEM(Grid_info, seeddem, &selected_count,              &fitted_Z, MPP_stereo_angle, smooth_iteration, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row);
 
-                if(seeddem[iter_count] > -50 )
+                if(sigma < 20 && sigma > 0 && selected_count > 6)
                 {
-                    long int selected_count = 0;
-                    sigma = (float)LocalSurfaceFitting_DEM(MPP_stereo_angle, sigma_th, smooth_iteration, Grid_info, seeddem, seeddem_size.height, seeddem_size.width, grid_size, pts_col, pts_row, &selected_count, &fitted_Z);
-                    //if(!check_smooth_iter)
-                    //  printf("sigma %f\t%f\n",sigma,fitted_Z);
-
-                    double diff_Z = fabs(seeddem[iter_count] - fitted_Z);
-
-                    //Grid_info[iter_count].lsf_std = FloatToUnsignedChar_lsf(sigma);
-
-                    if(check_smooth_iter)
-                    {
-                        if(sigma < 20 && sigma > 0 && selected_count > 6)
-                        {
-                            smooth_DEM[iter_count] = fitted_Z;
-                            //sum_fitted_Z += fitted_Z;
-                            total_selected_points++;
-                            sigma_sum += sigma;
-                            sigma2_sum += (sigma*sigma);
-                            //temp_sigma[iter_count] = sigma;
-
-                            //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-                        }
-                        else
-                        {
-                            smooth_DEM[iter_count] = seeddem[iter_count];
-                            //temp_sigma[iter_count] = -9999;
-                        }
-                    }
-                    else
-                    {
-                        if(sigma < 20 && sigma > 0 && selected_count > 6)
-                        {
-                            smooth_DEM[iter_count] = fitted_Z;
-                            //sum_fitted_Z += fitted_Z;
-                            total_selected_points++;
-                            sigma_sum += sigma;
-                            sigma2_sum += (sigma*sigma);
-                            //temp_sigma[iter_count] = sigma;
-                            //printf("fitted_Z %f\tsigma %f\n",fitted_Z,sigma);
-                        }
-                        else
-                        {
-                            smooth_DEM[iter_count] = seeddem[iter_count];
-                            //temp_sigma[iter_count] = -9999;
-                        }
-                    }
+                    smooth_DEM[iter_count] = fitted_Z;
+                    total_selected_points++;
+                    sigma_sum += sigma;
+                    sigma2_sum += (sigma*sigma);
                 }
                 else
                 {
                     smooth_DEM[iter_count] = seeddem[iter_count];
-                    //temp_sigma[iter_count] = -9999;
                 }
             }
+            else
+            {
+                smooth_DEM[iter_count] = seeddem[iter_count];
+            }
         }
-        printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     }
+    printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     
     *sigma_average = sigma_sum/total_selected_points;
-    
-    
-    //printf("%f\t%f\n",sigma2_sum,((double)(sigma_sum*sigma_sum)));
     *sigma_std = sqrt( (double)(sigma2_sum)/(double)(total_selected_points) - ((double)(*sigma_average**sigma_average)) );
     printf("avg sigma %f\tstd sigma %f\ttotal_pts %ld\n",*sigma_average,*sigma_std,total_selected_points);
-    /*
-    sigma_sum = 0;
-#pragma omp parallel for schedule(guided) reduction(+:sigma_sum)
-    for(i=0 ; i<seeddem_size.width*seeddem_size.height ; i++)
-    {
-        if(temp_sigma[i] > -1)
-            sigma_sum = sigma_sum + (temp_sigma[i] - *sigma_average)*(temp_sigma[i] - *sigma_average);
-    }
-
-    *sigma_std = sqrt(sigma_sum/total_selected_points);
-    printf("mem std sigma %f\n",*sigma_std);
-    */
-    
-    //free(temp_sigma);
 }
 
-double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSFINFO *Grid_info, float *input, int row_size, int col_size, double grid, long int X, long int Y, long int *numpts, double *fitted_Z)
+double LocalSurfaceFitting_DEM(LSFINFO *Grid_info, float *input, long int *numpts, double *fitted_Z, const double MPP, const int smooth_iter, const int row_size, const int col_size, const double grid, const long int X, const long int Y)
 {
-    double result;
-    long int row_pos, col_pos;
+    long int row_pos(Y), col_pos(X);
     long int row,col;
-    long int size_pts;
     int check_stop = 0;
     long int final_interval = 5;
     long int interval = 2;
@@ -23454,8 +22430,8 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 
     long int row_interval = 15;
 
-    col_pos = (long int)X;
-    row_pos = (long int)Y;
+    //col_pos = (long int)X;
+    //row_pos = (long int)Y;
 
     double hist_th = 0.8;
     if(grid >= 8)
@@ -23468,7 +22444,7 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     long int data_length = (long int)row_size*(long int)col_size;
     long int t_index = (long int)(row_pos*(long int)col_size + col_pos);
     double sigma = 999999;
-    double MPP_th = 5;
+    const double MPP_th = 5;
     long int mask_interval = 1;
 
     long int add_interval = 0;
@@ -23549,13 +22525,13 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
         }
     }
 
-    double maxX_ptslists = -10000000;//final_interval*grid;
-    double maxY_ptslists = -10000000;//final_interval*grid;
-    double minX_ptslists =  10000000;//-final_interval*grid;
-    double minY_ptslists =  10000000;//-final_interval*grid;
-    double distX_ptslists = 0;//maxX_ptslists - minX_ptslists;
-    double distY_ptslists = 0;//maxY_ptslists - minY_ptslists;
-    double Scale_ptslists = 1000;
+    double maxX_ptslists = -10000000;
+    double maxY_ptslists = -10000000;
+    double minX_ptslists =  10000000;
+    double minY_ptslists =  10000000;
+    double distX_ptslists = 0;
+    double distY_ptslists = 0;
+    const double Scale_ptslists = 1000;
 
     vector<D3DPOINT> XY_save;
     XY_save.clear();
@@ -23597,7 +22573,6 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
 
     distX_ptslists = maxX_ptslists - minX_ptslists;
     distY_ptslists = maxY_ptslists - minY_ptslists;
-    //printf("distX %f\t%f\t%d\t%d\t%d\t%d\t%d\t%d\n",distX_ptslists,distY_ptslists,final_interval,XY_save.size(),count,*numpts,mask_interval,smooth_iter);
 
     double scale_factor_X = 1.0/distX_ptslists*Scale_ptslists;
     double scale_factor_Y = 1.0/distY_ptslists*Scale_ptslists;
@@ -23935,7 +22910,6 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     }
     else
     {
-        //printf("selected pts %d\n",XY_save.size());
         sigma = 999999;
     }
 
@@ -23945,11 +22919,11 @@ double LocalSurfaceFitting_DEM(double MPP, double sigma_th, int smooth_iter, LSF
     return sigma;
 }
 
-void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool Hemisphere, double MPP, double grid_size, int divide)
+void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double MPP, const int divide)
 {
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    
+    double grid_size; 
     total_ST = time(0);
     
     FILE* pFile_DEM = NULL;
@@ -23963,6 +22937,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
     char metafilename[500];
     CSize DEM_size;
     long int DEM_length;
+    TransParam param;
     
     if(divide == 0)
     {
@@ -24008,45 +22983,11 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         int max_iter_count = 5;
         int s_iter = 0;
         bool check_smooth_iter = true;
-        double MPP_stereo_angle = MPP;
         LSFINFO *Grid_info = NULL;
         float* seeddem = NULL;
-        //unsigned char* matchtag = NULL;
         double minX, maxY;
         
-        /*
-        FILE* pMetafile = fopen(metafilename,"r");
-        if(pMetafile)
-        {
-            printf("meta file exist!!");
-            
-            char linestr[1000];
-            char linestr1[1000];
-            char* pos1;
-            char* token = NULL;
-            bool check_mpp = false;
-            
-            while(!feof(pMetafile) && !check_mpp)
-            {
-                fgets(linestr,sizeof(linestr),pMetafile);
-                strcpy(linestr1,linestr);
-                token = strtok(linestr,"=");
-                
-                if(strcmp(token,"Setereo_pair_expected_height_accuracy") == 0)
-                {
-                    pos1 = strstr(linestr1,"=")+1;
-                    MPP_stereo_angle            = atof(pos1);
-                    
-                    check_mpp = true;
-                }
-            }
-            fclose(pMetafile);
-        }
-        else
-            printf("meta file doesn't exist!!\n");
-        */
-        
-        printf("MPP_stereo_angle %f\n",MPP_stereo_angle);
+        printf("MPP_stereo_angle %f\n",MPP);
         
         DEM_size = GetDEMsize(str_DEMfile,metafilename,&param,&grid_size,seeddem,&minX,&maxY);
         printf("DEM_size %d\t%d\n",DEM_size.width,DEM_size.height);
@@ -24055,47 +22996,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         printf("Done seeddem\n");
         
         DEM_length = (long)(DEM_size.height)*(long)(DEM_size.width);
-        //matchtag = (unsigned char*)calloc(sizeof(unsigned char),DEM_length);
         printf("Done matchtag memory allocation %ld\n",DEM_length);
-        /*for(long int i = 0; i< DEM_length ; i++)
-        {
-            if(seeddem[i] > -100)
-                matchtag[i] = 1;
-        }
-        
-        FILE* pDEMheader = fopen(str_matchfile,"r");
-        if(pDEMheader)
-        {
-            printf("raw matchtag file exist!!\n");
-            matchtag = GetMatchtagValue(str_matchfile,DEM_size);
-            
-            fclose(pDEMheader);
-        }
-        else
-        {
-            printf("raw matchtag file doesn't exist!!\n");
-            
-            FILE* pMatchtif = fopen(str_matchfile_tif,"r");
-            if(pMatchtif)
-            {
-                printf("tif matchtag file exist!!\n");
-                matchtag = GetMatchtagValue(str_matchfile_tif,DEM_size);
-                
-                fclose(pMatchtif);
-                
-            }
-            else
-            {
-                printf("tif matchtag file doesn't exist!!\n");
-                matchtag = (unsigned char*)calloc(sizeof(unsigned char),DEM_size.width*DEM_size.height);
-                for(int i = 0; i< DEM_size.height*DEM_size.width ; i++)
-                {
-                    if(seeddem[i] > -100)
-                        matchtag[i] = 1;
-                }
-            }
-        }
-        */
         printf("%d\n",DEM_size.width);
         printf("%d\n",DEM_size.height);
         printf("%f\n",grid_size);
@@ -24104,7 +23005,6 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         for(long int count_index = 0 ; count_index < DEM_length; count_index++)
         {
-            //Grid_info[count_index].lsf_std = FloatToUnsignedChar_lsf(0.0);
             Grid_info[count_index].lsf_kernel = 2;
         }
         
@@ -24130,8 +23030,8 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
                     check_smooth_iter = false;
                 }
             }
-            
-            DEM_STDKenel_LSF(DEM_size,check_smooth_iter, MPP_stereo_angle, Grid_info, &sigma_avg,&sigma_std,s_iter,grid_size,seeddem,smooth_DEM);
+           
+            DEM_STDKenel_LSF(Grid_info, &sigma_avg,&sigma_std, seeddem,smooth_DEM, grid_size, s_iter, DEM_size,MPP);
             
             if(sigma_avg > max_std)
             {
@@ -24146,8 +23046,6 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
             }
             
             printf("End LSF %d\tsigma avg std %f\t%f\n",s_iter,sigma_avg,sigma_std);
-            free(seeddem);
-            seeddem = (float*)calloc(sizeof(float),DEM_length);
             memcpy(seeddem,smooth_DEM,sizeof(float)*DEM_length);
             
             s_iter++;
@@ -24156,8 +23054,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         free(Grid_info);
         
-        //Envihdr_writer(param,DEM_header, DEM_size.width, DEM_size.height, grid_size, minX, maxY, Hemisphere,4);
-        WriteGeotiff(DEM_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, Hemisphere, 4);
+        WriteGeotiff(DEM_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
         
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         
@@ -24165,9 +23062,7 @@ void LSFSmoothing_DEM(char *savepath, char* outputpath, TransParam param, bool H
         
         printf("%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         
-        //free(matchtag);
         free(seeddem);
-        
         
         fclose(pFile_DEM);
         
@@ -24476,7 +23371,7 @@ D2DPOINT *ImageToPhoto(D2DPOINT *_image, int _numofpts, float _CCDSize, CSize _i
 
 
 
-D2DPOINT GetPhotoCoordinate_single(D3DPOINT A, EO Photo, CAMERA_INFO Camera, RM M)
+D2DPOINT GetPhotoCoordinate_single(const D3DPOINT A, const EO Photo, const CAMERA_INFO Camera, const RM M)
 {
     D2DPOINT IP;
     
@@ -24505,7 +23400,7 @@ D3DPOINT GetObjectCoordinate_single(D2DPOINT a, double z,EO Photo, CAMERA_INFO C
     return A;
 }
 
-D2DPOINT PhotoToImage_single(D2DPOINT _photo, float _CCDSize, CSize _imgsize)
+D2DPOINT PhotoToImage_single(const D2DPOINT _photo, const double _CCDSize, const CSize _imgsize)
 {
     D2DPOINT m_ImageCoord;
     
@@ -24695,7 +23590,7 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
 
 // Compute the correlation between two arrays using a numerically stable formulation
 // Return the correlation coefficient or -99 if undefined
-double Correlate(double *L, double *R, int N)
+double Correlate(const double *L, const double *R, const int N)
 {
     double Lmean = 0;
     double Rmean = 0;
@@ -24789,7 +23684,7 @@ float Correlate_float(float *L, float *R, int N)
 
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
-double InterpolatePatch(uint16 *Image, long int position, CSize Imagesize, double dx, double dy)
+double InterpolatePatch(const uint16 *Image, const long int position, const CSize Imagesize, const double dx, const double dy)
 {
     double patch =
         (double) (Image[position]) * (1 - dx) * (1 - dy) + 
@@ -24866,7 +23761,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             double *ortho_dy = (double*)malloc(sizeof(double)*proinfo->number_of_images);
             double **Boundary = (double**)malloc(sizeof(double*)*proinfo->number_of_images);
             CSize tmp_datasize;
-            int cols[2], rows[2];
+            long int cols[2], rows[2];
             double *GridSize_width = (double*)calloc(sizeof(double),proinfo->number_of_images);
             double *GridSize_height = (double*)calloc(sizeof(double),proinfo->number_of_images);
             //CSize *Grid_size = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
@@ -25282,7 +24177,7 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
         mkdir(proinfo->tmpdir,0777);
         
         CSize tmp_datasize;
-        int cols[2], rows[2];
+        long int cols[2], rows[2];
         double Sum_grid = 0;
         NCCflag ncc_flag;
         int py_level = proinfo->pyramid_level;
@@ -26257,7 +25152,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         mkdir(proinfo->tmpdir,0777);
         
      
-        int cols[2], rows[2];
+        long int cols[2], rows[2];
         double Sum_grid = 0;
         NCCflag ncc_flag;
         int py_level = proinfo->pyramid_level;
@@ -27269,7 +26164,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
         mkdir(proinfo->tmpdir,0777);
         
      
-        int cols[2], rows[2];
+        long int cols[2], rows[2];
         double Sum_grid = 0;
         NCCflag ncc_flag;
         int py_level = proinfo->pyramid_level;
@@ -28577,7 +27472,7 @@ F3DPOINT SurfaceDistance_ori(F3DPOINT tar_normal_ori, float* ref_dem, F3DPOINT t
             bool divergent_index_y          = (pre_angle_y >= vector_slope_y & tar_normal_denor.m_Y != 0 & dy != 0);
             if( divergent_index_x || divergent_index_y)
             {
-                F3DPOINT temp_pt = {0};
+                F3DPOINT temp_pt;
                 temp_pt.m_X                  = pre_pt_on_surface.m_X + (after_pt_on_surface.m_X - pre_pt_on_surface.m_X)/2.0;
                 temp_pt.m_Y                  = pre_pt_on_surface.m_Y + (after_pt_on_surface.m_Y - pre_pt_on_surface.m_Y)/2.0;
                 
@@ -32644,8 +31539,7 @@ void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary,
         
         float *seeddx = NULL;
         float *seeddy = NULL;
-        int cols[2];
-        int rows[2];
+        long int cols[2], rows[2];
         CSize data_size;
 
         CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
@@ -32777,7 +31671,6 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                             bool flag_start;
                             
                             int level              = pyramid_step;
-                            uint8 sub_total_count    = 0;
                             
                             CSize Size_Grid2D, pre_Size_Grid2D;
                             
@@ -32883,16 +31776,14 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 
                                 SubImages_L        = LoadPyramidImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
                                 SubImages_R        = LoadPyramidImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
-                                SubMagImages_L    = LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level,&left_mag_var,&left_mag_avg);
-                                SubMagImages_R    = LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level,&right_mag_var,&right_mag_avg);
+                                SubMagImages_L    = LoadPyramidMagImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
+                                SubMagImages_R    = LoadPyramidMagImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
                                 
                                 SubOriImages_L  = LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
                                 SubOriImages_R  = LoadPyramidOriImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
                                 
                                 printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
                                 
-                                double mag_avg = (left_mag_avg + right_mag_avg)/2.0;
-                                double mag_var = (left_mag_var + right_mag_var)/2.0;
                                 
                                 total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
                                 
@@ -33594,7 +32485,7 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
     
     if(GetImageSize(LImageFilename,LImagesize) && GetImageSize(RImageFilename,RImagesize))
     {
-        int Lcols[2], Lrows[2], Rcols[2], Rrows[2];
+        long int Lcols[2], Lrows[2], Rcols[2], Rrows[2];
         if(GetsubareaImage_SDM(proinfo,LImageFilename,LImagesize,proinfo.LBoundary,Lcols,Lrows) &&
            GetsubareaImage_SDM(proinfo,RImageFilename,RImagesize,proinfo.RBoundary,Rcols,Rrows) )
         {
@@ -33742,7 +32633,7 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
     return ret;
 }
 
-bool GetsubareaImage_SDM(ProInfo proinfo, char *ImageFilename, CSize *Imagesize, double *subBoundary, int *cols, int *rows)
+bool GetsubareaImage_SDM(ProInfo proinfo, char *ImageFilename, CSize *Imagesize, double *subBoundary, long int *cols,long int *rows)
 {
     bool ret = false;
     
@@ -35077,7 +33968,6 @@ UGRIDSDM* SetHeightRange_SDM(UGRIDSDM *GridPT3, BL BL_param)
     
     int i, tcnt;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step, iteration;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -35085,7 +33975,7 @@ UGRIDSDM* SetHeightRange_SDM(UGRIDSDM *GridPT3, BL BL_param)
     pyramid_step    = BL_param.Pyramid_step;
     iteration        = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width    = BL_param.Size_Grid2D.width;
     gridsize.height    = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;
@@ -35126,7 +34016,6 @@ void SetHeightRange_shift(int numOfPts, int numOfTri, UGRIDSDM *GridPT3,BL BL_pa
     uint32 num_triangles;
     int i, tcnt;
     double gridspace;
-    double *boundary;
     CSize gridsize;
     uint8 pyramid_step, iteration;
     uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
@@ -35141,7 +34030,7 @@ void SetHeightRange_shift(int numOfPts, int numOfTri, UGRIDSDM *GridPT3,BL BL_pa
     pyramid_step    = BL_param.Pyramid_step;
     iteration        = BL_param.iteration;
     gridspace = BL_param.gridspace;
-    boundary    = BL_param.Boundary;
+    const double *boundary    = BL_param.Boundary;
     gridsize.width    = BL_param.Size_Grid2D.width;
     gridsize.height    = BL_param.Size_Grid2D.height;
     TIN_Grid_Size_X= gridsize.width;

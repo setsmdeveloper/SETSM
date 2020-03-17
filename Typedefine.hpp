@@ -40,6 +40,22 @@ typedef struct tagUI2DPoint
 {
 	uint32 m_X;
 	uint32 m_Y;
+    
+    tagUI2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagUI2DPoint(uint32 m_X, uint32 m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagUI2DPoint(const tagUI2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
 } UI2DPOINT;
 
 typedef struct tagUI3DPoint
@@ -47,13 +63,89 @@ typedef struct tagUI3DPoint
 	uint32 m_X;
 	uint32 m_Y;
 	uint32 m_Z;
+    
+    tagUI3DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+        m_Z = 0;
+    }
+    tagUI3DPoint(uint32 m_X, uint32 m_Y, uint32 m_Z):m_X(m_X),m_Y(m_Y),m_Z(m_Z)
+    {
+        
+    }
+    tagUI3DPoint(const tagUI3DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+        m_Z = p.m_Z;
+    }
+    
 } UI3DPOINT;
 
+typedef struct tagD2DPoint
+{
+    double m_X;
+    double m_Y;
+    
+    tagD2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagD2DPoint(double m_X, double m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagD2DPoint(const tagD2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
+    tagD2DPoint operator=(const tagD2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
+    
+} D2DPOINT;
 
 typedef struct tagF2DPoint
 {
 	float m_X;
 	float m_Y;
+    
+    tagF2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagF2DPoint(float m_X, float m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagF2DPoint(const tagF2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
+    tagF2DPoint operator=(const tagD2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
+    
+    tagF2DPoint operator=(const tagF2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
+    
 } F2DPOINT;
 
 typedef struct tagF3DPoint
@@ -62,13 +154,28 @@ typedef struct tagF3DPoint
 	float m_Y;
 	float m_Z;
 	uint8 flag;
+    
+    tagF3DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+        m_Z = 0;
+        flag = false;
+    }
+    tagF3DPoint(float m_X, float m_Y, float m_Z, uint8 flag):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    {
+        
+    }
+    tagF3DPoint(const tagF3DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+        m_Z = p.m_Z;
+        flag = p.flag;
+    }
 } F3DPOINT;
 
-typedef struct tagD2DPoint
-{
-	double m_X;
-	double m_Y;
-} D2DPOINT;
+
 
 typedef struct tagD3DPoint
 {
@@ -76,6 +183,32 @@ typedef struct tagD3DPoint
 	double m_Y;
 	double m_Z;
     uint8 flag;
+    
+    tagD3DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+        m_Z = 0;
+        flag = false;
+    }
+    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    {
+        
+    }
+    tagD3DPoint(const tagD3DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+        m_Z = p.m_Z;
+        flag = p.flag;
+    }
+    
+    tagD3DPoint operator=(const tagD2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
 } D3DPOINT;
 
 typedef struct tagTransParam
@@ -93,7 +226,7 @@ typedef struct tagTransParam
 	int projection;
     int utm_zone;
 	
-	char direction[10];
+	char direction[2];
 	bool bHemisphere;
 } TransParam;
 
@@ -101,6 +234,18 @@ typedef struct tagCSize
 {
 	unsigned int width;
 	unsigned int height;
+    
+    tagCSize(){}
+    
+    tagCSize(const int width, const int height):width(width), height(height)
+    {
+    }
+    
+    tagCSize(const tagCSize &size)
+    {
+        width = size.width;
+        height = size.height;
+    }
 } CSize;
 
 typedef struct tagNCCflag
@@ -124,13 +269,13 @@ typedef struct tagNCCresult
 	short max_WNCC;
     
     short GNCC;
+    unsigned short NumOfHeight;
     //float *GNCC_multi;
 	unsigned char result4; //peak count
     
     //int max_WNCC_pos;
 	
     
-    unsigned short NumOfHeight;
     bool check_height_change;
 	//int roh_count;
 } NCCresult;
@@ -145,8 +290,8 @@ typedef struct UpdateGrid{
 	short ortho_ncc[MaxNCC];
     short Mean_ortho_ncc;
 
-    uint8 Matched_flag;
-	uint8 anchor_flag;
+    unsigned char Matched_flag;
+	unsigned char anchor_flag;
     
 }UGRID;
 
@@ -168,7 +313,7 @@ typedef struct BlunderIP{
 	CSize Size_Grid2D;
 	double gridspace;
 	double Hinterval; 
-	double* Boundary;
+	const double* Boundary;
 	uint8 Pyramid_step;
 	uint8 iteration;
 	bool height_check_flag;
@@ -457,5 +602,90 @@ typedef struct tagConformalparam
     float Ty;
     float Tz;
 } Conformalparam;
+
+typedef struct taglevelinfo
+{
+    const uint16 * const *py_Images;
+    const uint8 * const *py_OriImages;
+    const uint16 * const *py_MagImages;
+    
+    const uint16 * const *py_BImages;
+    const uint16 * const *py_BMagImages;
+
+    const uint16 * const *py_Images_next;
+    const uint8 * const *py_OriImages_next;
+    const uint16 * const *py_MagImages_next;
+    
+    const D2DPOINT *py_Startpos;
+    const D2DPOINT *py_BStartpos;
+    const D2DPOINT *py_Startpos_next;
+    
+    const double * const * const *RPCs;
+    const double *Boundary;
+    const int *Pyramid_step;
+    const CSize * const *py_Sizes;
+    const unsigned char *Template_size;
+    double ** ImageAdjust;//updated in RA computation step
+    const TransParam *param;
+    const unsigned char *NumOfIAparam;
+    const double *bin_angle;
+    const int *blunder_selected_level; 
+    const CSize *Size_Grid2D;
+    const long int *Grid_length;
+    const D2DPOINT* GridPts;
+    const D2DPOINT* Grid_wgs;
+
+    const double *height_step;
+    const double *grid_resolution;
+    double *minmaxHeight; //iteratively changed
+    const int *Py_combined_level;
+    bool *check_matching_rate;
+} LevelInfo;
+/*
+typedef struct tagKernelInfo
+{
+    const long int pt_index;
+    const int Half_template_size;
+    const double im_resolution;
+    const double im_resolution_next;
+    const long int sub_imagesize_w;
+    const long int sub_imagesize_h;
+    const long int sub_imagesize_w_next;
+    const long int sub_imagesize_h_next;
+    const F2DPOINT * const *all_im_cd;
+    const F2DPOINT * const *all_im_cd_next;
+    const UGRID *GridPT3;
+    const int reference_id;
+    const int ti;
+    const bool check_combined_WNCC;
+    const CSize LImagesize;
+    const CSize RImagesize;
+    const CSize LImagesize_next;
+    const CSize RImagesize_next;
+    tagKernelInfo(const long int pt_index,const int Half_template_size,const double im_resolution,const double im_resolution_next,const long int sub_imagesize_w,const long int sub_imagesize_h,const long int sub_imagesize_w_next,const long int sub_imagesize_h_next,const F2DPOINT * const *all_im_cd,const F2DPOINT * const *all_im_cd_next,const UGRID *GridPT3,const int reference_id,const int ti,const bool check_combined_WNCC,const CSize LImagesize,const CSize RImagesize,const CSize LImagesize_next,const CSize RImagesize_next):pt_index(pt_index),Half_template_size(Half_template_size),im_resolution(im_resolution),im_resolution_next(im_resolution_next),sub_imagesize_w(sub_imagesize_w),sub_imagesize_h(sub_imagesize_h),sub_imagesize_w_next(sub_imagesize_w_next),sub_imagesize_h_next(sub_imagesize_h_next),all_im_cd(all_im_cd),all_im_cd_next(all_im_cd_next),GridPT3(GridPT3),reference_id(reference_id),ti(ti),check_combined_WNCC(check_combined_WNCC),LImagesize(LImagesize),RImagesize(RImagesize),LImagesize_next(LImagesize_next),RImagesize_next(RImagesize_next)
+    {
+    }
+
+} KernelInfo;
+*/
+typedef struct tagSetKernel
+{
+    double **left_patch_vecs;
+    double **left_mag_patch_vecs;
+    double **right_patch_vecs;
+    double **right_mag_patch_vecs;
+    /*double **left_patch_next_vecs;
+    double **left_mag_patch_next_vecs;
+    double **right_patch_next_vecs;
+    double **right_mag_patch_next_vecs;
+    */
+    const int reference_id;
+    const int ti;
+    const int Half_template_size;
+    const int patch_size;
+    tagSetKernel(double **left_patch_vecs,double **left_mag_patch_vecs,double **right_patch_vecs,double **right_mag_patch_vecs,/*double **left_patch_next_vecs,double **left_mag_patch_next_vecs,double **right_patch_next_vecs,double **right_mag_patch_next_vecs,*/const int reference_id,const int ti,const int Half_template_size,const int patch_size):left_patch_vecs(left_patch_vecs),left_mag_patch_vecs(left_mag_patch_vecs),right_patch_vecs(right_patch_vecs),right_mag_patch_vecs(right_mag_patch_vecs),/*left_patch_next_vecs(left_patch_next_vecs),left_mag_patch_next_vecs(left_mag_patch_next_vecs),right_patch_next_vecs(right_patch_next_vecs),right_mag_patch_next_vecs(right_mag_patch_next_vecs),*/reference_id(reference_id),ti(ti),Half_template_size(Half_template_size),patch_size(patch_size)
+    {
+    }
+} SetKernel;
 #endif
 
