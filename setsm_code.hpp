@@ -46,6 +46,8 @@ typedef struct nnXY
 	float Z;
 } NNXY;
 
+void DownSample(ARGINFO &args);
+float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size, double _sigma);
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 char* SetOutpathName(char *_path);
 

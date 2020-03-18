@@ -107,6 +107,7 @@ int main(int argc,char *argv[])
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
     args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1;
+    args.check_downsample = false;
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
@@ -118,8 +119,9 @@ int main(int argc,char *argv[])
     args.RA_only = 0;
     args.focal_length = 120;
     args.CCD_size = 12;
-    
     args.SGM_py = 1;
+    args.DS_sigma = 1.6;
+    args.DS_kernel = 9;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -732,6 +734,7 @@ int main(int argc,char *argv[])
             
             for (i=0; i<argc; i++)
             {
+                
                 if (strcmp("-SGMpy",argv[i]) == 0)
                 {
                     if (argc == i+1) {
@@ -1035,6 +1038,34 @@ int main(int argc,char *argv[])
                     }
                 }
      
+                if (strcmp("-downsample",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input the threads value\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        sprintf(args.seedDEMfilename,"%s",argv[i+1]);
+                        printf("%s\n",args.seedDEMfilename);
+                        sprintf(args.Outputpath_name,"%s",argv[i+2]);
+                        printf("%s\n",args.Outputpath_name);
+                        args.check_downsample = true;
+                    }
+                }
+                
+                if (strcmp("-kernel",argv[i]) == 0)
+                {
+                    args.DS_kernel = atoi(argv[i+1]);
+                    printf("%d\n",args.DS_kernel);
+                }
+                
+                if (strcmp("-sigma",argv[i]) == 0)
+                {
+                    args.DS_sigma = atof(argv[i+1]);
+                    printf("%f\n",args.DS_sigma);
+                }
+                
                 if (strcmp("-seed",argv[i]) == 0)
                 {
                     if(args.check_sdm_ortho == 0)
@@ -1503,7 +1534,11 @@ int main(int argc,char *argv[])
                 
                 if(args.check_txt_input == 0)
                 {
-                    if(image_count > 1 || args.check_ortho)
+                    if(args.check_downsample)
+                    {
+                        DownSample(args);
+                    }
+                    else if(image_count > 1 || args.check_ortho)
                     {
                         args.number_of_images = image_count;
                         
@@ -1637,6 +1672,62 @@ char* SetOutpathName(char *_path)
     
     return t_name;
     
+}
+
+void DownSample(ARGINFO &args)
+{
+    float *seeddem = NULL;
+    int cols[2];
+    int rows[2];
+    CSize data_size;
+    double minX, maxY, grid_size;
+    
+    CSize seeddem_size = ReadGeotiff_info(args.seedDEMfilename, &minX, &maxY, &grid_size);
+    
+    TransParam param;
+    bool Hemisphere;
+    SetTranParam_fromOrtho(&param,args.seedDEMfilename,args,&Hemisphere);
+    
+    
+    CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
+    Imagesize->width = seeddem_size.width;
+    Imagesize->height = seeddem_size.height;
+    
+    cols[0] = 0;
+    cols[1] = seeddem_size.width;
+    
+    rows[0] = 0;
+    rows[1] = seeddem_size.height;
+    
+    seeddem = Readtiff_DEM(args.seedDEMfilename,Imagesize,cols,rows,&data_size);
+    
+    int downsample_step = ceil(log2(args.DEM_space/grid_size));
+    
+    printf("downsample_step %d\t%d\t%f\n",downsample_step,args.DS_kernel,args.DS_sigma);
+    
+    
+    float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
+    
+    CSize out_size;
+    
+    for(int level = 0 ; level < downsample_step ; level ++)
+    {
+        if(level == 0)
+        {
+            pyimg[0] = CreateImagePyramid_float(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
+            out_size.width = seeddem_size.width/2;
+            out_size.height = seeddem_size.height/2;
+        }
+        else
+        {
+            pyimg[level] = CreateImagePyramid_float(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
+            out_size.width = out_size.width/2;
+            out_size.height = out_size.height/2;
+            free(pyimg[level-1]);
+        }
+    }
+    
+    WriteGeotiff(args.Outputpath_name, pyimg[downsample_step-1], out_size.width, out_size.height, args.DEM_space, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
 }
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
@@ -9976,6 +10067,85 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
             }
 
             result_img[r*result_size.width + c] = round(temp);
+        }
+    }
+    
+    for(int i=0;i<_filter_size;i++)
+        if(GaussianFilter[i])
+            free(GaussianFilter[i]);
+
+    if(GaussianFilter)
+        free(GaussianFilter);
+    
+
+    return result_img;
+}
+
+float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size, double _sigma)
+{
+    //_filter_size = 7, sigma = 1.6
+    double sigma = _sigma;
+    double temp,scale;
+    double sum = 0;
+    double** GaussianFilter;
+    CSize result_size;
+    float* result_img;
+
+    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
+    for(int i=0;i<_filter_size;i++)
+        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
+
+    
+    result_size.width = _img_size.width/2;
+    result_size.height = _img_size.height/2;
+    scale=sqrt(2*PI)*sigma;
+    
+    result_img = (float*)malloc(sizeof(float)*result_size.height*result_size.width);
+
+    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
+    {
+        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
+        {
+            temp = -1*(i*i+j*j)/(2*sigma*sigma);
+            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]=exp(temp)/scale;
+            sum += exp(temp)/scale;
+        }
+    }
+
+#pragma omp parallel for schedule(guided)
+    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
+    {
+        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
+        {
+            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
+            int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
+            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
+        }
+    }
+
+#pragma omp parallel for private(temp) schedule(guided)
+    //for(long int ori_index=0 ; ori_index<(long)result_size.height*(long)result_size.width ; ori_index++)
+    for(long int r=0;r<result_size.height;r++)
+    {
+        for(long int c=0;c<result_size.width;c++)
+        {
+            temp = 0;
+
+            for(int l=0;l<_filter_size;l++)
+            {
+                for(int k=0;k<_filter_size;k++)
+                {
+                    //r'->2r+m, c'->2c+n
+                    if( (2*r + l-(int)(_filter_size/2)) >= 0 && (2*c + k-(int)(_filter_size/2)) >= 0 &&
+                        (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
+                    {
+                        temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
+                        
+                    }
+                }
+            }
+
+            result_img[r*result_size.width + c] = float(temp);
         }
     }
     
