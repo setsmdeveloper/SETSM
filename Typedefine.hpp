@@ -35,6 +35,7 @@
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
+enum PyImageSelect {OR, BD, NX};
 
 typedef struct tagUI2DPoint
 {
@@ -625,7 +626,7 @@ typedef struct taglevelinfo
     const int *Pyramid_step;
     const CSize * const *py_Sizes;
     const unsigned char *Template_size;
-    double ** ImageAdjust;//updated in RA computation step
+    const double * const *ImageAdjust;//updated in RA computation step
     const TransParam *param;
     const unsigned char *NumOfIAparam;
     const double *bin_angle;

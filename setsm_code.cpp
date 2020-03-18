@@ -3456,7 +3456,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     uint8  ***SubOriImages = (uint8***)malloc(sizeof(uint8**)*py_level_set);
                     uint16 ***SubMagImages = (uint16***)malloc(sizeof(uint16**)*py_level_set);
                     
-                    double cal_mem = 0;
                     for(int iter_level = 0 ; iter_level < py_level_set; iter_level++)
                     {
                         SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
@@ -3469,13 +3468,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
                                 
-                                cal_mem += (double)(sizeof(uint16)*data_length)*2.0;
-                                cal_mem += (double)(sizeof(uint8)*data_length);
-                                
-                                SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                //SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
                                 
                                 if(iter_level == 0)
-                                    memcpy(SubImages[iter_level][image_index],SourceImages[image_index],sizeof(uint16)*data_length);
+                                    SubImages[iter_level][image_index] = SourceImages[image_index];
+                                    //memcpy(SubImages[iter_level][image_index],SourceImages[image_index],sizeof(uint16)*data_length);
                                 else
                                     SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
                                 
@@ -3484,23 +3481,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                         }
                     }
-                    
-                    for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
-                    {
-                        if(proinfo->check_selected_image[image_index])
-                            free(SourceImages[image_index]);
-                    }
-                    free(SourceImages);
-                    
+                    //pyramid image generation
                     SetPyramidImages(proinfo, py_level_set, data_size_lr, SubImages, SubMagImages, SubOriImages);
                     
-                    printf("image mem size %f\n",cal_mem/1024.0/1024.0/1024.0);
-                    /*
-                     if(proinfo->check_Matchtag)
-                     Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr, fid);
-                     else
-                     Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,data_size_lr, fid);
-                     */
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
@@ -3573,6 +3556,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         
                         if(proinfo->IsRA && check_new_subBoundary_RA)
                         {
+                            printf("Resize RA tile\n");
                             preBoundary[0] = subBoundary[0];
                             preBoundary[1] = subBoundary[1];
                             preBoundary[2] = subBoundary[2];
@@ -3583,16 +3567,77 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             subBoundary[2] = new_subBoundary_RA[2];
                             subBoundary[3] = new_subBoundary_RA[3];
                             
-                            RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,0,0);
+                            for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                            {
+                                if(proinfo->check_selected_image[image_index])
+                                {
+                                    free(SourceImages[image_index]);
+                                
+                                    SourceImages[image_index] = SetsubsetImage(proinfo,image_index,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
+                                    
+                                    SetPySizes(data_size_lr[image_index], Subsetsize[image_index], level+1);
+                                }
+                            }
                             
-                            subsetImage(proinfo,param,NumOfIAparam,RPCs,Imageparams,subBoundary,minmaxHeight,
-                                        Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
+                            //delete pre-asigned image memory
+                            for(int t_level = 0 ; t_level <= pyramid_step ; t_level++)
+                            {
+                                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                {
+                                    if(proinfo->check_selected_image[ti])
+                                    {
+                                        free(SubImages[t_level][ti]);
+                                        free(SubMagImages[t_level][ti]);
+                                        free(SubOriImages[t_level][ti]);
+                                    }
+                                }
+                                free(SubImages[t_level]);
+                                free(SubMagImages[t_level]);
+                                free(SubOriImages[t_level]);
+                            }
+                            free(SubImages);
+                            free(SubMagImages);
+                            free(SubOriImages);
                             
-                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                                if(proinfo->check_selected_image[ti])
-                                    SetPySizes(data_size_lr[ti], Subsetsize[ti], level+1);
+                            //new memory allocate
+                            SubImages = (uint16***)malloc(sizeof(uint16**)*(level+1));
+                            SubOriImages = (uint8***)malloc(sizeof(uint8**)*(level+1));
+                            SubMagImages = (uint16***)malloc(sizeof(uint16**)*(level+1));
                             
-                            Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr,fid);
+                            for(int iter_level = 0 ; iter_level < (level+1); iter_level++)
+                            {
+                                SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                                SubOriImages[iter_level] = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
+                                SubMagImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                                
+                                for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                                {
+                                    if(proinfo->check_selected_image[image_index])
+                                    {
+                                        long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
+                                        
+                                        if(iter_level == 0)
+                                            SubImages[iter_level][image_index] = SourceImages[image_index];
+                                        else
+                                            SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                        
+                                        SubOriImages[iter_level][image_index] = (uint8*)malloc(sizeof(uint8)*data_length);
+                                        SubMagImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                    }
+                                }
+                            }
+                            //pyramid image generation
+                            SetPyramidImages(proinfo, (level+1), data_size_lr, SubImages, SubMagImages, SubOriImages);
+                            
+                            printf("Resize RA tile end\n");
+                            //RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,0,0);
+                            
+                            //subsetImage(proinfo,param,NumOfIAparam,RPCs,Imageparams,subBoundary,minmaxHeight,
+                            //            Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
+                            
+                            
+                            
+                            //Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr,fid);
                         }
                         
                         printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
@@ -3613,7 +3658,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         printf("selected_bl %d\n",blunder_selected_level);
                         
                         uint8 iteration;
-                        
                         
                         D2DPOINT *Startpos = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
                         D2DPOINT *BStartpos= (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
@@ -3740,31 +3784,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         
                         fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
                         
-                        /*
-                         printf("load subimages\n");
-                         
-                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                         {
-                         if(proinfo->check_selected_image[ti])
-                         {
-                         printf("load subimage %d\n",ti);
-                         SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                         SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                         SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                         
-                         SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-                         SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-                         
-                         if(level > Py_combined_level)
-                         {
-                         SubImages_next[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                         SubOriImages_next[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                         SubMagImages_next[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                         }
-                         }
-                         }
-                         printf("load subimages blunder_selected_level\n");
-                         */
                         D2DPOINT *Grid_wgs = ps2wgs(param,Grid_length,GridPT);
                         levelinfo.Grid_wgs = Grid_wgs;
                         
@@ -5156,26 +5175,10 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
                 }
-                else
-                {
-                    for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
-                    {
-                        if(proinfo->check_selected_image[image_index])
-                            free(SourceImages[image_index]);
-                    }
-                    free(SourceImages);
-                }
             }
-            else
-            {
-                for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
-                {
-                    if(proinfo->check_selected_image[image_index])
-                        free(SourceImages[image_index]);
-                }
-                free(SourceImages);
-            }
-    
+            
+            free(SourceImages);
+            
             fclose(fid);
             fclose(fid_header);
             
@@ -9845,9 +9848,6 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
     //for(long int ori_index=0 ; ori_index<(long)result_size.height*(long)result_size.width ; ori_index++)
     for(long int r=0;r<result_size.height;r++)
     {
-        
-            //long r = (int)(floor(ori_index/result_size.width));
-            //long c = ori_index % result_size.width;
         for(long int c=0;c<result_size.width;c++)
         {
             temp = 0;
@@ -9861,7 +9861,6 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
                         (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
                     {
                         temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
-                        
                     }
                 }
             }
@@ -10645,138 +10644,20 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         check_ortho = true;
     
     //orthoimage pixel information save
-    D2DPOINT **all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
+    D2DPOINT **all_im_cd = NULL;
     D2DPOINT **all_im_cd_next = NULL;
-    if(check_combined_WNCC)
-        all_im_cd_next = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
     
     long int sub_imagesize_w, sub_imagesize_h;
     long int sub_imagesize_w_next, sub_imagesize_h_next;
     
     if(check_ortho)
     {
-        SetOrthoImageCoord(proinfo, plevelinfo, GridPT3, check_combined_WNCC, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
+        all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
         
-        {
-            sub_imagesize_w = (long int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-            sub_imagesize_h = (long int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
-            
-            if(check_combined_WNCC)
-            {
-                sub_imagesize_w_next = (long int)((subBoundary[2] - subBoundary[0])/im_resolution_next)+1;
-                sub_imagesize_h_next = (long int)((subBoundary[3] - subBoundary[1])/im_resolution_next)+1;
-            }
-            
-            printf("imsize %d %d %u %u\n",sub_imagesize_w,sub_imagesize_h,plevelinfo.Size_Grid2D->width,plevelinfo.Size_Grid2D->height);
-            
-            const long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
-            long int sub_imagesize_total_next;
-            if(check_combined_WNCC)
-                sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
-            
-            printf("sub_imagesize_total %ld\n",sub_imagesize_total);
-            
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-            {
-                if(proinfo->check_selected_image[ti])
-                {
-                    all_im_cd[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total);
-                    if (all_im_cd[ti] == NULL)
-                    {
-                        printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-                        exit(1);
-                    }
-                    
-                    if(check_combined_WNCC)
-                    {
-                        all_im_cd_next[ti] = (D2DPOINT*)calloc(sizeof(D2DPOINT),sub_imagesize_total_next);
-                        if (all_im_cd_next[ti] == NULL)
-                        {
-                            printf("ERROR: Out of memory - all_left_im_cd_next is NULL\n");
-                            exit(1);
-                        }
-                    }
-                }
-            }
-            
-#pragma omp parallel for schedule(guided)
-            for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-            {
-                long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
-                long int pts_col = iter_count % sub_imagesize_w;
-                
-                double t_X     = subBoundary[0] + pts_col*im_resolution;
-                double t_Y     = subBoundary[1] + pts_row*im_resolution;
-                
-                long int t_col   = (long int)((t_X - subBoundary[0])/(*plevelinfo.grid_resolution));
-                long int t_row   = (long int)((t_Y - subBoundary[1])/(*plevelinfo.grid_resolution));
-                
-                long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
-                long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-                
-                
-                long int t_col_next, t_row_next;
-                long int pt_index_im_next;
-                if(check_combined_WNCC)
-                {
-                    t_col_next   = (long int)((t_X - subBoundary[0])/im_resolution_next);
-                    t_row_next   = (long int)((t_Y - subBoundary[1])/im_resolution_next);
-                    
-                    pt_index_im_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
-                }
-                
-                if(pt_index < numofpts && t_col < plevelinfo.Size_Grid2D->width && t_row < plevelinfo.Size_Grid2D->height)
-                {
-                    if(GridPT3[pt_index].Height != -1000)
-                    {
-                        D3DPOINT temp_GP;
-                        D2DPOINT temp_GP_p;
-                        
-                        if(proinfo->sensor_type == SB)
-                        {
-                            temp_GP_p.m_X = t_X;
-                            temp_GP_p.m_Y = t_Y;
-                            
-                            temp_GP     = ps2wgs_single(*plevelinfo.param,temp_GP_p);
-                        }
-                        else
-                        {
-                            temp_GP.m_X   = t_X;
-                            temp_GP.m_Y   = t_Y;
-                        }
-                        temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
-                        
-                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                        {
-                            if(proinfo->check_selected_image[ti])
-                            {
-                                D2DPOINT Imagecoord;
-                                D2DPOINT Imagecoord_py;
-                                if(proinfo->sensor_type == SB)
-                                    Imagecoord      = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP);
-                                else
-                                {
-                                    D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
-                                    Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
-                                }
-                                Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos[ti],Pyramid_step);
-                                
-                                all_im_cd[ti][pt_index_im] = Imagecoord_py;
-                                
-                                if(check_combined_WNCC)
-                                {
-                                    Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos_next[ti],Pyramid_step-1);
-                                    if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
-                                    {
-                                        all_im_cd_next[ti][pt_index_im_next] = Imagecoord_py;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        if(check_combined_WNCC)
+            all_im_cd_next = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
+        
+        SetOrthoImageCoord(proinfo, plevelinfo, GridPT3, check_combined_WNCC, OR, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
     }
     
     double ncc_alpha, ncc_beta;
@@ -10953,7 +10834,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                     D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                                     D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                                     
-                                                    SetVecKernelValue(plevelinfo, rsetkernel,false, row, col, pos_left,pos_right, radius2, Count_N_ortho);
+                                                    SetVecKernelValue(plevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N_ortho);
                                                     
                                                     if(check_combined_WNCC)
                                                     {
@@ -10966,7 +10847,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             pos_left  = all_im_cd_next[reference_id][pt_index_temp];
                                                             pos_right = all_im_cd_next[ti][pt_index_temp];
                                                             
-                                                            SetVecKernelValue(plevelinfo, rsetkernel_next,true, row, col, pos_left, pos_right, radius2, Count_N_ortho_next);
+                                                            SetVecKernelValue(plevelinfo, rsetkernel_next,NX, row, col, pos_left, pos_right, radius2, Count_N_ortho_next);
                                                         }
                                                     }
                                                 }
@@ -10976,10 +10857,10 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                 }  // end row loop
                                 
                                 // Compute correlations
-                                ComputeMultiNCC(rsetkernel, false, TH_N, Count_N_ortho, count_GNCC,  sum_GNCC_multi);
+                                ComputeMultiNCC(rsetkernel, TH_N, Count_N_ortho, count_GNCC,  sum_GNCC_multi);
                                 
                                 if(check_combined_WNCC)
-                                    ComputeMultiNCC(rsetkernel_next, true , TH_N, Count_N_ortho_next, count_GNCC,  sum_GNCC_multi);
+                                    ComputeMultiNCC(rsetkernel_next, TH_N, Count_N_ortho_next, count_GNCC,  sum_GNCC_multi);
                                 
                                 if(count_GNCC > 0)
                                     nccresult[pt_index].GNCC = DoubleToSignedChar_result(sum_GNCC_multi/count_GNCC);
@@ -11117,7 +10998,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             D2DPOINT temp_pos(cos0*col - sin0*row, sin0*col + cos0*row);
                                                             D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
                                                             
-                                                            SetVecKernelValue(plevelinfo, rsetkernel,false, row, col, pos_left,pos_right, radius2, Count_N);
+                                                            SetVecKernelValue(plevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
                                                             
                                                             if(check_combined_WNCC_INCC)
                                                             {
@@ -11125,7 +11006,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                                 D2DPOINT temp_pos_next(cos0*col - sin0*row, sin0*col + cos0*row);
                                                                 D2DPOINT pos_right_next(Tar_Imagecoord_py_next[0].m_X + temp_pos_next.m_X,Tar_Imagecoord_py_next[0].m_Y + temp_pos_next.m_Y);
                                                                 
-                                                                SetVecKernelValue(plevelinfo, rsetkernel_next,true, row, col, pos_left_next, pos_right_next, radius2, Count_N_next);
+                                                                SetVecKernelValue(plevelinfo, rsetkernel_next,NX, row, col, pos_left_next, pos_right_next, radius2, Count_N_next);
                                                                 
                                                             }  // if(check_combined_WNCC_INCC)
                                                         }
@@ -11133,7 +11014,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                 }  // end row loop
                                                 
                                                 // Compute correlations
-                                                ComputeMultiNCC(rsetkernel, false, TH_N, Count_N, count_INCC,  sum_INCC_multi);
+                                                ComputeMultiNCC(rsetkernel, TH_N, Count_N, count_INCC,  sum_INCC_multi);
                                                 if(Count_N[0] > TH_N && Count_N[1] > TH_N && Count_N[2] > TH_N)
                                                 {
                                                     if(!(*plevelinfo.check_matching_rate) && !IsRA)
@@ -11141,7 +11022,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                 }
                                                 
                                                 if(check_combined_WNCC_INCC)
-                                                    ComputeMultiNCC(rsetkernel_next, true, TH_N, Count_N_next, count_INCC,  sum_INCC_multi);
+                                                    ComputeMultiNCC(rsetkernel_next, TH_N, Count_N_next, count_INCC,  sum_INCC_multi);
                                                 
                                                 if(IsRA || (*plevelinfo.check_matching_rate )) //no 3D Voxel structure
                                                 {
@@ -11216,21 +11097,22 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                 }
             }
         }
+        
+        if (all_im_cd)
+            free(all_im_cd);
+        if(check_combined_WNCC)
+        {
+            if (all_im_cd_next)
+                free(all_im_cd_next);
+        }
     }
     
-    if (all_im_cd)
-        free(all_im_cd);
     
-    if(check_combined_WNCC)
-    {
-        if (all_im_cd_next)
-            free(all_im_cd_next);
-    }
     
     return Accessable_grid;
 }  // end VerticalLineLocus
 
-void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **all_im_cd, D2DPOINT **all_im_cd_next)
+void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **all_im_cd, D2DPOINT **all_im_cd_next)
 {
     sub_imagesize_w = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
     sub_imagesize_h = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
@@ -11333,7 +11215,11 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
                             D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
                             Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
                         }
-                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+                        
+                        if(check_pyimage == OR)
+                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+                        else
+                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_BStartpos[ti],*plevelinfo.blunder_selected_level);
                         
                         all_im_cd[ti][pt_index_im] = Imagecoord_py;
                         
@@ -11353,18 +11239,23 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
 }
 
 
-void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool check_next, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
+void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSelect check_pyimage, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
 {
     CSize LImagesize, RImagesize;
-    if(!check_next)
+    if(check_pyimage == OR)
     {
         LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step];
         RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step];
     }
-    else
+    else if(check_pyimage == NX)
     {
         LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step - 1];
         RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step - 1];
+    }
+    else
+    {
+        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.blunder_selected_level];
+        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.blunder_selected_level];
     }
     
     if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
@@ -11380,7 +11271,7 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool che
         double dx_r        =  pos_right.m_X - (int)(pos_right.m_X);
         double dy_r        =  pos_right.m_Y - (int)(pos_right.m_Y);
         
-        if(!check_next)
+        if(check_pyimage == OR)
         {
             //interpolate left_patch
             left_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.reference_id], position, LImagesize, dx, dy);
@@ -11390,7 +11281,7 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool che
             right_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
             right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
         }
-        else
+        else if(check_pyimage == NX)
         {
             //interpolate left_patch
             left_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.reference_id], position, LImagesize, dx, dy);
@@ -11399,6 +11290,16 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool che
             //interpolate right_patch
             right_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
             right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+        }
+        else
+        {
+            //interpolate left_patch
+            left_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.reference_id], position, LImagesize, dx, dy);
+            left_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.reference_id], position,LImagesize, dx, dy);
+        
+            //interpolate right_patch
+            right_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+            right_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
         }
             
         if(left_patch > 0 && right_patch > 0)
@@ -11444,7 +11345,7 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool che
     }
 }
 
-void ComputeMultiNCC(SetKernel &rsetkernel, const bool check_next, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi)
+void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi)
 {
     if(Count_N[0] > Th_rho && Count_N[1] > Th_rho && Count_N[2] > Th_rho)
     {
@@ -13444,21 +13345,18 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
     const D2DPOINT* GridPts = rlevelinfo.GridPts;
     const D2DPOINT *Grid_wgs = rlevelinfo.Grid_wgs;
     const uint8 NumofIAparam = *rlevelinfo.NumOfIAparam;
-    double **ImageAdjust = rlevelinfo.ImageAdjust;
+    const double * const *ImageAdjust = rlevelinfo.ImageAdjust;
     const uint8 Pyramid_step = *rlevelinfo.Pyramid_step;
     const D2DPOINT *Startpos = rlevelinfo.py_BStartpos;
     const double* Boundary = rlevelinfo.Boundary;
     const int blunder_selected_level = *rlevelinfo.blunder_selected_level;
     
-    //if(Pyramid_step >= 1)
-    {
-        double template_area = 5.0;
-        int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(blunder_selected_level)))/2.0)*2+1;
-        if(Template_size < t_Template_size)
-            Template_size = t_Template_size;
-        
-        printf("VerticalLineLocus_blunder : t Template_size %d\t%d\n",t_Template_size,Template_size);
-    }
+    double template_area = 5.0;
+    int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(blunder_selected_level)))/2.0)*2+1;
+    if(Template_size < t_Template_size)
+        Template_size = t_Template_size;
+    
+    printf("VerticalLineLocus_blunder : t Template_size %d\t%d\n",t_Template_size,Template_size);
     
     int Half_template_size = (int)(Template_size/2.0);
     
@@ -13482,132 +13380,19 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
         }
     }
     
-    double subBoundary[4];
     
+    const double subBoundary[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
+    const long numofpts = *rlevelinfo.Grid_length;
+    im_resolution = proinfo->resolution*pwrtwo(*rlevelinfo.blunder_selected_level);
     
-    int numofpts;
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
+    D2DPOINT **all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
+    D2DPOINT **all_im_cd_next = NULL;
     
-    int sub_imagesize_w, sub_imagesize_h;
-    bool check_ortho = false;
+    long sub_imagesize_w, sub_imagesize_h;
+    long sub_imagesize_w_next, sub_imagesize_h_next;
     
-    subBoundary[0]    = Boundary[0];
-    subBoundary[1]    = Boundary[1];
-    subBoundary[2]    = Boundary[2];
-    subBoundary[3]    = Boundary[3];
+    SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, false, BD, im_resolution, 0, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
     
-    numofpts = Size_Grid2D.height*Size_Grid2D.width;
-    
-    //orthoimage_l = (uint16*)calloc(sizeof(uint16),numofpts);
-    //orthoimage_r = (uint16*)calloc(sizeof(uint16),numofpts);
-    
-    
-    //orthoheight    = (double*)calloc(sizeof(double),numofpts);
-    
-    im_resolution = im_resolution*pwrtwo(blunder_selected_level);
-    
-    printf("im_resolution = %f\n",im_resolution);
-    
-    sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-    sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
-    long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
-    printf("sub_imagesize_total %ld\n",sub_imagesize_total);
-    
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-    {
-        if(proinfo->check_selected_image[ti])
-        {
-            all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-            if (all_im_cd[ti] == NULL)
-            {
-                printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-                exit(1);
-            }
-        }
-    }
-    
-#pragma omp parallel for schedule(guided)
-    for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-    {
-        int pts_row = (int)(floor(iter_count/sub_imagesize_w));
-        int pts_col = iter_count % sub_imagesize_w;
-        int pt_index;
-        double t_X, t_Y;
-        int t_col, t_row;
-        long int pt_index_im;
-        
-        t_X     = subBoundary[0] + pts_col*im_resolution;
-        t_Y     = subBoundary[1] + pts_row*im_resolution;
-        
-        t_col   = (int)((t_X - subBoundary[0])/DEM_resolution);
-        t_row   = (int)((t_Y - subBoundary[1])/DEM_resolution);
-        
-        pt_index    = t_row*Size_Grid2D.width + t_col;
-        pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-        
-        if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 &&
-           t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
-        {
-            if(GridPT3[pt_index].Height != -1000)
-            {
-                D3DPOINT temp_GP;
-                D2DPOINT temp_GP_p;
-                D2DPOINT Imagecoord;
-                D2DPOINT Imagecoord_py;
-                
-                if(proinfo->sensor_type == SB)
-                {
-                    temp_GP_p.m_X = t_X;
-                    temp_GP_p.m_Y = t_Y;
-                    
-                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                    temp_GP.m_X   = temp_GP_p.m_X;
-                    temp_GP.m_Y   = temp_GP_p.m_Y;
-                }
-                else
-                {
-                    temp_GP.m_X   = t_X;
-                    temp_GP.m_Y   = t_Y;
-                }
-                temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
-                
-                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                {
-                    if(proinfo->check_selected_image[ti])
-                    {
-                        if(proinfo->sensor_type == SB)
-                            Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
-                        else
-                        {
-                            D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
-                            Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
-                        }
-                        Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],blunder_selected_level);
-                        
-                        all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
-                        all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
-                    }
-                }
-            }
-            else {
-                //orthoheight[pt_index]   = -1000;
-            }
-        }
-    }
-    
-    double ncc_alpha, ncc_beta;
-    
-    if(Pyramid_step >= 3)
-        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.3 + (iteration-1)*0.10);
-    else if(Pyramid_step == 2)
-        ncc_alpha = 1.0 - (0.5 + (iteration-1)*0.10);
-    else
-        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.10);
-    
-    if(ncc_alpha < 0.1)
-        ncc_alpha = 0.1;
-    
-    printf("VerticalLineLocus_blunder : ortho_ncc\n");
     
 #pragma omp parallel
     {
@@ -13626,22 +13411,13 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
         }
         
 #pragma omp for schedule(guided)
-        for(int iter_count = 0 ; iter_count < Size_Grid2D.height*Size_Grid2D.width ; iter_count++)
+        for(int iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
-            int pts_row = (int)(floor(iter_count/Size_Grid2D.width));
-            int pts_col = iter_count % Size_Grid2D.width;
-            int pt_index;
-            pt_index = pts_row*Size_Grid2D.width + pts_col;
+            long pts_row = (int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
+            long pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
+            long pt_index = pts_row*rlevelinfo.Size_Grid2D->width + pts_col;
             
-            double Sum_ortho_ncc = 0;
-            int count_ncc = 0;
-            
-            int reference_id = 0;
-            CSize LImagesize, RImagesize;
-            
-            LImagesize.width  = Imagesizes[reference_id][blunder_selected_level].width;
-            LImagesize.height = Imagesizes[reference_id][blunder_selected_level].height;
-            
+            const int reference_id = 0;
             if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
             {
                 nccresult[pt_index] = -1.0;
@@ -13651,175 +13427,55 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                 {
                     if(proinfo->check_selected_image[ti])
                     {
-                        RImagesize.width  = Imagesizes[ti][blunder_selected_level].width;
-                        RImagesize.height = Imagesizes[ti][blunder_selected_level].height;
+                        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,ti,Half_template_size,patch_size);
                         
                         int Count_N[3] = {0};
-                        
-                        double t_nccresult;
-                        
-                        bool check_INCC = false;
+                        double count_GNCC = 0;
+                        double t_nccresult = 0;
                         
                         for(int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
                             for(int col = -Half_template_size; col <= Half_template_size ; col++)
                             {
-                                double radius2  = (double)(row*row + col*col);
+                                const int radius2  = row*row + col*col;
                                 if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                                 {
-                                    double pos_row_left = -100;
-                                    double pos_col_left = -100;
-                                    double pos_row_right= -100;
-                                    double pos_col_right= -100;
+                                    const double t_X     = rlevelinfo.GridPts[pt_index].m_X + col*im_resolution;
+                                    const double t_Y     = rlevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
                                     
-                                    int pt_index_temp,pt_index_dem,pt_index_temp_c;
-                                    double t_X, t_Y, t_X_c,t_Y_c;
-                                    int t_col, t_row, tt_col, tt_row,t_col_c, t_row_c;
+                                    long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
+                                    long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
+                                    long int pt_index_temp = t_row*sub_imagesize_w + t_col;
                                     
-                                    t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                                    t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
+                                    const long int tt_col  = (long int)((t_X - subBoundary[0])/(*rlevelinfo.grid_resolution));
+                                    const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*rlevelinfo.grid_resolution));
+                                    const long int pt_index_dem  = tt_row*(long int)rlevelinfo.Size_Grid2D->width + tt_col;
                                     
-                                    t_col   = (int)((t_X - subBoundary[0])/im_resolution);
-                                    t_row   = (int)((t_Y - subBoundary[1])/im_resolution);
-                                    
-                                    tt_col  = (int)((t_X - subBoundary[0])/DEM_resolution);
-                                    tt_row  = (int)((t_Y - subBoundary[1])/DEM_resolution);
-                                    
-                                    pt_index_temp = t_row*sub_imagesize_w + t_col;
-                                    
-                                    pt_index_dem  = tt_row*Size_Grid2D.width + tt_col;
-                                    
-                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                                       t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h &&
-                                       pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                                       tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                                       all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < numofpts && tt_col >= 0 && tt_col < rlevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < rlevelinfo.Size_Grid2D->height && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                     {
                                         if(GridPT3[pt_index_dem].Height != -1000)
                                         {
-                                            pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
-                                            pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
-                                            pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
-                                            pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
+                                            D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
+                                            D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
-                                            if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                               pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
-                                            {
-                                                double dx;
-                                                double dy;
-                                                long int position;
-                                                
-                                                //interpolate left_patch
-                                                dx          =  pos_col_left - (int)(pos_col_left);
-                                                dy          =  pos_row_left - (int)(pos_row_left);
-                                                position = (long int) (pos_col_left) + (long int) pos_row_left * LImagesize.width;
-                                                double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                                double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
-                                                
-                                                //interpolate right_patch
-                                                dx          =  pos_col_right - (int)(pos_col_right);
-                                                dy          =  pos_row_right - (int)(pos_row_right);
-                                                position = (long int) (pos_col_right) + (long int) pos_row_right * RImagesize.width;
-                                                double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                                double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
-                                                
-                                                //end interpolation
-                                                
-                                                left_patch_vecs[0][Count_N[0]] = left_patch;
-                                                left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-                                                right_patch_vecs[0][Count_N[0]] = right_patch;
-                                                right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
-                                                Count_N[0]++;
-                                                
-                                                int size_1, size_2;
-                                                size_1        = (int)(Half_template_size/2);
-                                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                                {
-                                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                    {
-                                                        left_patch_vecs[1][Count_N[1]] = left_patch;
-                                                        left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                                                        right_patch_vecs[1][Count_N[1]] = right_patch;
-                                                        right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
-                                                        Count_N[1]++;
-                                                    }
-                                                }
-                                                
-                                                size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                                {
-                                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                    {
-                                                        left_patch_vecs[2][Count_N[2]] = left_patch;
-                                                        left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                                                        right_patch_vecs[2][Count_N[2]] = right_patch;
-                                                        right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
-                                                        Count_N[2]++;
-                                                    }
-                                                }
-                                                
-                                                if(row == 0 && col == 0)
-                                                {
-                                                    //orthoimage_l[pt_index] = (int)(left_patch);
-                                                    //orthoimage_r[pt_index] = (int)(right_patch);
-                                                    
-                                                }
-                                            }
-                                        } // if(GridPT3[pt_index_dem].Height != -1000)
+                                            SetVecKernelValue(rlevelinfo, rsetkernel,BD, row, col, pos_left,pos_right, radius2, Count_N);
+                                        }
                                     }
                                 } // if(radius <= Half_template_size-1)
                             } // end col loop
                         } // end row loop
                         
                         // Compute collelations
-                        if(Count_N[0] > 0 && Count_N[1] > 0 && Count_N[2] > 0)
-                        {
-                            double temp_roh = 0;
-                            double count_roh = 0;
-                            for (int k=0; k<3; k++)
-                            {
-                                double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-                                if (ncc != -99)
-                                {
-                                    count_roh++;
-                                    temp_roh += ncc;
-                                }
-                                
-                                double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-                                if (ncc_mag != -99)
-                                {
-                                    count_roh++;
-                                    temp_roh += ncc_mag;
-                                }
-                            }
-                            if (count_roh > 0)
-                                t_nccresult = round(temp_roh/count_roh*1000.0)/1000.0;
-                            else
-                                t_nccresult = -1;
-                        }
-                        else
-                        {
-                            t_nccresult = -1;
-                        }
+                        ComputeMultiNCC(rsetkernel, 0, Count_N, count_GNCC,  t_nccresult);
                         
                         if(max_ncc < t_nccresult)
                             max_ncc = t_nccresult;
                         
                         GridPT3[pt_index].ortho_ncc[ti] = DoubleToSignedChar_grid(t_nccresult);
-                        
-                        /*if(t_nccresult > -1)
-                         {
-                         Sum_ortho_ncc += GridPT3[pt_index].ortho_ncc[ti];
-                         count_ncc++;
-                         }*/
                     }
                 } // end ti loop
-                
-                //if(count_ncc > 0)
-                {
-                    GridPT3[pt_index].Mean_ortho_ncc = DoubleToSignedChar_grid(max_ncc);
-                    nccresult[pt_index] = max_ncc;
-                }
+                GridPT3[pt_index].Mean_ortho_ncc = DoubleToSignedChar_grid(max_ncc);
+                nccresult[pt_index] = max_ncc;
             }
         } // end omp for
         
@@ -13844,10 +13500,6 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
     }
     if (all_im_cd)
         free(all_im_cd);
-    
-    //free(orthoimage_l);
-    //free(orthoimage_r);
-    //free(orthoheight);
     
     return true;
 }

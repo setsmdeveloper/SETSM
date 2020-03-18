@@ -119,11 +119,11 @@ double GetHeightStep(int Pyramid_step, double im_resolution);
 
 int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
 
-void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
+void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
 
-void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, const bool check_next, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N);
+void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSelect check_pyimage, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N);
 
-void ComputeMultiNCC(SetKernel &rsetkernel, const bool check_next, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi);
+void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi);
 
 void FindPeakNcc(const int Pyramid_step, const int iteration, const long int grid_index, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, float &pre_height, int &direction, double &max_WNCC, NCCresult *nccresult);
 
