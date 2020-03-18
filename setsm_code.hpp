@@ -88,6 +88,11 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, double* _Hinterval);
 
 bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 NumofIAparam, const double *const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff);
+
+uint16 *SetsubsetImage(ProInfo *proinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize);
+
+void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages);
+
 D2DPOINT* wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs);
 D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs);
 D3DPOINT* wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs);
@@ -154,14 +159,8 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 
 void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, D3DPOINT *ptslists);
 
-int DecisionMPs_setheight(ProInfo *proinfo,LevelInfo &rlevelinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-						  uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
-						  bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-						  uint16 **MagImages,double DEM_resolution, double im_resolution, const double * const * const *RPCs,
-						  const CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-						  TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-						  uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
-						  char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level);
+void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri);
+
 int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
                        CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_results_anchor,int count_results_blunder, char *filename_mps,vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
 

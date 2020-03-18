@@ -3279,13 +3279,13 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         if(check_cal || check_cal_2)
         {
             printf("start cal tile\n");
-
+            
             FILE *fid = NULL;
             FILE *fid_header = NULL;
-
+            
             D2DPOINT *Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
             CSize *Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
-
+            
             char **Subsetfilename = (char**)malloc(sizeof(char*)*proinfo->number_of_images);
             double **t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -3293,8 +3293,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                 t_Imageparams[ti] = (double*)calloc(sizeof(double),2);
                 Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
             }
-
-            char save_file[500]; 
+            
+            char save_file[500];
             if(proinfo->IsRA)
             {
                 if(!proinfo->check_checktiff)
@@ -3303,7 +3303,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     fid         = fopen(save_file,"w");
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
-
+                    
                     sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
                 }
@@ -3315,25 +3315,25 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     t_Imageparams[ti][0]    = Imageparams[ti][0];
                     t_Imageparams[ti][1]    = Imageparams[ti][1];
                 }
-
+                
                 if(!proinfo->check_checktiff)
                 {
                     sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
-
+                    
                     sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
                 }
             }
-
+            
             double subBoundary[4];
             printf("minmaxH = %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
             SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
-
+            
             printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
-
+            
             //set subset image filenames
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
             {
@@ -3342,14 +3342,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                 sprintf(Subsetfilename[ti],"%s/%s_subset_%d_%d.raw",proinfo->tmpdir,filename,row,col);
                 free(filename);
             }
-
+            
             printf("subsetimage\n");
-
+            
             double RA_memory = 0;
             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
             {
                 printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
-
+                
                 CSize t_Imagesize;
                 t_Imagesize.width = (subBoundary[2] - subBoundary[0])/0.7;
                 t_Imagesize.height = (subBoundary[3] - subBoundary[1])/0.7;
@@ -3357,12 +3357,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                 RA_memory += (sizeof(uint16)*data_length)*2;
                 RA_memory += (sizeof(int16)*data_length);
                 RA_memory += (sizeof(uint8)*data_length);
-
+                
                 proinfo->check_selected_image[ti] = true;
             }
-
+            
             RA_memory = RA_memory/1024.0/1024.0/1024.0;
-
+            
             if(proinfo->IsRA)
             {
                 printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
@@ -3372,11 +3372,20 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     exit(1);
                 }
             }
-
-            if(subsetImage(proinfo,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetfilename,Subsetsize,fid,proinfo->check_checktiff))
+            
+            uint16 **SourceImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+            int count_available_images = 0;
+            for(int index_image = 0 ; index_image < proinfo->number_of_images ; index_image++)
+            {
+                SourceImages[index_image] = SetsubsetImage(proinfo,index_image,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
+                if(proinfo->check_selected_image[index_image])
+                    count_available_images++;
+            }
+            
+            if(count_available_images >= 2)
             {
                 printf("Completion of subsetImage!!\n");
-
+                
                 if( check_kernel_size(proinfo, Subsetsize, Template_size, pyramid_step))
                 {
                     double total_memory = 0.0;
@@ -3384,23 +3393,23 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     double grid_resolution = 0;
                     double pre_grid_resolution = 0;
                     bool lower_level_match = true;
-
+                    
                     bool flag_start = false;
-
+                    
                     int level             = pyramid_step;
                     if(proinfo->check_Matchtag)
                     {
                         level   = 0;
                         printf("reprocessing Matchtag\n");
                     }
-
+                    
                     CSize Size_Grid2D, pre_Size_Grid2D;
                     CSize **data_size_lr = (CSize**)malloc(sizeof(CSize*)*proinfo->number_of_images);
                     UGRID *GridPT3 = NULL, *Pre_GridPT3 = NULL;
-
+                    
                     time_t PreST = 0, PreET = 0;
                     double Pregab = 0;
-
+                    
                     Size_Grid2D.height  = 0;
                     Size_Grid2D.width   = 0;
                     pre_Size_Grid2D = Size_Grid2D;
@@ -3412,7 +3421,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+1));
                                 SetPySizes(data_size_lr[ti], Subsetsize[ti], level);
-
+                                
                                 for (int ttt = 0 ; ttt < level+1 ;ttt++)
                                     printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
                             }
@@ -3431,22 +3440,73 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                         }
                     }
-
+                    
                     PreST = time(0);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing start!!\n",row,iter_row_end,col,t_col_end);
-
+                    
+                    //Set Pyramid Images memory
+                    uint8 py_level_set;
                     if(proinfo->check_Matchtag)
-                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr, fid);
+                        py_level_set = 2;
                     else
-                        Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,data_size_lr, fid);
-
+                        py_level_set = level + 1;
+                    
+                    uint16 ***SubImages = (uint16***)malloc(sizeof(uint16**)*py_level_set);
+                    uint8  ***SubOriImages = (uint8***)malloc(sizeof(uint8**)*py_level_set);
+                    uint16 ***SubMagImages = (uint16***)malloc(sizeof(uint16**)*py_level_set);
+                    
+                    double cal_mem = 0;
+                    for(int iter_level = 0 ; iter_level < py_level_set; iter_level++)
+                    {
+                        SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                        SubOriImages[iter_level] = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
+                        SubMagImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                        
+                        for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                        {
+                            if(proinfo->check_selected_image[image_index])
+                            {
+                                long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
+                                
+                                cal_mem += (double)(sizeof(uint16)*data_length)*2.0;
+                                cal_mem += (double)(sizeof(uint8)*data_length);
+                                
+                                SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                
+                                if(iter_level == 0)
+                                    memcpy(SubImages[iter_level][image_index],SourceImages[image_index],sizeof(uint16)*data_length);
+                                else
+                                    SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                
+                                SubOriImages[iter_level][image_index] = (uint8*)malloc(sizeof(uint8)*data_length);
+                                SubMagImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                            }
+                        }
+                    }
+                    
+                    for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                    {
+                        if(proinfo->check_selected_image[image_index])
+                            free(SourceImages[image_index]);
+                    }
+                    free(SourceImages);
+                    
+                    SetPyramidImages(proinfo, py_level_set, data_size_lr, SubImages, SubMagImages, SubOriImages);
+                    
+                    printf("image mem size %f\n",cal_mem/1024.0/1024.0/1024.0);
+                    /*
+                     if(proinfo->check_Matchtag)
+                     Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr, fid);
+                     else
+                     Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level,data_size_lr, fid);
+                     */
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d\tcol = %d/%d\tPreprocessing finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-
+                    
                     PreST = time(0);
                     printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
-
+                    
                     int blunder_selected_level;
                     int pre_blunder_selected_level;
                     if(proinfo->DEM_resolution == 8)
@@ -3459,16 +3519,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         pre_blunder_selected_level = 1;
                     else
                         pre_blunder_selected_level = 0;
-
-
+                    
+                    
                     int final_level_iteration = 1;
                     if(proinfo->check_Matchtag)
                         final_level_iteration = 2;
-
+                    
                     double matching_rate = 0;
                     bool check_matching_rate = false;
                     double th_mr = 0.05;
-
+                    
                     bool check_RA_divide = false;
                     double tilesize_RA = 20000;
                     double lengthOfX = subBoundary[2] - subBoundary[0];
@@ -3502,96 +3562,77 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                         }
                     }
-
+                    
                     printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n",lengthOfX,lengthOfY,division_X,division_Y,total_tile,check_RA_divide);
-
+                    
                     const int Py_combined_level = 0;
                     while(lower_level_match && level >= 0)
                     {
-
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
-
+                        
                         if(proinfo->IsRA && check_new_subBoundary_RA)
                         {
                             preBoundary[0] = subBoundary[0];
                             preBoundary[1] = subBoundary[1];
                             preBoundary[2] = subBoundary[2];
                             preBoundary[3] = subBoundary[3];
-
+                            
                             subBoundary[0] = new_subBoundary_RA[0];
                             subBoundary[1] = new_subBoundary_RA[1];
                             subBoundary[2] = new_subBoundary_RA[2];
                             subBoundary[3] = new_subBoundary_RA[3];
-
+                            
                             RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,0,0);
-
+                            
                             subsetImage(proinfo,param,NumOfIAparam,RPCs,Imageparams,subBoundary,minmaxHeight,
-                                    Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
-
+                                        Startpos_ori,Subsetfilename,Subsetsize, fid,proinfo->check_checktiff);
+                            
                             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                            {
                                 if(proinfo->check_selected_image[ti])
-                                {
                                     SetPySizes(data_size_lr[ti], Subsetsize[ti], level+1);
-                                }
-                            }
+                            
                             Preprocessing(proinfo,proinfo->tmpdir,Subsetfilename,level+1,data_size_lr,fid);
                         }
                         
                         printf("subBoundary %f\t%f\t%f\t%f\t preBoundary %f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],preBoundary[0],preBoundary[1],preBoundary[2],preBoundary[3]);
-
+                        
                         double Th_roh, Th_roh_min, Th_roh_start, Th_roh_next;
                         double minH_mps, maxH_mps;
                         double minH_grid, maxH_grid;
                         double MPP;
                         double MPP_simgle_image;
                         double MPP_stereo_angle = 1;
-
-                        uint8 iteration;
-
-                        D2DPOINT *Startpos = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-                        D2DPOINT *BStartpos= (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-
-                        uint16 **SubImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint8  **SubOriImages = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
-                        uint16 **SubMagImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint16 **SubImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        uint16 **SubMagImages_B = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-
-
-                        D2DPOINT *Startpos_next = NULL;
-                        uint16 **SubImages_next = NULL;
-                        uint8  **SubOriImages_next = NULL;
-                        uint16 **SubMagImages_next = NULL;
-                        if(level > Py_combined_level)
-                        {
-                            Startpos_next = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
-                            SubImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                            SubOriImages_next = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
-                            SubMagImages_next = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
-                        }
-
+                        
                         if(level >= pyramid_step)
                             blunder_selected_level = level;
                         else if(level >= 2)
                             blunder_selected_level = level + 1;
                         else
                             blunder_selected_level = level + 1;
-
                         printf("selected_bl %d\n",blunder_selected_level);
                         
-                        SetThs(proinfo,level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start);
-
+                        uint8 iteration;
+                        
+                        
+                        D2DPOINT *Startpos = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
+                        D2DPOINT *BStartpos= (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
+                        
+                        D2DPOINT *Startpos_next = NULL;
+                        if(level > Py_combined_level)
+                        {
+                            Startpos_next = (D2DPOINT*)malloc(sizeof(D2DPOINT)*proinfo->number_of_images);
+                        }
+                        
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
                             Startpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level));
                             Startpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(level));
-
+                            
                             BStartpos[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(blunder_selected_level));
                             BStartpos[ti].m_Y       = (double)(Startpos_ori[ti].m_Y/pwrtwo(blunder_selected_level));
-
+                            
                             printf("Startpos %f\t%f\t%f\t%f\t%f\t%f\n",Startpos_ori[ti].m_X,Startpos_ori[ti].m_Y,Startpos[ti].m_X,Startpos[ti].m_Y,BStartpos[ti].m_X,BStartpos[ti].m_Y);
-
+                            
                             if(level > Py_combined_level)
                             {
                                 Startpos_next[ti].m_X       = (double)(Startpos_ori[ti].m_X/pwrtwo(level-1));
@@ -3600,17 +3641,20 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         }
                         
                         LevelInfo levelinfo = {NULL};
-
-                        levelinfo.py_Images = SubImages;
-                        levelinfo.py_MagImages = SubMagImages;
-                        levelinfo.py_OriImages = SubOriImages;
                         
-                        levelinfo.py_BImages = SubImages_B;
-                        levelinfo.py_BMagImages = SubMagImages_B;
+                        levelinfo.py_Images = SubImages[level];
+                        levelinfo.py_MagImages = SubMagImages[level];
+                        levelinfo.py_OriImages = SubOriImages[level];
                         
-                        levelinfo.py_Images_next = SubImages_next;
-                        levelinfo.py_OriImages_next = SubOriImages_next;
-                        levelinfo.py_MagImages_next = SubMagImages_next;
+                        levelinfo.py_BImages = SubImages[blunder_selected_level];
+                        levelinfo.py_BMagImages = SubMagImages[blunder_selected_level];
+                        
+                        if(level > Py_combined_level)
+                        {
+                            levelinfo.py_Images_next = SubImages[level-1];
+                            levelinfo.py_OriImages_next = SubOriImages[level-1];
+                            levelinfo.py_MagImages_next = SubMagImages[level-1];
+                        }
                         
                         levelinfo.py_Startpos = Startpos;
                         levelinfo.py_BStartpos = BStartpos;
@@ -3627,29 +3671,31 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         levelinfo.bin_angle = &bin_angle;
                         levelinfo.blunder_selected_level = &blunder_selected_level;
                         levelinfo.Py_combined_level = &Py_combined_level;
-
+                        
                         printf("levelinfo %d\t%d\n",*levelinfo.Pyramid_step,*levelinfo.blunder_selected_level);
-
+                        
+                        SetThs(proinfo,level,final_level_iteration, &Th_roh, &Th_roh_min, &Th_roh_next, &Th_roh_start);
+                        
                         D2DPOINT *GridPT = NULL;
                         if(proinfo->IsRA)
                         {
                             py_resolution           = Image_res[0]*pwrtwo(pyramid_step+1);
                             grid_resolution         = Image_res[0]*pwrtwo(pyramid_step+1);
-
+                            
                             printf("RA grid size %f\n",py_resolution);
-
+                            
                             GridPT                  = SetDEMGrid(subBoundary, grid_resolution, grid_resolution,&Size_Grid2D);
-
+                            
                             printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
                         }
                         else
                             GridPT  = SetGrids(proinfo, level, final_level_iteration, proinfo->resolution, &Size_Grid2D, proinfo->DEM_resolution, &py_resolution, &grid_resolution, subBoundary);
-
+                        
                         const long int Grid_length = (long int)Size_Grid2D.width*(long int)Size_Grid2D.height;
                         levelinfo.Size_Grid2D = &Size_Grid2D;
                         levelinfo.Grid_length = &Grid_length;
                         levelinfo.GridPts = GridPT;
-
+                        
                         if(!flag_start)
                         {
                             printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f minmax %f %f\n",proinfo->pre_DEMtif,proinfo->priori_DEM_tif,Image_res[0],minmaxHeight[0],minmaxHeight[1]);
@@ -3657,7 +3703,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 free(GridPT3);
                             GridPT3 = SetGrid3PT(proinfo,param, Size_Grid2D, Th_roh, minmaxHeight,subBoundary,grid_resolution);
                         }
-
+                        
                         if(flag_start)
                         {
                             if(proinfo->IsRA)
@@ -3665,9 +3711,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 if(check_new_subBoundary_RA)
                                 {
                                     GridPT3 = ResizeGirdPT3_RA(proinfo, pre_Size_Grid2D, Size_Grid2D, preBoundary,subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
-
+                                    
                                     check_new_subBoundary_RA = false;
-
+                                    
                                     printf("start ResizeGridPT3 with newBoundry pre size %d %d size %d %d pre_resol %f\n",pre_Size_Grid2D.width,pre_Size_Grid2D.height,Size_Grid2D.width,Size_Grid2D.height,pre_grid_resolution);
                                 }
                                 else
@@ -3682,61 +3728,62 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 GridPT3 = ResizeGirdPT3(proinfo, pre_Size_Grid2D, Size_Grid2D, subBoundary, GridPT, Pre_GridPT3, pre_grid_resolution,minmaxHeight);
                             }
                         }
-
+                        
                         printf("end start ResizeGridPT3 minmax height %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
-
+                        
                         pre_Size_Grid2D.width = Size_Grid2D.width;
                         pre_Size_Grid2D.height = Size_Grid2D.height;
                         pre_grid_resolution = grid_resolution;
-
+                        
                         fprintf(fid,"level = %d, Completion of Gridinfo setup\t%d\t%d!!\n",level,Size_Grid2D.width,Size_Grid2D.height);
-
+                        
                         fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
-
-                        printf("load subimages\n");
-
-                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                        {
-                            if(proinfo->check_selected_image[ti])
-                            {
-                                printf("load subimage %d\n",ti);
-                                SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                                SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-                                SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
-
-                                SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-                                SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
-
-                                if(level > Py_combined_level)
-                                {
-                                    SubImages_next[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                                    SubOriImages_next[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                                    SubMagImages_next[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
-                                }
-                            }
-                        }
-                        printf("load subimages blunder_selected_level\n");
-
+                        
+                        /*
+                         printf("load subimages\n");
+                         
+                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                         {
+                         if(proinfo->check_selected_image[ti])
+                         {
+                         printf("load subimage %d\n",ti);
+                         SubImages[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+                         SubOriImages[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+                         SubMagImages[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level],level);
+                         
+                         SubImages_B[ti]   = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
+                         SubMagImages_B[ti]= LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][blunder_selected_level],blunder_selected_level);
+                         
+                         if(level > Py_combined_level)
+                         {
+                         SubImages_next[ti]     = LoadPyramidImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
+                         SubOriImages_next[ti]  = LoadPyramidOriImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
+                         SubMagImages_next[ti]  = LoadPyramidMagImages(proinfo->tmpdir,Subsetfilename[ti],data_size_lr[ti][level-1],level-1);
+                         }
+                         }
+                         }
+                         printf("load subimages blunder_selected_level\n");
+                         */
                         D2DPOINT *Grid_wgs = ps2wgs(param,Grid_length,GridPT);
                         levelinfo.Grid_wgs = Grid_wgs;
-
+                        
                         if(proinfo->pre_DEMtif && !flag_start)
                         {
                             if(proinfo->check_Matchtag)
                             {
-                                VerticalLineLocus_seeddem(proinfo,SubMagImages_B,grid_resolution, Image_res[0], RPCs,data_size_lr, SubImages_B, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, blunder_selected_level, BStartpos, subBoundary,minmaxHeight);
+                                VerticalLineLocus_seeddem(proinfo,levelinfo.py_BMagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, levelinfo.py_BImages, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, blunder_selected_level, BStartpos, subBoundary,minmaxHeight);
                                 printf("check_matchtag ortho_ncc\n");
                             }
                             else
                             {
-                                VerticalLineLocus_seeddem(proinfo,SubMagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, SubImages, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, level, Startpos, subBoundary,minmaxHeight);
+                                VerticalLineLocus_seeddem(proinfo,levelinfo.py_MagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, levelinfo.py_Images, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, level, Startpos, subBoundary,minmaxHeight);
                             }
                         }
-
+                        
                         iteration       = 1;
                         if(level == 0)
                             iteration = final_level_iteration;
-
+                        
                         int pre_matched_pts=10;
                         double matching_change_rate = 100;
                         const double rate_th = 0.00999999;
@@ -3744,26 +3791,26 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         float mem_th = 5;
                         if(level <= 1)
                             mem_th = 10;
-
+                        
                         const double height_step = GetHeightStep(level,Image_res[0]);
                         levelinfo.height_step = &height_step;
                         levelinfo.grid_resolution = &grid_resolution;
                         levelinfo.minmaxHeight = minmaxHeight;
-
+                        
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
                         const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,Py_combined_level,minmaxHeight);
-
+                        
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
-
+                        
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory -2)
                         {
                             printf("System memory is not enough to run SETSM. Please reduce tilesize or assign more physical memory!!\n");
                             exit(1);
                         }
-
+                        
                         if(!check_matching_rate)
                         {
                             if(proinfo->IsRA || level <= 2 && (total_memory > proinfo->System_memory - mem_th  ))
@@ -3774,11 +3821,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         
                         if(proinfo->check_Matchtag && proinfo->DEM_resolution < 2)
                             check_matching_rate = true;
-
+                        
                         VOXEL **grid_voxel = NULL;
                         if(!check_matching_rate)
                             grid_voxel = (VOXEL**)calloc(sizeof(VOXEL*),Size_Grid2D.width*Size_Grid2D.height);
-
+                        
                         if(proinfo->sensor_type == SB)
                         {
                             if(proinfo->IsRA)
@@ -3798,11 +3845,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             MPP_simgle_image = proinfo->resolution*1.5;
                             MPP_stereo_angle = MPP_simgle_image;
                         }
-
+                        
                         *stereo_angle_accuracy = MPP_stereo_angle;
-
+                        
                         printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
-
+                        
                         NCCresult *nccresult = (NCCresult*)calloc(sizeof(NCCresult),Grid_length);
                         levelinfo.check_matching_rate = &check_matching_rate;
                         bool level_check_matching_rate = false;
@@ -3810,16 +3857,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         {
                             if(level == 0 &&  iteration == 3)
                                 matching_change_rate = 0.001;
-
+                            
                             printf("%f \t %f\n",Th_roh,Th_roh_min);
-
+                            
                             double pre_3sigma, pre_mean;
                             double Th_roh_update = 0;
-
+                            
                             NCCflag flag;
-
+                            
                             BL blunder_param;
-
+                            
                             char filename_mps[500];
                             char filename_mps_asc[500];
                             char filename_mps_mid[500];
@@ -3827,23 +3874,23 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             char filename_mps_pre[500];
                             char filename_mps_anchor[500];
                             char filename_mps_aft[500];
-
+                            
                             char filename_tri[500];
                             char v_temp_path[500];
-
+                            
                             int count_results[2];
                             int count_results_anchor[2];
                             int count_MPs;
                             bool check_ortho_cal = false;
-
+                            
                             uint8 ortho_level = 2;
                             if(proinfo->DEM_resolution >= 8)
                                 ortho_level = 3;
-
+                            
                             if(level >= ortho_level)
                             {
                                 check_ortho_cal = true;
-
+                                
                                 if(level == 2 && iteration > 5)
                                     check_ortho_cal = false;
                             }
@@ -3851,14 +3898,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 check_ortho_cal = false;
                             }
-
+                            
                             //if(level <= proinfo->SGM_py)
                             //    check_ortho_cal = false;
-
+                            
                             printf("ortho level = %d\n",ortho_level);
-
+                            
                             pre_3sigma  = 0;    pre_mean    = 0;
-
+                            
                             if(level > 1)
                             {
                                 flag.rotate_flag     = 1;       flag.multi_flag      = 1;       flag.multi_flag_sum  = 1;       flag.inter_flag      = 1;
@@ -3867,18 +3914,18 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 flag.rotate_flag     = 1;       flag.multi_flag      = 1;       flag.multi_flag_sum  = 1;       flag.inter_flag      = 1;
                             }
-
+                            
                             if(iteration > 1)
                                 flag.weight_flag     = 1;
                             else
                                 flag.weight_flag     = 0;
-
+                            
                             fprintf(fid,"Starting computation of NCC\n iteration = %u\tTh_roh = %f\tTh_roh_start = %f\tGrid size %d %d\n",
                                     iteration, Th_roh,Th_roh_start,Size_Grid2D.width,Size_Grid2D.height);
-
+                            
                             for( int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                 printf("sub size %d\t%d\n",data_size_lr[ti][level].width,data_size_lr[ti][level].height);
-
+                            
                             if(proinfo->IsRA)
                             {
                                 sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
@@ -3889,19 +3936,19 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 sprintf(filename_mps,"%s/txt/matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_asc,"%s/txt/matched_pts_%d_%d_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration);
-
+                                
                                 sprintf(filename_mps_fin,"%s/txt/matched_pts_%d_%d_%d_%d_fin.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_pre,"%s/txt/matched_pts_%d_%d_%d_%d_pre.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_aft,"%s/txt/matched_pts_%d_%d_%d_%d_aft.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_anchor,"%s/txt/matched_pts_%d_%d_%d_%d_anchor.txt",proinfo->save_filepath,row,col,level,iteration);
                             }
-
+                            
                             sprintf(filename_tri,"%s/grid_voxel_height_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                             sprintf(v_temp_path,"%s/tmp/vv_tmp",proinfo->save_filepath);
-
+                            
                             printf("template size =%d\n",Template_size);
-
-
+                            
+                            
                             double Memory = 0;
                             size_t GridPT_size  = (sizeof(D2DPOINT)*Size_Grid2D.height*Size_Grid2D.width);
                             Memory += (double)((GridPT_size)*3);
@@ -3915,14 +3962,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             size_t voxel_all_size = (sizeof(VOXEL)*Size_Grid2D.width*Size_Grid2D.height);
                             Memory += (double)(voxel_all_size);
                             printf("voxel_all_size %f\n",(double)(voxel_all_size)/1024.0/1024.0/1024.0);
-
+                            
                             if(!check_matching_rate)
                             {
                                 //FILE* t_fid_c = fopen(filename_tri,"w");
-
+                                
                                 size_t voxel_size = 0;
                                 InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration);
-
+                                
                                 for(long int t_r = 0 ; t_r < Size_Grid2D.height ; t_r++)
                                 {
                                     for(long int t_c = 0 ; t_c < Size_Grid2D.width ; t_c++)
@@ -3934,66 +3981,66 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             //fprintf(t_fid_c,"%d\t",nccresult[t_index].NumOfHeight);
                                         }
                                         /*else
-                                          {
-                                          if(grid_voxel[t_index])
-                                          free(grid_voxel[t_index]);
-                                          }*/
+                                         {
+                                         if(grid_voxel[t_index])
+                                         free(grid_voxel[t_index]);
+                                         }*/
                                     }
                                     //fprintf(t_fid_c,"\n");
                                 }
                                 //fclose(t_fid_c);
-
+                                
                                 voxel_all_size += voxel_size;
                                 printf("Done grid_voxel initialize. memory size %f\n",(double)(voxel_all_size)/1024.0/1024.0/1024.0);
                             }
-
+                            
                             printf("all memeory %f\n",(Memory+(double)(voxel_all_size))/1024.0/1024.0/1024.0);
-
+                            
                             const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration);
-
+                            
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
-
+                            
                             if(!check_matching_rate)
                             {
                                 if(level == 0 && iteration > 1 && proinfo->DEM_resolution >= 2)
                                 {
                                     fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", row, col, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
-
+                                    
                                     printf("header file write %d\t%d\n",level,iteration);
                                 }
-
+                                
                                 const int MaxNumberofHeightVoxel = (int)((minmaxHeight[1] - minmaxHeight[0])/height_step);
-
+                                
                                 AWNCC(proinfo,grid_voxel,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel);
                                 printf("Done AWNCC\n");
                             }
-
+                            
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
-
+                            
                             minH_mps = 1000000;
                             maxH_mps = -1000000;
-
+                            
                             if(level >= 5)
                                 MPP = MPP_simgle_image;
                             else if(MPP_stereo_angle > 5)
                                 MPP = MPP_stereo_angle;
                             else
                                 MPP = MPP_simgle_image;
-
+                            
                             vector<D3DPOINT> MatchedPts_list;
-
+                            
                             count_MPs = SelectMPs(proinfo,nccresult,Size_Grid2D,GridPT,GridPT3,Th_roh,Th_roh_min,Th_roh_start,Th_roh_next,level,pyramid_step,
-                                    iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
+                                                  iteration,0,filename_mps_pre,proinfo->pre_DEMtif,proinfo->IsRA,MPP,proinfo->DEM_resolution,Image_res[0],final_level_iteration,MPP_stereo_angle,&MatchedPts_list);
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
-
-
+                            
+                            
                             D3DPOINT *ptslists = NULL;
-
+                            
                             vector<D3DPOINT>::iterator it;
                             vector<D3DPOINT> MatchedPts_list_mps;
                             vector<D3DPOINT> MatchedPts_list_blunder;
                             vector<D3DPOINT> MatchedPts_list_anchor;
-
+                            
                             if(count_MPs > 10)
                             {
                                 if (check_ortho_cal && proinfo->IsRA != 1)
@@ -4024,7 +4071,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
                                     
                                     //blunder detection
-                              
+                                    
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     count_results[0] = 0;
@@ -4054,7 +4101,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         ptslists[i] = *it;
                                         i++;
                                     }
-                                 
+                                    
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     count_results[0] = 0;
@@ -4083,19 +4130,19 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             
                             MatchedPts_list.clear();
                             vector<D3DPOINT>().swap(MatchedPts_list);
-
+                            
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
-
+                            
                             printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
-                                    count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
-
-                        //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"decisionmps");
-
+                                   count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
+                            
+                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"decisionmps");
+                            
                             if(lower_level_match)
                             {
                                 FILE* survey;
                                 int i;
-
+                                
                                 if(check_ortho_cal && proinfo->IsRA != 1)
                                 {
                                     printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
@@ -4108,17 +4155,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 }
                                 //else
                                 //survey  = fopen(filename_mps,"r");
-
+                                
                                 blunder_param.Boundary  = subBoundary;
                                 blunder_param.gridspace = grid_resolution;
                                 blunder_param.height_check_flag = true;
                                 blunder_param.Hinterval = Hinterval;
                                 blunder_param.iteration = iteration;
                                 blunder_param.Pyramid_step = level;
-
+                                
                                 blunder_param.Size_Grid2D.width = Size_Grid2D.width;
                                 blunder_param.Size_Grid2D.height = Size_Grid2D.height;
-
+                                
                                 int TIN_split_level = 0;
                                 if (grid_resolution <= 8)
                                 {
@@ -4126,22 +4173,22 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         TIN_split_level = 0;
                                     else if(grid_resolution <= 4)
                                         TIN_split_level = 2;
-
+                                    
                                     if(fabs(subBoundary[2] - subBoundary[0]) > 10000 || fabs(subBoundary[3] - subBoundary[1]) > 10000)
                                         TIN_split_level = 2;
                                 }
-
+                                
                                 if(proinfo->IsRA)
                                 {
                                     TIN_split_level = 4;
                                 }
-
+                                
                                 printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
                                 count_MPs = MatchedPts_list_mps.size();
-
+                                
                                 vector<UI3DPOINT> t_trilists;
                                 vector<UI3DPOINT>::iterator it_tri;
-
+                                
                                 if(level == 0 && iteration == 3)
                                 {
                                     //F3DPOINT *ptslists;
@@ -4153,17 +4200,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     minmaxBR[3] = -10000000;
                                     minmaxBR[4] = 100000;
                                     minmaxBR[5] = -100000;
-
+                                    
                                     i = 0;
                                     for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                     {
                                         ptslists[i] = *it;
-
+                                        
                                         if(minmaxBR[0] > ptslists[i].m_X)
                                             minmaxBR[0]     = ptslists[i].m_X;
                                         if(minmaxBR[1] > ptslists[i].m_Y)
                                             minmaxBR[1]     = ptslists[i].m_Y;
-
+                                        
                                         if(minmaxBR[2] < ptslists[i].m_X)
                                             minmaxBR[2]     = ptslists[i].m_X;
                                         if(minmaxBR[3] < ptslists[i].m_Y)
@@ -4174,79 +4221,79 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             minmaxBR[5] = ptslists[i].m_Z;
                                         i++;
                                     }
-
+                                    
                                     MatchedPts_list_mps.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_mps);
-
+                                    
                                     /*
-                                       i = 0;
-                                    //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
-                                    F3DPOINT pts_tmp;
-                                    while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&pts_tmp.m_X,&pts_tmp.m_Y,&pts_tmp.m_Z,&pts_tmp.flag)) != EOF )
-                                    {
-                                    if(pts_tmp.m_X >= subBoundary[0] && pts_tmp.m_X <= subBoundary[2] && pts_tmp.m_Y >= subBoundary[1] && pts_tmp.m_Y <= subBoundary[3])
-                                    {
-                                    ptslists[i].m_X = pts_tmp.m_X;
-                                    ptslists[i].m_Y = pts_tmp.m_Y;
-                                    ptslists[i].m_Z = pts_tmp.m_Z;
-
-                                    if(minmaxBR[0] > ptslists[i].m_X)
-                                    minmaxBR[0]     = ptslists[i].m_X;
-                                    if(minmaxBR[1] > ptslists[i].m_Y)
-                                    minmaxBR[1]     = ptslists[i].m_Y;
-
-                                    if(minmaxBR[2] < ptslists[i].m_X)
-                                    minmaxBR[2]     = ptslists[i].m_X;
-                                    if(minmaxBR[3] < ptslists[i].m_Y)
-                                    minmaxBR[3]     = ptslists[i].m_Y;
-                                    if(minmaxBR[4] > ptslists[i].m_Z)
-                                    minmaxBR[4] = ptslists[i].m_Z;
-                                    if(minmaxBR[5] < ptslists[i].m_Z)
-                                    minmaxBR[5] = ptslists[i].m_Z;
-                                    }
-                                    i++;
-
-                                    }
-                                    fclose(survey);
-                                    */
+                                     i = 0;
+                                     //F3DPOINT* temp_pts = (F3DPOINT*)malloc(sizeof(F3DPOINT)*count_MPs);
+                                     F3DPOINT pts_tmp;
+                                     while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&pts_tmp.m_X,&pts_tmp.m_Y,&pts_tmp.m_Z,&pts_tmp.flag)) != EOF )
+                                     {
+                                     if(pts_tmp.m_X >= subBoundary[0] && pts_tmp.m_X <= subBoundary[2] && pts_tmp.m_Y >= subBoundary[1] && pts_tmp.m_Y <= subBoundary[3])
+                                     {
+                                     ptslists[i].m_X = pts_tmp.m_X;
+                                     ptslists[i].m_Y = pts_tmp.m_Y;
+                                     ptslists[i].m_Z = pts_tmp.m_Z;
+                                     
+                                     if(minmaxBR[0] > ptslists[i].m_X)
+                                     minmaxBR[0]     = ptslists[i].m_X;
+                                     if(minmaxBR[1] > ptslists[i].m_Y)
+                                     minmaxBR[1]     = ptslists[i].m_Y;
+                                     
+                                     if(minmaxBR[2] < ptslists[i].m_X)
+                                     minmaxBR[2]     = ptslists[i].m_X;
+                                     if(minmaxBR[3] < ptslists[i].m_Y)
+                                     minmaxBR[3]     = ptslists[i].m_Y;
+                                     if(minmaxBR[4] > ptslists[i].m_Z)
+                                     minmaxBR[4] = ptslists[i].m_Z;
+                                     if(minmaxBR[5] < ptslists[i].m_Z)
+                                     minmaxBR[5] = ptslists[i].m_Z;
+                                     }
+                                     i++;
+                                     
+                                     }
+                                     fclose(survey);
+                                     */
                                     FILE *pFile = fopen(filename_mps,"wb");
                                     fwrite(ptslists,sizeof(D3DPOINT),count_MPs,pFile);
                                     fclose(pFile);
                                     /*
-                                       FILE *pFile_a = fopen(filename_mps_asc,"w");
-                                       for(i=0;i<count_MPs;i++)
-                                       {
-                                    //if(ptslists[i].flag != 1)
-                                    {
-                                    //if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
-                                    fprintf(pFile_a,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
-                                    }
-                                    }
-                                    fclose(pFile_a);
-                                    */
-
-
+                                     FILE *pFile_a = fopen(filename_mps_asc,"w");
+                                     for(i=0;i<count_MPs;i++)
+                                     {
+                                     //if(ptslists[i].flag != 1)
+                                     {
+                                     //if(ptslists[i].m_X >= subBoundary[0] && ptslists[i].m_X <= subBoundary[2] && ptslists[i].m_Y >= subBoundary[1] && ptslists[i].m_Y <= subBoundary[3])
+                                     fprintf(pFile_a,"%f %f %f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                     }
+                                     }
+                                     fclose(pFile_a);
+                                     */
+                                    
+                                    
                                     if(!proinfo->IsRA)
                                     {
                                         FILE *fid_BR;
                                         FILE *fid_count;
-
+                                        
                                         char save_file[500];
                                         sprintf(save_file,"%s/txt/matched_BR_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                                         fid_BR  = fopen(save_file,"w");
                                         fprintf(fid_BR,"%f\t%f\t%f\t%f\t%f\t%f\n",minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
                                         fclose(fid_BR);
-
+                                        
                                         sprintf(save_file,"%s/txt/count_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                                         fid_count  = fopen(save_file,"w");
-
+                                        
                                         fprintf(fid_count,"%d\n",count_MPs);
                                         fclose(fid_count);
-
+                                        
                                         echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,0,&Size_Grid2D,GridPT3,(char*)"final");
                                     }
                                     free(ptslists);
-
+                                    
                                     matching_change_rate = 0.001;
                                 }
                                 else
@@ -4254,16 +4301,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     if(check_ortho_cal && proinfo->IsRA != 1)
                                     {
                                         //D3DPOINT *ptslists;
-
+                                        
                                         //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
                                         double minY_ptslists =  100000000;
                                         int i;
-
+                                        
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-
+                                        
                                         i = 0;
                                         for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
@@ -4277,30 +4324,30 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
-                                           i = 0;
-                                           while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-                                           {
-                                           if(level == 4)
-                                           {
-                                           ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
-                                           }
-
-                                           i++;
-                                           }
-
-                                           fclose(survey);
-                                           */
+                                         i = 0;
+                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                         {
+                                         if(level == 4)
+                                         {
+                                         ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                         }
+                                         
+                                         i++;
+                                         }
+                                         
+                                         fclose(survey);
+                                         */
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                                         UI3DPOINT *trilists;
-
+                                        
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-
+                                        
                                         FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
-
+                                        
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-
+                                        
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4309,36 +4356,36 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         }
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
-
+                                        
                                         /*
-                                           i = 0;
-                                           for(i=0;i<count_tri;i++)
-                                           {
-                                           trilists[i].m_X = t_trilists[i].m_X;
-                                           trilists[i].m_Y = t_trilists[i].m_Y;
-                                           trilists[i].m_Z = t_trilists[i].m_Z;
-                                           }
-
-                                           free(t_trilists);
-                                           */
-
+                                         i = 0;
+                                         for(i=0;i<count_tri;i++)
+                                         {
+                                         trilists[i].m_X = t_trilists[i].m_X;
+                                         trilists[i].m_Y = t_trilists[i].m_Y;
+                                         trilists[i].m_Z = t_trilists[i].m_Z;
+                                         }
+                                         
+                                         free(t_trilists);
+                                         */
+                                        
                                         fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
-
+                                        
                                         printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
-
+                                        
                                         count_results[0] = Ortho_blunder(proinfo,ptslists, count_MPs, trilists,count_tri, 0,&minH_grid,&maxH_grid,blunder_param,
-                                                SubMagImages,SubImages,
-                                                grid_resolution, Image_res[0],RPCs,
-                                                data_size_lr,Size_Grid2D,param,NumOfIAparam,
-                                                t_Imageparams,minmaxHeight,level,MPP_simgle_image,
-                                                Startpos,iteration,GridPT3,filename_mps);
+                                                                         SubMagImages[level],SubImages[level],
+                                                                         grid_resolution, Image_res[0],RPCs,
+                                                                         data_size_lr,Size_Grid2D,param,NumOfIAparam,
+                                                                         t_Imageparams,minmaxHeight,level,MPP_simgle_image,
+                                                                         Startpos,iteration,GridPT3,filename_mps);
                                         free(trilists);
-
+                                        
                                         printf("end ortho_blunder %d\n",count_results[0]);
-
+                                        
                                         int matched_pts = 0;
                                         i = 0;
-
+                                        
                                         if(level == 4)
                                         {
                                             vector<D3DPOINT> ortho_list;
@@ -4350,11 +4397,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                     matched_pts++;
                                                 }
                                             }
-
+                                            
                                             free(ptslists);
                                             count_MPs = matched_pts;
                                             ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-
+                                            
                                             i = 0;
                                             for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
                                             {
@@ -4364,29 +4411,29 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
                                         }
-
+                                        
                                         printf("load ortho_blunder pts %d\n",count_MPs);
-
+                                        
                                         //survey  = fopen(filename_mps,"r");
                                         /*
-                                           while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
-                                           {
-                                           i++;
-                                           }
-                                           fclose(survey);
-                                           */
+                                         while( i < count_MPs && (fscanf(survey,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                         {
+                                         i++;
+                                         }
+                                         fclose(survey);
+                                         */
                                         double min_max2[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
-
+                                        
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-
+                                        
                                         //Save triangulation and delete it since we will not use it
                                         FullTriangulation *origTri_2 = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max2,&count_tri, grid_resolution);
                                         delete origTri_2;
-
-
+                                        
+                                        
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-
+                                        
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4396,46 +4443,41 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         /*
-                                           trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                           i = 0;
-                                           for(i=0;i<count_tri;i++)
-                                           {
-                                           trilists[i].m_X = t_trilists[i].m_X;
-                                           trilists[i].m_Y = t_trilists[i].m_Y;
-                                           trilists[i].m_Z = t_trilists[i].m_Z;
-                                           }
-
-                                           free(t_trilists);
-                                           */
-
-                                         DecisionMPs_setheight(proinfo,levelinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
-                                                Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                                SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                                Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                                param, Grid_wgs,GridPT,
-                                                NumOfIAparam, t_Imageparams, BStartpos,
-                                                proinfo->save_filepath,row,col,ptslists,trilists,count_tri,SubOriImages,blunder_selected_level);
-
+                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                         i = 0;
+                                         for(i=0;i<count_tri;i++)
+                                         {
+                                         trilists[i].m_X = t_trilists[i].m_X;
+                                         trilists[i].m_Y = t_trilists[i].m_Y;
+                                         trilists[i].m_Z = t_trilists[i].m_Z;
+                                         }
+                                         
+                                         free(t_trilists);
+                                         */
+                                        
+                                        
+                                        DecisionMPs_setheight(proinfo, levelinfo, count_MPs,GridPT3, iteration, Hinterval, minmaxHeight, ptslists,trilists,count_tri);
+                                        
                                         printf("end decision_setheight\n");
-
+                                        
                                         if(pre_matched_pts == 0)
                                             matching_change_rate = 0;
                                         else
                                             matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-
+                                        
                                         matching_rate = count_MPs/(double)(Accessable_grid);
-
+                                        
                                         printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
                                         pre_matched_pts = count_MPs;
-
+                                        
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                         {
                                             level_check_matching_rate = true;
                                         }
-
+                                        
                                         if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
-
+                                        
                                         if(level == 0)
                                         {
                                             if(proinfo->DEM_resolution < 2)
@@ -4443,29 +4485,29 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             if(iteration > 2)
                                                 matching_change_rate = 0.001;
                                         }
-
+                                        
                                         if(level <= 1)
                                         {
                                             if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
-
+                                        
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
-
+                                        
                                         if(proinfo->DEM_resolution >= 8)
                                         {
                                             matching_change_rate = 0.001;
                                         }
                                         /*
-                                           if(proinfo->pre_DEMtif)
-                                           {
-                                           if(level >= 4)
-                                           matching_change_rate = 0.001;
-                                           }
-                                           */
+                                         if(proinfo->pre_DEMtif)
+                                         {
+                                         if(level >= 4)
+                                         matching_change_rate = 0.001;
+                                         }
+                                         */
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
-
+                                        
                                         if(Th_roh >= Th_roh_min)
                                         {
                                             if(level == 0)
@@ -4486,12 +4528,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                     Th_roh_update       = (double)(Th_roh - 0.10);
                                                 else
                                                     Th_roh_update       = (double)(Th_roh - 0.06);
-
+                                                
                                             }
                                         }
-
+                                        
                                         printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
-
+                                        
                                         bool check_level_end = false;
                                         if(level != 0)
                                         {
@@ -4500,19 +4542,19 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                 check_level_end = true;
                                             }
                                         }
-
+                                        
                                         if(level == 0)
                                         {
                                             if(MPP_stereo_angle > 5)
                                                 MPP = MPP_stereo_angle;
                                             else
                                                 MPP = MPP_simgle_image;
-
+                                            
                                             if(proinfo->DEM_resolution < 2)
                                                 Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif, minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             else
                                                 GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-
+                                            
                                             printf("update GridPT3\n");
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
@@ -4526,7 +4568,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             }
                                             else
                                                 MPP = MPP_simgle_image;
-
+                                            
                                             Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             printf("update GridPT3\n");
                                         }
@@ -4545,28 +4587,28 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             {
                                                 MPP = MPP_simgle_image;
                                             }
-
+                                            
                                             GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                         }
-
+                                        
                                         free(trilists);
                                         free(ptslists);
-
+                                        
                                         final_iteration = iteration;
                                     }
                                     else
                                     {
                                         //D3DPOINT *ptslists;
-
+                                        
                                         //FILE *pTri;
                                         double maxX_ptslists = -100000000;
                                         double maxY_ptslists = -100000000;
                                         double minX_ptslists =  100000000;
                                         double minY_ptslists =  100000000;
                                         int i;
-
+                                        
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-
+                                        
                                         i = 0;
                                         for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
@@ -4576,27 +4618,27 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         /*
-                                           i = 0;
-                                           while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-                                           {
-                                           i++;
-                                           }
-                                           fclose(survey);
-                                           */
-
+                                         i = 0;
+                                         while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
+                                         {
+                                         i++;
+                                         }
+                                         fclose(survey);
+                                         */
+                                        
                                         UI3DPOINT *trilists;
-
+                                        
                                         double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
-
+                                        
                                         //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-
+                                        
                                         //Save triangulation and delete it since we will not use it
                                         FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                         delete origTri;
-
+                                        
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-
+                                        
                                         i = 0;
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
@@ -4605,31 +4647,31 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         }
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
-
+                                        
                                         /*
-                                           trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                           i = 0;
-                                           for(i=0;i<count_tri;i++)
-                                           {
-                                           trilists[i].m_X = t_trilists[i].m_X;
-                                           trilists[i].m_Y = t_trilists[i].m_Y;
-                                           trilists[i].m_Z = t_trilists[i].m_Z;
-                                           }
-
-                                           free(t_trilists);
-                                           */
-
+                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                         i = 0;
+                                         for(i=0;i<count_tri;i++)
+                                         {
+                                         trilists[i].m_X = t_trilists[i].m_X;
+                                         trilists[i].m_Y = t_trilists[i].m_Y;
+                                         trilists[i].m_Z = t_trilists[i].m_Z;
+                                         }
+                                         
+                                         free(t_trilists);
+                                         */
+                                        
                                         if(pre_matched_pts == 0)
                                             matching_change_rate = 0;
                                         else
                                             matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-
+                                        
                                         printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                         pre_matched_pts = count_results[0];
-
+                                        
                                         if(iteration > max_iteration)
                                             matching_change_rate = 0.001;
-
+                                        
                                         if(level == 0)
                                         {
                                             if(proinfo->DEM_resolution < 2)
@@ -4637,27 +4679,27 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             if(iteration > 2)
                                                 matching_change_rate = 0.001;
                                         }
-
+                                        
                                         if(level <= 1)
                                         {
                                             if(iteration >= ceil(max_iteration/2.0))
                                                 matching_change_rate = 0.001;
                                         }
-
+                                        
                                         if(proinfo->IsRA)
                                             matching_change_rate = 0.001;
-
+                                        
                                         if(proinfo->DEM_resolution >= 8)
                                         {
                                             matching_change_rate = 0.001;
                                         }
                                         /*
-                                           if(proinfo->pre_DEMtif)
-                                           {
-                                           if(level >= 4)
-                                           matching_change_rate = 0.001;
-                                           }
-                                           */
+                                         if(proinfo->pre_DEMtif)
+                                         {
+                                         if(level >= 4)
+                                         matching_change_rate = 0.001;
+                                         }
+                                         */
                                         if(Th_roh >= Th_roh_min)
                                         {
                                             if(level == 0)
@@ -4680,17 +4722,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                     Th_roh_update       = (double)(Th_roh - 0.06);
                                             }
                                         }
-
+                                        
                                         matching_rate = count_MPs/(double)(Accessable_grid);
                                         printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
-
+                                        
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                         {
                                             level_check_matching_rate = true;
                                         }
-
+                                        
                                         bool check_level_end = false;
-
+                                        
                                         if(level != 0)
                                         {
                                             if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
@@ -4698,7 +4740,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                 check_level_end = true;
                                             }
                                         }
-
+                                        
                                         if(level == 0)
                                         {
                                             if(MPP_stereo_angle > 5)
@@ -4713,7 +4755,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             {
                                                 GridPT3         = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                             }
-
+                                            
                                             printf("update GridPT3\n");
                                         }
                                         else if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th && level > 0)
@@ -4727,9 +4769,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             }
                                             else
                                                 MPP = MPP_simgle_image;
-
+                                            
                                             Pre_GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
-
+                                            
                                             printf("update GridPT3\n");
                                         }
                                         else
@@ -4747,18 +4789,18 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             {
                                                 MPP = MPP_simgle_image;
                                             }
-
+                                            
                                             GridPT3     = SetHeightRange(proinfo,nccresult,proinfo->pre_DEMtif,minmaxHeight,count_MPs, count_tri, GridPT3,0,&minH_grid,&maxH_grid,blunder_param,ptslists,trilists,proinfo->IsRA,MPP,proinfo->save_filepath,row,col,check_level_end,proinfo->seedDEMsigma,check_matching_rate);
                                         }
-
+                                        
                                         free(trilists);
-
+                                        
                                         if(proinfo->IsRA && level <= 3)
                                         {
                                             int RA_iter_counts = 0;
                                             RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
-                                                    Template_size, SubImages, data_size_lr, SubOriImages, param,
-                                                    bin_angle, pyramid_step, param.bHemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
+                                                                         Template_size, SubImages[level], data_size_lr, SubOriImages[level], param,
+                                                                         bin_angle, pyramid_step, param.bHemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
                                             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                             {
                                                 if(proinfo->check_selected_image[ti])
@@ -4767,7 +4809,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                     printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
                                                 }
                                             }
-
+                                            
                                             if (level <= 1)
                                             {
                                                 char save_file[500];
@@ -4779,7 +4821,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                 fclose(fid_RAinfo);
                                             }
                                         }
-
+                                        
                                         if(proinfo->IsRA)
                                         {
                                             if(check_RA_divide)
@@ -4790,21 +4832,21 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                     double t_X,t_Y,t_Z;
                                                     //bool t_flag;
                                                     int* t_count = (int*)calloc(sizeof(int),total_tile);
-
+                                                    
                                                     for(int k=0;k<count_MPs;k++)
                                                     {
                                                         //fscanf(fid_pts,"%lf %lf %lf %hhd\n",&t_X,&t_Y,&t_Z,&t_flag);
                                                         t_X = ptslists[k].m_X;
                                                         t_Y = ptslists[k].m_Y;
                                                         t_Z = ptslists[k].m_Z;
-
+                                                        
                                                         int t_col = floor((t_X - subBoundary[0])/(double)tilesize_RA);
                                                         int t_row = floor((t_Y - subBoundary[1])/(double)tilesize_RA);
-
+                                                        
                                                         t_count[t_col+division_X*t_row] ++;
                                                     }
                                                     //fclose(fid_pts);
-
+                                                    
                                                     int saved_count = 0;
                                                     int selected_X = 0;
                                                     int selected_Y = 0;
@@ -4818,67 +4860,67 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                             selected_X  = k % division_X;
                                                         }
                                                         total_count += t_count[k];
-
+                                                        
                                                         //printf("k %d\tt_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",k,t_count[k],saved_count,selected_X,selected_Y);
                                                     }
                                                     printf("total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
                                                     printf("selected br %f\t%f\t%f\t%f\n",subBoundary[0] + selected_X*tilesize_RA,subBoundary[1] + selected_Y*tilesize_RA,
-                                                            subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
-
+                                                           subBoundary[0] + (selected_X+1)*tilesize_RA,subBoundary[1] + (selected_Y+1)*tilesize_RA);
+                                                    
                                                     fprintf(fid,"total_count %d\tsaved_count %d\tselected_X %d\tselected_Y %d\n",total_count,saved_count,selected_X,selected_Y);
-
+                                                    
                                                     new_subBoundary_RA[0] = subBoundary[0] + selected_X*tilesize_RA;
                                                     new_subBoundary_RA[1] = subBoundary[1] + selected_Y*tilesize_RA;
                                                     new_subBoundary_RA[2] = subBoundary[0] + (selected_X+1)*tilesize_RA;
                                                     new_subBoundary_RA[3] = subBoundary[1] + (selected_Y+1)*tilesize_RA;
-
+                                                    
                                                     check_new_subBoundary_RA = true;
                                                     check_RA_divide = false;
-
+                                                    
                                                     free(t_count);
-
+                                                    
                                                 }
                                             }
                                         }
-
+                                        
                                         free(ptslists);
                                     }
                                 }
-
+                                
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",row,col,level,iteration);
-
+                                
                                 fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\tmatching_rate = %f\n",
                                         row,col,level,iteration,count_MPs,minH_grid,maxH_grid,matching_rate);
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
-                                        row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
+                                       row,col,level,iteration,count_MPs,minH_grid,maxH_grid);
                                 //matching_rate = (double)count_results[0]/(double)total_matching_candidate_pts;
-
+                                
                                 //printf("total_matching_candidate_pts = %d\tMPs = %d\tmatching_rate = %f\n",total_matching_candidate_pts,count_results[0],matching_rate);
                             }
                             /*
-                               if (level == 0 && iteration == 3)
-                               {
-                               remove(filename_mps_pre);
-                               if(level >= ortho_level && proinfo->IsRA != 1)
-                               {
-                               remove(filename_mps_aft);
-                               remove(filename_mps_fin);
-                               remove(filename_mps_anchor);
-
-                               }
-                               }
-                               else
-                               {
-                               remove(filename_mps);
-                               remove(filename_mps_pre);
-                               if(level >= ortho_level && proinfo->IsRA != 1)
-                               {
-                               remove(filename_mps_aft);
-                               remove(filename_mps_fin);
-                               remove(filename_mps_anchor);
-                               }
-                               }
-                               */
+                             if (level == 0 && iteration == 3)
+                             {
+                             remove(filename_mps_pre);
+                             if(level >= ortho_level && proinfo->IsRA != 1)
+                             {
+                             remove(filename_mps_aft);
+                             remove(filename_mps_fin);
+                             remove(filename_mps_anchor);
+                             
+                             }
+                             }
+                             else
+                             {
+                             remove(filename_mps);
+                             remove(filename_mps_pre);
+                             if(level >= ortho_level && proinfo->IsRA != 1)
+                             {
+                             remove(filename_mps_aft);
+                             remove(filename_mps_fin);
+                             remove(filename_mps_anchor);
+                             }
+                             }
+                             */
                             if(lower_level_match)
                             {
                                 flag_start          = true;
@@ -4886,14 +4928,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                             else if(level == 0)
                                 iteration++;
-
+                            
                             if(level == 0)
                             {
                                 if(proinfo->DEM_resolution >= 2)
                                     Th_roh          = (double)(Th_roh - 0.10);
                                 else
                                     Th_roh          = (double)(Th_roh - 0.50);
-
+                                
                                 if(iteration > 3)
                                     Th_roh          = (double)(Th_roh - 0.50);
                             }
@@ -4910,7 +4952,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 else
                                     Th_roh          = (double)(Th_roh - 0.06);
                             }
-
+                            
                             if(lower_level_match)
                             {
                                 if(Th_roh < Th_roh_min && matching_change_rate > rate_th)
@@ -4932,7 +4974,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     }
                                 }
                             }
-
+                            
                             if (!lower_level_match && Th_roh < Th_roh_min)
                             {
                                 if(level > 0)
@@ -4942,15 +4984,15 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     Th_roh_min = 0.4;
                                 }
                             }
-
+                            
                             if(level == 0)
                                 final_level_iteration = iteration;
-
+                            
                             printf("lower_level_match %d\tmatching change rate %f\tTh_roh %f\t%f\n",lower_level_match,matching_change_rate,Th_roh,Th_roh_min);
-
+                            
                             printf("Memory : System %f\t SETSM required %f\n",proinfo->System_memory, total_memory);
                         }
-
+                        
                         if(flag_start)
                         {
                             double min_after, max_after;
@@ -4969,7 +5011,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     min_after = minH_grid;
                                 if(max_after < maxH_grid)
                                     max_after = maxH_grid;
-
+                                
                                 minmaxHeight[0]     = min_after;
                                 minmaxHeight[1]     = max_after;
                             }
@@ -4977,14 +5019,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd of level processing!! minmaxHeight = [%f \t%f]\n",
                                     row,col,level,iteration,minmaxHeight[0],minmaxHeight[1]);
                         }
-
+                        
                         printf("\trow = %d/%d\tcol = %d/%d\tDEM generation(%%) = %4.2f%% !!\n",row,iter_row_end,col,t_col_end,(double)(pyramid_step+1 - level)/(double)(pyramid_step+1)*100);
-
+                        
                         if(proinfo->IsRA)
                         {
                             //if(!lower_level_match || level < DEM_level)
                             free(GridPT);
-
+                            
                             if(!lower_level_match)
                             {
                                 lower_level_match   = true;
@@ -5000,10 +5042,10 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                             free(GridPT);
                         }
-
+                        
                         printf("release Grid_wgs, nccresult\n");
                         free(Grid_wgs);
-
+                        
                         if(!check_matching_rate)
                         {
 #pragma omp parallel for //schedule(guided)
@@ -5018,82 +5060,126 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             free(grid_voxel);
                             printf("free grid_voxel\n");
                         }
-
+                        
                         if(!check_matching_rate)
                             check_matching_rate = level_check_matching_rate;
-
+                        
                         free(nccresult);
-
+                        
+                        /*
+                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                         {
+                         if(proinfo->check_selected_image[ti])
+                         {
+                         printf("release subImage L\n");
+                         free(SubImages[ti]);
+                         free(SubImages_B[ti]);
+                         free(SubOriImages[ti]);
+                         
+                         
+                         printf("release subimage Mag\n\n\n");
+                         free(SubMagImages[ti]);
+                         free(SubMagImages_B[ti]);
+                         
+                         if(level > Py_combined_level)
+                         {
+                         free(SubImages_next[ti]);
+                         free(SubOriImages_next[ti]);
+                         free(SubMagImages_next[ti]);
+                         }
+                         }
+                         }
+                         */
+                        printf("release subImage L\n");
+                        //free(SubImages);
+                        //free(SubImages_B);
+                        //free(SubOriImages);
+                        
+                        printf("release subimage Mag\n\n\n");
+                        //free(SubMagImages);
+                        //free(SubMagImages_B);
+                        
+                        free(Startpos);
+                        free(BStartpos);
+                        
+                        if(level > Py_combined_level)
+                        {
+                            free(Startpos_next);
+                            //free(SubImages_next);
+                            //free(SubOriImages_next);
+                            //free(SubMagImages_next);
+                        }
+                        
+                        if(level > 0)
+                            level   = level - 1;
+                        
+                        if(level == 0 && final_level_iteration == 4)
+                            level = -1;
+                        
+                    }
+                    printf("relese data size\n");
+                    
+                    for(int t_level = 0 ; t_level <= pyramid_step ; t_level++)
+                    {
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
                             if(proinfo->check_selected_image[ti])
                             {
-                                printf("release subImage L\n");
-                                free(SubImages[ti]);
-                                free(SubImages_B[ti]);
-                                free(SubOriImages[ti]);
-
-
-                                printf("release subimage Mag\n\n\n");
-                                free(SubMagImages[ti]);
-                                free(SubMagImages_B[ti]);
-
-                                if(level > Py_combined_level)
-                                {
-                                    free(SubImages_next[ti]);
-                                    free(SubOriImages_next[ti]);
-                                    free(SubMagImages_next[ti]);
-                                }
+                                free(SubImages[t_level][ti]);
+                                free(SubMagImages[t_level][ti]);
+                                free(SubOriImages[t_level][ti]);
                             }
                         }
-                        printf("release subImage L\n");
-                        free(SubImages);
-                        free(SubImages_B);
-                        free(SubOriImages);
-
-                        printf("release subimage Mag\n\n\n");
-                        free(SubMagImages);
-                        free(SubMagImages_B);
-
-                        free(Startpos);
-                        free(BStartpos);
-
-                        if(level > Py_combined_level)
-                        {
-                            free(Startpos_next);
-                            free(SubImages_next);
-                            free(SubOriImages_next);
-                            free(SubMagImages_next);
-                        }
-
-                        if(level > 0)
-                            level   = level - 1;
-
-                        if(level == 0 && final_level_iteration == 4)
-                            level = -1;
-
+                        free(SubImages[t_level]);
+                        free(SubMagImages[t_level]);
+                        free(SubOriImages[t_level]);
                     }
-                    printf("relese data size\n");
-
+                    
+                    free(SubImages);
+                    free(SubMagImages);
+                    free(SubOriImages);
+                    
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    {
                         if(proinfo->check_selected_image[ti])
-                            free(data_size_lr[ti]);
+                        {
+                             free(data_size_lr[ti]);
+                        }
+                    }
                     free(data_size_lr);
-
+                    
                     free(GridPT3);
-
+                    
                     printf("release GridTP3\n");
                     PreET = time(0);
                     Pregab = difftime(PreET,PreST);
                     printf("row = %d/%d \tcol = %d/%d\tDEM generation finish(time[m] = %5.2f)!!\n",row,iter_row_end,col,t_col_end,Pregab/60.0);
-
+                }
+                else
+                {
+                    for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                    {
+                        if(proinfo->check_selected_image[image_index])
+                            free(SourceImages[image_index]);
+                    }
+                    free(SourceImages);
                 }
             }
+            else
+            {
+                for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                {
+                    if(proinfo->check_selected_image[image_index])
+                        free(SourceImages[image_index]);
+                }
+                free(SourceImages);
+            }
+    
             fclose(fid);
             fclose(fid_header);
-
-            RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,pyramid_step,0);
-
+            
+            //RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,pyramid_step,0);
+            
             if(proinfo->IsRA)
             {
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
@@ -5106,7 +5192,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     }
                 }
             }
-
+            
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
                 if(proinfo->check_selected_image[ti])
@@ -5115,7 +5201,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     free(t_Imageparams[ti]);
                 }
             }
-
+            
             free(Subsetfilename);
             free(t_Imageparams);
             free(Startpos_ori);
@@ -5158,6 +5244,18 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
     const int level = *(plevelinfo.Pyramid_step);
     const int blunder_selected_level = *(plevelinfo.blunder_selected_level);
     printf("%d\t%d\n",level,blunder_selected_level);
+    
+    for(int iter_level = 0 ; iter_level <= level ; iter_level++)
+    {
+        for(int image_index = 0 ; image_index < info->number_of_images ; image_index++)
+        {
+            long int data_length = (long int)plevelinfo.py_Sizes[image_index][iter_level].height*(long int)plevelinfo.py_Sizes[image_index][iter_level].width;
+                
+            image += (double)(sizeof(uint16)*data_length)*2.0;
+            image += (double)(sizeof(uint8)*data_length);
+        }
+    }
+    /*
     for(int ti = 0 ; ti < info->number_of_images ; ti++)    
     {
         const long int data_length_ti = plevelinfo.py_Sizes[ti][level].height * plevelinfo.py_Sizes[ti][level].width;
@@ -5175,6 +5273,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
             magimage += (double)((sizeof(uint16)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
         }
     }
+     */
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += (image + oriimage + magimage);
     //printf("memory 1 %f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage);
@@ -8623,8 +8722,6 @@ bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 Numo
 {
     bool ret = false;
 
-    char *filename;
-    
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
     {
         CSize Imagesize;
@@ -8676,6 +8773,36 @@ bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 Numo
     }
     
     return ret;
+}
+
+uint16 *SetsubsetImage(ProInfo *proinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
+{
+    bool ret = false;
+
+    CSize Imagesize;
+    uint16 *outimage = NULL;
+    
+    if(GetImageSize(proinfo->Imagefilename[index_image],&Imagesize))
+    {
+        long int Lcols[2], Lrows[2];
+        if(GetsubareaImage(proinfo,index_image,transparam,NumofIAparam,RPCs[index_image],ImageParams[index_image],proinfo->Imagefilename[index_image],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
+        {
+            printf("read image %d\n", index_image);
+            outimage   = Readtiff(proinfo->Imagefilename[index_image],&Imagesize,Lcols,Lrows,&Subsetsize[index_image],proinfo->check_checktiff);
+            if(proinfo->check_checktiff)
+                exit(1);
+            
+            Startpos[index_image].m_X  = (double)(Lcols[0]);
+            Startpos[index_image].m_Y  = (double)(Lrows[0]);
+            
+            if(!outimage)
+                proinfo->check_selected_image[index_image] = false;
+        }
+    }
+    else
+        proinfo->check_selected_image[index_image] = false;
+  
+    return outimage;
 }
 
 D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs) {
@@ -9583,6 +9710,28 @@ void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfi
             fclose(pFile_check_file);
 
         free(filename_py);
+    }
+}
+
+void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages)
+{
+    for(int iter_level = 1 ; iter_level < py_level_set; iter_level++)
+    {
+        for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+        {
+            if(proinfo->check_selected_image[image_index])
+            {
+                long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
+   
+                SubImages[iter_level][image_index] = CreateImagePyramid(SubImages[iter_level-1][image_index],data_size_lr[image_index][iter_level-1],9,(double)(1.5));
+                
+                int16 *dirimg = (int16*)malloc(sizeof(int16)*data_length);
+                MakeSobelMagnitudeImage(data_size_lr[image_index][iter_level],SubImages[iter_level][image_index],SubMagImages[iter_level][image_index],dirimg);
+                Orientation(data_size_lr[image_index][iter_level],SubMagImages[iter_level][image_index],dirimg,15,SubOriImages[iter_level][image_index]);
+                
+                free(dirimg);
+            }
+        }
     }
 }
 
@@ -13282,12 +13431,12 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagI
 
 bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder)
 {
-    const uint16 * const *MagImages = rlevelinfo.py_BMagImages;
+    const uint16 * const *MagImages = rlevelinfo.py_BMagImages; //blunder_selected_level images
     double im_resolution = proinfo->resolution;
     double DEM_resolution = proinfo->DEM_resolution;
     const double * const * const *RPCs = rlevelinfo.RPCs;
     const CSize * const *Imagesizes = rlevelinfo.py_Sizes;
-    const uint16 * const *Images = rlevelinfo.py_BImages;
+    const uint16 * const *Images = rlevelinfo.py_BImages; //blunder_selected_level images
     uint8 Template_size = *rlevelinfo.Template_size;
     const CSize Size_Grid2D = *rlevelinfo.Size_Grid2D;
     const TransParam param = *rlevelinfo.param;
@@ -14855,50 +15004,32 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
     }
 }
 
-int DecisionMPs_setheight(ProInfo *proinfo,LevelInfo &rlevelinfo, bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
-                          uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
-                          bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
-                          uint16 **MagImages,double DEM_resolution, double im_resolution, const double * const * const *RPCs,
-                          const CSize *Imagesizes_ori, CSize **Imagesizes, uint16 **Images, uint8 Template_size,
-                          TransParam param, D2DPOINT* Grid_wgs,D2DPOINT* GridPts,
-                          uint8 NumofIAparam, double **ImageAdjust, D2DPOINT *Startpos,
-                          char* save_filepath, uint8 tile_row, uint8 tile_col,D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri,uint8 **ori_images, int blunder_selected_level)
+void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri)
 {
-    char bufstr[500];
-    uint16 count            = 0;
-    int count_MPs       = count_MPs_input;
-    double gridspace            = grid_resolution;
-    int Th_pts;
-    int i=0;
-    BL blunder_param;
-    double blunder_dh = 0;
-    double mt_minmaxheight[2];
-    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
+    const int count_MPs       = count_MPs_input;
+    const double gridspace            = *rlevelinfo.grid_resolution;
     
-    blunder_param.Boundary  = Boundary;
-    blunder_param.gridspace = grid_resolution;
+    double mt_minmaxheight[2];
+    
+    BL blunder_param;
+    blunder_param.Boundary  = rlevelinfo.Boundary;
+    blunder_param.gridspace = *rlevelinfo.grid_resolution;
     blunder_param.height_check_flag = true;
     blunder_param.Hinterval = Hinterval;
     blunder_param.iteration = iteration;
-    blunder_param.Pyramid_step = Pyramid_step;
+    blunder_param.Pyramid_step = *rlevelinfo.Pyramid_step;
     
-    blunder_param.Size_Grid2D.width = Size_Grid2D.width;
-    blunder_param.Size_Grid2D.height = Size_Grid2D.height;
+    blunder_param.Size_Grid2D.width = rlevelinfo.Size_Grid2D->width;
+    blunder_param.Size_Grid2D.height = rlevelinfo.Size_Grid2D->height;
+    
+    float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     
     SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,numoftri, GridPT3, blunder_param,mt_minmaxheight,false);
     
     VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
-    /*
-    VerticalLineLocus_blunder(proinfo,ortho_ncc,MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
-                              Images, Template_size,
-                              Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                              NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
-                              save_filepath, tile_row, tile_col, iteration,100,Boundary,ori_images,blunder_selected_level,false);
-     */
+
     free(ortho_ncc);
-    //free(INCC);
-    
-    return count;
+
 }
 
 //Returns created triangulation pointer
