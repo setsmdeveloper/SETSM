@@ -641,49 +641,18 @@ typedef struct taglevelinfo
     const int *Py_combined_level;
     bool *check_matching_rate;
 } LevelInfo;
-/*
-typedef struct tagKernelInfo
-{
-    const long int pt_index;
-    const int Half_template_size;
-    const double im_resolution;
-    const double im_resolution_next;
-    const long int sub_imagesize_w;
-    const long int sub_imagesize_h;
-    const long int sub_imagesize_w_next;
-    const long int sub_imagesize_h_next;
-    const F2DPOINT * const *all_im_cd;
-    const F2DPOINT * const *all_im_cd_next;
-    const UGRID *GridPT3;
-    const int reference_id;
-    const int ti;
-    const bool check_combined_WNCC;
-    const CSize LImagesize;
-    const CSize RImagesize;
-    const CSize LImagesize_next;
-    const CSize RImagesize_next;
-    tagKernelInfo(const long int pt_index,const int Half_template_size,const double im_resolution,const double im_resolution_next,const long int sub_imagesize_w,const long int sub_imagesize_h,const long int sub_imagesize_w_next,const long int sub_imagesize_h_next,const F2DPOINT * const *all_im_cd,const F2DPOINT * const *all_im_cd_next,const UGRID *GridPT3,const int reference_id,const int ti,const bool check_combined_WNCC,const CSize LImagesize,const CSize RImagesize,const CSize LImagesize_next,const CSize RImagesize_next):pt_index(pt_index),Half_template_size(Half_template_size),im_resolution(im_resolution),im_resolution_next(im_resolution_next),sub_imagesize_w(sub_imagesize_w),sub_imagesize_h(sub_imagesize_h),sub_imagesize_w_next(sub_imagesize_w_next),sub_imagesize_h_next(sub_imagesize_h_next),all_im_cd(all_im_cd),all_im_cd_next(all_im_cd_next),GridPT3(GridPT3),reference_id(reference_id),ti(ti),check_combined_WNCC(check_combined_WNCC),LImagesize(LImagesize),RImagesize(RImagesize),LImagesize_next(LImagesize_next),RImagesize_next(RImagesize_next)
-    {
-    }
 
-} KernelInfo;
-*/
 typedef struct tagSetKernel
 {
     double **left_patch_vecs;
     double **left_mag_patch_vecs;
     double **right_patch_vecs;
     double **right_mag_patch_vecs;
-    /*double **left_patch_next_vecs;
-    double **left_mag_patch_next_vecs;
-    double **right_patch_next_vecs;
-    double **right_mag_patch_next_vecs;
-    */
     const int reference_id;
     const int ti;
     const int Half_template_size;
     const int patch_size;
-    tagSetKernel(double **left_patch_vecs,double **left_mag_patch_vecs,double **right_patch_vecs,double **right_mag_patch_vecs,/*double **left_patch_next_vecs,double **left_mag_patch_next_vecs,double **right_patch_next_vecs,double **right_mag_patch_next_vecs,*/const int reference_id,const int ti,const int Half_template_size,const int patch_size):left_patch_vecs(left_patch_vecs),left_mag_patch_vecs(left_mag_patch_vecs),right_patch_vecs(right_patch_vecs),right_mag_patch_vecs(right_mag_patch_vecs),/*left_patch_next_vecs(left_patch_next_vecs),left_mag_patch_next_vecs(left_mag_patch_next_vecs),right_patch_next_vecs(right_patch_next_vecs),right_mag_patch_next_vecs(right_mag_patch_next_vecs),*/reference_id(reference_id),ti(ti),Half_template_size(Half_template_size),patch_size(patch_size)
+    tagSetKernel(double **left_patch_vecs,double **left_mag_patch_vecs,double **right_patch_vecs,double **right_mag_patch_vecs,const int reference_id,const int ti,const int Half_template_size,const int patch_size):left_patch_vecs(left_patch_vecs),left_mag_patch_vecs(left_mag_patch_vecs),right_patch_vecs(right_patch_vecs),right_mag_patch_vecs(right_mag_patch_vecs),reference_id(reference_id),ti(ti),Half_template_size(Half_template_size),patch_size(patch_size)
     {
     }
 } SetKernel;

@@ -135,7 +135,8 @@ void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level
 
 void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagImages, const double DEM_resolution, const double ori_im_resolution, const double * const * const *RPCs, const CSize * const *imagesizes, const uint16 * const *Images, const uint8 Template_size, const CSize Size_Grid2D, const TransParam param, const D2DPOINT* GridPts, UGRID *GridPT3, const uint8 NumofIAparam, const double * const *ImageAdjust, const uint8 Pyramid_step, const D2DPOINT *Startpos, const double* Boundary, const double* minmaxHeight);
 
-bool VerticalLineLocus_blunder(const ProInfo *proinfo,float* nccresult, const uint16 * const *MagImages, double DEM_resolution,double im_resolution, const double * const * const *RPCs, const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, uint8 Template_size, CSize Size_Grid2D, TransParam param,const D2DPOINT* GridPts,const D2DPOINT *Grid_wgs, UGRID *GridPT3, uint8 NumofIAparam, const double * const *ImageAdjust, uint8 Pyramid_step,const D2DPOINT *Startpos, const char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,const double* Boundary,const uint8 * const *ori_images, int blunder_selected_level, bool bblunder);
+bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder);
+
 int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
                              uint16 **MagImages, uint16 **Images,
                              double DEM_resolution, double im_resolution,const double * const * const *RPCs, CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,const double* boundary,double *F_sncc);
@@ -151,9 +152,9 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
-int DecisionMPs(const ProInfo *proinfo,const bool flag_blunder,const int count_MPs_input,const double* Boundary, UGRID *GridPT3,const uint8 Pyramid_step,const double grid_resolution, const uint8 iteration, const CSize Size_Grid2D, char *filename_mps_pre,char *filename_mps,const double Hinterval, bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight,const uint16 * const *MagImages,const double DEM_resolution, double im_resolution,const double * const * const *RPCs,const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, const uint8 Template_size,const TransParam param,const D2DPOINT* Grid_wgs, const D2DPOINT* GridPts,const uint8 NumofIAparam,const double * const *ImageAdjust,const D2DPOINT *Startpos,const uint8 tile_row,const uint8 tile_col,const uint8 * const *ori_images,const int blunder_selected_level,D3DPOINT *ptslists);
+void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, D3DPOINT *ptslists);
 
-int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+int DecisionMPs_setheight(ProInfo *proinfo,LevelInfo &rlevelinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
 						  uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
 						  bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
 						  uint16 **MagImages,double DEM_resolution, double im_resolution, const double * const * const *RPCs,
@@ -176,9 +177,8 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 
-bool blunder_detection_TIN(int pre_DEMtif, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
-						   D3DPOINT *ptslists, bool *detectedBlunders, int numOfPts, UI3DPOINT *trilists,int numOfTri, UGRID *Gridpts, BL BL_param, 
-						   uint32 *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma);
+bool blunder_detection_TIN(const ProInfo *proinfo, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,
+                           D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, long *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight);
 
 int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param, uint16 **MagImages, uint16 **Images, double DEM_resolution, double im_resolution, const double * const * const *RPCs, CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
 

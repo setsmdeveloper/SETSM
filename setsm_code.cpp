@@ -3834,7 +3834,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             int count_results[2];
                             int count_results_anchor[2];
                             int count_MPs;
-                            int count_blunder;
                             bool check_ortho_cal = false;
 
                             uint8 ortho_level = 2;
@@ -3995,114 +3994,102 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             vector<D3DPOINT> MatchedPts_list_blunder;
                             vector<D3DPOINT> MatchedPts_list_anchor;
 
-                            if (check_ortho_cal && proinfo->IsRA != 1)
+                            if(count_MPs > 10)
                             {
-                                //anchor points
-                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                i = 0;
-                                for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
+                                if (check_ortho_cal && proinfo->IsRA != 1)
                                 {
-                                    ptslists[i] = *it;
-                                    i++;
-                                }
-
-                                count_blunder = DecisionMPs(proinfo,false,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_anchor,
-                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results_anchor,&minH_mps,&maxH_mps,minmaxHeight,
-                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                        param, Grid_wgs,GridPT,
-                                        NumOfIAparam, t_Imageparams, BStartpos,
-                                        row,col,SubOriImages,blunder_selected_level,ptslists);
-                                int tcnt;
-                                count_results_anchor[0] = 0;
-                                for(tcnt=0;tcnt<count_MPs;tcnt++)
-                                {
-                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                    //anchor points
+                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                    i = 0;
+                                    for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
                                     {
-                                        MatchedPts_list_anchor.push_back(ptslists[tcnt]);
-                                        count_results_anchor[0]++;
+                                        ptslists[i] = *it;
+                                        i++;
                                     }
-                                    ptslists[tcnt].flag = 0;
-                                }
-
-                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
-
-                                //blunder detection
-                                count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps_aft,
-                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                        param, Grid_wgs,GridPT,
-                                        NumOfIAparam, t_Imageparams, BStartpos,
-                                        row,col,SubOriImages,blunder_selected_level,ptslists);
-
-                                count_results[0] = 0;
-                                for(tcnt=0;tcnt<count_MPs;tcnt++)
-                                {
-                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                    
+                                    DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                    
+                                    int tcnt;
+                                    count_results_anchor[0] = 0;
+                                    for(tcnt=0;tcnt<count_MPs;tcnt++)
                                     {
-                                        MatchedPts_list_blunder.push_back(ptslists[tcnt]);
-                                        count_results[0]++;
-
-                                        if(minH_mps > ptslists[tcnt].m_Z)
-                                            minH_mps        = ptslists[tcnt].m_Z;
-                                        if(maxH_mps < ptslists[tcnt].m_Z)
-                                            maxH_mps       = ptslists[tcnt].m_Z;
+                                        if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                        {
+                                            MatchedPts_list_anchor.push_back(ptslists[tcnt]);
+                                            count_results_anchor[0]++;
+                                        }
+                                        ptslists[tcnt].flag = 0;
                                     }
+                                    
+                                    printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
+                                    
+                                    //blunder detection
+                              
+                                    DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                    
+                                    count_results[0] = 0;
+                                    for(tcnt=0;tcnt<count_MPs;tcnt++)
+                                    {
+                                        if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                        {
+                                            MatchedPts_list_blunder.push_back(ptslists[tcnt]);
+                                            count_results[0]++;
+                                            
+                                            if(minH_mps > ptslists[tcnt].m_Z)
+                                                minH_mps        = ptslists[tcnt].m_Z;
+                                            if(maxH_mps < ptslists[tcnt].m_Z)
+                                                maxH_mps       = ptslists[tcnt].m_Z;
+                                        }
+                                    }
+                                    
+                                    free(ptslists);
+                                    printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                                 }
-
-                                free(ptslists);
-                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
+                                else
+                                {
+                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                    i = 0;
+                                    for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
+                                    {
+                                        ptslists[i] = *it;
+                                        i++;
+                                    }
+                                 
+                                    DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                    
+                                    count_results[0] = 0;
+                                    for(int tcnt=0;tcnt<count_MPs;tcnt++)
+                                    {
+                                        if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                        {
+                                            MatchedPts_list_mps.push_back(ptslists[tcnt]);
+                                            count_results[0]++;
+                                            
+                                            if(minH_mps > ptslists[tcnt].m_Z)
+                                                minH_mps        = ptslists[tcnt].m_Z;
+                                            if(maxH_mps < ptslists[tcnt].m_Z)
+                                                maxH_mps       = ptslists[tcnt].m_Z;
+                                        }
+                                    }
+                                    
+                                    count_MPs       = count_results[0];
+                                    
+                                    free(ptslists);
+                                    printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
+                                }
                             }
                             else
-                            {
-                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                i = 0;
-                                for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
-                                {
-                                    ptslists[i] = *it;
-                                    i++;
-                                }
-
-                                count_blunder = DecisionMPs(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps_pre,filename_mps,
-                                        Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
-                                        SubMagImages_B,grid_resolution, Image_res[0],RPCs,
-                                        Imagesizes,data_size_lr,SubImages_B,Template_size,
-                                        param, Grid_wgs,GridPT,
-                                        NumOfIAparam, t_Imageparams, BStartpos,
-                                        row,col,SubOriImages,blunder_selected_level,ptslists);
-
-                                count_results[0] = 0;
-                                for(int tcnt=0;tcnt<count_MPs;tcnt++)
-                                {
-                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
-                                    {
-                                        MatchedPts_list_mps.push_back(ptslists[tcnt]);
-                                        count_results[0]++;
-
-                                        if(minH_mps > ptslists[tcnt].m_Z)
-                                            minH_mps        = ptslists[tcnt].m_Z;
-                                        if(maxH_mps < ptslists[tcnt].m_Z)
-                                            maxH_mps       = ptslists[tcnt].m_Z;
-                                    }
-                                }
-
-                                count_MPs       = count_results[0];
-
-                                free(ptslists);
-                                printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
-                            }
-
+                                lower_level_match = false;
+                            
                             MatchedPts_list.clear();
                             vector<D3DPOINT>().swap(MatchedPts_list);
 
-                            fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d,%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs,count_blunder);
+                            fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
 
                             printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
                                     count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
 
-
-                            //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"decisionmps");
+                        //echoprint_Gridinfo(proinfo,nccresult,proinfo->save_filepath,row,col,level,iteration,false,&Size_Grid2D,GridPT3,(char*)"decisionmps");
 
                             if(lower_level_match)
                             {
@@ -4421,7 +4408,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                            free(t_trilists);
                                            */
 
-                                        count_blunder = DecisionMPs_setheight(proinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
+                                         DecisionMPs_setheight(proinfo,levelinfo,true,count_MPs,subBoundary,GridPT3,level,grid_resolution,iteration,Size_Grid2D,filename_mps,proinfo->save_filepath,
                                                 Hinterval,&lower_level_match,&pre_3sigma,&pre_mean,count_results,&minH_mps,&maxH_mps,minmaxHeight,
                                                 SubMagImages_B,grid_resolution, Image_res[0],RPCs,
                                                 Imagesizes,data_size_lr,SubImages_B,Template_size,
@@ -13293,11 +13280,25 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagI
     printf("%d %d\n",count_low,count_total);
 }
 
-bool VerticalLineLocus_blunder(const ProInfo *proinfo,float* nccresult, const uint16 * const *MagImages, double DEM_resolution, double im_resolution, const double * const * const *RPCs, const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, uint8 Template_size, CSize Size_Grid2D, TransParam param,const D2DPOINT* GridPts,const D2DPOINT *Grid_wgs, UGRID *GridPT3, uint8 NumofIAparam, const double * const *ImageAdjust, uint8 Pyramid_step,const D2DPOINT *Startpos,const char* save_filepath, uint8 tile_row, uint8 tile_col, uint8 iteration,uint8 bl_count,const double* Boundary,const uint8 * const *ori_images, int blunder_selected_level, bool bblunder)
+bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder)
 {
-    //uint16* orthoimage_l, *orthoimage_r;
-    
-    //double* orthoheight;
+    const uint16 * const *MagImages = rlevelinfo.py_BMagImages;
+    double im_resolution = proinfo->resolution;
+    double DEM_resolution = proinfo->DEM_resolution;
+    const double * const * const *RPCs = rlevelinfo.RPCs;
+    const CSize * const *Imagesizes = rlevelinfo.py_Sizes;
+    const uint16 * const *Images = rlevelinfo.py_BImages;
+    uint8 Template_size = *rlevelinfo.Template_size;
+    const CSize Size_Grid2D = *rlevelinfo.Size_Grid2D;
+    const TransParam param = *rlevelinfo.param;
+    const D2DPOINT* GridPts = rlevelinfo.GridPts;
+    const D2DPOINT *Grid_wgs = rlevelinfo.Grid_wgs;
+    const uint8 NumofIAparam = *rlevelinfo.NumOfIAparam;
+    double **ImageAdjust = rlevelinfo.ImageAdjust;
+    const uint8 Pyramid_step = *rlevelinfo.Pyramid_step;
+    const D2DPOINT *Startpos = rlevelinfo.py_BStartpos;
+    const double* Boundary = rlevelinfo.Boundary;
+    const int blunder_selected_level = *rlevelinfo.blunder_selected_level;
     
     //if(Pyramid_step >= 1)
     {
@@ -14642,425 +14643,219 @@ int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOIN
     return count_MPs;
 }
 
-int DecisionMPs(const ProInfo *proinfo,const bool flag_blunder,const int count_MPs_input,const double* Boundary, UGRID *GridPT3,const uint8 Pyramid_step,const double grid_resolution, const uint8 iteration, const CSize Size_Grid2D, char *filename_mps_pre, char *filename_mps,const double Hinterval, bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight,const uint16 * const *MagImages,const double DEM_resolution, double im_resolution,const double * const * const *RPCs,const CSize *Imagesizes_ori,const CSize * const *Imagesizes,const uint16 * const *Images, const uint8 Template_size,const TransParam param,const D2DPOINT* Grid_wgs, const D2DPOINT* GridPts,const uint8 NumofIAparam,const double * const *ImageAdjust,const D2DPOINT *Startpos,const uint8 tile_row,const uint8 tile_col,const uint8 * const *ori_images,const int blunder_selected_level,D3DPOINT *ptslists)
+void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, D3DPOINT *ptslists)
 {
-    const char *filename_tri = proinfo->save_filepath;
-    const char* save_filepath = proinfo->save_filepath;
-    const int pre_DEMtif = proinfo->pre_DEMtif;
-    const int IsRA = proinfo->IsRA;
-    const double seedDEMsigma = proinfo->seedDEMsigma;
-    const double f_demsize = proinfo->DEM_resolution;
-    
-    uint16 count            = 0;
-    *p_flag             = true;
-    int count_MPs       = count_MPs_input;
-    int TIN_split_level = 0;
-    int count_tri;
-    
+    const long int count_MPs       = count_MPs_input;
+    const int Th_pts = 1;
     
     *minz_mp = 100000;
     *maxz_mp = -100000;
-    
-    if (grid_resolution <= 8)
+ 
+    uint8 max_count         = 30;
+    if(!flag_blunder) //anchor points
+        max_count = 10;
+    else //blunder points
     {
-        if(grid_resolution <= 8 && grid_resolution > 4)
-            TIN_split_level = 0;
-        else if(grid_resolution <= 4)
-            TIN_split_level = 2;
-        
-        if(fabs(Boundary[2] - Boundary[0]) > 10000 || fabs(Boundary[3] - Boundary[1]) > 10000)
-            TIN_split_level = 2;
-        
+        if(*rlevelinfo.Pyramid_step >= 4)
+            max_count  = 30;
+        else if(*rlevelinfo.Pyramid_step >= 3)
+            max_count  = 20;
+        else
+            max_count = 10;
     }
     
-    double TIN_resolution = grid_resolution;
-    if(IsRA)
-    {
-        TIN_split_level = 4;
-        //TIN_resolution = RA_resolution;
-    }
+    printf("DEM resolution %f\n",proinfo->DEM_resolution);
     
-    if(count_MPs > 10)
+    BL blunder_param;
+    blunder_param.Boundary  = rlevelinfo.Boundary;
+    blunder_param.gridspace = *rlevelinfo.grid_resolution;
+    blunder_param.height_check_flag = true;
+    blunder_param.Hinterval = Hinterval;
+    blunder_param.iteration = iteration;
+    blunder_param.Pyramid_step = *rlevelinfo.Pyramid_step;
+    
+    blunder_param.Size_Grid2D.width = rlevelinfo.Size_Grid2D->width;
+    blunder_param.Size_Grid2D.height = rlevelinfo.Size_Grid2D->height;
+    
+    long count = 0;
+    if( !(*rlevelinfo.Pyramid_step == 0 && iteration == 3))
     {
-        double gridspace            = grid_resolution;
-        uint8 max_count         = 30;
-        if(IsRA)
-            max_count = 30;
+        double min_max[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
         
-        if(!flag_blunder)
+        UI3DPOINT *trilists = NULL;
+        FullTriangulation *origTri = NULL;
+        vector<UI3DPOINT> t_trilists;
+        int count_tri;
+        
+        //Save triangulation for later use as we will remove blunders directly from this triangulation
+        origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
+        
+        count_tri = t_trilists.size();
+        
+        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+        vector<UI3DPOINT>::iterator it;
+        long int i = 0;
+        for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
         {
-            if(Pyramid_step == 4)
-                max_count = 10;
-            else if(Pyramid_step == 3)
-            {
-                max_count = 10;
-                //if(iteration > 5)
-                //    max_count = 5;
-            }
-            else {
-                max_count = 10;
-            }
+            trilists[i] = *it;
+            i++;
         }
+        t_trilists.clear();
+        vector<UI3DPOINT>().swap(t_trilists);
         
-        bool check_dh           = false;
-        bool height_check_flag  = false;
+        
         bool flag               = true;
+        double blunder_dh = 0;
+        long pre_count_blunder = -100;
+        long pre_count_MPs = -100;
         
         
-        FILE *survey;
-        int Th_pts;
-        
-        printf("DEM resolution %f\n",f_demsize);
-        
-        if(flag_blunder)
+        while(flag == true && count < max_count && count_tri > 20)
         {
-            if(Pyramid_step == 3)
+            long int count_blunders = 0;
+            double mt_minmaxheight[2];
+            long blunder_count[2] = {0};
+            
+            float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
+            
+            bool *detBlunders = (bool*)calloc(sizeof(bool), count_MPs);
+            
+            if(proinfo->IsRA != 1)
             {
-                max_count  = 20;
-                if(IsRA)
-                    max_count = 20;
-            }
-            else if(Pyramid_step == 2)
-            {
-                if(f_demsize < 8 )
-                    max_count = 10;
-                else
-                    max_count = 10;
-            }
-            else if(Pyramid_step == 1)
-                max_count = 10;
-            else if(Pyramid_step == 0)
-            {
-                if( iteration == 1)
-                    max_count = 10;
-                else if(iteration == 2)
-                    max_count = 10;
-                else if( iteration >= 3)
-                    max_count = 10;
-            }
-        }
-        
-        //survey  = fopen(filename_mps_pre,"r");
-        //if(survey)
-        {
-            int i=0;
-            BL blunder_param;
-            double blunder_dh = 0;
-            int blunder_th_counts;
-            int pre_count_blunder = -100;
-            int pre_count_MPs = -100;
-            uint32 blunder_count[2];
-            int iter_row,iter_col;
-            
-            
-            
-            blunder_param.Boundary  = Boundary;
-            blunder_param.gridspace = grid_resolution;
-            blunder_param.height_check_flag = true;
-            blunder_param.Hinterval = Hinterval;
-            blunder_param.iteration = iteration;
-            blunder_param.Pyramid_step = Pyramid_step;
-            
-            blunder_param.Size_Grid2D.width = Size_Grid2D.width;
-            blunder_param.Size_Grid2D.height = Size_Grid2D.height;
-            
-            Th_pts      = 1;
-            
-            if(Pyramid_step >= 3)
-                blunder_th_counts = 1;
-            else {
-                blunder_th_counts = 1;
+                SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
+                VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, true);
             }
             
-            //TIN generation start
-            /*
-             D3DPOINT *ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-             
-             std::list<D3DPOINT>::iterator it;
-             int kk = 0;
-             for(it = input_ptslist.begin(); it != input_ptslist.end() ; ++it)
-             {
-             ptslists[kk] = *it;
-             kk++;
-             }
-             */
-            /*
-             while( i < count_MPs && (fscanf(survey,"%f %f %f %hhd\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z,&ptslists[i].flag)) != EOF )
-             {
-             i++;
-             }
-             */
-            double min_max[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
+            blunder_detection_TIN(proinfo, ortho_ncc,flag_blunder,count,&blunder_dh,ptslists, detBlunders, count_MPs,
+                                  trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight);
             
-            if( !(Pyramid_step == 0 && iteration == 3) /*&& Pyramid_step > proinfo->SGM_py*/)
-            {
-                UI3DPOINT *trilists;
-                FullTriangulation *origTri;
-                //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_MPs*4);
-                vector<UI3DPOINT> t_trilists;
-                
-                //Save triangulation for later use as we will remove blunders directly from this triangulation
-                //origTri = TINCreate(ptslists,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
-                origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
-                
-                count_tri = t_trilists.size();
-                
-                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                vector<UI3DPOINT>::iterator it;
-                i = 0;
-                for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
-                {
-                    trilists[i] = *it;
-                    i++;
-                }
-                t_trilists.clear();
-                vector<UI3DPOINT>().swap(t_trilists);
-                /*
-                 i = 0;
-                 for(i=0;i<count_tri;i++)
-                 {
-                 trilists[i].m_X = t_trilists[i].m_X;
-                 trilists[i].m_Y = t_trilists[i].m_Y;
-                 trilists[i].m_Z = t_trilists[i].m_Z;
-                 }
-                 
-                 free(t_trilists);
-                 */
-                // TIN generation end
-                
-                
-                while(flag == true && count < max_count && count_tri > 20)
-                {
-                    int count_blunders = 0;
-                    double mt_minmaxheight[2];
-                    float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
-                    blunder_count[0] = 0;
-                    blunder_count[1] = 0;
-                    
-                    bool *detBlunders = (bool*)calloc(sizeof(bool), count_MPs);
-                    
-                    if(IsRA != 1)
-                    {
-                        SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
-                        
-                        printf("mt_minmax %f %f\n",mt_minmaxheight[0],mt_minmaxheight[1]);
-                        
-                        VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
-                                                  Images, Template_size,
-                                                  Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                                                  NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
-                                                  save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,true);
-                    }
-                    blunder_detection_TIN(pre_DEMtif,ortho_ncc,flag_blunder,count,&blunder_dh,filename_mps,ptslists, detBlunders, count_MPs,
-                                          trilists,count_tri, GridPT3, blunder_param, blunder_count,minz_mp,maxz_mp,mt_minmaxheight,IsRA,seedDEMsigma);
-                    
-                    free(ortho_ncc);
-                    
-                    printf("blunder detection end\tblunder_dh = %f\n",blunder_dh);
-                    
-                    if(count > 0)
-                        count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
-                    else
-                        count_blunders = blunder_count[1];
-                    
-                    if(count_blunders < blunder_th_counts)
-                        flag = false;
-                    
-                    if(blunder_count[0] < Th_pts)
-                    {
-                        flag = false;
-                    }
-                    
-                    if(pre_count_blunder == blunder_count[1] && pre_count_MPs == blunder_count[0])
-                        flag = false;
-                    else {
-                        pre_count_MPs = blunder_count[0];
-                        pre_count_blunder = blunder_count[1];
-                    }
-                    
-                    count++;
-                    
-                    if(count >= max_count || count_tri <= 20)
-                        flag = false;
-                    
-                    printf("start TIN\n");
-                    D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
-                    D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
-                    uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
-                    //FILE *pTri;
-                    
-                    int new_blunder_cnt=0;
-                    int t_tri_counts = 0;
-                    for(i=0;i<count_MPs;i++)
-                    {
-                        //Check for newly found blunders, and save them to be removed from triangulation
-                        if (detBlunders[i])
-                        {
-                            input_blunder_pts[new_blunder_cnt].m_X = ptslists[i].m_X;
-                            input_blunder_pts[new_blunder_cnt].m_Y = ptslists[i].m_Y;
-                            new_blunder_cnt++;
-                        }
-                        if(flag)
-                        {
-                            if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
-                            {
-                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                check_id[t_tri_counts]          = i;
-                                t_tri_counts++;
-                            }
-                        }
-                        else
-                        {
-                            if(ptslists[i].flag != 1)
-                            {
-                                input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                                input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                                check_id[t_tri_counts]          = i;
-                                t_tri_counts++;
-                            }
-                        }
-                        
-                    }
-                    
-                    if (new_blunder_cnt > 0)
-                    {
-                        free(trilists);
-                        //UI3DPOINT* t_trilists   = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*(t_tri_counts)*4);
-                        vector<UI3DPOINT> tt_trilists;
-                        //If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
-                        //Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
-                        if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
-                        {
-                            //Must delete old triangulation and create new one, should be faster
-                            delete origTri;
-                            //origTri = TINCreate(input_tri_pts, t_tri_counts, t_trilists, min_max, &count_tri, grid_resolution);
-                            origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, grid_resolution);
-                        }
-                        else
-                        {
-                            //Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                            TINUpdate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
-                        }
-                        
-                        count_tri = tt_trilists.size();
-                        
-                        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                        
-                        vector<UI3DPOINT>::iterator itt;
-                        i = 0;
-                        for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
-                        {
-                            trilists[i].m_X = check_id[itt->m_X];
-                            trilists[i].m_Y = check_id[itt->m_Y];
-                            trilists[i].m_Z = check_id[itt->m_Z];
-                            i++;
-                        }
-                        tt_trilists.clear();
-                        vector<UI3DPOINT>().swap(tt_trilists);
-                        /*
-                         for(i=0;i<count_tri;i++)
-                         {
-                         trilists[i].m_X = check_id[t_trilists[i].m_X];
-                         trilists[i].m_Y = check_id[t_trilists[i].m_Y];
-                         trilists[i].m_Z = check_id[t_trilists[i].m_Z];
-                         }
-                         free(t_trilists);
-                         */
-                    }
-                    
-                    free(input_blunder_pts);
-                    free(input_tri_pts);
-                    free(detBlunders);
-                    free(check_id);
-                    
-                    printf("end TIN\n");
-                    
-                    count_Results[0]    = count_MPs;
-                    count_Results[1]    = count_tri;
-                    
-                    printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
-                    
-                    //blunder remove from TIN minmax height
-                    int floor_ieration = 2;
-                }
-                
-                /*
-                 FILE *pfile = fopen(filename_mps,"w");
-                 int tcnt = 0;
-                 count_Results[0] = 0;
-                 for(tcnt=0;tcnt<count_MPs;tcnt++)
-                 {
-                 if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
-                 {
-                 fprintf(pfile,"%.4f %.4f %.4f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
-                 count_Results[0]++;
-                 }
-                 }
-                 fclose(pfile);
-                 */
-                double mt_minmaxheight[2];
-                SetHeightRange_blunder(minmaxHeight,ptslists, count_Results[0], trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
-                
-                free(trilists);
-                
-                if(flag_blunder == true)
-                    count = 50;
-                else {
-                    count = 40;
-                }
-                
-                float* ortho_ncc = (float*)calloc(sizeof(float),Size_Grid2D.height*Size_Grid2D.width);
-                
-                VerticalLineLocus_blunder(proinfo,ortho_ncc, MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
-                                          Images, Template_size,
-                                          Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
-                                          NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
-                                          save_filepath, tile_row, tile_col, iteration,count,Boundary,ori_images,blunder_selected_level,false);
-                printf("DecisionMP : end VerticalLineLocus_blunder\n");
-                free(ortho_ncc);
-                delete origTri;
-            }
+            free(ortho_ncc);
+            
+            if(count > 0)
+                count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
+            else
+                count_blunders = blunder_count[1];
+            
+            if(count_blunders < Th_pts)
+                flag = false;
+            
+            if(blunder_count[0] < Th_pts)
+                flag = false;
+            
+            if(pre_count_blunder == blunder_count[1] && pre_count_MPs == blunder_count[0])
+                flag = false;
             else
             {
-                /*
-                 FILE *pfile = fopen(filename_mps,"w");
-                 int tcnt = 0;
-                 int selected_count_MPs = 0;
-                 
-                 for(tcnt=0;tcnt<count_MPs;tcnt++)
-                 {
-                 if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= Boundary[0] && ptslists[tcnt].m_X <= Boundary[2] && ptslists[tcnt].m_Y >= Boundary[1] && ptslists[tcnt].m_Y <= Boundary[3])
-                 {
-                 fprintf(pfile,"%.4f %.4f %.4f %d\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z,ptslists[tcnt].flag);
-                 
-                 if(*minz_mp > ptslists[tcnt].m_Z)
-                 *minz_mp        = ptslists[tcnt].m_Z;
-                 if(*maxz_mp < ptslists[tcnt].m_Z)
-                 *maxz_mp        = ptslists[tcnt].m_Z;
-                 
-                 selected_count_MPs++;
-                 }
-                 
-                 }
-                 count_MPs = selected_count_MPs;
-                 count_Results[0] = count_MPs;
-                 fclose(pfile);
-                 */
+                pre_count_MPs = blunder_count[0];
+                pre_count_blunder = blunder_count[1];
             }
-            //free(ptslists);
             
+            printf("start TIN\n");
+            D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
+            D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
+            uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
+            
+            long int new_blunder_cnt = 0;
+            long int t_tri_counts = 0;
+            for(long int i=0;i<count_MPs;i++)
+            {
+                //Check for newly found blunders, and save them to be removed from triangulation
+                if (detBlunders[i])
+                {
+                    input_blunder_pts[new_blunder_cnt].m_X = ptslists[i].m_X;
+                    input_blunder_pts[new_blunder_cnt].m_Y = ptslists[i].m_Y;
+                    new_blunder_cnt++;
+                }
+                if(flag)
+                {
+                    if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
+                    {
+                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                        check_id[t_tri_counts]          = i;
+                        t_tri_counts++;
+                    }
+                }
+                else
+                {
+                    if(ptslists[i].flag != 1)
+                    {
+                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                        check_id[t_tri_counts]          = i;
+                        t_tri_counts++;
+                    }
+                }
+            }
+            
+            if (new_blunder_cnt > 0)
+            {
+                free(trilists);
+                vector<UI3DPOINT> tt_trilists;
+                //If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
+                //Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
+                if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
+                {
+                    //Must delete old triangulation and create new one, should be faster
+                    delete origTri;
+                    origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution);
+                }
+                else
+                {
+                    //Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
+                    TINUpdate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
+                }
+                
+                count_tri = tt_trilists.size();
+                
+                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                
+                vector<UI3DPOINT>::iterator itt;
+                long i = 0;
+                for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
+                {
+                    trilists[i].m_X = check_id[itt->m_X];
+                    trilists[i].m_Y = check_id[itt->m_Y];
+                    trilists[i].m_Z = check_id[itt->m_Z];
+                    i++;
+                }
+                tt_trilists.clear();
+                vector<UI3DPOINT>().swap(tt_trilists);
+            }
+            
+            free(input_blunder_pts);
+            free(input_tri_pts);
+            free(detBlunders);
+            free(check_id);
+            
+            printf("end TIN\n");
+            
+            count_Results[0]    = count_MPs;
+            count_Results[1]    = count_tri;
+            
+            count++;
+            if(count >= max_count || count_tri <= 20)
+                flag = false;
+            
+            printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,*rlevelinfo.grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
         }
-        //fclose(survey);
+
+        double mt_minmaxheight[2];
+        SetHeightRange_blunder(minmaxHeight,ptslists, count_Results[0], trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
         
+        free(trilists);
+        
+        float* ortho_ncc = (float*)calloc(sizeof(float),*rlevelinfo.Grid_length);
+        
+        VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
+        printf("DecisionMP : end VerticalLineLocus_blunder\n");
+        
+        free(ortho_ncc);
+        delete origTri;
     }
-    else
-        *p_flag     = false;
-    
-    return count;
 }
 
-int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
+int DecisionMPs_setheight(ProInfo *proinfo,LevelInfo &rlevelinfo, bool flag_blunder, int count_MPs_input, double* Boundary, UGRID *GridPT3, uint8 Pyramid_step, double grid_resolution,
                           uint8 iteration, CSize Size_Grid2D, char *filename_mps_pre, char *filename_tri, double Hinterval,
                           bool *p_flag, double *pre_3sigma, double *pre_mean, int *count_Results, double *minz_mp, double *maxz_mp, double *minmaxHeight,
                           uint16 **MagImages,double DEM_resolution, double im_resolution, const double * const * const *RPCs,
@@ -15079,7 +14874,6 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     double blunder_dh = 0;
     double mt_minmaxheight[2];
     float* ortho_ncc = (float*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(float));
-    //double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
     
     blunder_param.Boundary  = Boundary;
     blunder_param.gridspace = grid_resolution;
@@ -15093,11 +14887,14 @@ int DecisionMPs_setheight(ProInfo *proinfo,bool flag_blunder, int count_MPs_inpu
     
     SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,numoftri, GridPT3, blunder_param,mt_minmaxheight,false);
     
+    VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
+    /*
     VerticalLineLocus_blunder(proinfo,ortho_ncc,MagImages,DEM_resolution, im_resolution, RPCs, Imagesizes_ori, Imagesizes,
                               Images, Template_size,
                               Size_Grid2D, param, GridPts, Grid_wgs, GridPT3,
                               NumofIAparam, ImageAdjust, Pyramid_step, Startpos,
                               save_filepath, tile_row, tile_col, iteration,100,Boundary,ori_images,blunder_selected_level,false);
+     */
     free(ortho_ncc);
     //free(INCC);
     
@@ -15487,10 +15284,13 @@ void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min
 }
 
 
-bool blunder_detection_TIN(int pre_DEMtif,float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,char *file_pts,
-                           D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, uint32 *blunder_count,
-                           double *minz_mp, double *maxz_mp, double *minmaxHeight, int IsRA,double seedDEMsigma)
+bool blunder_detection_TIN(const ProInfo *proinfo, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,
+                           D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, long *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight)
 {
+    int pre_DEMtif = proinfo->pre_DEMtif;
+    int IsRA = proinfo->IsRA;
+    double seedDEMsigma = proinfo->seedDEMsigma;
+    
     uint8 pyramid_step, iteration;
     pyramid_step    = BL_param.Pyramid_step;
     iteration       = BL_param.iteration;
