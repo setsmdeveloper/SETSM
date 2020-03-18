@@ -637,7 +637,7 @@ typedef struct taglevelinfo
 
     const double *height_step;
     const double *grid_resolution;
-    double *minmaxHeight; //iteratively changed
+    //double *minmaxHeight; //iteratively changed
     const int *Py_combined_level;
     bool *check_matching_rate;
 } LevelInfo;

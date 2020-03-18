@@ -3205,7 +3205,7 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 }
 #endif
 
-int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile)
+int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -3329,6 +3329,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             }
             
             double subBoundary[4];
+            double minmaxHeight[2] = {ori_minmaxHeight[0], ori_minmaxHeight[1]};
             printf("minmaxH = %f\t%f\n",minmaxHeight[0],minmaxHeight[1]);
             SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
             
@@ -3795,7 +3796,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         const double height_step = GetHeightStep(level,Image_res[0]);
                         levelinfo.height_step = &height_step;
                         levelinfo.grid_resolution = &grid_resolution;
-                        levelinfo.minmaxHeight = minmaxHeight;
+                        //levelinfo.minmaxHeight = minmaxHeight;
                         
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
@@ -3968,7 +3969,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 //FILE* t_fid_c = fopen(filename_tri,"w");
                                 
                                 size_t voxel_size = 0;
-                                InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration);
+                                InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight);
                                 
                                 for(long int t_r = 0 ; t_r < Size_Grid2D.height ; t_r++)
                                 {
@@ -3996,7 +3997,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             
                             printf("all memeory %f\n",(Memory+(double)(voxel_all_size))/1024.0/1024.0/1024.0);
                             
-                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration);
+                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                             
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                             
@@ -10323,7 +10324,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
     return HS;
 }
 
-void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration)
+void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight)
 {
     const double height_step = *plevelinfo.height_step;
     const uint8 pyramid_step = *plevelinfo.Pyramid_step;
@@ -10359,14 +10360,14 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
                         {
                             if(iteration > 1)
                             {
-                                if(GridPT3[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && GridPT3[t_i].minHeight >= plevelinfo.minmaxHeight[0] && nccresult[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && nccresult[t_i].minHeight >= plevelinfo.minmaxHeight[0])
+                                if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0] && nccresult[t_i].maxHeight <= minmaxHeight[1] && nccresult[t_i].minHeight >= minmaxHeight[0])
                                     check_blunder_cell = false;
                                 else
                                       check_blunder_cell = true;
                             }
                             else
                             {
-                                if(GridPT3[t_i].maxHeight <= plevelinfo.minmaxHeight[1] && GridPT3[t_i].minHeight >= plevelinfo.minmaxHeight[0])
+                                if(GridPT3[t_i].maxHeight <= minmaxHeight[1] && GridPT3[t_i].minHeight >= minmaxHeight[0])
                                     check_blunder_cell = false;
                                 else
                                     check_blunder_cell = true;
@@ -10578,7 +10579,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
 
 }
 
-int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration)
+int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
     const char* save_filepath = proinfo->save_filepath;
@@ -10893,14 +10894,14 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                 
                 if(Pyramid_step <= 1)
                 {
-                    if(GridPT3[pt_index].maxHeight > plevelinfo.minmaxHeight[1] || GridPT3[pt_index].minHeight < plevelinfo.minmaxHeight[0])
+                    if(GridPT3[pt_index].maxHeight > minmaxHeight[1] || GridPT3[pt_index].minHeight < minmaxHeight[0])
                         check_blunder_cell = true;
                 }
                 
                 if(check_matchtag && iteration  <= 2)
                 {
                     check_blunder_cell = false;
-                    if(GridPT3[pt_index].maxHeight > plevelinfo.minmaxHeight[1] || GridPT3[pt_index].minHeight < plevelinfo.minmaxHeight[0])
+                    if(GridPT3[pt_index].maxHeight > minmaxHeight[1] || GridPT3[pt_index].minHeight < minmaxHeight[0])
                         check_blunder_cell = true;
                     else if( (abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) > 1000) )
                         check_blunder_cell = true;
