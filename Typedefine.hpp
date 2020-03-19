@@ -301,6 +301,8 @@ typedef struct ArgumentInfo{
     double SDM_days;
     double SDM_AS;
     double DS_sigma;
+    double DS_tx;
+    double DS_ty;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -330,6 +332,7 @@ typedef struct ArgumentInfo{
     char EO_Path[500];
     char DEM_input_file[500];
     
+    bool check_DS_txy;
     bool check_downsample;
 	bool check_DEM_space;
 	bool check_Threads_num;

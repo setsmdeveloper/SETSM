@@ -108,6 +108,7 @@ int main(int argc,char *argv[])
     args.check_DEM_coreg_output = false;
     args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1;
     args.check_downsample = false;
+    args.check_DS_txy = false;
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
@@ -1047,23 +1048,32 @@ int main(int argc,char *argv[])
                     else
                     {
                         sprintf(args.seedDEMfilename,"%s",argv[i+1]);
-                        printf("%s\n",args.seedDEMfilename);
+                        printf("source %s\n",args.seedDEMfilename);
                         sprintf(args.Outputpath_name,"%s",argv[i+2]);
-                        printf("%s\n",args.Outputpath_name);
+                        printf("target %s\n",args.Outputpath_name);
                         args.check_downsample = true;
                     }
+                }
+                
+                if (strcmp("-txy",argv[i]) == 0)
+                {
+                    args.DS_tx = atof(argv[i+1]);
+                    printf("Target origin X %f\n",args.DS_tx);
+                    args.DS_ty = atof(argv[i+2]);
+                    printf("Target origin Y %f\n",args.DS_ty);
+                    args.check_DS_txy = true;
                 }
                 
                 if (strcmp("-kernel",argv[i]) == 0)
                 {
                     args.DS_kernel = atoi(argv[i+1]);
-                    printf("%d\n",args.DS_kernel);
+                    printf("kernel size %d\n",args.DS_kernel);
                 }
                 
                 if (strcmp("-sigma",argv[i]) == 0)
                 {
                     args.DS_sigma = atof(argv[i+1]);
-                    printf("%f\n",args.DS_sigma);
+                    printf("sigma value %f\n",args.DS_sigma);
                 }
                 
                 if (strcmp("-seed",argv[i]) == 0)
@@ -1676,58 +1686,143 @@ char* SetOutpathName(char *_path)
 
 void DownSample(ARGINFO &args)
 {
-    float *seeddem = NULL;
     int cols[2];
     int rows[2];
     CSize data_size;
     double minX, maxY, grid_size;
     
     CSize seeddem_size = ReadGeotiff_info(args.seedDEMfilename, &minX, &maxY, &grid_size);
-    
-    TransParam param;
-    bool Hemisphere;
-    SetTranParam_fromOrtho(&param,args.seedDEMfilename,args,&Hemisphere);
-    
-    
-    CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
-    Imagesize->width = seeddem_size.width;
-    Imagesize->height = seeddem_size.height;
-    
-    cols[0] = 0;
-    cols[1] = seeddem_size.width;
-    
-    rows[0] = 0;
-    rows[1] = seeddem_size.height;
-    
-    seeddem = Readtiff_DEM(args.seedDEMfilename,Imagesize,cols,rows,&data_size);
-    
     int downsample_step = ceil(log2(args.DEM_space/grid_size));
-    
-    printf("downsample_step %d\t%d\t%f\n",downsample_step,args.DS_kernel,args.DS_sigma);
-    
-    
-    float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
-    
-    CSize out_size;
-    
-    for(int level = 0 ; level < downsample_step ; level ++)
+    if(downsample_step < 1)
     {
-        if(level == 0)
+        printf("No downsampling necessary. Please check source(%3.1f) and target resolution(%3.1f)!!\n",grid_size,args.DEM_space);
+        exit(1);
+    }
+    else
+    {
+        TransParam param;
+        bool Hemisphere;
+        SetTranParam_fromOrtho(&param,args.seedDEMfilename,args,&Hemisphere);
+        
+        
+        CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
+        Imagesize->width = seeddem_size.width;
+        Imagesize->height = seeddem_size.height;
+        
+        cols[0] = 0;
+        cols[1] = seeddem_size.width;
+        
+        rows[0] = 0;
+        rows[1] = seeddem_size.height;
+        
+        float *seeddem = Readtiff_DEM(args.seedDEMfilename,Imagesize,cols,rows,&data_size);
+        
+        float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
+        
+        CSize out_size;
+        
+        for(int level = 0 ; level < downsample_step ; level ++)
         {
-            pyimg[0] = CreateImagePyramid_float(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
-            out_size.width = seeddem_size.width/2;
-            out_size.height = seeddem_size.height/2;
+            if(level == 0)
+            {
+                pyimg[0] = CreateImagePyramid(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
+                free(seeddem);
+                out_size.width = seeddem_size.width/2;
+                out_size.height = seeddem_size.height/2;
+            }
+            else
+            {
+                pyimg[level] = CreateImagePyramid(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
+                out_size.width = out_size.width/2;
+                out_size.height = out_size.height/2;
+            }
+        }
+        
+        for(int i=0 ; i< downsample_step-1 ; i++)
+            free(pyimg[i]);
+        
+        printf("Done Gaussian processing\n");
+        
+        D2DPOINT target;
+        if(!args.check_DS_txy)
+        {
+            target.m_X = (int)(minX/2.0)*2;
+            target.m_Y = (int)(maxY/2.0)*2;
         }
         else
         {
-            pyimg[level] = CreateImagePyramid_float(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
-            out_size.width = out_size.width/2;
-            out_size.height = out_size.height/2;
-            free(pyimg[level-1]);
+            target.m_X = (int)(args.DS_tx/2.0)*2;
+            target.m_Y = (int)(args.DS_ty/2.0)*2;
         }
+        
+        D2DPOINT Dxy;
+        Dxy.m_X = minX - (int)target.m_X;
+        Dxy.m_Y = maxY - (int)target.m_Y;
+        D2DPOINT Dgrid;
+        Dgrid.m_X = -Dxy.m_X/args.DEM_space;
+        Dgrid.m_Y = Dxy.m_Y/args.DEM_space;
+        long data_length = (long)out_size.width*(long)out_size.height;
+        
+        float *outimg = (float*)malloc(sizeof(float)*data_length);
+#pragma omp parallel for schedule(guided)
+        for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
+        {
+            long int pts_row = (long int)(floor(iter_count/out_size.width));
+            long int pts_col = iter_count % out_size.width;
+            long int pt_index = pts_row*(long int)out_size.width + pts_col;
+            
+            D2DPOINT query_pt;
+            query_pt.m_X = pts_col + Dgrid.m_X;
+            query_pt.m_Y = pts_row + Dgrid.m_Y;
+            outimg[iter_count] = BilinearResampling(pyimg[downsample_step-1],out_size,query_pt);
+        }
+        printf("Done resampling\n");
+        free(pyimg[downsample_step-1]);
+        free(pyimg);
+        
+        WriteGeotiff(args.Outputpath_name, outimg, out_size.width, out_size.height, args.DEM_space, target.m_X, target.m_Y, param.projection, param.zone, param.bHemisphere, 4);
+
+        free(outimg);
+    }
+}
+
+template <typename T>
+T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
+{
+    const long data_length = (long)img_size.width*(long)img_size.height;
+    
+    long int index1,index2,index3, index4;
+    T value1, value2, value3, value4;
+    double value;
+    
+    const long t_col_int   = (long int)(query_pt.m_X + 0.01);
+    const long t_row_int   = (long int)(query_pt.m_Y + 0.01);
+    
+    const double dcol        = query_pt.m_X - t_col_int;
+    const double drow        = query_pt.m_Y - t_row_int;
+    
+    
+    index1  = (t_col_int    ) + (t_row_int    )*(long)img_size.width;
+    index2  = (t_col_int + 1) + (t_row_int    )*(long)img_size.width;
+    index3  = (t_col_int    ) + (t_row_int + 1)*(long)img_size.width;
+    index4  = (t_col_int + 1) + (t_row_int + 1)*(long)img_size.width;
+    
+    if(index1 >= 0 && index1 < data_length && index2 >= 0 && index2 < data_length && index3 >= 0 && index3 < data_length && index4 >= 0 && index4 < data_length && t_col_int >= 0 && (t_col_int + 1) < img_size.width && t_row_int >= 0 && (t_row_int + 1) < img_size.height)
+    {
+        value1      = input[index1];
+        value2      = input[index2];
+        value3      = input[index3];
+        value4      = input[index4];
+    
+        value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
+            + value3*(1-dcol)*drow + value4*dcol*drow;
+    }
+    else
+    {
+        value       = -9999;
     }
     
-    WriteGeotiff(args.Outputpath_name, pyimg[downsample_step-1], out_size.width, out_size.height, args.DEM_space, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
+    return (T)value;
 }
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
@@ -9998,7 +10093,94 @@ uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, 
     return out;
 }
 
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
+{
+    //_filter_size = 7, sigma = 1.6
+    double sigma = _sigma;
+    double temp,scale;
+    double sum = 0;
+    double** GaussianFilter;
+    CSize result_size;
+    T* result_img;
 
+    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
+    for(int i=0;i<_filter_size;i++)
+        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
+
+    
+    result_size.width = _img_size.width/2;
+    result_size.height = _img_size.height/2;
+    scale=sqrt(2*PI)*sigma;
+    
+    int half_filter_size = (int)(_filter_size/2);
+    
+    result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
+
+    for(int i=-half_filter_size;i<=half_filter_size;i++)
+    {
+        for(int j=-half_filter_size;j<=half_filter_size;j++)
+        {
+            temp = -1*(i*i+j*j)/(2*sigma*sigma);
+            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)/scale;
+            sum += exp(temp)/scale;
+        }
+    }
+
+#pragma omp parallel for schedule(guided)
+    for(int i=-half_filter_size;i<=half_filter_size;i++)
+    {
+        for(int j=-half_filter_size;j<=half_filter_size;j++)
+        {
+            GaussianFilter[i+half_filter_size][j+half_filter_size]/=sum;
+            //int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
+            //GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
+        }
+    }
+
+#pragma omp parallel for private(temp) schedule(guided)
+    //for(long int ori_index=0 ; ori_index<(long)result_size.height*(long)result_size.width ; ori_index++)
+    for(long int r=0;r<result_size.height;r++)
+    {
+        for(long int c=0;c<result_size.width;c++)
+        {
+            double temp_v = 0;
+            int count = 0;
+            for(int l=-half_filter_size;l<=half_filter_size;l++)
+            {
+                for(int k=-half_filter_size;k<=half_filter_size;k++)
+                {
+                    //r'->2r+m, c'->2c+n
+                    if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
+                        (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
+                    {
+                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > -100)
+                        {
+                            temp_v += GaussianFilter[l + half_filter_size][k + half_filter_size]*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            count ++;
+                        }
+                    }
+                }
+            }
+
+            if(count > _filter_size*_filter_size*0.3)
+                result_img[r*result_size.width + c] = round(temp_v);
+            else
+                result_img[r*result_size.width + c] = -9999;
+        }
+    }
+    
+    for(int i=0;i<_filter_size;i++)
+        if(GaussianFilter[i])
+            free(GaussianFilter[i]);
+
+    if(GaussianFilter)
+        free(GaussianFilter);
+    
+
+    return result_img;
+}
+/*
 uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma)
 {
     //_filter_size = 7, sigma = 1.6
@@ -10155,7 +10337,7 @@ float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size
 
     return result_img;
 }
-
+*/
 unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, int _filter_size, double _sigma)
 {
     //_filter_size = 7, sigma = 1.6
@@ -21898,7 +22080,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     if(check_overlap)
     {
         // set saving pointer for orthoimage
-        uint16 *result_ortho    = (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
+        uint16 *result_ortho    = (uint16*)calloc((long)Orthoimagesize.width*(long)Orthoimagesize.height,sizeof(uint16));
         
         float *DEM_value    = NULL;
         

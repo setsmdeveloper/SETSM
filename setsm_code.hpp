@@ -47,7 +47,7 @@ typedef struct nnXY
 } NNXY;
 
 void DownSample(ARGINFO &args);
-float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size, double _sigma);
+//float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size, double _sigma);
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 char* SetOutpathName(char *_path);
 
@@ -108,7 +108,7 @@ void Preprocessing(ProInfo *proinfo, char *save_path,char **Subsetfile, uint8 py
 uint16* LoadPyramidImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level);
 uint16* LoadPyramidMagImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level, double *val, double *avg);
 uint8* LoadPyramidOriImages(char *save_path,char *subsetfile, CSize data_size, uint8 py_level);
-uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
+//uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
 void MakeSobelMagnitudeImage(CSize _img_size, uint16* _src_image, uint16* _dist_mag_image, /*int16* _gx, int16* _gy,*/ int16* _dir);
 void Orientation(CSize imagesize, uint16* Gmag, int16* Gdir, uint8 Template_size, uint8* plhs);
 void CalMPP_pair(double CA,double mean_product_res, double im_resolution, double *MPP_stereo_angle);
@@ -396,4 +396,9 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 float quickselect(float *arr, int n, int k);
 bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb);
+
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma);
+template <typename T>
+T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt);
 #endif // SETSM_CODE_H
