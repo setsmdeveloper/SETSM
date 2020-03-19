@@ -1813,9 +1813,12 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
         value2      = input[index2];
         value3      = input[index3];
         value4      = input[index4];
-    
-        value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
-            + value3*(1-dcol)*drow + value4*dcol*drow;
+
+        if(value1 > -100 && value2 > -100 && value3 > -100 && value4 > 100)
+            value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow) + value3*(1-dcol)*drow + value4*dcol*drow;
+        else
+            value = -9999;
+
     }
     else
     {
