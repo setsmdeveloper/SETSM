@@ -10091,9 +10091,9 @@ float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size
     CSize result_size;
     float* result_img;
 
-    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
+    GaussianFilter = (double**)calloc(sizeof(double*),_filter_size);
     for(int i=0;i<_filter_size;i++)
-        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
+        GaussianFilter[i] = (double*)calloc(sizeof(double),_filter_size);
 
     
     result_size.width = _img_size.width/2;
@@ -10112,19 +10112,16 @@ float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size
         }
     }
 
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided) 
     for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
     {
         for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
         {
             GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
-            int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
         }
     }
 
 #pragma omp parallel for private(temp) schedule(guided)
-    //for(long int ori_index=0 ; ori_index<(long)result_size.height*(long)result_size.width ; ori_index++)
     for(long int r=0;r<result_size.height;r++)
     {
         for(long int c=0;c<result_size.width;c++)
@@ -10140,7 +10137,6 @@ float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size
                         (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
                     {
                         temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
-                        
                     }
                 }
             }
