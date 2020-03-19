@@ -442,6 +442,11 @@ typedef struct ArgumentInfo{
     double focal_length;
     double CCD_size;
     double System_memory;
+    double SDM_days;
+    double SDM_AS;
+    double DS_sigma;
+    double DS_tx;
+    double DS_ty;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -461,8 +466,7 @@ typedef struct ArgumentInfo{
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
     uint8 pyramid_level;
     uint8 SDM_SS;
-    double SDM_days;
-    double SDM_AS;
+    int DS_kernel;
     
     char Image[MaxImages][500];
 	char Outputpath[500];
@@ -472,6 +476,8 @@ typedef struct ArgumentInfo{
     char EO_Path[500];
     char DEM_input_file[500];
     
+    bool check_DS_txy;
+    bool check_downsample;
 	bool check_DEM_space;
 	bool check_Threads_num;
 	bool check_seeddem;

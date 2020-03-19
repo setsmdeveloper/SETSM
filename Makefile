@@ -42,7 +42,7 @@ else
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-std=c99 -g -O3 -fopenmp 
-  CXXFLAGS=-g -O3 -fopenmp 
+  CXXFLAGS=-std=c++11 -O3 -fopenmp 
 endif
 
 $(shell git describe --always --tags --dirty > git_description)

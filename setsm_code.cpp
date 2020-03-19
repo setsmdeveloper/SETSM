@@ -128,6 +128,8 @@ int main(int argc,char *argv[])
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
     args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1;
+    args.check_downsample = false;
+    args.check_DS_txy = false;
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
@@ -139,8 +141,9 @@ int main(int argc,char *argv[])
     args.RA_only = 0;
     args.focal_length = 120;
     args.CCD_size = 12;
-    
     args.SGM_py = 1;
+    args.DS_sigma = 1.6;
+    args.DS_kernel = 9;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -1056,6 +1059,43 @@ int main(int argc,char *argv[])
                     }
                 }
      
+                if (strcmp("-downsample",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input the threads value\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        sprintf(args.seedDEMfilename,"%s",argv[i+1]);
+                        printf("source %s\n",args.seedDEMfilename);
+                        sprintf(args.Outputpath_name,"%s",argv[i+2]);
+                        printf("target %s\n",args.Outputpath_name);
+                        args.check_downsample = true;
+                    }
+                }
+                
+                if (strcmp("-txy",argv[i]) == 0)
+                {
+                    args.DS_tx = atof(argv[i+1]);
+                    printf("Target origin X %f\n",args.DS_tx);
+                    args.DS_ty = atof(argv[i+2]);
+                    printf("Target origin Y %f\n",args.DS_ty);
+                    args.check_DS_txy = true;
+                }
+                
+                if (strcmp("-kernel",argv[i]) == 0)
+                {
+                    args.DS_kernel = atoi(argv[i+1]);
+                    printf("kernel size %d\n",args.DS_kernel);
+                }
+                
+                if (strcmp("-sigma",argv[i]) == 0)
+                {
+                    args.DS_sigma = atof(argv[i+1]);
+                    printf("sigma value %f\n",args.DS_sigma);
+                }
+                
                 if (strcmp("-seed",argv[i]) == 0)
                 {
                     if(args.check_sdm_ortho == 0)
@@ -1524,7 +1564,11 @@ int main(int argc,char *argv[])
                 
                 if(args.check_txt_input == 0)
                 {
-                    if(image_count > 1 || args.check_ortho)
+                    if(args.check_downsample)
+                    {
+                        DownSample(args);
+                    }
+                    else if(image_count > 1 || args.check_ortho)
                     {
                         args.number_of_images = image_count;
                         
@@ -1658,6 +1702,147 @@ char* SetOutpathName(char *_path)
     
     return t_name;
     
+}
+
+void DownSample(ARGINFO &args)
+{
+    long cols[2];
+    long rows[2];
+    CSize data_size;
+    double minX, maxY, grid_size;
+    
+    CSize seeddem_size = ReadGeotiff_info(args.seedDEMfilename, &minX, &maxY, &grid_size);
+    int downsample_step = ceil(log2(args.DEM_space/grid_size));
+    if(downsample_step < 1)
+    {
+        printf("No downsampling necessary. Please check source(%3.1f) and target resolution(%3.1f)!!\n",grid_size,args.DEM_space);
+        exit(1);
+    }
+    else
+    {
+        TransParam param;
+        bool Hemisphere;
+        SetTranParam_fromOrtho(&param,args.seedDEMfilename,args,&Hemisphere);
+        
+        
+        CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
+        Imagesize->width = seeddem_size.width;
+        Imagesize->height = seeddem_size.height;
+        
+        cols[0] = 0;
+        cols[1] = seeddem_size.width;
+        
+        rows[0] = 0;
+        rows[1] = seeddem_size.height;
+        
+        float *seeddem = Readtiff_DEM(args.seedDEMfilename,Imagesize,cols,rows,&data_size);
+        
+        float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
+        
+        CSize out_size;
+        
+        for(int level = 0 ; level < downsample_step ; level ++)
+        {
+            if(level == 0)
+            {
+                pyimg[0] = CreateImagePyramid(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
+                free(seeddem);
+                out_size.width = seeddem_size.width/2;
+                out_size.height = seeddem_size.height/2;
+            }
+            else
+            {
+                pyimg[level] = CreateImagePyramid(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
+                out_size.width = out_size.width/2;
+                out_size.height = out_size.height/2;
+            }
+        }
+        /*
+        for(int i=0 ; i< downsample_step-1 ; i++)
+            free(pyimg[i]);
+        
+        WriteGeotiff(args.Outputpath_name, pyimg[downsample_step-1], out_size.width, out_size.height, args.DEM_space, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
+        
+        free(pyimg[downsample_step-1]);
+        free(pyimg);
+        */
+        printf("Done Gaussian processing\n");
+        
+        D2DPOINT target;
+        if(!args.check_DS_txy)
+        {
+            target.m_X = (int)(minX/2.0)*2;
+            target.m_Y = (int)(maxY/2.0)*2;
+        }
+        else
+        {
+            target.m_X = (int)(args.DS_tx/2.0)*2;
+            target.m_Y = (int)(args.DS_ty/2.0)*2;
+        }
+        
+        D2DPOINT Dxy(minX - (int)target.m_X, maxY - (int)target.m_Y);
+        D2DPOINT Dgrid(-Dxy.m_X/args.DEM_space,Dxy.m_Y/args.DEM_space);
+        long data_length = (long)out_size.width*(long)out_size.height;
+        
+        float *outimg = (float*)malloc(sizeof(float)*data_length);
+#pragma omp parallel for schedule(guided)
+        for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
+        {
+            long int pts_row = (long int)(floor(iter_count/out_size.width));
+            long int pts_col = iter_count % out_size.width;
+            long int pt_index = pts_row*(long int)out_size.width + pts_col;
+            
+            D2DPOINT query_pt(pts_col + Dgrid.m_X,pts_row + Dgrid.m_Y);
+            outimg[iter_count] = BilinearResampling(pyimg[downsample_step-1],out_size,query_pt);
+        }
+        printf("Done resampling\n");
+        free(pyimg[downsample_step-1]);
+        free(pyimg);
+        
+        WriteGeotiff(args.Outputpath_name, outimg, out_size.width, out_size.height, args.DEM_space, target.m_X, target.m_Y, param.projection, param.zone, param.bHemisphere, 4);
+
+        free(outimg);
+         
+    }
+}
+
+template <typename T>
+T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
+{
+    const long data_length = (long)img_size.width*(long)img_size.height;
+    
+    long int index1,index2,index3, index4;
+    T value1, value2, value3, value4;
+    double value;
+    
+    const long t_col_int   = (long int)(query_pt.m_X + 0.01);
+    const long t_row_int   = (long int)(query_pt.m_Y + 0.01);
+    
+    const double dcol        = query_pt.m_X - t_col_int;
+    const double drow        = query_pt.m_Y - t_row_int;
+    
+    
+    index1  = (t_col_int    ) + (t_row_int    )*(long)img_size.width;
+    index2  = (t_col_int + 1) + (t_row_int    )*(long)img_size.width;
+    index3  = (t_col_int    ) + (t_row_int + 1)*(long)img_size.width;
+    index4  = (t_col_int + 1) + (t_row_int + 1)*(long)img_size.width;
+    
+    if(index1 >= 0 && index1 < data_length && index2 >= 0 && index2 < data_length && index3 >= 0 && index3 < data_length && index4 >= 0 && index4 < data_length && t_col_int >= 0 && (t_col_int + 1) < img_size.width && t_row_int >= 0 && (t_row_int + 1) < img_size.height)
+    {
+        value1      = input[index1];
+        value2      = input[index2];
+        value3      = input[index3];
+        value4      = input[index4];
+    
+        value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
+            + value3*(1-dcol)*drow + value4*dcol*drow;
+    }
+    else
+    {
+        value       = -9999;
+    }
+    
+    return (T)value;
 }
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
@@ -6526,7 +6711,7 @@ UGRID *SetGrid3PT(const ProInfo *proinfo,const TransParam param, const CSize Siz
     total_grid_counts       = Size_Grid2D.height*Size_Grid2D.width;
     GridPT3                 = (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
 
-#pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight,Th_roh)
+#pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight)
     for(long int i=0;i<total_grid_counts;i++)
     {
         GridPT3[i].Matched_flag     = 0;
@@ -9801,8 +9986,8 @@ uint16* LoadPyramidMagImages(const char *save_path,char *subsetfile,const CSize 
     return out;
 }
 
-
-uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma)
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
 {
     //_filter_size = 7, sigma = 1.6
     double sigma = _sigma;
@@ -9810,7 +9995,7 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
     double sum = 0;
     double** GaussianFilter;
     CSize result_size;
-    uint16* result_img;
+    T* result_img;
 
     GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
     for(int i=0;i<_filter_size;i++)
@@ -9821,26 +10006,28 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
     result_size.height = _img_size.height/2;
     scale=sqrt(2*PI)*sigma;
     
-    result_img = (uint16*)malloc(sizeof(uint16)*result_size.height*result_size.width);
+    int half_filter_size = (int)(_filter_size/2);
+    
+    result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
 
-    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
+    for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
-        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
+        for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            temp = -1*(i*i+j*j)/(2*sigma*sigma);
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]=exp(temp)/scale;
+            temp = -1.0*(i*i+j*j)/(2*sigma*sigma);
+            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)/scale;
             sum += exp(temp)/scale;
         }
     }
 
 #pragma omp parallel for schedule(guided)
-    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
+    for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
-        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
+        for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
-            int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
+            GaussianFilter[i+half_filter_size][j+half_filter_size]/=sum;
+            //int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
+            //GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
         }
     }
 
@@ -9850,22 +10037,29 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
     {
         for(long int c=0;c<result_size.width;c++)
         {
-            temp = 0;
-
-            for(int l=0;l<_filter_size;l++)
+            double temp_v = 0;
+            int count = 0;
+            for(int l=-half_filter_size;l<=half_filter_size;l++)
             {
-                for(int k=0;k<_filter_size;k++)
+                for(int k=-half_filter_size;k<=half_filter_size;k++)
                 {
                     //r'->2r+m, c'->2c+n
-                    if( (2*r + l-(int)(_filter_size/2)) >= 0 && (2*c + k-(int)(_filter_size/2)) >= 0 && 
-                        (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
+                    if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
+                        (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
                     {
-                        temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
+                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > -100)
+                        {
+                            temp_v += GaussianFilter[l + half_filter_size][k + half_filter_size]*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            count ++;
+                        }
                     }
                 }
             }
 
-            result_img[r*result_size.width + c] = round(temp);
+            if(count > _filter_size*_filter_size*0.3)
+                result_img[r*result_size.width + c] = (T)temp_v;
+            else
+                result_img[r*result_size.width + c] = -9999;
         }
     }
     
@@ -9880,6 +10074,7 @@ uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, do
     return result_img;
 }
 
+/*
 unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, int _filter_size, double _sigma)
 {
     //_filter_size = 7, sigma = 1.6
@@ -9917,8 +10112,8 @@ unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, i
         for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
         {
             GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
-            int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
+            //int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
+            //GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
         }
     }
     
@@ -9942,7 +10137,10 @@ unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, i
                     }
                 }
             }
-            result_img[r*result_size.width + c] = round(temp);
+            if(temp <= 255)
+                result_img[r*result_size.width + c] = round(temp);
+            else
+                result_img[r*result_size.width + c] = 255;
         }
     }
     
@@ -9956,6 +10154,7 @@ unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, i
     
     return result_img;
 }
+
 
 uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size)
 {
@@ -9994,6 +10193,7 @@ uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size
     
     return result_img;
 }
+*/
 
 void MakeSobelMagnitudeImage(const CSize _img_size, const uint16* _src_image, uint16* _dist_mag_image, int16* _dir)
 {
@@ -13333,26 +13533,11 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagI
 
 bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder)
 {
-    const uint16 * const *MagImages = rlevelinfo.py_BMagImages; //blunder_selected_level images
     double im_resolution = proinfo->resolution;
-    double DEM_resolution = proinfo->DEM_resolution;
-    const double * const * const *RPCs = rlevelinfo.RPCs;
-    const CSize * const *Imagesizes = rlevelinfo.py_Sizes;
-    const uint16 * const *Images = rlevelinfo.py_BImages; //blunder_selected_level images
     uint8 Template_size = *rlevelinfo.Template_size;
-    const CSize Size_Grid2D = *rlevelinfo.Size_Grid2D;
-    const TransParam param = *rlevelinfo.param;
-    const D2DPOINT* GridPts = rlevelinfo.GridPts;
-    const D2DPOINT *Grid_wgs = rlevelinfo.Grid_wgs;
-    const uint8 NumofIAparam = *rlevelinfo.NumOfIAparam;
-    const double * const *ImageAdjust = rlevelinfo.ImageAdjust;
-    const uint8 Pyramid_step = *rlevelinfo.Pyramid_step;
-    const D2DPOINT *Startpos = rlevelinfo.py_BStartpos;
-    const double* Boundary = rlevelinfo.Boundary;
-    const int blunder_selected_level = *rlevelinfo.blunder_selected_level;
     
     double template_area = 5.0;
-    int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(blunder_selected_level)))/2.0)*2+1;
+    int t_Template_size = (int)((template_area/(im_resolution*pwrtwo(*rlevelinfo.blunder_selected_level)))/2.0)*2+1;
     if(Template_size < t_Template_size)
         Template_size = t_Template_size;
     
@@ -13362,13 +13547,13 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
     
     if(bblunder)
     {
-        if(Pyramid_step == 4)
+        if(*rlevelinfo.Pyramid_step == 4)
         {
             Half_template_size = Template_size - iteration*2;
             if(Half_template_size < (int)(Template_size/2.0))
                 Half_template_size = (int)(Template_size/2.0);
         }
-        else if(Pyramid_step == 3)
+        else if(*rlevelinfo.Pyramid_step == 3)
         {
             Half_template_size = Template_size - 2  - (iteration)*2;
             if(Half_template_size < (int)(Template_size/2.0))
@@ -13418,7 +13603,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
             long pt_index = pts_row*rlevelinfo.Size_Grid2D->width + pts_col;
             
             const int reference_id = 0;
-            if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
+            if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
             {
                 nccresult[pt_index] = -1.0;
                 double max_ncc = -100;
@@ -14524,7 +14709,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
             
             if(proinfo->IsRA != 1)
             {
-                SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
+                SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,count_tri, GridPT3, mt_minmaxheight);
                 VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, true);
             }
             
@@ -14643,7 +14828,8 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
         }
 
         double mt_minmaxheight[2];
-        SetHeightRange_blunder(minmaxHeight,ptslists, count_Results[0], trilists,count_tri, GridPT3, blunder_param,mt_minmaxheight,false);
+        SetHeightRange_blunder(rlevelinfo,ptslists, count_Results[0], trilists,count_tri, GridPT3, mt_minmaxheight);
+       
         
         free(trilists);
         
@@ -14677,7 +14863,7 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
     
     float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     
-    SetHeightRange_blunder(minmaxHeight,ptslists, count_MPs, trilists,numoftri, GridPT3, blunder_param,mt_minmaxheight,false);
+    SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,numoftri, GridPT3, mt_minmaxheight);
     
     VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
 
@@ -17139,218 +17325,120 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
     return resize_GridPT3;
 }
 
-bool SetHeightRange_blunder(const double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update)
+bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3, double *mt_minmaxheight)
 {
-    uint32 num_triangles;
-    int i, tcnt;
-    double gridspace;
-    CSize gridsize;
-    uint8 pyramid_step, iteration;
-    uint32 TIN_Grid_Size_X, TIN_Grid_Size_Y;
-    uint8* m_bHeight;
+    const double gridspace = *rlevelinfo.grid_resolution;
     double Total_Min_Z      =  100000;
     double Total_Max_Z      = -100000;
-    double meters_per_pixel= 2.0;
-    double DEM_error        = meters_per_pixel*2;
-    int Col_C, Row_R;
     
-    num_triangles=numOfTri;
-    pyramid_step    = BL_param.Pyramid_step;
-    iteration       = BL_param.iteration;
-    gridspace = BL_param.gridspace;
-    const double *boundary    = BL_param.Boundary;
-    gridsize.width  = BL_param.Size_Grid2D.width;
-    gridsize.height = BL_param.Size_Grid2D.height;
-    TIN_Grid_Size_X= gridsize.width;
-    TIN_Grid_Size_Y= gridsize.height;
+    const double *boundary    = rlevelinfo.Boundary;
+    const long int TIN_Grid_Size_X= rlevelinfo.Size_Grid2D->width;
+    const long int TIN_Grid_Size_Y= rlevelinfo.Size_Grid2D->height;
     
-    m_bHeight       = (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
+    uint8 *m_bHeight       = (uint8*)calloc(TIN_Grid_Size_Y*TIN_Grid_Size_X,sizeof(uint8));
     
-    //#pragma omp parallel shared(Total_Min_Z,Total_Max_Z,GridPT3,pts,tris,num_triangles,m_bHeight,pyramid_step,gridspace,boundary,TIN_Grid_Size_X,TIN_Grid_Size_Y,DEM_error) private(tcnt)
+    for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
-        //#pragma omp for
-        for(tcnt=0;tcnt<(int)(num_triangles);tcnt++)
+        const UI3DPOINT t_tri(tris[tcnt]);
+        const int pdex0 = t_tri.m_X;
+        const int pdex1 = t_tri.m_Y;
+        const int pdex2 = t_tri.m_Z;
+        
+        if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
         {
-            UI3DPOINT t_tri;
-            D3DPOINT pt0,pt1,pt2;
-            int pdex0,pdex1,pdex2;
-            double TriP1[3];
-            double TriP2[3];
-            double TriP3[3];
+            const double TriP1[3] = {pts[pdex0].m_X, pts[pdex0].m_Y, pts[pdex0].m_Z};
+            const double TriP2[3] = {pts[pdex1].m_X, pts[pdex1].m_Y, pts[pdex1].m_Z};
+            const double TriP3[3] = {pts[pdex2].m_X, pts[pdex2].m_Y, pts[pdex2].m_Z};
             
+            const double temp_MinZ = min(min(TriP1[2],TriP2[2]),TriP3[2]);
+            const double temp_MaxZ = max(max(TriP1[2],TriP2[2]),TriP3[2]);
             
-            double temp_MinZ, temp_MaxZ;
-            double TriMinXY[2], TriMaxXY[2];
-            int PixelMinXY[2]={0};
-            int PixelMaxXY[2]={0};
-            int Col, Row;
-            int numPts = numOfPts;
+            if(temp_MinZ < Total_Min_Z)
+                Total_Min_Z = temp_MinZ;
+            if(temp_MaxZ > Total_Max_Z)
+                Total_Max_Z = temp_MaxZ;
             
-            t_tri   = tris[tcnt];
-            pdex0 = t_tri.m_X;
-            pdex1 = t_tri.m_Y;
-            pdex2 = t_tri.m_Z;
+            // calculation on BoundingBox(MinMax XY) of triangle
+            const double TriMinXY[2] = { min(min(TriP1[0],TriP2[0]),TriP3[0]), min(min(TriP1[1],TriP2[1]),TriP3[1])};
+            const double TriMaxXY[2] = { max(max(TriP1[0],TriP2[0]),TriP3[0]), max(max(TriP1[1],TriP2[1]),TriP3[1])};
+            int PixelMinXY[2] = { (int)((TriMinXY[0] - boundary[0])/gridspace + 0.5), (int)((TriMinXY[1] - boundary[1])/gridspace + 0.5)};
+            int PixelMaxXY[2] = { (int)((TriMaxXY[0] - boundary[0])/gridspace + 0.5), (int)((TriMaxXY[1] - boundary[1])/gridspace + 0.5)};
             
-            if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
+            PixelMinXY[0] -= 1;     PixelMinXY[1] -= 1;
+            PixelMaxXY[0] += 1;     PixelMaxXY[1] += 1;
+            
+            if (PixelMaxXY[0] >= (int)(TIN_Grid_Size_X))
+                PixelMaxXY[0] =  (int)(TIN_Grid_Size_X-1);
+            if (PixelMaxXY[1] >= (int)(TIN_Grid_Size_Y))
+                PixelMaxXY[1] =  (int)(TIN_Grid_Size_Y-1);
+            if (PixelMinXY[0] < 0)
+                PixelMinXY[0] = 0;
+            if (PixelMinXY[1] < 0)
+                PixelMinXY[1] = 0;
+            
+            for (long Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
             {
-                int node1_index, node2_index, node3_index;
-                bool check_anchor_flag = false;
-                pt0 = pts[pdex0];
-                pt1 = pts[pdex1];
-                pt2 = pts[pdex2];
-                
-                TriP1[0]        = pt0.m_X;
-                TriP2[0]        = pt1.m_X;
-                TriP3[0]        = pt2.m_X;
-                
-                TriP1[1]        = pt0.m_Y;
-                TriP2[1]        = pt1.m_Y;
-                TriP3[1]        = pt2.m_Y;
-                
-                TriP1[2]        = pt0.m_Z;
-                TriP2[2]        = pt1.m_Z;
-                TriP3[2]        = pt2.m_Z;
-                
-                temp_MinZ = min(min(TriP1[2],TriP2[2]),TriP3[2]);
-                temp_MaxZ = max(max(TriP1[2],TriP2[2]),TriP3[2]);
-                
-                if(temp_MinZ < Total_Min_Z)
-                    Total_Min_Z = temp_MinZ;
-                if(temp_MaxZ > Total_Max_Z)
-                    Total_Max_Z = temp_MaxZ;
-                
-                // calculation on BoundingBox(MinMax XY) of triangle
-                TriMinXY[0] = min(min(TriP1[0],TriP2[0]),TriP3[0]);
-                TriMinXY[1] = min(min(TriP1[1],TriP2[1]),TriP3[1]);
-                TriMaxXY[0] = max(max(TriP1[0],TriP2[0]),TriP3[0]);
-                TriMaxXY[1] = max(max(TriP1[1],TriP2[1]),TriP3[1]);
-                
-                PixelMinXY[0] = (int)((TriMinXY[0] - boundary[0])/gridspace + 0.5);
-                PixelMinXY[1] = (int)((TriMinXY[1] - boundary[1])/gridspace + 0.5);
-                PixelMaxXY[0] = (int)((TriMaxXY[0] - boundary[0])/gridspace + 0.5);
-                PixelMaxXY[1] = (int)((TriMaxXY[1] - boundary[1])/gridspace + 0.5);
-                
-                PixelMinXY[0] -= 1;     PixelMinXY[1] -= 1;
-                PixelMaxXY[0] += 1;     PixelMaxXY[1] += 1;
-                if (PixelMaxXY[0] >= (int)(TIN_Grid_Size_X))    
-                    PixelMaxXY[0] =  (int)(TIN_Grid_Size_X-1);
-                if (PixelMaxXY[1] >= (int)(TIN_Grid_Size_Y))   
-                    PixelMaxXY[1] =  (int)(TIN_Grid_Size_Y-1);
-                if (PixelMinXY[0] < 0)  
-                    PixelMinXY[0] = 0;
-                if (PixelMinXY[1] < 0)  
-                    PixelMinXY[1] = 0;
-                
-                for (Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
+                for (long Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                 {
-                    for (Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
+                    const int Index= TIN_Grid_Size_X*Row + Col;
+                    
+                    if (m_bHeight[Index] == 0)
                     {
-                        int Index= TIN_Grid_Size_X*Row + Col;
+                        double Z = -1000.0;
+                        bool rtn = false;
+                         
+                        const double CurGPXY[2]  =  { Col*gridspace + boundary[0] , Row*gridspace + boundary[1] };
+                        const double v12[2] =       { TriP2[0]-TriP1[0],            TriP2[1]-TriP1[1]};
+                        const double v1P[2] =       { CurGPXY[0]-TriP1[0],          CurGPXY[1]-TriP1[1]};
+                        const double v23[2] =       { TriP3[0]-TriP2[0] ,           TriP3[1]-TriP2[1]};
+                        const double v2P[2] =       { CurGPXY[0]-TriP2[0] ,         CurGPXY[1]-TriP2[1]};
+                        const double v31[2] =       { TriP1[0]-TriP3[0],            TriP1[1]-TriP3[1]};
+                        const double v3P[2] =       { CurGPXY[0]-TriP3[0],          CurGPXY[1]-TriP3[1]};
                         
-                        if (m_bHeight[Index] == 0)  
+                        int Sum = 3;
+                        if (v12[0]*v1P[1]-v12[1]*v1P[0] <= 0)
+                            Sum--;
+                        if (v23[0]*v2P[1]-v23[1]*v2P[0] <= 0)
+                            Sum--;
+                        if (v31[0]*v3P[1]-v31[1]*v3P[0] <= 0)
+                            Sum--;
+                        
+                        if (Sum==0 || Sum==3)
                         {
-                            double CurGPXY[2]={0.};
-                            double Z = -1000.0;
-                            bool rtn = false;
-                            double _p1[3], _p2[3], _p3[3], v12[2], v1P[2];
-                            double v23[2], v2P[2], v31[2], v3P[2];
-                            int Sum;
-                            
-                            CurGPXY[0]  = (Col)*gridspace + boundary[0];
-                            CurGPXY[1]  = (Row)*gridspace + boundary[1];
-                            
-                            _p1[0]      = TriP1[0];
-                            _p1[1]      = TriP1[1];
-                            _p1[2]      = TriP1[2];
-                            
-                            _p2[0]      = TriP2[0];
-                            _p2[1]      = TriP2[1];
-                            _p2[2]      = TriP2[2];
-                            
-                            _p3[0]      = TriP3[0];
-                            _p3[1]      = TriP3[1];
-                            _p3[2]      = TriP3[2];
-                            
-                            v12[0]      = _p2[0]-_p1[0];
-                            v12[1]      = _p2[1]-_p1[1];
-                            
-                            v1P[0]      = CurGPXY[0]-_p1[0];
-                            v1P[1]      = CurGPXY[1]-_p1[1];
-                            
-                            v23[0]      = _p3[0]-_p2[0];
-                            v23[1]      = _p3[1]-_p2[1];
-                            
-                            v2P[0]      = CurGPXY[0]-_p2[0];
-                            v2P[1]      = CurGPXY[1]-_p2[1];
-                            
-                            v31[0]      = _p1[0]-_p3[0];
-                            v31[1]      = _p1[1]-_p3[1];
-                            
-                            v3P[0]      = CurGPXY[0]-_p3[0];
-                            v3P[1]      = CurGPXY[1]-_p3[1];
-                            
-                            Sum = 3;
-                            if (v12[0]*v1P[1]-v12[1]*v1P[0] <= 0)
-                                Sum--;
-                            if (v23[0]*v2P[1]-v23[1]*v2P[0] <= 0)
-                                Sum--;
-                            if (v31[0]*v3P[1]-v31[1]*v3P[0] <= 0)
-                                Sum--;
-                            
-                            if (Sum==0 || Sum==3)
+                            const double v12[3] = { TriP2[0]-TriP1[0], TriP2[1]-TriP1[1], TriP2[2]-TriP1[2]};
+                            const double v13[3] = { TriP3[0]-TriP1[0], TriP3[1]-TriP1[1], TriP3[2]-TriP1[2]};
+                            double Normal[3] = { v12[1]*v13[2] - v12[2]*v13[1], v12[2]*v13[0] - v12[0]*v13[2], v12[0]*v13[1] - v12[1]*v13[0]};
+                            const double Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
+                     
+                            if(Len > 0)
                             {
-                                double v12[3], v13[3], Len, A, B, C, D;
-                                double Normal[3]={0.};
+                                Normal[0]/=Len; Normal[1]/=Len; Normal[2]/=Len;
+                                const double A = Normal[0];
+                                const double B = Normal[1];
+                                const double C = Normal[2];
+                                const double D = -(A*TriP1[0]+B*TriP1[1]+C*TriP1[2]);
                                 
-                                v12[0]  = _p2[0]-_p1[0];
-                                v12[1]  = _p2[1]-_p1[1];
-                                v12[2]  = _p2[2]-_p1[2];
-                                
-                                v13[0]  = _p3[0]-_p1[0];
-                                v13[1]  = _p3[1]-_p1[1];
-                                v13[2]  = _p3[2]-_p1[2];
-                                
-                                Normal[0]=v12[1]*v13[2] - v12[2]*v13[1];
-                                Normal[1]=v12[2]*v13[0] - v12[0]*v13[2];
-                                Normal[2]=v12[0]*v13[1] - v12[1]*v13[0];
-                                
-                                Len=sqrt(Normal[0]*Normal[0] + Normal[1]*Normal[1] + Normal[2]*Normal[2]);
-                                if(Len > 0)
+                                if(C != 0)
                                 {
-                                    Normal[0]/=Len;
-                                    Normal[1]/=Len;
-                                    Normal[2]/=Len;
-                                    
-                                    A = Normal[0];
-                                    B = Normal[1];
-                                    C = Normal[2];
-                                    D = -(A*_p1[0]+B*_p1[1]+C*_p1[2]);
-                                    
-                                    if(C != 0)
-                                    {
-                                        Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
-                                        rtn = true;
-                                    }
-                                    else
-                                        rtn = false;
+                                    Z = -1.0 * ((A * CurGPXY[0]) + (B * CurGPXY[1]) + D) / C;
+                                    rtn = true;
                                 }
+                                else
+                                    rtn = false;
                             }
-                            
-                            if (rtn)
-                            {
-                                double t1,t2;
-                                m_bHeight[Index] = 1;
-                                GridPT3[Index].Height = (float)Z;
-                                
-                                //GridPT3[Index].t_minHeight = temp_MinZ;
-                                //GridPT3[Index].t_maxHeight = temp_MaxZ;
-                            }
+                        }
+                        
+                        if (rtn)
+                        {
+                            m_bHeight[Index] = 1;
+                            GridPT3[Index].Height = (float)Z;
                         }
                     }
                 }
             }
         }
     }
+
     if(m_bHeight)
         free(m_bHeight);
     
@@ -20373,7 +20461,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     if(check_overlap)
     {
         // set saving pointer for orthoimage
-        uint16 *result_ortho    = (uint16*)calloc(Orthoimagesize.width*Orthoimagesize.height,sizeof(uint16));
+        uint16 *result_ortho    = (uint16*)calloc((long)Orthoimagesize.width*(long)Orthoimagesize.height,sizeof(uint16));
         
         float *DEM_value    = NULL;
         
@@ -24854,7 +24942,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 data_size = data_size_ref[level-1];
                 
                 data_length = (long int)data_size.height*(long int)data_size.width;
-                SubImages_ref[level]= CreateImagePyramid_BYTE(SubImages_ref[level-1],data_size,py_kernel_size,(double)1.6);
+                //SubImages_ref[level]= CreateImagePyramid_BYTE(SubImages_ref[level-1],data_size,py_kernel_size,(double)1.6);
+                SubImages_ref[level]= CreateImagePyramid(SubImages_ref[level-1],data_size,py_kernel_size,(double)1.6);
             }
             //printf("preprocessing size level ID %d\t%d\t%d\n",level,data_size.width,data_size.height);
         }
@@ -25004,7 +25093,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                     data_size = data_size_tar[level-1];
                     
                     data_length = (long int)data_size.height*(long int)data_size.width;
-                    SubImages_tar[level]= CreateImagePyramid_BYTE(SubImages_tar[level-1],data_size,py_kernel_size,(double)1.6);
+                    //SubImages_tar[level]= CreateImagePyramid_BYTE(SubImages_tar[level-1],data_size,py_kernel_size,(double)1.6);
+                    SubImages_tar[level]= CreateImagePyramid(SubImages_tar[level-1],data_size,py_kernel_size,(double)1.6);
                 }
                 //printf("preprocessing size level ID %d\t%d\t%d\t%d\n",level,ti,data_size.width,data_size.height);
             }
@@ -28011,8 +28101,8 @@ F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *bounda
                 for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
                 {
                     GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
-                    int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
-                    GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
+                    //int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
+                    //GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
                 }
             }
     }
@@ -28906,82 +28996,6 @@ double* LoadPyramidImages_double(char *save_path,char *subsetfile, CSize data_si
     }
     fclose(pFile);
     return out;
-}
-
-double* CreateImagePyramid_double(double* _input, CSize _img_size, int _filter_size, double _sigma)
-{
-    //_filter_size = 7, sigma = 1.6
-    double sigma = _sigma;
-    double temp,scale;
-    double sum = 0;
-    double** GaussianFilter;
-    CSize result_size;
-    double* result_img;
-    
-    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
-    for(int i=0;i<_filter_size;i++)
-        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
-    
-    
-    result_size.width = _img_size.width/2;
-    result_size.height = _img_size.height/2;
-    scale=sqrt(2*PI)*sigma;
-    
-    result_img = (double*)malloc(sizeof(double)*result_size.height*result_size.width);
-    
-    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
-    {
-        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
-        {
-            temp = -1*(i*i+j*j)/(2*sigma*sigma);
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]=exp(temp)/scale;
-            sum += exp(temp)/scale;
-        }
-    }
-    
-#pragma omp parallel for schedule(guided)
-    for(int i=-(int)(_filter_size/2);i<(int)(_filter_size/2)+1;i++)
-    {
-        for(int j=-(int)(_filter_size/2);j<(int)(_filter_size/2)+1;j++)
-        {
-            GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)]/=sum;
-        }
-    }
-    
-#pragma omp parallel for private(temp) schedule(guided)
-    for(long int r=0;r<result_size.height;r++)
-    {
-        for(long int c=0;c<result_size.width;c++)
-        {
-            temp = 0;
-            
-            for(int l=0;l<_filter_size;l++)
-            {
-                for(int k=0;k<_filter_size;k++)
-                {
-                    //r'->2r+m, c'->2c+n
-                    if( (2*r + l-(int)(_filter_size/2)) >= 0 && (2*c + k-(int)(_filter_size/2)) >= 0 &&
-                       (2*r + l-(int)(_filter_size/2)) < _img_size.height && (2*c + k-(int)(_filter_size/2)) < _img_size.width)
-                    {
-                        temp += GaussianFilter[l][k]*_input[(2*r + l-(int)(_filter_size/2))*_img_size.width +(2*c + k-(int)(_filter_size/2))];
-                        
-                    }
-                }
-            }
-            
-            result_img[r*result_size.width + c] = (double)temp;
-        }
-    }
-    
-    for(int i=0;i<_filter_size;i++)
-        if(GaussianFilter[i])
-            free(GaussianFilter[i]);
-    
-    if(GaussianFilter)
-        free(GaussianFilter);
-    
-    
-    return result_img;
 }
 
 int* CoregParam_Image(ProInfo *proinfo,uint8 Pyramid_step, uint8 total_level, double **ImageAdjust, NCCflag _flag,

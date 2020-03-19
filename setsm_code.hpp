@@ -26,6 +26,7 @@
 #include "tiffio.h"
 #include <list>
 #include <vector>
+#include <cmath>
 
 #define	 MAXRAND	 0x7fffffff
 #define	 BIGNUM		 1e37
@@ -45,7 +46,8 @@ typedef struct nnXY
 	float Y;
 	float Z;
 } NNXY;
-
+void DownSample(ARGINFO &args);
+//float* CreateImagePyramid_float(float* _input, CSize _img_size, int _filter_size, double _sigma);
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 char* SetOutpathName(char *_path);
 
@@ -108,7 +110,8 @@ void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfi
 uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
 uint16* LoadPyramidMagImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
 uint8* LoadPyramidOriImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
-uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
+
+//uint16* CreateImagePyramid(uint16* _input, CSize _img_size, int _filter_size, double _sigma);
 void MakeSobelMagnitudeImage(const CSize _img_size,const uint16* _src_image, uint16* _dist_mag_image, int16* _dir);
 void Orientation(const CSize imagesize,const uint16* Gmag,const int16* Gdir,const uint8 Template_size, uint8* plhs);
 void CalMPP_pair(double CA,double mean_product_res, double im_resolution, double *MPP_stereo_angle);
@@ -181,7 +184,8 @@ bool blunder_detection_TIN(const ProInfo *proinfo, float* ortho_ncc, bool flag_b
 
 int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param, uint16 **MagImages, uint16 **Images, double DEM_resolution, double im_resolution, const double * const * const *RPCs, CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
 
-bool SetHeightRange_blunder(const double* minmaxHeight,D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3, BL BL_param, double *mt_minmaxheight,bool blunder_update);
+bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3, double *mt_minmaxheight);
+
 UGRID* SetHeightRange(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
 					  double *minH_grid, double *maxH_grid, BL BL_param,D3DPOINT *pts, UI3DPOINT *tris,int IsRA, double MPP, char* save_path, uint8 tile_row, uint8 tile_col,bool check_level_end, double seedDEMsigma, bool level_check_matching_rate);
 UGRID* SetHeightRange_cp(ProInfo *proinfo, NCCresult *nccresult, bool pre_DEMtif, double* minmaxHeight,int numOfPts, int numOfTri, UGRID *GridPT3, bool update_flag,
@@ -306,7 +310,7 @@ bool postNCC_ortho(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double 
                    NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh);
 double *Readtiff_Coreg(char *filename, CSize *Imagesize, int *cols, int *rows, CSize *data_size);
 double* LoadPyramidImages_double(char *save_path,char *subsetfile, CSize data_size, uint8 py_level);
-double* CreateImagePyramid_double(double* _input, CSize _img_size, int _filter_size, double _sigma);
+
 //End Image Coregistration
 double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std );
 void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt);
@@ -317,8 +321,7 @@ void SlopeAspect(F3DPOINT normal, F3DPOINT scale, float *slope, float *aspect);
 F3DPOINT ConformalTransform(F3DPOINT input, Conformalparam param);
 F3DPOINT Normalize_coord(F3DPOINT input, F3DPOINT Mean, F3DPOINT Scale);
 F3DPOINT Denormalize_coord(F3DPOINT input, F3DPOINT Mean, F3DPOINT Scale);
-uint16* CreateImagePyramid_avg(uint16* _input, CSize _img_size, int _filter_size);
-unsigned char* CreateImagePyramid_BYTE(unsigned char* _input, CSize _img_size, int _filter_size, double _sigma);
+
 unsigned char* CreateHillshade(float* _input, CSize _img_size, double grid_size);
 F3DPOINT* SettingControls(float* DEM_ref, float* DEM_tar, double grid_size_ref, double grid_size_tar, double *boundary_ref, double *boundary_tar, double* overlapped_br, CSize img_size_ref, CSize img_size_tar, long *tin_point_num);
 F3DPOINT* CreateImagePyramid_DEM(float* _input, double grid_size, double *boundary, double* overlapped_br, uint8 pyramid_level, CSize _img_size, int _filter_size, double _sigma, float* result_img, long *tin_point_num, bool check_pts);
@@ -367,4 +370,9 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 float quickselect(float *arr, int n, int k);
 bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb);
+
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma);
+template <typename T>
+T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt);
 #endif // SETSM_CODE_H
