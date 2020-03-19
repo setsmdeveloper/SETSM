@@ -10164,7 +10164,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
             }
 
             if(count > _filter_size*_filter_size*0.3)
-                result_img[r*result_size.width + c] = round(temp_v);
+                result_img[r*result_size.width + c] = (T)temp_v;
             else
                 result_img[r*result_size.width + c] = -9999;
         }
