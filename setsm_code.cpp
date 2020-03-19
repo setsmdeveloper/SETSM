@@ -1814,7 +1814,7 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
         value3      = input[index3];
         value4      = input[index4];
 
-        if(value1 > -100 && value2 > -100 && value3 > -100 && value4 > 100)
+        if(value1 > -9999 && value2 > -9999 && value3 > -9999 && value4 > -9999)
             value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow) + value3*(1-dcol)*drow + value4*dcol*drow;
         else
             value = -9999;
@@ -10157,7 +10157,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
                         (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
                     {
-                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > -100)
+                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > -9999)
                         {
                             temp_v += GaussianFilter[l + half_filter_size][k + half_filter_size]*_input[(2*r + l)*_img_size.width +(2*c + k)];
                             count ++;
