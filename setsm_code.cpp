@@ -1816,13 +1816,29 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
 
         if(value1 > -9999 && value2 > -9999 && value3 > -9999 && value4 > -9999)
             value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow) + value3*(1-dcol)*drow + value4*dcol*drow;
+        else if(value1 > -9999)
+            value = input[index1];
+        else if(value2 > -9999)
+            value = input[index2];
+        else if(value3 > -9999)
+            value = input[index3];
+        else if(value4 > -9999)
+            value = input[index4];
         else
             value = -9999;
-
     }
     else
     {
-        value       = -9999;
+        if(index1 >= 0 && index1 < data_length      && t_col_int >= 0       && (t_col_int) < img_size.width     && t_row_int >= 0 && (t_row_int) < img_size.height)
+            value = input[index1];
+        else if(index2 >= 0 && index2 < data_length && t_col_int + 1 >= 0   && (t_col_int + 1) < img_size.width && t_row_int >= 0 && (t_row_int) < img_size.height)
+            value = input[index2];
+        else if(index3 >= 0 && index3 < data_length && t_col_int >= 0       && (t_col_int) < img_size.width     && t_row_int + 1 >= 0 && (t_row_int + 1) < img_size.height)
+            value = input[index3];
+        else if(index4 >= 0 && index4 < data_length && t_col_int + 1 >= 0   && (t_col_int + 1) < img_size.width && t_row_int + 1 >= 0 && (t_row_int + 1) < img_size.height)
+            value = input[index4];
+        else
+            value = -9999;
     }
     
     return (T)value;
@@ -10136,13 +10152,10 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
             GaussianFilter[i+half_filter_size][j+half_filter_size]/=sum;
-            //int GI = (int)((GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] + 0.001)*1000);
-            //GaussianFilter[i+(int)(_filter_size/2)][j+(int)(_filter_size/2)] = (double)(GI/1000.0);
         }
     }
 
 #pragma omp parallel for private(temp) schedule(guided)
-    //for(long int ori_index=0 ; ori_index<(long)result_size.height*(long)result_size.width ; ori_index++)
     for(long int r=0;r<result_size.height;r++)
     {
         for(long int c=0;c<result_size.width;c++)
@@ -10155,7 +10168,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                 {
                     //r'->2r+m, c'->2c+n
                     if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
-                        (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
+                            (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
                     {
                         if(_input[(2*r + l)*_img_size.width +(2*c + k)] > -9999)
                         {
@@ -10165,11 +10178,11 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     }
                 }
             }
-
-            if(count > _filter_size*_filter_size*0.3)
+            if(count == _filter_size*_filter_size)
                 result_img[r*result_size.width + c] = (T)temp_v;
             else
-                result_img[r*result_size.width + c] = -9999;
+                result_img[r*result_size.width + c] = _input[(2*r)*_img_size.width +(2*c)];
+
         }
     }
     
