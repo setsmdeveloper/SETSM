@@ -644,6 +644,7 @@ typedef struct taglevelinfo
 
     const double *height_step;
     const double *grid_resolution;
+    const double *Hinterval;
     //double *minmaxHeight; //iteratively changed
     const int *Py_combined_level;
     bool *check_matching_rate;
@@ -656,7 +657,7 @@ typedef struct tagSetKernel
     double **right_patch_vecs;
     double **right_mag_patch_vecs;
     const int reference_id;
-    const int ti;
+    int ti;
     const int Half_template_size;
     const int patch_size;
     tagSetKernel(double **left_patch_vecs,double **left_mag_patch_vecs,double **right_patch_vecs,double **right_mag_patch_vecs,const int reference_id,const int ti,const int Half_template_size,const int patch_size):left_patch_vecs(left_patch_vecs),left_mag_patch_vecs(left_mag_patch_vecs),right_patch_vecs(right_patch_vecs),right_mag_patch_vecs(right_mag_patch_vecs),reference_id(reference_id),ti(ti),Half_template_size(Half_template_size),patch_size(patch_size)

@@ -179,8 +179,7 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 
-bool blunder_detection_TIN(const ProInfo *proinfo, float* ortho_ncc, bool flag_blunder,uint16 count_bl,double* blunder_dh,
-                           D3DPOINT *pts, bool *detectedBlunders, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *Gridpts, BL BL_param, long *blunder_count,double *minz_mp, double *maxz_mp, double *minmaxHeight);
+bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
 
 int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param, uint16 **MagImages, uint16 **Images, double DEM_resolution, double im_resolution, const double * const * const *RPCs, CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
 
