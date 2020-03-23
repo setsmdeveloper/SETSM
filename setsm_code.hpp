@@ -282,7 +282,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
 float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path);
 
 
-double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c);
+double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c, double* gsd);
 CSize Envihdr_reader_ortho(char *filename);
 CSize Envihdr_reader_DEM_ortho(TransParam param, char *filename, double *minX, double *maxY, double *grid_size);
 char* remove_ext_ortho(char* mystr);

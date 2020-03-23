@@ -1904,8 +1904,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 {
                     if(args.sensor_provider == DG)
                     {
-                        double row_grid_size, col_grid_size;
-                        RPCs[ti]       = OpenXMLFile_ortho(proinfo->RPCfilename[ti], &row_grid_size, &col_grid_size);
+                        double row_grid_size, col_grid_size, product_grid_size;
+                        RPCs[ti]       = OpenXMLFile_ortho(proinfo->RPCfilename[ti], &row_grid_size, &col_grid_size, &product_grid_size);
                     }
                     else if(args.sensor_provider == PL)
                     {
@@ -21862,7 +21862,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     double resolution[3];
     int impyramid_step;
     double** RPCs;
-    double row_grid_size, col_grid_size;
+    double row_grid_size, col_grid_size, product_grid_size;
     bool Hemisphere = false;
     double DEM_minX, DEM_maxY;
     double minLat,minLon;
@@ -21964,7 +21964,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     {
         if(args.sensor_provider == DG)
         {
-            RPCs            = OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size);
+            RPCs            = OpenXMLFile_ortho(RPCFilename, &row_grid_size, &col_grid_size,&product_grid_size);
         }
         else if(args.sensor_provider == PL)
         {
@@ -23166,17 +23166,20 @@ bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, double grids
     return true;
 }
 
-double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
+double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c, double* gsd)
 {
     double** out = NULL;
     
     FILE *pFile;
     char temp_str[1000];
     char linestr[1000];
+    char linestr1[1000];
     int i;
     char* pos1;
     char* pos2;
     char* token = NULL;
+    char* token1 = NULL;
+    char* token2 = NULL;
     
     double aa;
     
@@ -23184,134 +23187,240 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
     if(pFile)
     {
         out = (double**)malloc(sizeof(double*)*7);
+        out[0] = (double*)malloc(sizeof(double)*5);
+        out[1] = (double*)malloc(sizeof(double)*5);
+        out[6] = (double*)malloc(sizeof(double)*2);
+        
         while(!feof(pFile))
         {
-            fscanf(pFile,"%s",temp_str);
-            if(strcmp(temp_str,"<IMAGE>") == 0)
+            fgets(linestr,sizeof(linestr),pFile);
+            strcpy(linestr1,linestr);
+            token1 = strstr(linestr,"<");
+            token = strtok(token1,">");
+            if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
             {
-                for(i=0;i<21;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
+                pos1 = strstr(linestr1,">")+1;
                 pos2 = strtok(pos1,"<");
                 *gsd_r          = atof(pos2);
-                
-                //for(i=0;i<2;i++)
-                //  fgets(temp_str,sizeof(temp_str),pFile);
-                
-                fgets(linestr,sizeof(linestr),pFile);
-                pos1 = strstr(linestr,">")+1;
+                printf("collect row %f\n",*gsd_r);
+            }
+            if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
                 pos2 = strtok(pos1,"<");
                 *gsd_c          = atof(pos2);
-                
+                printf("collect col %f\n",*gsd_c);
+            }
+            if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd            = atof(pos2);
+                printf("collect gsd %f\n",*gsd);
             }
             
-            if(strcmp(temp_str,"<RPB>")==0)
+            if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
             {
-                for(i=0;i<5;i++)
-                    fgets(temp_str,sizeof(temp_str),pFile);
-                
-                out[6] = (double*)malloc(sizeof(double)*2);
-                for(i=0;i<2;i++)
-                {
-                    
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[6][i]           = atof(pos2);
-                    
-                }
-                
-                out[0] = (double*)malloc(sizeof(double)*5);
-                for(i=0;i<5;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][i]           = atof(pos2);
-                }
-                aa                      = out[0][2];
-                out[0][2]               = out[0][3];
-                out[0][3]               = aa;
-                
-                out[1] = (double*)malloc(sizeof(double)*5);
-                for(i=0;i<5;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][i]           = atof(pos2);
-                }
-                
-                aa                      = out[1][2];
-                out[1][2]               = out[1][3];
-                out[1][3]               = aa;
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_r          = atof(pos2);
+                printf("product row %f\n",*gsd_r);
+            }
+            if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd_c          = atof(pos2);
+                printf("product col %f\n",*gsd_c);
+            }
+            if(strcmp(token,"<MEANPRODUCTGSD") == 0)
+            {
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                *gsd            = atof(pos2);
+                printf("product gsd %f\n",*gsd);
+            }
+            
+            
+            if(strcmp(token,"<ERRBIAS") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[6][0]           = atof(pos2);
+                printf("ERRBIAS %f\n",out[6][0]);
+            }
+            if(strcmp(token,"<ERRRAND") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[6][1]           = atof(pos2);
+            }
+            if(strcmp(token,"<LINEOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][0]           = atof(pos2);
+            }
+            if(strcmp(token,"<SAMPOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][1]           = atof(pos2);
+            }
+            if(strcmp(token,"<LATOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][2]           = atof(pos2);
+            }
+            if(strcmp(token,"<LONGOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][3]           = atof(pos2);
+            }
+            if(strcmp(token,"<HEIGHTOFFSET") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[0][4]           = atof(pos2);
+            }
+            
+            
+            if(strcmp(token,"<LINESCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][0]           = atof(pos2);
+            }
+            if(strcmp(token,"<SAMPSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][1]           = atof(pos2);
+            }
+            if(strcmp(token,"<LATSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][2]           = atof(pos2);
+            }
+            if(strcmp(token,"<LONGSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][3]           = atof(pos2);
+            }
+            if(strcmp(token,"<HEIGHTSCALE") == 0)
+            {
+                //fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr1,">")+1;
+                pos2 = strtok(pos1,"<");
+                out[1][4]           = atof(pos2);
+            }
+         
+            
+            if(strcmp(token,"<LINENUMCOEFList") == 0)
+            {
                 out[2] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
-                i=0;
-                while(token != NULL)
-                {
-                    out[2][i]           = atof(token);
-                    //printf("%e\n",out[2][i]);
-                    token = strtok(NULL," ");
-                    i++;
-                }
+                token2 = strtok(pos2," ");
                 
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                i=0;
+                while(token2 != NULL && i<20)
+                {
+                    out[2][i]           = atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[2][i] %f\n",out[2][i]);
+                    
+                    i++;
+                    
+                    
+                }
+            }
+            if(strcmp(token,"<LINEDENCOEFList") == 0)
+            {
                 out[3] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
+                token2 = strtok(pos2," ");
                 i=0;
-                while(token != NULL)
+                while(token != NULL && i<20)
                 {
-                    out[3][i]           = atof(token);
-                    //printf("%e\n",out[3][i]);
-                    token = strtok(NULL," ");
+                    out[3][i]           = atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[3][i] %f\n",out[3][i]);
+                    
                     i++;
                 }
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
+            }
+            if(strcmp(token,"<SAMPNUMCOEFList") == 0)
+            {
                 out[4] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
+                token2 = strtok(pos2," ");
+                
+                printf("token2 %s\n",token2);
+                
                 i=0;
-                while(token != NULL)
+                while(token != NULL && i<20)
                 {
-                    out[4][i]           = atof(token);
-                    //printf("%e\n",out[4][i]);
-                    token = strtok(NULL," ");
+                    out[4][i]           = atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[4][i] %f\n",out[4][i]);
+                    
                     i++;
                 }
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                fgets(temp_str,sizeof(temp_str),pFile);
+            }
+            if(strcmp(token,"<SAMPDENCOEFList") == 0)
+            {
                 out[5] = (double*)malloc(sizeof(double)*20);
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
                 pos2 = strtok(pos1,"<");
-                token = strtok(pos2," ");
+                token2 = strtok(pos2," ");
                 i=0;
-                while(token != NULL)
+                while(token != NULL && i<20)
                 {
-                    out[5][i]           = atof(token);
-                    //printf("%e\n",out[5][i]);
-                    token = strtok(NULL," ");
+                    out[5][i]           = atof(token2);
+                    token2 = strtok(NULL," ");
+                    
+                    //printf("out[5][i] %f\n",out[5][i]);
+                    
                     i++;
                 }
             }
+            
         }
+        
+        aa                      = out[0][2];
+        out[0][2]               = out[0][3];
+        out[0][3]               = aa;
+        
+        aa                      = out[1][2];
+        out[1][2]               = out[1][3];
+        out[1][3]               = aa;
+        
         fclose(pFile);
         
         if(pos1)
@@ -23321,6 +23430,7 @@ double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c)
         if(token)
             token = NULL;
     }
+    
     return out;
 }
 
