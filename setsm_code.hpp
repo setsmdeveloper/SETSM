@@ -145,15 +145,12 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagI
 
 bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder);
 
-int VerticalLineLocus_Ortho(ProInfo *proinfo, double *F_Height,D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt,
-                             uint16 **MagImages, uint16 **Images,
-                             double DEM_resolution, double im_resolution,const double * const * const *RPCs, CSize **Imagesizes,  CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,  UGRID *GridPT3, int target_index, int ref1_index, int ref2_index,const double* boundary,double *F_sncc);
+int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP, double *F_Height, D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt, UGRID *GridPT3, int target_index, double *F_sncc);
+
 D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 D2DPOINT OriginalToPyramid_single(const D2DPOINT InCoord, const D2DPOINT Startpos, const uint8 Pyramid_step);
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
-int SelectMPs(ProInfo *proinfo,NCCresult* roh_height, CSize Size_Grid2D, D2DPOINT *GridPts_XY, UGRID *GridPT3,
-              double Th_roh, double Th_roh_min, double Th_roh_start, double Th_roh_next, uint8 Pyramid_step, uint8 total_pyramid,
-              uint8 iteration, uint8 peak_level, char *filename_mps, int pre_DEMtif, int IsRA, double MPP, double DEM_resolution, double im_resolution, int final_level_iteration,double MPP_stereo_angle,vector<D3DPOINT> *linkedlist);
+long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* roh_height, UGRID *GridPT3, const double Th_roh, const double Th_roh_min, const double Th_roh_start, const double Th_roh_next, const int iteration, const double MPP, const int final_level_iteration,const double MPP_stereo_angle, vector<D3DPOINT> *linkedlist);
 
 UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size_Grid2D, double img_resolution, double grid_resolution,
 						 double min_max[],
@@ -164,8 +161,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
 
 void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri);
 
-int SetttingFlagOfGrid(double *subBoundary,UGRID *GridPT3, uint8 Pyramid_step,double grid_resolution,uint8 iteration,
-                       CSize Size_Grid2D,char *filename_mps_anchor,char *filename_mps_aft,int count_results_anchor,int count_results_blunder, char *filename_mps,vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
+int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
 
 int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos, const double * const * const *RPCs, double **ImageAdjust, NCCflag _flag,
 				uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
@@ -181,7 +177,7 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
 
 bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
 
-int Ortho_blunder(ProInfo *proinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, bool update_flag,double *minH_grid, double *maxH_grid, BL BL_param, uint16 **MagImages, uint16 **Images, double DEM_resolution, double im_resolution, const double * const * const *RPCs, CSize **Imagesizes, CSize Size_Grid2D, TransParam param, uint8 NumofIAparam, double **ImageAdjust, double* minmaxHeight, uint8 Pyramid_step, double meters_per_pixel, D2DPOINT *Startpos, uint8 iteration,	UGRID *GridPT3, char *filename_mps);
+int Ortho_blunder(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3);
 
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3, double *mt_minmaxheight);
 
@@ -256,7 +252,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
 float *LoadDEM_ortho(TransParam param, char *DEM_path, char* hdr_path);
 
 
-double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c);
+double** OpenXMLFile_ortho(char* _filename, double* gsd_r, double* gsd_c, double* gsd);
 CSize Envihdr_reader_ortho(char *filename);
 CSize Envihdr_reader_DEM_ortho(TransParam param, char *filename, double *minX, double *maxY, double *grid_size);
 char* remove_ext_ortho(char* mystr);

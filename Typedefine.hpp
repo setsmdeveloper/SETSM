@@ -26,7 +26,7 @@
 #define MMToUM 1000
 #define MaxImages 100
 #define MaxNCC 2
-
+#define Nodata -9999
 #ifndef bool
 //#define bool unsigned char
 #define true 0x1
