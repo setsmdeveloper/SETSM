@@ -4074,6 +4074,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         bool level_check_matching_rate = false;
                         while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
                         {
+                            levelinfo.ImageAdjust = t_Imageparams;
+                            
                             if(level == 0 &&  iteration == 3)
                                 matching_change_rate = 0.001;
                             
@@ -4830,9 +4832,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         if(proinfo->IsRA && level <= 3)
                                         {
                                             int RA_iter_counts = 0;
-                                            RA_iter_counts = AdjustParam(proinfo,level, count_MPs, filename_mps, Startpos, RPCs, t_Imageparams, flag,
-                                                                         Template_size, SubImages[level], data_size_lr, SubOriImages[level], param,
-                                                                         bin_angle, pyramid_step, param.bHemisphere, proinfo->save_filepath, proinfo->tmpdir,ptslists);
+                                            RA_iter_counts = AdjustParam(proinfo, levelinfo, count_MPs, t_Imageparams, pyramid_step, ptslists);
                                             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                             {
                                                 if(proinfo->check_selected_image[ti])
@@ -16605,38 +16605,18 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
     //fclose(outcount);
 }
 
-int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_pts, D2DPOINT *Startpos,const double * const * const *RPCs, double **ImageAdjust, NCCflag _flag,
-                uint8 Template_size, uint16 **Images, CSize **Imagesizes, uint8 **ori_images, TransParam param,
-                double bin_angle, uint8 total_pyramid, bool Hemisphere, char* save_filepath, char* tmpdir, D3DPOINT* ptslists)
+int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, D3DPOINT* ptslists)
 {
-    int i,iter_count;
-    
-    
     int reference_id = 0;
-    CSize LImagesize;
-    
-    LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-    LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
-    
-    double  left_IA[2];
-    left_IA[0] = ImageAdjust[reference_id][0];
-    left_IA[1] = ImageAdjust[reference_id][1];
-    
-    double **subA;
-    double **TsubA;
-    double **InverseSubA;
+    const int Pyramid_step = *rlevelinfo.Pyramid_step;
+    CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
+    const double left_IA[2] = {ImageAdjust[reference_id][0], ImageAdjust[reference_id][1]};
+   
+    double **subA    = (double**)malloc(9*sizeof(double*));
+    double **TsubA   = (double**)malloc(6*sizeof(double*));
+    double **InverseSubA = (double**)malloc(6*sizeof(double*));
 
-    FILE *fid_pts;
-    //D3DPOINT* MPs;
-    D3DPOINT *Coord;
-    
-    int ii,kk;
-
-    subA    = (double**)malloc(9*sizeof(double*));
-    TsubA   = (double**)malloc(6*sizeof(double*));
-    InverseSubA = (double**)malloc(6*sizeof(double*));
-
-    for(ii=0;ii<9;ii++)
+    for(int ii=0;ii<9;ii++)
     {
         subA[ii]    = (double*)malloc(6*sizeof(double));
         if(ii < 6)
@@ -16646,7 +16626,7 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
         }
     }
 
-    for(ii=0;ii<9;ii++)
+    for(int ii=0;ii<9;ii++)
         subA[ii][0]   = 1.0;
 
     subA[0][1] = -1.0; subA[0][2] = -1.0; subA[0][3] =  1.0; subA[0][4] =  1.0; subA[0][5] =  1.0;
@@ -16659,8 +16639,8 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     subA[7][1] =  0.0; subA[7][2] =  1.0; subA[7][3] =  0.0; subA[7][4] =  0.0; subA[7][5] =  1.0;
     subA[8][1] =  1.0; subA[8][2] =  1.0; subA[8][3] =  1.0; subA[8][4] =  1.0; subA[8][5] =  1.0;
 
-    for(ii=0;ii<6;ii++)
-        for(kk=0;kk<9;kk++)
+    for(int ii=0;ii<6;ii++)
+        for(int kk=0;kk<9;kk++)
             TsubA[ii][kk]       = subA[kk][ii];
 
     InverseSubA[0][0] =  0.555556; InverseSubA[0][1] =  0.000000; InverseSubA[0][2] =  0.000000; InverseSubA[0][3] = -0.333333; InverseSubA[0][4] =  0.000000; InverseSubA[0][5] = -0.333333;
@@ -16670,34 +16650,18 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
     InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
 
-    /*
-    fid_pts     = fopen(file_pts,"r");
-    MPs = (D3DPOINT*)malloc(sizeof(D3DPOINT)*NumofPts);
-    
-    for(i=0;i<NumofPts;i++)
-    {
-        fscanf(fid_pts,"%lf %lf %lf %hhd\n",&MPs[i].m_X,&MPs[i].m_Y,&MPs[i].m_Z,&MPs[i].flag);
-        //printf("t_coord %f\t%f\t%f\n",MPs[i].m_X,MPs[i].m_Y,MPs[i].m_Z);
-    }
- 
-    fclose(fid_pts);
-    */
-    
+    D3DPOINT *Coord           = ps2wgs_3D(*rlevelinfo.param,NumofPts,ptslists);
 
-    Coord           = ps2wgs_3D(param,NumofPts,ptslists);
-
+    int iter_count;
     for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
         {
             bool check_stop = false;
-            iter_count = 1;
+            int iter_count = 1;
             while(!check_stop && iter_count < 10)
             {
-                uint8   Half_template_size;
-                double b_factor;
                 bool flag_boundary = false;
-                int i;
                 int count_pts = 0;
                 double sum_weight_X     = 0;
                 double sum_weight_Y     = 0;
@@ -16705,106 +16669,86 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                 double t_sum_weight_X       = 0;
                 double t_sum_weight_Y       = 0;
                 double t_sum_max_roh        = 0;
-                double shift_X, shift_Y;
-
-                //calculation image coord from object coord by RFM in left and right image
-                b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
-                Half_template_size   = (int)(Template_size/2.0);
+                
+                 const double b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
+                const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
                 std::array<double*, 3>* left_patch_vecs_array;
                 std::array<double*, 3>* right_patch_vecs_array;
 
-#pragma omp parallel shared(Pyramid_step,Startpos,ImageAdjust,NumofPts,RPCs,left_IA,Coord,Half_template_size,b_factor,Imagesizes,ori_images,subA,TsubA,InverseSubA,_flag,patch_size,reference_id,ti,LImagesize,Images,bin_angle) private(i,t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
                 {
-
+                    
 #pragma omp single
-                {
-                    // Make patch vectors thread private rather than private to each loop iteration
-                    // These are used by postNCC but allocated here for efficiency
-                    left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                    right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                    for (int th=0; th<omp_get_num_threads(); th++) {
-                        for (int k=0; k<3; k++)
-                        {
-                            left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                            right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
+                    {
+                        // Make patch vectors thread private rather than private to each loop iteration
+                        // These are used by postNCC but allocated here for efficiency
+                        left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
+                        right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
+                        for (int th=0; th<omp_get_num_threads(); th++) {
+                            for (int k=0; k<3; k++)
+                            {
+                                left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
+                                right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
+                            }
                         }
                     }
-                }
-
+                    
 #pragma omp for schedule(guided)
-                for(i = 0; i<NumofPts ; i++)
-                {
-                    double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
-                    double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
-
-                    D2DPOINT Left_Imagecoord,Left_Imagecoord_p;
-                    
-                    Left_Imagecoord_p   = GetObjectToImageRPC_single(RPCs[reference_id],2,left_IA,Coord[i]);
-                    Left_Imagecoord     = OriginalToPyramid_single(Left_Imagecoord_p,Startpos[reference_id],Pyramid_step);
-                    
-                    D2DPOINT Right_Imagecoord, Right_Imagecoord_p;
-                    CSize RImagesize;
-                 
-                    RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                    RImagesize.height = Imagesizes[ti][Pyramid_step].height;
-                    
-                    Right_Imagecoord_p  = GetObjectToImageRPC_single(RPCs[ti],2,ImageAdjust[ti],Coord[i]);
-                    Right_Imagecoord    = OriginalToPyramid_single(Right_Imagecoord_p,Startpos[ti],Pyramid_step);
-
-                    if(   Left_Imagecoord.m_Y  > Half_template_size*b_factor    + 10                    && Left_Imagecoord.m_X  > Half_template_size*b_factor + 10
-                          && Left_Imagecoord.m_Y  < LImagesize.height - Half_template_size*b_factor - 10    && Left_Imagecoord.m_X  < LImagesize.width - Half_template_size*b_factor - 10
-                          && Right_Imagecoord.m_Y > Half_template_size*b_factor + 10                    && Right_Imagecoord.m_X > Half_template_size*b_factor + 10
-                          && Right_Imagecoord.m_Y < RImagesize.height - Half_template_size*b_factor - 10    && Right_Imagecoord.m_X < RImagesize.width - Half_template_size*b_factor - 10)
+                    for(long i = 0; i<NumofPts ; i++)
                     {
-                        double Left_X = Left_Imagecoord.m_X;
-                        double Left_Y = Left_Imagecoord.m_Y;
-                        double Right_X = Right_Imagecoord.m_X;
-                        double Right_Y = Right_Imagecoord.m_Y;
-                        int index_l = ((int)Left_Y)*LImagesize.width + (int)Left_X;
-                        int index_r = ((int)Right_Y)*RImagesize.width + (int)Right_X;
-                        double ori_diff;
-                        if( (index_l > 0 && index_l < LImagesize.height*LImagesize.width) && (index_r > 0 && index_r < RImagesize.height*RImagesize.width) )
+                        double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
+                        double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
+                        
+                        //calculation image coord from object coord by RFM in left and right image
+                        D2DPOINT Left_Imagecoord_p   = GetObjectToImageRPC_single(rlevelinfo.RPCs[reference_id],2,left_IA,Coord[i]);
+                        D2DPOINT Left_Imagecoord     = OriginalToPyramid_single(Left_Imagecoord_p,rlevelinfo.py_Startpos[reference_id],Pyramid_step);
+                        
+                        CSize RImagesize(rlevelinfo.py_Sizes[ti][Pyramid_step].width, rlevelinfo.py_Sizes[ti][Pyramid_step].height);
+                        
+                        D2DPOINT Right_Imagecoord_p  = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],2,ImageAdjust[ti],Coord[i]);
+                        D2DPOINT Right_Imagecoord    = OriginalToPyramid_single(Right_Imagecoord_p,rlevelinfo.py_Startpos[ti],Pyramid_step);
+                        
+                        if(Left_Imagecoord.m_Y  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_X  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_Y  < LImagesize.height - Half_template_size*b_factor - 10 && Left_Imagecoord.m_X  < LImagesize.width - Half_template_size*b_factor - 10 && Right_Imagecoord.m_Y > Half_template_size*b_factor + 10 && Right_Imagecoord.m_X > Half_template_size*b_factor + 10 && Right_Imagecoord.m_Y < RImagesize.height - Half_template_size*b_factor - 10 && Right_Imagecoord.m_X < RImagesize.width - Half_template_size*b_factor - 10)
                         {
-                            ori_diff = ori_images[reference_id][index_l] - ori_images[ti][index_r];
-                            
-                            if(postNCC(Pyramid_step, ori_diff, Left_Y,  Left_X, Right_Y, Right_X,
-                                       subA,TsubA,InverseSubA,Half_template_size,_flag,bin_angle,LImagesize,RImagesize,Images[reference_id],Images[ti],&t_sum_weight_X,&t_sum_weight_Y,&t_sum_max_roh,left_patch_vecs,right_patch_vecs))
+                            long index_l = (long)Left_Imagecoord.m_Y*(long)LImagesize.width + (long)Left_Imagecoord.m_X;
+                            long index_r = (long)Right_Imagecoord.m_Y*(long)RImagesize.width + (long)Right_Imagecoord.m_X;
+                            if( (index_l > 0 && index_l < (long)LImagesize.height*(long)LImagesize.width) && (index_r > 0 && index_r < (long)RImagesize.height*(long)RImagesize.width) )
                             {
-                                //#pragma omp critical
+                                double ori_diff = rlevelinfo.py_OriImages[reference_id][index_l] - rlevelinfo.py_OriImages[ti][index_r];
+                                
+                                if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
                                 {
                                     sum_weight_X += t_sum_weight_X;
                                     sum_weight_Y += t_sum_weight_Y;
                                     sum_max_roh  += t_sum_max_roh;
+                                    count_pts++;
                                 }
-                                //#pragma omp atomic
-                                count_pts++;
                             }
                         }
-                    }
-                } // end omp for
-
+                    } // end omp for
+                    
 #pragma omp single
-                {
-                    // free thread-private vectors
-                    for (int th=0; th<omp_get_num_threads(); th++) {
-                        for (int k=0; k<3; k++)
-                        {
-                            free(left_patch_vecs_array[th][k]);
-                            free(right_patch_vecs_array[th][k]);
+                    {
+                        // free thread-private vectors
+                        for (int th=0; th<omp_get_num_threads(); th++) {
+                            for (int k=0; k<3; k++)
+                            {
+                                free(left_patch_vecs_array[th][k]);
+                                free(right_patch_vecs_array[th][k]);
+                            }
                         }
+                        delete[] left_patch_vecs_array;
+                        delete[] right_patch_vecs_array;
                     }
-                    delete[] left_patch_vecs_array;
-                    delete[] right_patch_vecs_array;
-                }
-
+                    
                 } // end omp parallel
 
                 if(count_pts > 10)
                 {
-                    shift_X             = sum_weight_X/sum_max_roh*pow(2.0,Pyramid_step);
-                    shift_Y             = sum_weight_Y/sum_max_roh*pow(2.0,Pyramid_step);
+                    double shift_X             = sum_weight_X/sum_max_roh*pow(2.0,Pyramid_step);
+                    double shift_Y             = sum_weight_Y/sum_max_roh*pow(2.0,Pyramid_step);
                     if(fabs(shift_Y) < 0.1 && fabs(shift_X) < 0.1)
                         check_stop = true;
          
@@ -16817,19 +16761,14 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
                     ImageAdjust[ti][0]      = shift_Y;
                 }
                 else
-                {
                     check_stop = true;
 
-                }
-
                 iter_count++;
-                
-                
             }
         }
     }
     
-    for(ii=0;ii<9;ii++)
+    for(int ii=0;ii<9;ii++)
     {
         free(subA[ii]);
         if(ii < 6)
@@ -16844,149 +16783,89 @@ int AdjustParam(ProInfo *proinfo,uint8 Pyramid_step, int NumofPts, char * file_p
     free(InverseSubA);
     
     free(Coord);
-    //free(MPs);
 
     return iter_count;
 }
 
 
-bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Half_template_size, 
-             NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, uint16* _leftimage, uint16* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double **subA, double **TsubA, double **InverseSubA, uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
 {
-
-    // input order: NumOfPt, LeftImage, RightImage, Template_size, center_row_left, center_col_left, center_row_right, center_col_right, ncc_weight
     bool check_pt = false;
-    int count_max_roh       = 0;
-
-    uint8 rotate_flag,multi_flag,multi_flag_sum,inter_flag,weight_flag;
-
-    //Image info input
-    uint16 L_rowsize   = leftsize.height;
-    uint16 L_colsize   = leftsize.width;
-
-    uint16 R_rowsize   = rightsize.height;
-    uint16 R_colsize   = rightsize.width;
-
-    double t_weight_X   = 0;
-    double t_weight_Y   = 0;
-    double t_max_roh    = 0;
-    double diff_theta;
-    int mask_row, mask_col;
-
-    int half_mask_size;
-    int count = 0;
-
-    //Half_template_size  = (int)(Template_size/2);
-    half_mask_size      = 1;
-    
-    rotate_flag = _flag.rotate_flag;
-    multi_flag  = _flag.multi_flag;
-    multi_flag_sum  = _flag.multi_flag_sum;
-    inter_flag  = _flag.inter_flag;
-    weight_flag = _flag.weight_flag;
-
-    
-    diff_theta = Ori_diff;
-
+ 
+    CSize leftsize = rlevelinfo.py_Sizes[reference_ID][*rlevelinfo.Pyramid_step];
+    CSize rightsize = rlevelinfo.py_Sizes[target_ID][*rlevelinfo.Pyramid_step];
+ 
+    const int half_mask_size = 1;
     double result_rho[9]  = {};
-    double XX[6]          = {};
-    double ATLT[6]        = {};
-    int i, j, k;
+    
     uint8 cell_count = 0;
 
-    for(j=0;j<9;j++)
+    for(int j=0;j<9;j++)
         result_rho[j]       = -1.00;
 
-    for(mask_row = - half_mask_size ; mask_row <= half_mask_size ; mask_row++)
+    for(long mask_row = - half_mask_size ; mask_row <= half_mask_size ; mask_row++)
     {
-        for(mask_col = - half_mask_size ; mask_col <= half_mask_size ; mask_col++)
+        for(long mask_col = - half_mask_size ; mask_col <= half_mask_size ; mask_col++)
         {
-            double rot_theta = 0.0;
-            int Count_N[3] = {0};          
-            int row, col;
-            int N;
-            int grid_index;
-
-            if(rotate_flag == 1)
-                rot_theta = (double)(diff_theta*bin_angle*PI/180.0);
-            
-            
-            for(row = -Half_template_size; row <= Half_template_size ; row++)
+            int Count_N[3] = {0};
+            double rot_theta = (double)(Ori_diff*(*rlevelinfo.bin_angle)*PI/180.0);
+        
+            for(long row = -Half_template_size; row <= Half_template_size ; row++)
             {
-                for(col = -Half_template_size; col <= Half_template_size ; col++)
+                for(long col = -Half_template_size; col <= Half_template_size ; col++)
                 {
                     double radius2  = (double)(row*row + col*col);
                     if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                     {
-                        double pos_row_left      = (Left_CR + row);
-                        double pos_col_left      = (Left_CC + col);
+                        double pos_row_left      = (left_pt.m_Y + row);
+                        double pos_col_left      = (left_pt.m_X + col);
 
                         double temp_col        = (cos(-rot_theta)*col - sin(-rot_theta)*row);
                         double temp_row        = (sin(-rot_theta)*col + cos(-rot_theta)*row);
-                        double pos_row_right     = (Right_CR + temp_row + mask_row);
-                        double pos_col_right     = (Right_CC + temp_col + mask_col);
+                        double pos_row_right     = (right_pt.m_Y + temp_row + mask_row);
+                        double pos_col_right     = (right_pt.m_X + temp_col + mask_col);
 
-                        if(pos_row_right-3 >= 0 && pos_row_right+3 < R_rowsize && pos_col_right-3 >= 0 && pos_col_right+3 < R_colsize &&
-                           pos_row_left-3 >= 0 && pos_row_left+3 < L_rowsize && pos_col_left-3 >= 0 && pos_col_left+3 < L_colsize)
+                        if(pos_row_right-3 >= 0 && pos_row_right+3 < rightsize.height && pos_col_right-3 >= 0 && pos_col_right+3 < rightsize.width &&
+                           pos_row_left-3 >= 0 && pos_row_left+3 < leftsize.height && pos_col_left-3 >= 0 && pos_col_left+3 < leftsize.width)
                         {
-                            double dx;
-                            double dy;
-                            long int position;
-                            double left_patch;
-                            double right_patch;
-
                             //interpolate left_patch
-                            dx = pos_col_left - (int) (pos_col_left);
-                            dy = pos_row_left - (int) (pos_row_left);
-                            position = (long int) (pos_col_left) + (long int) (pos_row_left) * L_colsize;
+                            double dx = pos_col_left - (int) (pos_col_left);
+                            double dy = pos_row_left - (int) (pos_row_left);
+                            long position = (long int) (pos_col_left) + (long int) (pos_row_left) * (long)leftsize.width;
                             
-                            // Appears inter_flag is always == 1
-                            if (inter_flag == 1) {
-                                left_patch = InterpolatePatch(_leftimage, position, leftsize, dx, dy);
-                            } else {
-                                left_patch = (double) (_leftimage[position]);
-                            }
+                            double left_patch = InterpolatePatch(rlevelinfo.py_Images[reference_ID], position, leftsize, dx, dy);
                             left_patch_vecs[0][Count_N[0]] = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
                             dy = pos_row_right - (int) (pos_row_right);
-                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * R_colsize;
+                            position = (long int) (pos_col_right) + (long int) (pos_row_right) * (long)rightsize.width;
                             
-                            // Appears inter_flag is always == 1
-                            if (inter_flag == 1) {
-                                right_patch = InterpolatePatch(_rightimage, position, rightsize, dx, dy);
-                            } else {
-                                right_patch = (double) (_rightimage[position]);
-                            }
+                            double right_patch = InterpolatePatch(rlevelinfo.py_Images[target_ID], position, rightsize, dx, dy);
                             right_patch_vecs[0][Count_N[0]] = right_patch;
                             
                             //end
                             Count_N[0]++;
 
-                            if(multi_flag == 1)
+                            int size_1        = (int)(Half_template_size/2);
+                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
                             {
-                                int size_1, size_2;
-                                size_1        = (int)(Half_template_size/2);
-                                if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
+                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                 {
-                                    if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                    {
-                                        left_patch_vecs[1][Count_N[1]] = left_patch;
-                                        right_patch_vecs[1][Count_N[1]] = right_patch;
-                                        Count_N[1]++;
-                                    }
+                                    left_patch_vecs[1][Count_N[1]] = left_patch;
+                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                    Count_N[1]++;
                                 }
+                            }
 
-                                size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                            int size_2        = size_1 + (int)((size_1/2.0) + 0.5);
+                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
+                            {
+                                if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                 {
-                                    if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                    {
-                                        left_patch_vecs[2][Count_N[2]] = left_patch;
-                                        right_patch_vecs[2][Count_N[2]] = right_patch;
-                                        Count_N[2]++;
-                                    }
+                                    left_patch_vecs[2][Count_N[2]] = left_patch;
+                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                    Count_N[2]++;
                                 }
                             }
                         }
@@ -16994,13 +16873,11 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                 }  // end col loop
             }  // end row loop
 
-            if(Count_N[0] > 0)
+            if(Count_N[0] > 0 && Count_N[1] && Count_N[2])
             {
                 double count_rho = 0;
                 double temp_rho = 0;
-                int klim = 1;
-                if(multi_flag == 1) klim = 3;
-                for (int k=0; k<klim; k++)
+                for (int k=0; k<3; k++)
                 {
                     if (Count_N[k] > 0)
                     {
@@ -17018,7 +16895,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                 else
                     temp_rho = -1;
 
-                grid_index           = (mask_row+1)*3 + (mask_col+1);
+                long grid_index           = (mask_row+1)*3 + (mask_col+1);
                 if(grid_index < 9)
                     result_rho[grid_index] = temp_rho;
                 cell_count++;
@@ -17027,6 +16904,11 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
         }  // end mask_col loop
     }  // end mask_row loop
 
+    double t_weight_X   = 0;
+    double t_weight_Y   = 0;
+    double t_max_roh    = 0;
+    double XX[6]          = {};
+    double ATLT[6]        = {};
     if(cell_count == 9)
     {
         double demnum;
@@ -17037,23 +16919,23 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
         bool find_index_2   = false;
         bool find_index     = false;
 
-        for(i=0;i<6;i++)
+        for(int i=0;i<6;i++)
         {
-            for(j=0;j<1;j++)
+            for(int j=0;j<1;j++)
             {
                 double sum = 0.0;
-                for(k=0;k<9;k++)
+                for(int k=0;k<9;k++)
                     sum += TsubA[i][k]*result_rho[k*1 + j];
                 ATLT[i*1 + j] = sum;
             }
         }
 
-        for(i=0;i<6;i++)
+        for(int i=0;i<6;i++)
         {
-            for(j=0;j<1;j++)
+            for(int j=0;j<1;j++)
             {
                 double sum = 0.0;
-                for(k=0;k<6;k++)
+                for(int k=0;k<6;k++)
                     sum += InverseSubA[i][k]*ATLT[k*1 + j];
                 XX[i*1 + j] = sum;
             }
@@ -17070,7 +16952,7 @@ bool postNCC(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_C
                 find_index_1 = true;
             if(fabs(max_Y) <= 1.0)
                 find_index_2 = true;
-            if (Pyramid_step >= 2) 
+            if (*rlevelinfo.Pyramid_step >= 2)
                 find_index  = find_index_1 & find_index_2 & (max_roh > 0.80);
             else
                 find_index  = find_index_1 & find_index_2 & (max_roh > 0.90);
