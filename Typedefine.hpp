@@ -666,7 +666,7 @@ typedef struct taglevelinfo
     const long int *Grid_length;
     const D2DPOINT* GridPts;
     const D2DPOINT* Grid_wgs;
-
+    int reference_id;
     const double *height_step;
     const double *grid_resolution;
     const double *Hinterval;
