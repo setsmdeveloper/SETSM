@@ -104,11 +104,23 @@ typedef struct tagD2DPoint
         m_Y = p.m_Y;
     }
     
-    tagD2DPoint operator=(const tagD2DPoint &p)
+    tagD2DPoint& operator=(const tagD2DPoint &p)
     {
         this->m_X = p.m_X;
         this->m_Y = p.m_Y;
         return *this;
+    }
+    
+    tagD2DPoint operator+(const tagD2DPoint &p)
+    {
+        tagD2DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y);
+        return temp;
+    }
+    
+    tagD2DPoint operator-(const tagD2DPoint &p)
+    {
+        tagD2DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y);
+        return temp;
     }
     
 } D2DPOINT;
@@ -133,7 +145,7 @@ typedef struct tagF2DPoint
         m_Y = p.m_Y;
     }
     
-    tagF2DPoint operator=(const tagD2DPoint &p)
+    tagF2DPoint& operator=(const tagD2DPoint &p)
     {
         this->m_X = p.m_X;
         this->m_Y = p.m_Y;
@@ -192,7 +204,7 @@ typedef struct tagD3DPoint
         m_Z = 0;
         flag = false;
     }
-    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
     {
         
     }
@@ -204,12 +216,25 @@ typedef struct tagD3DPoint
         flag = p.flag;
     }
     
-    tagD3DPoint operator=(const tagD2DPoint &p)
+    tagD3DPoint& operator=(const tagD2DPoint &p)
     {
         this->m_X = p.m_X;
         this->m_Y = p.m_Y;
         return *this;
     }
+    
+    tagD3DPoint operator+(const tagD3DPoint &p)
+    {
+        tagD3DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y, this->m_Z + p.m_Z, 0);
+        return temp;
+    }
+    
+    tagD3DPoint operator-(const tagD3DPoint &p)
+    {
+        tagD3DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y, this->m_Z - p.m_Z, 0);
+        return temp;
+    }
+    
 } D3DPOINT;
 
 typedef struct tagTransParam
