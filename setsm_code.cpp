@@ -29862,7 +29862,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     
                                                     i = 0;
                                                     
-                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -29921,7 +29921,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_shift);
                                                     
                                                     i = 0;
-                                                    while( i < count_shift && (fscanf(fid_load,"%f %f %f\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
+                                                    while( i < count_shift && (fscanf(fid_load,"%lf %lf %lf\n",&ptslists[i].m_X,&ptslists[i].m_Y,&ptslists[i].m_Z)) != EOF )
                                                     {
                                                         i++;
                                                     }
@@ -30901,6 +30901,9 @@ UGRIDSDM* ResizeGirdPT3_SDM(CSize preSize, CSize resize_Size, double* Boundary, 
                 resize_GridPT3[index].ortho_ncc        = preGridPT3[pre_index].ortho_ncc;
                 resize_GridPT3[index].col_shift        = preGridPT3[pre_index].col_shift;
                 resize_GridPT3[index].row_shift        = preGridPT3[pre_index].row_shift;
+                
+                //resize_GridPT3[index].col_sigma        = preGridPT3[pre_index].col_sigma;
+                //resize_GridPT3[index].row_sigma        = preGridPT3[pre_index].row_sigma;
             }
             else
             {
@@ -31589,7 +31592,7 @@ void echoprint_Gridinfo_SDM(uint8 prc_level, ProInfo proinfo, double* LBoundary,
 
 void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CSize LImagesize, uint16* LeftImage, CSize RImagesize, uint16* RightImage,double* boundary, ProInfo proinfo, char *save_path,int row,int col,int level, int iteration, CSize *Size_Grid2D, UGRIDSDM *GridPT3, const char *add_str, double gridsize, int d_date)
 {
-    FILE *outfile_XYZ, *outfile_Xshift, *outfile_Yshift;
+    FILE *outfile_XYZ, *outfile_Xshift, *outfile_Yshift, *outfile_Xsigma, *outfile_Ysigma;
     CSize temp_S;
     char t_str[500];
     int k,j;
@@ -31600,6 +31603,12 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
         outfile_Xshift    = fopen(t_str,"w");
         sprintf(t_str,"%s/txt/tin_yshift_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
         outfile_Yshift    = fopen(t_str,"w");
+        /*
+        sprintf(t_str,"%s/txt/tin_xsigma_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+        outfile_Xsigma    = fopen(t_str,"w");
+        sprintf(t_str,"%s/txt/tin_ysigma_level_%d_%d_%d_iter_%d_%s.txt",save_path,row,col,level,iteration,add_str);
+        outfile_Ysigma    = fopen(t_str,"w");
+         */
     }
     
     UGRIDSDM* temp_GridPT3;
@@ -31633,6 +31642,9 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
             double DX = GridPT3[matlab_index].col_shift*proinfo.resolution/proinfo.SDM_days;
             double DY = -GridPT3[matlab_index].row_shift*proinfo.resolution/proinfo.SDM_days;
             
+            //double Xsigma = GridPT3[matlab_index].col_sigma*proinfo.resolution;
+            //double Ysigma = GridPT3[matlab_index].row_sigma*proinfo.resolution;
+            
             if(d_date == 2)
             {
                 DX = -DX;
@@ -31649,17 +31661,26 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
                 {
                     fprintf(outfile_Xshift,"%f\t", DX);
                     fprintf(outfile_Yshift,"%f\t", DY);
+                    
+                    //fprintf(outfile_Xsigma,"%f\t", Xsigma);
+                    //fprintf(outfile_Ysigma,"%f\t", Ysigma);
                 }
                 else
                 {
                     fprintf(outfile_Xshift,"0\t");
                     fprintf(outfile_Yshift,"0\t");
+                    
+                    //fprintf(outfile_Xsigma,"0\t");
+                    //fprintf(outfile_Ysigma,"0\t");
                 }
             }
             else
             {
                 fprintf(outfile_Xshift,"0\t");
                 fprintf(outfile_Yshift,"0\t");
+                
+                //fprintf(outfile_Xsigma,"0\t");
+                //fprintf(outfile_Ysigma,"0\t");
             }
             
         }
@@ -31667,6 +31688,9 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
         {
             fprintf(outfile_Xshift,"\n");
             fprintf(outfile_Yshift,"\n");
+            
+            //fprintf(outfile_Xsigma,"\n");
+            //fprintf(outfile_Ysigma,"\n");
         }
     }
     
@@ -31674,6 +31698,9 @@ void echoprint_adjustXYZ(uint8 prc_level,double* LBoundary,double* RBoundary, CS
     {
         fclose(outfile_Xshift);
         fclose(outfile_Yshift);
+        
+        //fclose(outfile_Xsigma);
+        //fclose(outfile_Ysigma);
     }
     
     //free(temp_GridPT3);
@@ -31715,6 +31742,8 @@ UGRIDSDM* SetHeightRange_SDM(UGRIDSDM *GridPT3, BL BL_param)
             result[matlab_index].ortho_ncc                  = GridPT3[matlab_index].ortho_ncc;
             result[matlab_index].roh                        = GridPT3[matlab_index].roh;
             
+            //result[matlab_index].col_sigma                  = GridPT3[matlab_index].col_sigma;
+            //result[matlab_index].row_sigma                  = GridPT3[matlab_index].row_sigma;
         }
     }
     
@@ -33073,6 +33102,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                                         sum2_r += (1.0/pow(selected_diff_row[k],p))*selected_roh[k];
                                     }
                                     temp_row_shift[ori_index] = sum1_r/sum2_r;
+                                    
                                 }
                                 else
                                 {
@@ -33204,7 +33234,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                     for(int j=-kernal_size ; j <= kernal_size ; j++)
                     {
                         int index = (r+k)*gridsize.width + (c+j);
-                        if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width  && index >= 0 && index < (gridsize.height)*(gridsize.width) /*&& GridPT3[index].ortho_ncc > min_ortho_th*/)
+                        if(r+k >= 0 && r+k < gridsize.height && c+j >= 0 && c+j < gridsize.width  && index >= 0 && index < (gridsize.height)*(gridsize.width))
                         {
                             sum_c += temp_col_shift[index];
                             sum_r += temp_row_shift[index];
@@ -33212,6 +33242,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, BL BL_param, double DEM
                         }
                     }
                 }
+                
                 GridPT3[ori_index].col_shift = sum_c/count_cr;
                 GridPT3[ori_index].row_shift = sum_r/count_cr;
             }
@@ -33421,6 +33452,9 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
     VyShift = (float*)calloc(DEM_size.height*DEM_size.width,sizeof(float));
     Roh = (float*)calloc(DEM_size.height*DEM_size.width,sizeof(float));
     
+    float *Vxsigma = (float*)calloc(DEM_size.height*DEM_size.width,sizeof(float));
+    float *Vysigma = (float*)calloc(DEM_size.height*DEM_size.width,sizeof(float));
+    
     printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
     
     //setting DEM value
@@ -33467,9 +33501,9 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                     sprintf(hv_t_str,"%s/txt/tin_yshift_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
                     p_vyshift    = fopen(hv_t_str,"r");
                     /*
-                    sprintf(hv_t_str,"%s/txt/tin_colshift_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
+                    sprintf(hv_t_str,"%s/txt/tin_xsigma_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
                     p_cshift    = fopen(hv_t_str,"r");
-                    sprintf(hv_t_str,"%s/txt/tin_rowshift_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
+                    sprintf(hv_t_str,"%s/txt/tin_ysigma_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
                     p_rshift    = fopen(hv_t_str,"r");
                     */
                     sprintf(hv_t_str,"%s/txt/tin_roh_level_%d_%d_%d_iter_3_final.txt",info.save_filepath,row,col,find_level);
@@ -33490,8 +33524,10 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                                 
                                 double DEM_value;
                                 double Col_value, Row_value, Vx_value, Vy_value, Roh_value;
+                                
                                 //fscanf(p_cshift,"%lf\t",&Col_value);
                                 //fscanf(p_rshift,"%lf\t",&Row_value);
+                                
                                 fscanf(p_vxshift,"%lf\t",&Vx_value);
                                 fscanf(p_vyshift,"%lf\t",&Vy_value);
                                 fscanf(p_roh,"%lf\t",&Roh_value);
@@ -33501,12 +33537,12 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                                    iter_row > buffer && iter_row < row_size - buffer &&
                                    iter_col > buffer && iter_col < col_size - buffer)
                                 {
-                                    /*
-                                    if(fabs(Col_value) < 1000)
-                                        ColShift[index] = Col_value;
-                                    if(fabs(Row_value) < 1000)
-                                        RowShift[index] = Row_value;
-                                    */
+                                    
+                                    //if(fabs(Col_value) < 1000)
+                                    //    Vxsigma[index] = Col_value;
+                                    //if(fabs(Row_value) < 1000)
+                                     //   Vysigma[index] = Row_value;
+                                    
                                     //if(fabs(Vx_value) < 1000)
                                         VxShift[index] = Vx_value;
                                     //if(fabs(Vy_value) < 1000)
@@ -33536,10 +33572,10 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
         }
     }
     /*
-    sprintf(DEM_str, "%s/%s_col_shift.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, ColShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
-    sprintf(DEM_str, "%s/%s_row_shift.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, RowShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    sprintf(DEM_str, "%s/%s_dx_sigma.tif", info.save_filepath, info.Outputpath_name);
+    WriteGeotiff(DEM_str, Vxsigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    sprintf(DEM_str, "%s/%s_dy_sigma.tif", info.save_filepath, info.Outputpath_name);
+    WriteGeotiff(DEM_str, Vysigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
      */
     sprintf(DEM_str, "%s/%s_dx.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
@@ -33550,8 +33586,9 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
     sprintf(DEM_str, "%s/%s_roh.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
     
-    //free(ColShift);
-    //free(RowShift);
+    //free(Vxsigma);
+    //free(Vysigma);
+    
     free(VxShift);
     free(VyShift);
     free(Mag);

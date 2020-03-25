@@ -605,7 +605,8 @@ typedef struct UpdateGridSDM{
     float ortho_ncc;
     float col_shift;
     float row_shift;
-    
+    //float col_sigma;
+    //float row_sigma;
 }UGRIDSDM;
 
 typedef struct tagNCCresultSDM
@@ -657,7 +658,7 @@ typedef struct taglevelinfo
     const int *Pyramid_step;
     const CSize * const *py_Sizes;
     const unsigned char *Template_size;
-    const double * const *ImageAdjust;//updated in RA computation step
+    const double * const *ImageAdjust;
     const TransParam *param;
     const unsigned char *NumOfIAparam;
     const double *bin_angle;
