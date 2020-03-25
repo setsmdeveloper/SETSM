@@ -1735,7 +1735,8 @@ void DownSample(ARGINFO &args)
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        float *seeddem = Readtiff_DEM(args.seedDEMfilename,Imagesize,cols,rows,&data_size);
+        float type;
+        float *seeddem = Readtiff_T(args.seedDEMfilename,Imagesize,cols,rows,&data_size,type);
         
         float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
         
@@ -3580,11 +3581,19 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             time_t PreST = 0, PreET = 0;
             double Pregab = 0;
             
+            LevelInfo levelinfo = {NULL};
+            levelinfo.RPCs = RPCs;
+            levelinfo.Boundary = subBoundary;
+            levelinfo.Template_size = &Template_size;
+            levelinfo.ImageAdjust = t_Imageparams;
+            levelinfo.param = &param;
+            levelinfo.NumOfIAparam = &NumOfIAparam;
+            
             uint16 **SourceImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
             int count_available_images = 0;
             for(int index_image = 0 ; index_image < proinfo->number_of_images ; index_image++)
             {
-                SourceImages[index_image] = SetsubsetImage(proinfo,index_image,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
+                SourceImages[index_image] = SetsubsetImage(proinfo, levelinfo, index_image,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
                 if(proinfo->check_selected_image[index_image])
                     count_available_images++;
             }
@@ -3776,7 +3785,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 {
                                     free(SourceImages[image_index]);
                                 
-                                    SourceImages[image_index] = SetsubsetImage(proinfo,image_index,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
+                                    SourceImages[image_index] = SetsubsetImage(proinfo, levelinfo, image_index,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
                                     
                                     SetPySizes(data_size_lr[image_index], Subsetsize[image_index], level+1);
                                 }
@@ -3880,7 +3889,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             }
                         }
                         
-                        LevelInfo levelinfo = {NULL};
+                        
                         
                         levelinfo.py_Images = SubImages[level];
                         levelinfo.py_MagImages = SubMagImages[level];
@@ -3981,17 +3990,25 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         
                         D2DPOINT *Grid_wgs = ps2wgs(param,Grid_length,GridPT);
                         levelinfo.Grid_wgs = Grid_wgs;
+                        levelinfo.reference_id = 0;
+                        
+                        const double height_step = GetHeightStep(level,Image_res[0]);
+                        levelinfo.height_step = &height_step;
+                        levelinfo.grid_resolution = &grid_resolution;
+                        levelinfo.Hinterval = &Hinterval;
+                        
+                        printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         
                         if(proinfo->pre_DEMtif && !flag_start)
                         {
                             if(proinfo->check_Matchtag)
                             {
-                                VerticalLineLocus_seeddem(proinfo,levelinfo.py_BMagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, levelinfo.py_BImages, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, blunder_selected_level, BStartpos, subBoundary,minmaxHeight);
+                                VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
                                 printf("check_matchtag ortho_ncc\n");
                             }
                             else
                             {
-                                VerticalLineLocus_seeddem(proinfo,levelinfo.py_MagImages,grid_resolution, Image_res[0], RPCs,data_size_lr, levelinfo.py_Images, Template_size, Size_Grid2D, param, GridPT, GridPT3, NumOfIAparam, t_Imageparams, level, Startpos, subBoundary,minmaxHeight);
+                                VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
                             }
                         }
                         
@@ -4007,14 +4024,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         if(level <= 1)
                             mem_th = 10;
                         
-                        const double height_step = GetHeightStep(level,Image_res[0]);
-                        levelinfo.height_step = &height_step;
-                        levelinfo.grid_resolution = &grid_resolution;
-                        levelinfo.Hinterval = &Hinterval;
-                        
-                        printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         double minimum_memory;
-                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,Py_combined_level,minmaxHeight);
+                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,minmaxHeight);
                         
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
@@ -4068,7 +4079,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         NCCresult *nccresult = (NCCresult*)calloc(sizeof(NCCresult),Grid_length);
                         
                         levelinfo.check_matching_rate = &check_matching_rate;
-                        levelinfo.reference_id = 0;
                         
                         bool level_check_matching_rate = false;
                         while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
@@ -5102,7 +5112,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     return final_iteration;
 }
 
-double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *GridPT3, double *minimum_memory, const uint8 iteration,const int Py_combined_level,const double *minmaxHeight)
+double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *GridPT3, double *minimum_memory, const uint8 iteration,const double *minmaxHeight)
 {
     double Memory = 0;
     
@@ -5124,25 +5134,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
             image += (double)(sizeof(uint8)*data_length);
         }
     }
-    /*
-    for(int ti = 0 ; ti < info->number_of_images ; ti++)    
-    {
-        const long int data_length_ti = plevelinfo.py_Sizes[ti][level].height * plevelinfo.py_Sizes[ti][level].width;
-        image += (double)((sizeof(uint16)*data_length_ti) );
-        oriimage += (double)((sizeof(uint8)*data_length_ti) );
-        magimage += (double)((sizeof(uint16)*data_length_ti) );
-        const long int data_length_ti_B = plevelinfo.py_Sizes[ti][blunder_selected_level].height * plevelinfo.py_Sizes[ti][blunder_selected_level].width;
-        image += (double)((sizeof(uint16)*data_length_ti_B) );
-        magimage += (double)((sizeof(uint16)*data_length_ti_B) );
     
-        if(level > Py_combined_level)
-        {
-            image += (double)((sizeof(uint16)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
-            oriimage += (double)((sizeof(uint8)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
-            magimage += (double)((sizeof(uint16)*plevelinfo.py_Sizes[ti][level-1].height*plevelinfo.py_Sizes[ti][level-1].width) );
-        }
-    }
-     */
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += (image + oriimage + magimage);
     //printf("memory 1 %f\t%f\t%f\t%f\n",Memory,image,oriimage,magimage);
@@ -6282,41 +6274,6 @@ UGRID *SetGrid3PT(const ProInfo *proinfo,const TransParam param, const CSize Siz
     return GridPT3;
 }
 
-int  CalTotalIteration(uint8 DEM_level,int level)
-{
-    int sub_total_count;
-    //compute a total iterations. (need to modify)
-    if(DEM_level == 0)
-    {
-        if(level >= 3)
-            sub_total_count = 4*(level - 2) + 2*3;
-        else
-            sub_total_count = 2*3;
-    }
-    else if(DEM_level == 1)
-    {
-        if(level >= 3)
-            sub_total_count = 4*(level - 2) + 2*2;
-        else
-            sub_total_count = 2*2;
-    }
-    else if(DEM_level == 2)
-    {
-        if(level >= 3)
-            sub_total_count = 4*(level - 2) + 2*1;
-        else
-            sub_total_count = 2*1;
-    }
-    else if(DEM_level == 3)
-        sub_total_count = 4*(level - 2);
-    else if(DEM_level == 4)
-        sub_total_count = 4*(level - 3);
-    else
-        sub_total_count = 1;
-
-    return sub_total_count;
-}
-
 char* remove_ext(const char* mystr)
 {
     char *retstr;
@@ -6401,11 +6358,11 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 }
 
 
-bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 NumofIAparam, const double * const *RPCs,const double *ImageParam, char *ImageFilename, CSize Imagesize,
-                     const double *subBoundary,const double *minmaxHeight,long int *cols,long int *rows)
+bool GetsubareaImage(ProInfo *proinfo, LevelInfo &rlevelinfo, int ImageID, char *ImageFilename, const double *minmaxHeight, long int *cols, long int *rows)
 {
     bool ret = false;
 
+    CSize Imagesize;
     if(GetImageSize(ImageFilename,&Imagesize))
     {
         int i;
@@ -6420,23 +6377,23 @@ bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 N
         double minY =  1000000;
         double maxY = -1000000;
 
-        t_pts[0].m_X    = subBoundary[0];
-        t_pts[1].m_X    = subBoundary[2];
-        t_pts[2].m_X    = subBoundary[0];
-        t_pts[3].m_X    = subBoundary[2];
-        t_pts[4].m_X    = subBoundary[0];
-        t_pts[5].m_X    = subBoundary[2];
-        t_pts[6].m_X    = subBoundary[0];
-        t_pts[7].m_X    = subBoundary[2];
+        t_pts[0].m_X    = rlevelinfo.Boundary[0];
+        t_pts[1].m_X    = rlevelinfo.Boundary[2];
+        t_pts[2].m_X    = rlevelinfo.Boundary[0];
+        t_pts[3].m_X    = rlevelinfo.Boundary[2];
+        t_pts[4].m_X    = rlevelinfo.Boundary[0];
+        t_pts[5].m_X    = rlevelinfo.Boundary[2];
+        t_pts[6].m_X    = rlevelinfo.Boundary[0];
+        t_pts[7].m_X    = rlevelinfo.Boundary[2];
         
-        t_pts[0].m_Y    = subBoundary[1];
-        t_pts[1].m_Y    = subBoundary[3];
-        t_pts[2].m_Y    = subBoundary[1];
-        t_pts[3].m_Y    = subBoundary[3];
-        t_pts[4].m_Y    = subBoundary[3];
-        t_pts[5].m_Y    = subBoundary[1];
-        t_pts[6].m_Y    = subBoundary[3];
-        t_pts[7].m_Y    = subBoundary[1];
+        t_pts[0].m_Y    = rlevelinfo.Boundary[1];
+        t_pts[1].m_Y    = rlevelinfo.Boundary[3];
+        t_pts[2].m_Y    = rlevelinfo.Boundary[1];
+        t_pts[3].m_Y    = rlevelinfo.Boundary[3];
+        t_pts[4].m_Y    = rlevelinfo.Boundary[3];
+        t_pts[5].m_Y    = rlevelinfo.Boundary[1];
+        t_pts[6].m_Y    = rlevelinfo.Boundary[3];
+        t_pts[7].m_Y    = rlevelinfo.Boundary[1];
 
         t_pts[0].m_Z    = minmaxHeight[0];
         t_pts[1].m_Z    = minmaxHeight[0];
@@ -6451,8 +6408,8 @@ bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 N
         {
             D3DPOINT *t_pts1;
             
-            t_pts1          = ps2wgs_3D(transparam,8,t_pts);
-            ImageCoord      = GetObjectToImageRPC(RPCs, NumofIAparam, ImageParam, 8, t_pts1);
+            t_pts1          = ps2wgs_3D(*rlevelinfo.param,8,t_pts);
+            ImageCoord      = GetObjectToImageRPC(rlevelinfo.RPCs[ImageID], *rlevelinfo.NumOfIAparam, rlevelinfo.ImageAdjust[ImageID], 8, t_pts1);
             
             free(t_pts1);
         }
@@ -6519,7 +6476,7 @@ bool GetsubareaImage(ProInfo *proinfo,int ImageID,TransParam transparam, uint8 N
     return ret;
 }
         
-
+/*
 uint16 *Readtiff(char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, bool check_checktiff)
 {
     uint16 *out;
@@ -6997,17 +6954,6 @@ float *Readtiff_DEM(const char *filename, CSize *Imagesize,long int *cols,long i
                             }
                         }
                     }
-                    
- /*
-#pragma omp parallel for private(i,j) schedule(guided)
-                    for (i=0;i<tileL;i++)
-                    {
-                        for (j=0;j<tileW;j++)
-                        {
-                            out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                        }
-                    }
-  */
                 }
             }
             _TIFFfree(buf);
@@ -7018,7 +6964,7 @@ float *Readtiff_DEM(const char *filename, CSize *Imagesize,long int *cols,long i
     
     return out;
 }
-
+*/
 unsigned char *Readtiff_BYTE(char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size)
 {
     unsigned char *out;
@@ -7545,7 +7491,8 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo,const TransParam param, UGRID *
             rows[0] = 0;
             rows[1] = seeddem_size.height;
 
-            float *seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
+            float type;
+            float *seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size, type);
             printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
 
             for (long int row = 0; row < Grid_size.height; row ++) 
@@ -8455,7 +8402,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
 }
 
 
-bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff)
+bool subsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff)
 {
     bool ret = false;
 
@@ -8466,12 +8413,13 @@ bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 Numo
         if(GetImageSize(proinfo->Imagefilename[ti],&Imagesize))
         {
             long int Lcols[2], Lrows[2];
-            if(GetsubareaImage(proinfo,ti,transparam,NumofIAparam,RPCs[ti],ImageParams[ti],proinfo->Imagefilename[ti],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
+            if(GetsubareaImage(proinfo, rlevelinfo, ti, proinfo->Imagefilename[ti], minmaxHeight, Lcols, Lrows))
             {
                 uint16 *leftimage;
-
+                
                 printf("read image %d\n", ti);
-                leftimage   = Readtiff(proinfo->Imagefilename[ti],&Imagesize,Lcols,Lrows,&Subsetsize[ti],check_checktiff);
+                uint16 type;
+                leftimage   = Readtiff_T(proinfo->Imagefilename[ti],&Imagesize,Lcols,Lrows,&Subsetsize[ti],type);
                 if(check_checktiff)
                     exit(1);
                 
@@ -8512,7 +8460,7 @@ bool subsetImage(ProInfo *proinfo, const TransParam transparam, const uint8 Numo
     return ret;
 }
 
-uint16 *SetsubsetImage(ProInfo *proinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
+uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
 {
     bool ret = false;
 
@@ -8522,10 +8470,11 @@ uint16 *SetsubsetImage(ProInfo *proinfo, const int index_image, const TransParam
     if(GetImageSize(proinfo->Imagefilename[index_image],&Imagesize))
     {
         long int Lcols[2], Lrows[2];
-        if(GetsubareaImage(proinfo,index_image,transparam,NumofIAparam,RPCs[index_image],ImageParams[index_image],proinfo->Imagefilename[index_image],Imagesize,subBoundary,minmaxHeight,Lcols,Lrows))
+        if(GetsubareaImage(proinfo, rlevelinfo, index_image, proinfo->Imagefilename[index_image], minmaxHeight, Lcols, Lrows))
         {
             printf("read image %d\n", index_image);
-            outimage   = Readtiff(proinfo->Imagefilename[index_image],&Imagesize,Lcols,Lrows,&Subsetsize[index_image],proinfo->check_checktiff);
+            uint16 type;
+            outimage   = Readtiff_T(proinfo->Imagefilename[index_image],&Imagesize,Lcols,Lrows,&Subsetsize[index_image],type);
             if(proinfo->check_checktiff)
                 exit(1);
             
@@ -10409,7 +10358,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         
     int sum_data2 = 0;
     int sum_data = 0;
-    const int reference_id = 0;
+    const int reference_id = plevelinfo.reference_id;
     
 #pragma omp parallel
     {
@@ -12277,99 +12226,31 @@ void rohsmoothing(double *inputroh, bool *inputcheck, int total_count, int level
     
 }
 
-void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagImages, const double DEM_resolution, const double ori_im_resolution, const double * const * const *RPCs, const CSize * const *Imagesizes, const uint16 * const *Images, uint8 Template_size, const CSize Size_Grid2D, const TransParam param, const D2DPOINT* GridPts, UGRID *GridPT3, const uint8 NumofIAparam, const double * const *ImageAdjust, const uint8 Pyramid_step, const D2DPOINT *Startpos, const double* Boundary, const double* minmaxHeight)
+void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGRID *GridPT3, const double* minmaxHeight)
 {
+    const int Pyramid_step = *(rlevelinfo.Pyramid_step);
+    int Template_size = *(rlevelinfo.Template_size);
     double template_area = 5.0;
-    int t_Template_size = (int)((template_area/(ori_im_resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
+    int t_Template_size = (int)((template_area/(proinfo->resolution*pwrtwo(Pyramid_step)))/2.0)*2+1;
     if(Template_size < t_Template_size)
         Template_size = t_Template_size;
 
     int Half_template_size = (int)(Template_size/2.0);
-    double subBoundary[4] = {Boundary[0], Boundary[1], Boundary[2], Boundary[3]};
-    F2DPOINT **all_im_cd = (F2DPOINT**)malloc(sizeof(F2DPOINT*)*proinfo->number_of_images);
-    long int numofpts = Size_Grid2D.height*Size_Grid2D.width;
-    double im_resolution = ori_im_resolution*pwrtwo(Pyramid_step);
-    int sub_imagesize_w = (int)((subBoundary[2] - subBoundary[0])/im_resolution)+1;
-    int sub_imagesize_h = (int)((subBoundary[3] - subBoundary[1])/im_resolution)+1;
-    long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
-
-    printf("sub_imagesize_total %ld\n",sub_imagesize_total);
-
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-    {
-        if(proinfo->check_selected_image[ti])
-        {
-            all_im_cd[ti] = (F2DPOINT*)calloc(sizeof(F2DPOINT),sub_imagesize_total);
-            if (all_im_cd[ti] == NULL)
-            {
-                printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
-                exit(1);
-            }
-        }
-    }
-
-#pragma omp parallel for schedule(guided)
-    for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
-    {
-        long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
-        long int pts_col = iter_count % sub_imagesize_w;
-
-        double t_X     = subBoundary[0] + pts_col*im_resolution;
-        double t_Y     = subBoundary[1] + pts_row*im_resolution;
-
-        long int t_col   = (long int)((t_X - subBoundary[0])/DEM_resolution);
-        long int t_row   = (long int)((t_Y - subBoundary[1])/DEM_resolution);
-
-        long int pt_index    = t_row*(long int)Size_Grid2D.width + t_col;
-        long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-
-        if(pt_index < Size_Grid2D.width * Size_Grid2D.height && pts_row < sub_imagesize_h && pts_col < sub_imagesize_w && pts_row >= 0 && pts_col >= 0 && t_col >= 0 && t_row >= 0 && t_col < Size_Grid2D.width && t_row < Size_Grid2D.height)
-        {
-            if(GridPT3[pt_index].Height != -1000)
-            {
-                D3DPOINT temp_GP;
-                D2DPOINT temp_GP_p;
-
-                if(proinfo->sensor_type == SB)
-                {
-                    temp_GP_p.m_X = t_X;
-                    temp_GP_p.m_Y = t_Y;
-
-                    temp_GP_p     = ps2wgs_single(param,temp_GP_p);
-                    temp_GP.m_X   = temp_GP_p.m_X;
-                    temp_GP.m_Y   = temp_GP_p.m_Y;
-                }
-                else
-                {
-                    temp_GP.m_X   = t_X;
-                    temp_GP.m_Y   = t_Y;
-                }
-                temp_GP.m_Z   = (double)GridPT3[pt_index].Height;
-
-                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                {
-                    if(proinfo->check_selected_image[ti])
-                    {
-                        D2DPOINT Imagecoord;
-
-                        if(proinfo->sensor_type == SB)
-                            Imagecoord      = GetObjectToImageRPC_single(RPCs[ti],NumofIAparam,ImageAdjust[ti],temp_GP);
-                        else
-                        {
-                            D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
-                            Imagecoord      = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
-                        }
-
-                        D2DPOINT Imagecoord_py  = OriginalToPyramid_single(Imagecoord,Startpos[ti],Pyramid_step);
-
-                        all_im_cd[ti][pt_index_im].m_X = Imagecoord_py.m_X;
-                        all_im_cd[ti][pt_index_im].m_Y = Imagecoord_py.m_Y;
-                    }
-                }
-            }
-        }
-    }
-
+    const double subBoundary[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
+    
+    double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
+    double im_resolution_next = proinfo->resolution;
+    D2DPOINT **all_im_cd = NULL;
+    D2DPOINT **all_im_cd_next = NULL;
+    
+    long int sub_imagesize_w, sub_imagesize_h;
+    long int sub_imagesize_w_next, sub_imagesize_h_next;
+    
+    all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
+    SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, 0, OR, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
+    
+    
+    const int reference_id = rlevelinfo.reference_id;
     int count_total = 0;
     int count_low = 0;
 #pragma omp parallel
@@ -12388,157 +12269,66 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,const uint16 * const *MagI
             right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
         }
 
-        long int data_length = (long)Size_Grid2D.height*(long)Size_Grid2D.width;
+        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
+        
 #pragma omp for reduction(+:count_low, count_total) schedule(guided)
-        for(long int iter_count = 0 ; iter_count < data_length ; iter_count++)
+        for(long int iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
         {
-            long int pts_row = (long int)(floor(iter_count/Size_Grid2D.width));
-            long int pts_col = iter_count % Size_Grid2D.width;
-            long int pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
+            long int pts_row = (long int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
+            long int pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
+            long int pt_index = pts_row*(long int)rlevelinfo.Size_Grid2D->width + pts_col;
 
-            int reference_id = 0;
-            CSize LImagesize, RImagesize;
-
-            LImagesize.width  = Imagesizes[reference_id][Pyramid_step].width;
-            LImagesize.height = Imagesizes[reference_id][Pyramid_step].height;
-
-            if(pt_index < data_length && pts_row < Size_Grid2D.height && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_col >= 0)
+            if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
             {
                 for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
                 {
                     if(proinfo->check_selected_image[ti])
                     {
-                        RImagesize.width  = Imagesizes[ti][Pyramid_step].width;
-                        RImagesize.height = Imagesizes[ti][Pyramid_step].height;
-
+                        rsetkernel.ti = ti;
                         int Count_N[3] = {0};
-
-                        double nccresult = -10.0;
+                        double count_GNCC = 0;
+                        double nccresult = 0.0;
 
                         if(GridPT3[pt_index].Height != -1000)
                             count_total+=1;
 
-                        for(long int row = -Half_template_size; row <= Half_template_size ; row++)
+                        for(int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
-                            for(long int col = -Half_template_size; col <= Half_template_size ; col++)
+                            for(int col = -Half_template_size; col <= Half_template_size ; col++)
                             {
-                                double t_X     = GridPts[pt_index].m_X + col*im_resolution;
-                                double t_Y     = GridPts[pt_index].m_Y + row*im_resolution;
-
-                                long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
-                                long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
-
-                                long int tt_col  = (long int)((t_X - subBoundary[0])/DEM_resolution);
-                                long int tt_row  = (long int)((t_Y - subBoundary[1])/DEM_resolution);
-
-                                long int pt_index_temp = t_row*(long int)sub_imagesize_w + t_col;
-                                long int pt_index_dem  = tt_row*(long int)Size_Grid2D.width + tt_col;
-
-                                if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w * sub_imagesize_h &&
-                                        t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && 
-                                        pt_index_dem >= 0 && pt_index_dem < Size_Grid2D.width * Size_Grid2D.height &&
-                                        tt_col >= 0 && tt_col < Size_Grid2D.width && tt_row >=0 && tt_row < Size_Grid2D.height &&
-                                        all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                const int radius2  =  row*row + col*col;
+                                if(radius2 <= (Half_template_size+1)*(Half_template_size+1))
                                 {
-                                    if(GridPT3[pt_index_dem].Height != -1000)
+                                    const double t_X     = rlevelinfo.GridPts[pt_index].m_X + col*im_resolution;
+                                    const double t_Y     = rlevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
+                                    
+                                    long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
+                                    long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
+                                    long int pt_index_temp = t_row*sub_imagesize_w + t_col;
+                                    
+                                    const long int tt_col  = (long int)((t_X - subBoundary[0])/(*rlevelinfo.grid_resolution));
+                                    const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*rlevelinfo.grid_resolution));
+                                    const long int pt_index_dem  = tt_row*(long int)rlevelinfo.Size_Grid2D->width + tt_col;
+                                    
+                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < *rlevelinfo.Grid_length && tt_col >= 0 && tt_col < rlevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < rlevelinfo.Size_Grid2D->height && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                     {
-                                        double pos_row_left    = all_im_cd[reference_id][pt_index_temp].m_Y;
-                                        double pos_col_left    = all_im_cd[reference_id][pt_index_temp].m_X;
-                                        double pos_row_right   = all_im_cd[ti][pt_index_temp].m_Y;
-                                        double pos_col_right   = all_im_cd[ti][pt_index_temp].m_X;
-
-                                        if( pos_row_right >= 0 && pos_row_right+1 < RImagesize.height && pos_col_right  >= 0 && pos_col_right+1 < RImagesize.width &&
-                                                pos_row_left >= 0 && pos_row_left+1   < LImagesize.height && pos_col_left   >= 0 && pos_col_left+1  < LImagesize.width)
+                                        if(GridPT3[pt_index_dem].Height != -1000)
                                         {
-                                            double dx;
-                                            double dy;
-                                            long int position;
-
-                                            //interpolate left_patch
-                                            dx = pos_col_left - (int) (pos_col_left);
-                                            dy = pos_row_left - (int) (pos_row_left);
-                                            position = (long int) pos_col_left + (long int) pos_row_left * (long int)LImagesize.width;
-                                            double left_patch = InterpolatePatch(Images[reference_id], position, LImagesize, dx, dy);
-                                            double left_mag_patch = InterpolatePatch(MagImages[reference_id], position, LImagesize, dx, dy);
-
-                                            //interpolate right_patch
-                                            dx = pos_col_right - (int) (pos_col_right);
-                                            dy = pos_row_right - (int) (pos_row_right);
-                                            position = (long int) (pos_col_right) + (long int) pos_row_right * (long int)RImagesize.width;
-                                            double right_patch = InterpolatePatch(Images[ti], position, RImagesize, dx, dy);
-                                            double right_mag_patch = InterpolatePatch(MagImages[ti], position, RImagesize, dx, dy);
-
-                                            //end interpolation
-
-                                            left_patch_vecs[0][Count_N[0]] = left_patch;
-                                            left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-                                            right_patch_vecs[0][Count_N[0]] = right_patch;
-                                            right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
-                                            Count_N[0]++;
-
-                                            int size_1        = (int)(Half_template_size/2);
-                                            if( row >= -Half_template_size + size_1 && row <= Half_template_size - size_1)
-                                            {
-                                                if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
-                                                {
-                                                    left_patch_vecs[1][Count_N[1]] = left_patch;
-                                                    left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                                                    right_patch_vecs[1][Count_N[1]] = right_patch;
-                                                    right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
-                                                    Count_N[1]++;
-                                                }
-                                            }
-
-                                            int size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-                                            if( row >= -Half_template_size + size_2 && row <= Half_template_size - size_2)
-                                            {
-                                                if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
-                                                {
-                                                    left_patch_vecs[2][Count_N[2]] = left_patch;
-                                                    left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                                                    right_patch_vecs[2][Count_N[2]] = right_patch;
-                                                    right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
-                                                    Count_N[2]++;
-                                                }
-                                            }
+                                            D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
+                                            D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
+                                            
+                                            SetVecKernelValue(rlevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
-                                }
-                            } // end col loop
-                        } // end row loop
-
+                                }  // if(radius2 <= ...
+                            }  // end col loop
+                        }
+                        
                         // Compute correlations
-                        if(Count_N[0] > 0)
-                        {
-                            double temp_roh = 0;
-                            double count_roh = 0;
-                            for (int k=0; k<3; k++)
-                            {
-                                double ncc = Correlate(left_patch_vecs[k], right_patch_vecs[k], Count_N[k]);
-                                if (ncc != -99)
-                                {
-                                    count_roh++;
-                                    temp_roh += ncc;
-                                }
-
-                                double ncc_mag = Correlate(left_mag_patch_vecs[k], right_mag_patch_vecs[k], Count_N[k]);
-                                if (ncc_mag != -99)
-                                {
-                                    count_roh++;
-                                    temp_roh += ncc_mag;
-                                }
-                            }
-                            if (count_roh > 0)
-                                nccresult = temp_roh/count_roh;
-                            else
-                                nccresult = -1;
-                        }
-                        else 
-                        {
-                            nccresult = -1;
-                        }
-                        //nccresult1[pt_index] = nccresult;
-
+                        ComputeMultiNCC(rsetkernel, 0, Count_N, count_GNCC,  nccresult);
+                        if(Count_N[0] == 0)
+                            nccresult = -10;
+                        
                         if(nccresult < 0.3)
                         {
                             if(!proinfo->check_Matchtag)
@@ -12644,7 +12434,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
     
     SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, false, BD, im_resolution, 0, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
     
-    const int reference_id = 0;
+    const int reference_id = rlevelinfo.reference_id;
 #pragma omp parallel
     {
         // Make patch vectors thread private rather than private to each loop iteration
@@ -13006,6 +12796,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
         min_th_sncc = 0.5;
     }
     
+    const int reference_id = rlevelinfo.reference_id;
     double selected_count = 0;
     
     for(long count_height = 0 ; count_height < NumOfHeights ; count_height++)
@@ -13051,7 +12842,6 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                 {
                     int Count_N = 0;
 
-                    int reference_id = 0;
                     CSize LImagesize, RImagesize;
                     
                     LImagesize.width  = rlevelinfo.py_Sizes[reference_id][Pyramid_step].width;
@@ -15954,7 +15744,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, D3DPOINT* ptslists)
 {
-    int reference_id = 0;
+    const int reference_id = rlevelinfo.reference_id;
     const int Pyramid_step = *rlevelinfo.Pyramid_step;
     CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
     const double left_IA[2] = {ImageAdjust[reference_id][0], ImageAdjust[reference_id][1]};
@@ -20284,7 +20074,8 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        seeddem = Readtiff_DEM(GIMP_path,LImagesize,cols,rows,&data_size);
+        float type;
+        seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size,type);
         printf("tif open\n");
         
     }
@@ -21877,8 +21668,8 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                         break;
                     case 12:
                     {
-                        uint16* data16;
-                        data16 = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
+                        uint16 type;
+                        uint16* data16 = Readtiff_T(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],type);
                         long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
                         OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size16);
                         #pragma omp parallel for schedule(guided)
@@ -22306,8 +22097,8 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
                     break;
                 case 12:
                 {
-                    uint16* data16;
-                    data16 = Readtiff(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],false);
+                    uint16 type;
+                    uint16* data16 = Readtiff_T(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],type);
                     long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
                     OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size16);
 #pragma omp parallel for schedule(guided)
@@ -22494,7 +22285,8 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
         rows[0] = 0;
         rows[1] = OriImagesizes[0].height;
         
-        DEM = Readtiff_DEM(ref_dem_name,&OriImagesizes[0],cols,rows,&OriImagesizes[0]);
+        float type;
+        DEM = Readtiff_T(ref_dem_name,&OriImagesizes[0],cols,rows,&OriImagesizes[0],type);
         
         char *reffilename  = SetOutpathName(args.Image[0]);
         ref_no_ext = remove_ext_ortho(reffilename);
@@ -22551,7 +22343,8 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
             rows[0] = 0;
             rows[1] = OriImagesizes[ti].height;
             
-            DEM_tar= Readtiff_DEM(ref_dem_name,&OriImagesizes[ti],cols,rows,&OriImagesizes[ti]);
+            float type;
+            DEM_tar= Readtiff_T(ref_dem_name,&OriImagesizes[ti],cols,rows,&OriImagesizes[ti],type);
             
             char *reffilename  = SetOutpathName(args.Image[ti]);
             ref_no_ext = remove_ext_ortho(reffilename);
@@ -23183,7 +22976,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         rows[0] = 0;
         rows[1] = ref_dem_size.height;
         
-        DEM = Readtiff_DEM(ref_dem_name,&ref_dem_size,cols,rows,&ref_dem_size);
+        float type;
+        DEM = Readtiff_T(ref_dem_name,&ref_dem_size,cols,rows,&ref_dem_size,type);
         
         char *reffilename  = SetOutpathName(args.Image[0]);
         char *ref_no_ext = remove_ext_ortho(reffilename);
@@ -23320,7 +23114,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
             rows[0] = 0;
             rows[1] = tar_dem_size.height;
             
-            DEM_tar= Readtiff_DEM(tar_dem_name,&tar_dem_size,cols,rows,&tar_dem_size);
+            float type;
+            DEM_tar= Readtiff_T(tar_dem_name,&tar_dem_size,cols,rows,&tar_dem_size,type);
             
             char *reffilename  = SetOutpathName(args.Image[ti]);
             char *ref_no_ext = remove_ext_ortho(reffilename);
@@ -24202,7 +23997,8 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
         rows[0] = 0;
         rows[1] = ref_dem_size.height;
         
-        DEM = Readtiff_DEM(ref_dem_name,&ref_dem_size,cols,rows,&ref_dem_size);
+        float type;
+        DEM = Readtiff_T(ref_dem_name,&ref_dem_size,cols,rows,&ref_dem_size,type);
         
         char *reffilename  = SetOutpathName(args.Image[0]);
         char *ref_no_ext = remove_ext_ortho(reffilename);
@@ -24280,7 +24076,8 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
             rows[0] = 0;
             rows[1] = tar_dem_size.height;
             
-            DEM_tar= Readtiff_DEM(tar_dem_name,&tar_dem_size,cols,rows,&tar_dem_size);
+            float type;
+            DEM_tar= Readtiff_T(tar_dem_name,&tar_dem_size,cols,rows,&tar_dem_size,type);
             
             char *reffilename  = SetOutpathName(args.Image[ti]);
             char *ref_no_ext = remove_ext_ortho(reffilename);
@@ -29471,8 +29268,9 @@ void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary,
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        seeddx = Readtiff_DEM(col_shift_path,LImagesize,cols,rows,&data_size);
-        seeddy = Readtiff_DEM(row_shift_path,LImagesize,cols,rows,&data_size);
+        float type;
+        seeddx = Readtiff_T(col_shift_path,LImagesize,cols,rows,&data_size,type);
+        seeddy = Readtiff_T(row_shift_path,LImagesize,cols,rows,&data_size,type);
         printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
         
         for (row = 0; row < Grid_size.height; row ++) {
@@ -30451,8 +30249,8 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                     }
                     break;
                 case 12:
-                    uint16 *t_data16;
-                    t_data16    = Readtiff(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize,false);
+                    uint16 type;
+                    uint16 *t_data16    = Readtiff_T(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize,type);
                     if(t_data16)
                     {
                         FILE *pFile = fopen(LsubsetImage,"wb");
@@ -30516,8 +30314,8 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                     }
                     break;
                 case 12:
-                    uint16 *t_data16;
-                    t_data16    = Readtiff(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize,false);
+                    uint16 type;
+                    uint16 *t_data16    = Readtiff_T(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize,type);
                     if(t_data16)
                     {
                         FILE *pFile = fopen(RsubsetImage,"wb");
@@ -34181,4 +33979,302 @@ inline double SQRT(D3DPOINT a, D3DPOINT b, int dimension)
         return sqrt( SQ(a.m_X - b.m_X) + SQ(a.m_Y - b.m_Y) + SQ(a.m_Z - b.m_Z) );
 }
 
+template <typename T>
+T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type)
+{
+    T *out;
+    FILE *bin;
+    int check_ftype = 1; // 1 = tif, 2 = bin
+    TIFF *tif = NULL;
+    const char *ext = strrchr(filename,'.');
+    
+    if (!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
+    {
+        tif  = TIFFOpen(filename,"r");
+        check_ftype = 1;
+    }
+    else if(!strcmp("bin",ext+1))
+    {
+        bin  = fopen(filename,"rb");
+        check_ftype = 2;
+    }
+    
+    if(check_ftype == 1 && tif)
+    {
+        int i,j,row, col, tileW;
+        
+        tileW = -1;
+        TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
+        if(tileW < 0)
+        {
+            printf("NO TILE\n");
+            tsize_t scanline;
+            tdata_t buf;
+            uint16 s,nsamples;
+            
+            int a;
+            
+            // scanline read
+            data_size->width    = cols[1] - cols[0];
+            data_size->height   = rows[1] - rows[0];
+            long int data_length = (long)data_size->height*(long)data_size->width;
+            out             = (T*)malloc(sizeof(T)*data_length);
+            
+            scanline        = TIFFScanlineSize(tif);
+            
+            buf             = _TIFFmalloc(scanline);
+            
+            TIFFGetField(tif,TIFFTAG_SAMPLESPERPIXEL,&nsamples);
+            
+            for(s =0;s< nsamples;s++)
+            {
+                for (row=0;row<rows[0];row++)
+                    TIFFReadScanline(tif,buf,row,s);
+                for (row=rows[0];row<rows[1];row++)
+                {
+                    T* t_data;
+                    TIFFReadScanline(tif,buf,row,s);
+                    t_data = (T*)buf;
+#pragma omp parallel for private(a) schedule(guided)
+                    for(a = cols[0];a<cols[1];a++)
+                    {
+                        out[(long)(row-rows[0])*(long)data_size->width + (long)(a-cols[0])] = t_data[a];
+                    }
+                }
+            }
+            
+            _TIFFfree(buf);
+        }
+        else
+        {
+            printf("tile\n");
+            int tileL,count_W,count_L,starttileL,starttileW;
+            uint16 start_row,start_col,end_row,end_col;
+            tdata_t buf;
+            T* t_data;
+            
+            TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
+            TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
+            
+            starttileL      = (int)(rows[0]/tileL);
+            start_row       = starttileL*tileL;
+            end_row         = ((int)(rows[1]/tileL)+1)*tileL;
+            if(end_row > Imagesize->height)
+                end_row = Imagesize->height;
+            
+            starttileW      = (int)(cols[0]/tileW);
+            start_col       = starttileW*tileW;
+            end_col         = ((int)(cols[1]/tileW)+1)*tileW;
+            if(end_col > Imagesize->width)
+                end_col = Imagesize->width;
+            
+            
+            cols[0]         = start_col;
+            cols[1]         = end_col;
+            rows[0]         = start_row;
+            rows[1]         = end_row;
+            
+            data_size->width = end_col - start_col;
+            data_size->height= end_row - start_row;
+            
+            long int data_length = (long int)data_size->height*(long int)data_size->width;
+            
+            out             = (T*)malloc(sizeof(T)*data_length);
+            
+            buf             = _TIFFmalloc(TIFFTileSize(tif));
+            
+            count_L = ceil(data_size->height/(double)tileL);
+            count_W = ceil(data_size->width/(double)tileW);
+            
+            int f_row_end = 0;
+            int f_col_end = 0;
+            
+            if(count_L*tileL > data_size->height)
+                f_row_end = tileL + data_size->height - (count_L*tileL);
+            
+            if(count_W*tileW > data_size->width)
+                f_col_end = tileW + data_size->width - (count_W*tileW);
+            
+            printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
+            
+            for (row = 0; row < count_L; row ++)
+            {
+                for (col = 0; col < count_W; col ++)
+                {
+                    TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
+                    t_data = (T*)buf;
+                    
+                    if(f_row_end > 0 && f_col_end > 0)
+                    {
+                        if(row == count_L-1 && col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else if(row == count_L-1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                            
+                        }
+                        else if(col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else if(f_row_end > 0)
+                    {
+                        if(row == count_L-1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<f_row_end;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                            
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else if(f_col_end > 0)
+                    {
+                        if(col == count_W -1)
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<f_col_end;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                        else
+                        {
+#pragma omp parallel for private(i,j) schedule(guided)
+                            for (i=0;i<tileL;i++)
+                            {
+                                for (j=0;j<tileW;j++)
+                                {
+                                    int t_row = (row*tileL) + i;
+                                    int t_col = (col*tileL) + j;
+                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                       
+#pragma omp parallel for private(i,j) schedule(guided)
+                        for (i=0;i<tileL;i++)
+                        {
+                            for (j=0;j<tileW;j++)
+                            {
+                                int t_row = (row*tileL) + i;
+                                int t_col = (col*tileL) + j;
+                                if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
+                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                            }
+                        }
+                    }
+                }
+            }
+            _TIFFfree(buf);
+        }
+        TIFFClose(tif);
+    }
+    else if(check_ftype == 2 && bin)
+    {
+        long r,c,a;
+        data_size->width    = cols[1] - cols[0];
+        data_size->height   = rows[1] - rows[0];
+        
+        long int data_length = data_size->height*data_size->width;
+        
+        out             = (T*)malloc(sizeof(T)*data_length);
+        
+        for(r = rows[0]; r < rows[1] ; r++)
+        {
+            fseek(bin,sizeof(T)*(r*Imagesize->width + cols[0]),SEEK_SET);
+            T* t_data = (T*)malloc(sizeof(T)*data_size->width);
+            
+            fread(t_data,sizeof(T),data_size->width,bin);
+        
+            for(a = cols[0];a<cols[1];a++)
+            {
+                long int pos = (r-rows[0])*data_size->width + (a-cols[0]);
+                
+                out[pos] = t_data[a-cols[0]];
+            }
+            free(t_data);
+        }
+        fclose(bin);
+    }
 
+    return out;
+}
