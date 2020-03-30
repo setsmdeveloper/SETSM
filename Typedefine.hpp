@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "tiff.h"
-
 #ifndef _Typedefine_H_
 #define _Typedefine_H_
+
+//uint definition
+#include "tiff.h"
+#include "tiffio.h"
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -31,6 +32,15 @@
 //#define bool unsigned char
 #define true 0x1
 #define false 0x0
+#define SQ(x)         (x) * (x)
+#define SWAP(a,b) temp=a;a=b;b=temp;
+#define MAXRAND     0x7fffffff
+#define BIGNUM         1e37
+#define WEEBIT         0.000000000001
+#define MAXDIM         10
+#define MAXSTR         48
+#define pwrtwo(x) (1 << (x))
+
 #endif
 
 enum SensorType {SB , AB};
