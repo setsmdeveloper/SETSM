@@ -225,7 +225,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     }
      */
     printf("Hemis projection %d %d\n",Hemisphere, param.projection);
-    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+    printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
     
     // load DEM infor from geotiff file.
     DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
@@ -530,7 +530,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         free(RPCs);
         free(DEM_value);
         
-        WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, _param.bHemisphere, 12);
+        WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 12);
         free(result_ortho);
         
         ET = time(0);
@@ -1203,7 +1203,7 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary,
     LonLat[3].m_X = maxLon;
     LonLat[3].m_Y = minLat;
     
-    printf("param %s %d %d\n", param.direction,param.zone,param.projection);
+    printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
     XY          = wgs2ps(param,4, LonLat);
     
     t_minX      = min(min(min(XY[0].m_X,XY[1].m_X),XY[2].m_X),XY[3].m_X);

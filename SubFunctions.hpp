@@ -36,6 +36,9 @@ char* GetFileDir(char file_path[],int *size);
 char* SetOutpathName(char *_path);
 int Maketmpfolders(ProInfo *info);
 
+bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams);
+bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams);
+
 bool GetImageSize(char *filename, CSize *Imagesize);
 float* GetDEMValue(char *GIMP_path,CSize seeddem_size);
 
@@ -43,11 +46,12 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
 bool OpenDMCproject(char* project_path,ProInfo *proinfo, ARGINFO args);
 void SetPySizes(CSize *data_size_lr, const CSize Lsubsetsize, const int level);
 void RemoveFiles(const ProInfo *proinfo,const char *save_path, char **filename, const int py_level,const bool flag);
-void SetTranParam_fromGeoTiff(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere);
+
 double Correlate(const double *L, const double *R, const int N);
 
+void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile);
 void SetTransParam_param(TransParam *param, bool Hemisphere);
-void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *param);
+void SetTransParam(double minLat, double minLon, TransParam *param);
 
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
@@ -78,6 +82,10 @@ void GMA_double_printf(GMA_double *a);
 FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution);
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
+
+double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2);
+void SetAngle(double &angle);
+
 FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution);
 FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution);
 

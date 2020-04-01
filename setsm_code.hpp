@@ -36,7 +36,7 @@ void DownSample(ARGINFO &args);
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 
-bool SetupParam(ProInfo *info,uint8 *NumOfIAparam, uint8 *pre_DEM_level, uint8 *DEM_level,  bool *pre_DEMtif, bool *check_tile_array);
+bool SetupParam(ProInfo *info, bool *pre_DEMtif);
 
 void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
 			  uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY);
@@ -60,7 +60,9 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
 
 void SetGridHeightFromSeed(LevelInfo &rlevelinfo, UGRID *Grid, float *seeddem, CSize seeddem_size, double seed_grid, double minX, double maxY, double seedDEM_sigma, double *minmaxHeight);
 
-void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisphere, double* _boundary, double* _minmaxheight, double* _Hinterval);
+void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, double* _boundary, double* _minmaxheight, double* _Hinterval);
+
+void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundary, double* _minmaxheight, double* _Hinterval);
 
 bool subsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const TransParam transparam, const uint8 NumofIAparam, const double *const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff);
 
@@ -128,7 +130,7 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
 UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccresult, const int numOfPts, const int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, D3DPOINT *pts, const UI3DPOINT *tris, const double MPP, const bool level_check_matching_rate);
 
 void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
-double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2);
+
 bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z);
 
 UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
@@ -151,7 +153,7 @@ double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize);
 
 void MergeTiles(const ProInfo *info, const int iter_row_start, const int t_col_start, const int iter_row_end, const int t_col_end, int buffer, const int final_iteration, float *DEM, const CSize Final_DEMsize, double *FinalDEM_boundary);
 
-double MergeTiles_Ortho(const ProInfo *info, const int iter_row_start, const int t_col_start, const int iter_row_end,const int t_col_end, int buffer,const int final_iteration, signed char *DEM_ortho, const CSize Final_DEMsize, const double *FinalDEM_boundary);
+void MergeTiles_Ortho(const ProInfo *info, const int iter_row_start, const int t_col_start, const int iter_row_end,const int t_col_end, int buffer,const int final_iteration, signed char *DEM_ortho, const CSize Final_DEMsize, const double *FinalDEM_boundary);
 
 double FindNebPts_F_M_IDW(const float *input, const unsigned char *matching_flag, const long row_size, const long col_size, const double grid, const double minX, const double maxY, const double X, const double Y, const int row_interval);
 

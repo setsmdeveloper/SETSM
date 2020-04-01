@@ -340,8 +340,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             RemoveFiles(proinfo,proinfo->tmpdir,Subsetfilename,py_level,0);
             
             TransParam param;
-            bool Hemisphere;
-            SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0],args,&Hemisphere);
+            SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0]);
             
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
             {
@@ -396,7 +395,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     }
                     //printf("GCP_count %d\n",sel_count);
                     sprintf(out_file,"%s/GCPs_%d.tif",proinfo->save_filepath,ti);
-                    WriteGeotiff(out_file, GCP_value, GCP_size.width, GCP_size.height, GCP_grid, Boundary[ti][0], Boundary[ti][3], param.projection, param.zone, Hemisphere, 1);
+                    WriteGeotiff(out_file, GCP_value, GCP_size.width, GCP_size.height, GCP_grid, Boundary[ti][0], Boundary[ti][3], param.projection, param.utm_zone, param.bHemisphere, 1);
              
                     char *Ifilename  = SetOutpathName(args.Image[ti]);
                     char *tmp_no_ext = remove_ext(Ifilename);
@@ -407,7 +406,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     double upper = ImageAdjust_coreg[ti][0]*ortho_dy[ti];
                     printf("coreg %s\t%d\t%d\t%f\t%f\n",out_file,OriImagesizes[ti].width,OriImagesizes[ti].height,left,upper);
                     
-                    //WriteGeotiff(out_file, OriImages[ti], OriImagesizes[ti].width, OriImagesizes[ti].height, ortho_dx[ti], ImageBoundary[ti][0] +left , ImageBoundary[ti][3] + upper, param.projection, param.zone, Hemisphere, 12);
+                    //WriteGeotiff(out_file, OriImages[ti], OriImagesizes[ti].width, OriImagesizes[ti].height, ortho_dx[ti], ImageBoundary[ti][0] +left , ImageBoundary[ti][3] + upper, param.projection, param.utm_zone, param.bHemisphere, 12);
                     
                     free(GCP_value);
                     free(ref_pts);
@@ -1851,8 +1850,7 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
         
         //Tz and stat
         TransParam param;
-        bool Hemisphere;
-        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0],args,&Hemisphere);
+        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0]);
         
         float *DEM = NULL;
         //dem image = ref
@@ -2418,12 +2416,12 @@ double** DEM_ImageCoregistration(TransParam *return_param, char* _filename, ARGI
             
             printf("all stat %f\t%f\t%f\t%f\t%f\t%f\n",all_average,all_med,all_std,all_average_med,all_med_med,all_std_med);
             
-            WriteGeotiff(co_dems_name, co_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+            WriteGeotiff(co_dems_name, co_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
             
-            WriteGeotiff(copoly_dems_name, copoly_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+            WriteGeotiff(copoly_dems_name, copoly_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
             /*
-            WriteGeotiff(co_dems_name_diff, co_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-            WriteGeotiff(copoly_dems_name_diff, copoly_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+            WriteGeotiff(co_dems_name_diff, co_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+            WriteGeotiff(copoly_dems_name_diff, copoly_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
             */
             total_ET = time(0);
             total_gap = difftime(total_ET,total_ST);
@@ -2545,8 +2543,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
         ncc_flag.weight_flag     = 0;
         
         TransParam param;
-        bool Hemisphere;
-        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0],args,&Hemisphere);
+        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0]);
         
         //dem image = ref
         float *DEM = NULL;
@@ -3424,11 +3421,11 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                         
                         if(args.check_DEM_coreg_output == 2)
                         {
-                            WriteGeotiff(co_dems_name, co_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-                            WriteGeotiff(copoly_dems_name, copoly_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+                            WriteGeotiff(co_dems_name, co_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+                            WriteGeotiff(copoly_dems_name, copoly_dem, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
                             
-                            WriteGeotiff(co_dems_name_diff, co_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-                            WriteGeotiff(copoly_dems_name_diff, copoly_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+                            WriteGeotiff(co_dems_name_diff, co_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+                            WriteGeotiff(copoly_dems_name_diff, copoly_dem_diff, tar_data_size.width, tar_data_size.height, tar_grid_size, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
                             
                             free(co_dem);
                             free(copoly_dem);
@@ -3563,8 +3560,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
         ncc_flag.weight_flag     = 0;
         
         TransParam param;
-        bool Hemisphere;
-        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0],args,&Hemisphere);
+        SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0]);
         
         //dem image = ref
         float *DEM = NULL;
@@ -4461,8 +4457,8 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                         
                         if(args.check_DEM_coreg_output == 2)
                         {
-                            WriteGeotiff(co_dems_name, co_dem, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
-                            WriteGeotiff(co_dems_name_diff, copoly_dem, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.zone, Hemisphere, 4);
+                            WriteGeotiff(co_dems_name, co_dem, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+                            WriteGeotiff(co_dems_name_diff, copoly_dem, tar_dem_size.width, tar_dem_size.height, tar_dx, tar_minX, tar_maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
                             
                             free(co_dem);
                             free(copoly_dem);

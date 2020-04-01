@@ -129,6 +129,64 @@ int Maketmpfolders(ProInfo *info)
 }
 
 
+bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams)
+{
+    bool check_load_RA = false;
+    
+    FILE *pFile_echo  = fopen(RAfile,"r");
+    if(pFile_echo)
+    {
+        for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+        {
+            fscanf(pFile_echo,"%lf %lf",&Imageparams[ti][0],&Imageparams[ti][1]);
+            if(ti == 0)
+                proinfo->check_selected_image[ti] = true;
+            else
+            {
+                if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                    check_load_RA = true;
+                else
+                    proinfo->check_selected_image[ti] = false;
+            }
+        }
+        fclose(pFile_echo);
+    }
+     
+    return check_load_RA;
+}
+
+bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams)
+{
+    bool check_load_RA = false;
+    
+    FILE* pFile_echo  = fopen(echofile,"r");
+    if(pFile_echo)
+    {
+        for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+        {
+            char bufstr[500];
+            fgets(bufstr,500,pFile_echo);
+            if (strstr(bufstr,"RA param X")!=NULL)
+            {
+                sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
+                if(ti == 0)
+                    proinfo->check_selected_image[ti] = true;
+                else
+                {
+                    if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                        check_load_RA = true;
+                    else
+                        proinfo->check_selected_image[ti] = false;
+                }
+            }
+        }
+        fclose(pFile_echo);
+        
+    }
+    
+    return check_load_RA;
+}
+
 bool GetImageSize(char *filename, CSize *Imagesize)
 {
     bool ret = false;
@@ -689,13 +747,56 @@ void SetPySizes(CSize *data_size_lr, const CSize Subsetsize, const int level)
     }
 }
 
-
-
-void SetTranParam_fromGeoTiff(TransParam *param,char* inputfile,ARGINFO args,bool *Hemisphere)
+// Compute the correlation between two arrays using a numerically stable formulation
+// Return the correlation coefficient or -99 if undefined
+double Correlate(const double *L, const double *R, const int N)
 {
+    double Lmean = 0;
+    double Rmean = 0;
+    double rho;
     
-    param->utm_zone = args.utm_zone;
+    if(N > 0)
+    {
+        for (int i=0; i<N; i++)
+        {
+            Lmean += L[i];
+            Rmean += R[i];
+        }
+        Lmean = Lmean / N;
+        Rmean = Rmean / N;
 
+        double SumLR = 0;
+        double SumL2 = 0;
+        double SumR2 = 0;
+
+        for (int i=0; i<N; i++)
+        {
+            SumLR += (L[i]-Lmean)*(R[i]-Rmean);
+            SumL2 += (L[i]-Lmean)*(L[i]-Lmean);
+            SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
+        }
+
+        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
+        {
+            rho = SumLR / (sqrt(SumL2*SumR2));
+            int rI = (int)round(rho*1000);
+            rho = (double)rI / 1000.0;
+        }
+        else
+        {
+            rho = (double) -99;
+        }
+    }
+    else
+    {
+        rho = (double) -99;
+    }
+ 
+    return rho;
+}
+
+void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
+{
     TIFF *tif;
     GTIF *gtif;
     int cit_length;
@@ -719,7 +820,7 @@ void SetTranParam_fromGeoTiff(TransParam *param,char* inputfile,ARGINFO args,boo
     }
     char ttt[100];
     char hem[100];
-    sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->zone,&hem,&ttt);
+    sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->utm_zone,&hem,&ttt);
     
     //printf("111 citation %d\t%s\n",param.zone,hem);
     if(!strcmp(hem,"Northern")) //utm
@@ -789,59 +890,13 @@ void SetTranParam_fromGeoTiff(TransParam *param,char* inputfile,ARGINFO args,boo
     D2DPOINT wgs_coord = ps2wgs_single(*param, minXmaxY);
     
     //printf("coord %f\t%f\n",wgs_coord.m_X,wgs_coord.m_Y);
-    SetTransParam((double)(wgs_coord.m_Y),(double)(wgs_coord.m_X),Hemisphere, param);
+    SetTransParam((double)(wgs_coord.m_Y),(double)(wgs_coord.m_X),param);
     
-    printf("param %d\t%d\t%d\t%lf\t%d\t%s\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat,param->zone,param->direction);
+    printf("param %d\t%d\t%d\t%lf\t%d\t%s\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat,param->utm_zone,param->direction);
     //exit(1);
 }
 
-// Compute the correlation between two arrays using a numerically stable formulation
-// Return the correlation coefficient or -99 if undefined
-double Correlate(const double *L, const double *R, const int N)
-{
-    double Lmean = 0;
-    double Rmean = 0;
-    double rho;
-    
-    if(N > 0)
-    {
-        for (int i=0; i<N; i++)
-        {
-            Lmean += L[i];
-            Rmean += R[i];
-        }
-        Lmean = Lmean / N;
-        Rmean = Rmean / N;
 
-        double SumLR = 0;
-        double SumL2 = 0;
-        double SumR2 = 0;
-
-        for (int i=0; i<N; i++)
-        {
-            SumLR += (L[i]-Lmean)*(R[i]-Rmean);
-            SumL2 += (L[i]-Lmean)*(L[i]-Lmean);
-            SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
-        }
-
-        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
-        {
-            rho = SumLR / (sqrt(SumL2*SumR2));
-            int rI = (int)round(rho*1000);
-            rho = (double)rI / 1000.0;
-        }
-        else
-        {
-            rho = (double) -99;
-        }
-    }
-    else
-    {
-        rho = (double) -99;
-    }
- 
-    return rho;
-}
 
 void SetTransParam_param(TransParam *param, bool Hemisphere)
 {
@@ -854,8 +909,6 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
     }
     else
     {
-        Hemisphere = false;
-        
         param->a = (double)(6378137.0);
         param->e = (double)(0.08181919);
         param->phi_c = (double)(-71.0*DegToRad);
@@ -882,18 +935,12 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
     param->c    = (param->sa*param->sa)/param->sb;
 }
 
-void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *param)
+void SetTransParam(double minLat, double minLon, TransParam *param)
 {
     if(minLat > 0)
-    {
-        *Hemisphere = true;
-        param->bHemisphere = *Hemisphere;
-    }
+        param->bHemisphere = true;
     else
-    {
-        *Hemisphere = false;
-        param->bHemisphere = *Hemisphere;
-    }
+        param->bHemisphere = false;
     
     SetTransParam_param(param,param->bHemisphere);
  
@@ -954,10 +1001,7 @@ void SetTransParam(double minLat, double minLon, bool *Hemisphere, TransParam *p
     sprintf(param->direction,"%s",direction);
     
     if(param->utm_zone < -1)
-        param->zone = (int)( ( minLon / 6 ) + 31);
-    else
-        param->zone = param->utm_zone;
-    
+        param->utm_zone = (int)( ( minLon / 6 ) + 31);
 }
 
 
@@ -2543,7 +2587,32 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
 }
 
 
+double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2)
+{
+    double angle;
+    
+    const D3DPOINT U(pts1 - pts0);
+    const D3DPOINT V(pts2 - pts0);
+    const D3DPOINT N(U.m_Y*V.m_Z - V.m_Y*U.m_Z, -(U.m_X*V.m_Z - V.m_X*U.m_Z), U.m_X*V.m_Y - V.m_X*U.m_Y,0);
+    
+    double norm  = SQRT(N);
+    if (norm != 0)
+        angle = acos(fabs(N.m_Z)/norm)*RadToDeg;
+    
+    SetAngle(angle);
+    
+    return angle;
+}
 
+void SetAngle(double &angle)
+{
+    if(angle <= 0 && angle >= -90)
+        angle = fabs(angle);
+    else if(angle <= -270 && angle >= -360)
+        angle = 360 + angle;
+    else if(angle >= 270 && angle <= 360)
+        angle = 360 - angle;
+}
 
 
 

@@ -53,7 +53,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
         double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
-        int Huso = _param.zone;
+        int Huso = _param.utm_zone;
         
         D2DPOINT *m_sPS;
         if (m_NumOfPts > 0) {
@@ -139,7 +139,7 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs)
         double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
-        int Huso = _param.zone;
+        int Huso = _param.utm_zone;
         
         D2DPOINT m_sPS;
         
@@ -227,7 +227,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
         double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
-        int Huso = _param.zone;
+        int Huso = _param.utm_zone;
         
         D3DPOINT *m_sPS;
         
@@ -355,7 +355,7 @@ D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT
                 if (hemis < 0)
                     Y = Y - 10000000;
 
-                const int S = ( ( _param.zone* 6 ) - 183 );
+                const int S = ( ( _param.utm_zone* 6 ) - 183 );
                 const double lat =  Y / ( 6366197.724 * 0.9996 );
                 const double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
                 const double a = X / v;
@@ -459,7 +459,7 @@ D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps)
         if (hemis < 0)
             Y = Y - 10000000;
         
-        int S = ( ( _param.zone* 6 ) - 183 );
+        int S = ( ( _param.utm_zone* 6 ) - 183 );
         double lat =  Y / ( 6366197.724 * 0.9996 );
         double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
         double a = X / v;
@@ -578,7 +578,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
             if (hemis < 0)
                 Y = Y - 10000000;
             
-            int S = ( ( _param.zone* 6 ) - 183 );
+            int S = ( ( _param.utm_zone* 6 ) - 183 );
             double lat =  Y / ( 6366197.724 * 0.9996 );
             double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
             double a = X / v;

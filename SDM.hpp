@@ -34,7 +34,7 @@ bool Update_ortho_NCC(ProInfo proinfo, uint16 *MagImages_L,uint16 *MagImages_R,d
 bool average_filter_colrowshift(CSize Size_Grid2D, UGRIDSDM *GridPT3,uint8 Pyramid_step);
 void shift_filtering(ProInfo proinfo,UGRIDSDM *GridPT3, BL BL_param, double DEM_resolution);
 void RemoveFiles_SDM(char *save_path, char *lfilename, char *rfilename, int py_level, bool flag);
-double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param,int Hemisphere,uint8 pyramid_step);
+double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param, uint8 pyramid_step);
 
 
 

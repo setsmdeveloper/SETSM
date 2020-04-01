@@ -48,14 +48,13 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
             int i;
             
             bool check_tile_array = false;
-            bool Hemisphere;
             bool* tile_array = NULL;
             
             CSize Limagesize, Rimagesize;//original imagesize
             CSize LBRsize, RBRsize;//DEM boudary size
             
             TransParam param;
-            SetTranParam_fromGeoTiff(&param,proinfo.Imagefilename[0],args,&Hemisphere);
+            SetTranParam_fromGeoTiff(&param,proinfo.Imagefilename[0]);
             
             if(Maketmpfolders(&proinfo))
             {
@@ -299,7 +298,7 @@ bool SDM_ortho(TransParam *return_param, char* _filename, ARGINFO args, char *_s
                 {
                     printf("Tile merging start final iteration %d!!\n",final_iteration);
                     int buffer_tile = 0;
-                    mt_grid_size = MergeTiles_SDM(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration,param,Hemisphere,pyramid_step);
+                    mt_grid_size = MergeTiles_SDM(proinfo,iter_row_end,t_col_end,buffer_tile,final_iteration,param,pyramid_step);
                     //printf("Tile merging finish(time[m] = %5.2f)!!\n",gap/60.0);
                 }
                 
@@ -4477,7 +4476,7 @@ void RemoveFiles_SDM(char *save_path, char *lfilename, char *rfilename, int py_l
     }
 }
 
-double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param,int Hemisphere,uint8 pyramid_step)
+double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param, uint8 pyramid_step)
 {
     FILE *poutDEM;
     FILE *poutMatchtag;
@@ -4712,18 +4711,18 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
     }
     /*
     sprintf(DEM_str, "%s/%s_dx_sigma.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Vxsigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, Vxsigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     sprintf(DEM_str, "%s/%s_dy_sigma.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Vysigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, Vysigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
      */
     sprintf(DEM_str, "%s/%s_dx.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     sprintf(DEM_str, "%s/%s_dy.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, VyShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, VyShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     sprintf(DEM_str, "%s/%s_dmag.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Mag, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, Mag, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     sprintf(DEM_str, "%s/%s_roh.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.zone, Hemisphere, 4);
+    WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     
     //free(Vxsigma);
     //free(Vysigma);

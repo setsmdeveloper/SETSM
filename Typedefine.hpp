@@ -258,7 +258,6 @@ typedef struct tagTransParam
 	double phi_c, lambda_0;
 	
 	int pm;
-	int zone;
 	int projection;
     int utm_zone;
 	
