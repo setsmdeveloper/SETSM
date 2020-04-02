@@ -60,7 +60,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
-float quickselect(float *arr, int n, int k);
+double quickselect(double *arr, int n, int k);
 bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb);
 
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);

@@ -404,6 +404,7 @@ typedef struct ProjectInfo{
 	double seedDEMsigma;
     double LBoundary[4];
     double RBoundary[4];
+    double GCP_spacing;
     
 	double minHeight;
 	double maxHeight;
@@ -481,6 +482,7 @@ typedef struct ArgumentInfo{
     double DS_sigma;
     double DS_tx;
     double DS_ty;
+    double GCP_spacing;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -627,7 +629,7 @@ typedef struct tagNCCresultSDM
 
 typedef struct tagTINinfo
 {
-    F3DPOINT *normal;
+    D3DPOINT *normal;
     uint16 *slope;
     uint16 *aspect;
     float *ncc;

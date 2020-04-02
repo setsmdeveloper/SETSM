@@ -99,6 +99,7 @@ int main(int argc,char *argv[])
     args.SGM_py = 1;
     args.DS_sigma = 1.6;
     args.DS_kernel = 9;
+    args.GCP_spacing = -9;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -321,6 +322,19 @@ int main(int argc,char *argv[])
                         args.check_DEM_coreg_output = atoi(argv[i+1]);
                         printf("Coregistration output tif gneneration %d\n",args.check_DEM_coreg_output);
                     }
+                }
+            }
+            
+            if (strcmp("-gcp_space",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input the GCP space value\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.GCP_spacing = atof(argv[i+1]);
+                    printf("%f\n",args.GCP_spacing);
                 }
             }
             
@@ -2186,8 +2200,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 }
                             }
                             
-                            SetTiles_RA(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
-                                        &iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);
+                            SetTiles_RA(proinfo, Boundary, tile_size, &pyramid_step, &iter_row_start, &iter_row_end, &RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);
                             
                             printf("before RA row:col => row = %d\t%d\t;col = %d\t%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end);
                             
@@ -2343,8 +2356,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 args.RA_row         = 1;
                                 
-                                SetTiles_RA(proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
-                                            &iter_row_start, &iter_row_end,&RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);
+                                SetTiles_RA(proinfo, Boundary,  tile_size, &pyramid_step, &iter_row_start, &iter_row_end, &RA_row_iter, &t_col_start, &t_col_end, &RA_col_iter, &subX, &subY);
                                 
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
@@ -2363,7 +2375,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             }
                         }
                         
-                        
                         if(!proinfo->check_checktiff)
                         {
                             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
@@ -2374,7 +2385,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         proinfo->IsRA        = false;
                         
-                        if (!args.RA_only)
+                        if(!args.RA_only)
                         {
                             tile_size           = 4000;
                             
@@ -2414,9 +2425,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 }
                             }
                             
-                            
-                            SetTiles(seedDEM_gridsize,proinfo,proinfo->IsSP,proinfo->IsRR, Boundary, Res, tile_size, proinfo->pre_DEMtif, &pyramid_step, &buffer_area,
-                                     &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
+                            SetTiles(proinfo, Boundary, tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
                             
                             if (args.check_tiles_SR)
                                 iter_row_start    = args.start_row;
@@ -2449,9 +2458,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
-                                
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
-                                
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
@@ -2462,22 +2469,22 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if(!args.check_ortho)
                             {
                                 char check_file[500];
-                                FILE* pcheckFile;
                                 int max_row = 0;
                                 int max_col = 0;
-                                int row,col;
-                                for(row = 1; row < 100 ; row++)
+                                for(int row = 1; row < 100 ; row++)
                                 {
-                                    for(col = 1; col < 100 ; col++)
+                                    for(int col = 1; col < 100 ; col++)
                                     {
                                         sprintf(check_file,"%s/txt/matched_pts_%d_%d_0_3.txt",proinfo->save_filepath,row,col);
-                                        pcheckFile = fopen(check_file,"r");
+                                        FILE *pcheckFile = fopen(check_file,"r");
                                         if(pcheckFile)
                                         {
                                             if(max_row < row)
                                                 max_row = row;
                                             if(max_col < col)
                                                 max_col = col;
+                                            
+                                            fclose(pcheckFile);
                                         }
                                     }
                                 }
@@ -2511,14 +2518,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 if (proinfo->check_tiles_SR)
                                     iter_row_start    = proinfo->start_row;
                                 
-                                
                                 if (proinfo->check_tiles_SC)
                                     t_col_start       = proinfo->start_col;
-                                
                             }
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
-                            
                             
                             if(iter_row_end < 2 && t_col_end < 2)
                             {
@@ -2532,7 +2536,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             float *H_value = NULL;
                             unsigned char* MT_value = NULL;
                             
-                            int buffer_tile = 420;
+                            int buffer_tile = buffer_area + 20;
                             const int final_iteration = 3;
                             
                             double FinalDEM_boundary[4] = {0.};
@@ -2765,9 +2769,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     ET = time(0);
                                     gap = difftime(ET,ST);
                                     printf("Matched PT finish(time[m] = %5.2f)!!\n",gap/60.0);
-                                    
-                                    //if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
-                                    //    printf("not enough memory for LSF processing[%f]!!\n",MT_memory);
                                 }
                                 else
                                 {
@@ -2825,9 +2826,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 free(image_info);
             }
             else
-            {
                 printf("Check output directory path!!\n");
-            }
         }
     }
     
@@ -3673,13 +3672,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     printf("blunder detection for anchor points\n");
                                     //anchor points
                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                    
+                                    for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                        ptslists[count_pt] = MatchedPts_list[count_pt];
+                                    /*
                                     long count_pt = 0;
                                     for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
                                     {
                                         ptslists[count_pt] = *it;
                                         count_pt++;
                                     }
-                                    
+                                    */
                                     DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     long tcnt;
@@ -3722,13 +3725,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 {
                                     printf("blunder detection for all points\n");
                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                    long count_pt = 0;
+                                    //long count_pt = 0;
+                                    for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                        ptslists[count_pt] = MatchedPts_list[count_pt];
+                                    /*
                                     for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
                                     {
                                         ptslists[count_pt] = *it;
                                         count_pt++;
                                     }
-                                    
+                                    */
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     count_results[0] = 0;
@@ -3787,9 +3793,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     double minmaxBR[6] = {10000000, 10000000, -10000000, -10000000, 100000, -100000};
                                     
                                     int i = 0;
-                                    for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                    for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
+                                    //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                     {
-                                        ptslists[i] = *it;
+                                        //ptslists[i] = *it;
+                                        
+                                        ptslists[i] = MatchedPts_list_mps[i];
                                         
                                         if(minmaxBR[0] > ptslists[i].m_X)
                                             minmaxBR[0]     = ptslists[i].m_X;
@@ -3804,7 +3813,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             minmaxBR[4] = ptslists[i].m_Z;
                                         if(minmaxBR[5] < ptslists[i].m_Z)
                                             minmaxBR[5] = ptslists[i].m_Z;
-                                        i++;
+                                        //i++;
                                     }
                                     
                                     MatchedPts_list_mps.clear();
@@ -3851,14 +3860,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
-                                        for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                        for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
+                                        //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
-                                            ptslists[i] = *it;
+                                            //ptslists[i] = *it;
                                             
+                                            ptslists[i] = MatchedPts_list_mps[i];
                                             if(level == 4)
                                                 ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
                                             
-                                            i++;
+                                            //i++;
                                         }
                                         
                                         MatchedPts_list_mps.clear();
@@ -3874,11 +3885,15 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
                                         i = 0;
+                                        for(i = 0 ; i < t_trilists.size() ; i++)
+                                            trilists[i] = t_trilists[i];
+                                        /*
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
                                             trilists[i] = *it_tri;
                                             i++;
                                         }
+                                         */
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         
@@ -3911,10 +3926,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                             
                                             i = 0;
-                                            for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
+                                            for( i = 0 ; i < ortho_list.size() ; i++)
+                                            //for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
                                             {
-                                                ptslists[i] = *it;
-                                                i++;
+                                                ptslists[i] = ortho_list[i];
+                                                //ptslists[i] = *it;
+                                                //i++;
                                             }
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
@@ -3930,11 +3947,15 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
                                         i = 0;
+                                        for(i = 0 ; i < t_trilists.size() ; i++)
+                                        trilists[i] = t_trilists[i];
+                                        /*
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
                                             trilists[i] = *it_tri;
                                             i++;
                                         }
+                                         */
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                           
@@ -4060,10 +4081,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
                                         i = 0;
-                                        for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
+                                        for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
+                                        //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
-                                            ptslists[i] = *it;
-                                            i++;
+                                            ptslists[i] = MatchedPts_list_mps[i];
+                                            //ptslists[i] = *it;
+                                            //i++;
                                         }
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
@@ -4080,11 +4103,15 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
                                         i = 0;
+                                        for(i = 0 ; i < t_trilists.size() ; i++)
+                                            trilists[i] = t_trilists[i];
+                                        /*
                                         for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
                                         {
                                             trilists[i] = *it_tri;
                                             i++;
                                         }
+                                         */
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         
@@ -4686,15 +4713,11 @@ bool SetupParam(ProInfo *info, bool *pre_DEMtif)
 }
 
 
-void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
-              uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY)
+void SetTiles(const ProInfo *info, const double *Boundary, const int tile_size, uint8 *pyramid_step, uint16 *buffer_area, uint8 *iter_row_start, uint8 *iter_row_end, uint8 *t_col_start, uint8 *t_col_end, double *subX, double *subY)
 {
-    int lengthOfX = Boundary[2] - Boundary[0];
-    int lengthOfY = Boundary[3] - Boundary[1];
-    int division_X = (int) (ceil(lengthOfX / (double)(tile_size)));
-    int division_Y = (int) (ceil(lengthOfY / (double)(tile_size)));
-    *subX = floor((ceil(ceil(lengthOfX / division_X) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
-    *subY = floor((ceil(ceil(lengthOfY / division_Y) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
+    int division_X, division_Y;
+    SetsubsetBR(info, Boundary, tile_size, subX, subY, division_X, division_Y);
+    printf("dx = %d\tdy = %d\t%f\t%f\n", division_X, division_Y, *subX, *subY);
     
     if(info->pyramid_level != 4)
         *pyramid_step = info->pyramid_level;
@@ -4703,18 +4726,6 @@ void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, doub
     
     if(info->pre_DEMtif)
     {
-        /*
-        info->seedDEMsigma = 25*seedDEM_gridsize;
-        
-        if(seedDEM_gridsize >= 8)
-        {
-            *pyramid_step   = 3;
-        }
-        else
-        {
-            *pyramid_step   = 2;
-        }
-         */
         if(info->seedDEMsigma <= 15)
             *pyramid_step   = 2;
         else if(info->seedDEMsigma <= 30)
@@ -4724,26 +4735,11 @@ void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, doub
     if(info->DEM_resolution  >= 10)
         *buffer_area    = (uint16)(*buffer_area * 1.5);
 
-    if(!IsSP)
-    {
-        *iter_row_start = 1;
-        *iter_row_end   = division_Y+1;
-    }
-    else
-    {
-        int iter_row;
-        iter_row        = (int)(ceil(division_Y/info->SPnumber[1]));
-        *iter_row_start = iter_row*(info->SPnumber[0] - 1) + 1;
-        *iter_row_end   = iter_row*info->SPnumber[0];
-
-        if(info->SPnumber[0] == info->SPnumber[1])
-            *iter_row_end= division_Y+1;
-    }
+    *iter_row_start = 1;
+    *iter_row_end   = division_Y+1;
     
-    *t_col_start            = 1;
-    *t_col_end          = division_X+1;
-    if(IsRR)
-        *iter_row_start = info->start_row;
+    *t_col_start    = 1;
+    *t_col_end      = division_X+1;
     
     if(*iter_row_start == *iter_row_end)
         *iter_row_end += 1;
@@ -4751,18 +4747,11 @@ void SetTiles(double seedDEM_gridsize, ProInfo *info, bool IsSP, bool IsRR, doub
         *t_col_end += 1;
 }
 
-
-void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *Res, int tile_size, bool pre_DEMtif, uint8 *pyramid_step, uint16 *buffer_area,
-                 uint8 *RA_row_start, uint8 *RA_row_end, uint8 * RA_row_iter, uint8 *t_col_start, uint8 *t_col_end, uint8 *RA_col_iter, double *subX, double *subY)
+void SetTiles_RA(const ProInfo *info, const double *Boundary, const int tile_size, uint8 *pyramid_step, uint8 *RA_row_start, uint8 *RA_row_end, uint8 * RA_row_iter, uint8 *t_col_start, uint8 *t_col_end, uint8 *RA_col_iter, double *subX, double *subY)
 {
-    int lengthOfX = Boundary[2] - Boundary[0];
-    int lengthOfY = Boundary[3] - Boundary[1];
-    int division_X = (int) (ceil(lengthOfX / (double)(tile_size)));
-    int division_Y = (int) (ceil(lengthOfY / (double)(tile_size)));
-    *subX = floor((ceil(ceil(lengthOfX / division_X) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
-    *subY = floor((ceil(ceil(lengthOfY / division_Y) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
+    int division_X, division_Y;
+    SetsubsetBR(info, Boundary, tile_size, subX, subY, division_X, division_Y);
     
-    printf("%d %d tile size %d\n", lengthOfX, lengthOfY, tile_size);
     printf("dx = %d\tdy = %d\t%f\t%f\n", division_X, division_Y, *subX, *subY);
     
     *pyramid_step = 4;
@@ -4776,8 +4765,15 @@ void SetTiles_RA(ProInfo *info, bool IsSP, bool IsRR, double *Boundary, double *
     *t_col_end = (uint8) (ceilDivisionX + 1);
 }
 
-
-
+void SetsubsetBR(const ProInfo *info, const double *Boundary, const int tile_size, double *subX, double *subY, int &division_X, int &division_Y)
+{
+    int lengthOfX = Boundary[2] - Boundary[0];
+    int lengthOfY = Boundary[3] - Boundary[1];
+    division_X = (int) (ceil(lengthOfX / (double)(tile_size)));
+    division_Y = (int) (ceil(lengthOfY / (double)(tile_size)));
+    *subX = floor((ceil(ceil(lengthOfX / division_X) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
+    *subY = floor((ceil(ceil(lengthOfY / division_Y) / info->DEM_resolution) * info->DEM_resolution) / 2) * 2;
+}
 
 void SetThs(const ProInfo *proinfo,const int level, const int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start)
 {
@@ -9241,11 +9237,12 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
         
         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
         vector<UI3DPOINT>::iterator it;
-        long int i = 0;
-        for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
+        //long i = 0;
+        for(long i = 0 ; i < t_trilists.size() ; i++)
+        //for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
         {
-            trilists[i] = *it;
-            i++;
+            trilists[i] = t_trilists[i];
+            //i++;
         }
         t_trilists.clear();
         vector<UI3DPOINT>().swap(t_trilists);
@@ -9361,13 +9358,13 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                 
                 vector<UI3DPOINT>::iterator itt;
-                long i = 0;
-                for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
+                for(long i = 0 ; i < tt_trilists.size() ; i++)
+                //for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
                 {
-                    trilists[i].m_X = check_id[itt->m_X];
-                    trilists[i].m_Y = check_id[itt->m_Y];
-                    trilists[i].m_Z = check_id[itt->m_Z];
-                    i++;
+                    trilists[i].m_X = check_id[tt_trilists[i].m_X];
+                    trilists[i].m_Y = check_id[tt_trilists[i].m_Y];
+                    trilists[i].m_Z = check_id[tt_trilists[i].m_Z];
+                    //i++;
                 }
                 tt_trilists.clear();
                 vector<UI3DPOINT>().swap(tt_trilists);
@@ -10038,12 +10035,13 @@ int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> M
     vector<D3DPOINT>::iterator it;
     
     i = 0;
-    for(it = MatchedPts_list_anchor.begin(); it != MatchedPts_list_anchor.end() ; ++it)
+    for( i = 0 ; i < MatchedPts_list_anchor.size() ; i++)
+    //for(it = MatchedPts_list_anchor.begin(); it != MatchedPts_list_anchor.end() ; ++it)
     {
-        X = it->m_X;
-        Y = it->m_Y;
-        Z = it->m_Z;
-        t_flag = it->flag;
+        X = MatchedPts_list_anchor[i].m_X;
+        Y = MatchedPts_list_anchor[i].m_Y;
+        Z = MatchedPts_list_anchor[i].m_Z;
+        t_flag = MatchedPts_list_anchor[i].flag;
         
         t_col         = (int)((X - rlevelinfo.Boundary[0])/(*rlevelinfo.grid_resolution) + 0.5);
         t_row         = (int)((Y - rlevelinfo.Boundary[1])/(*rlevelinfo.grid_resolution) + 0.5);
@@ -10053,16 +10051,17 @@ int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> M
             GridPT3[grid_index].anchor_flag = 1;
         }
         
-        i++;
+   //     i++;
     }
  
     i=0;
-    for(it = MatchedPts_list_blunder.begin(); it != MatchedPts_list_blunder.end() ; ++it)
+    for( i = 0 ; i < MatchedPts_list_blunder.size() ; i++)
+    //for(it = MatchedPts_list_blunder.begin(); it != MatchedPts_list_blunder.end() ; ++it)
     {
-        X = it->m_X;
-        Y = it->m_Y;
-        Z = it->m_Z;
-        t_flag = it->flag;
+        X = MatchedPts_list_blunder[i].m_X;
+        Y = MatchedPts_list_blunder[i].m_Y;
+        Z = MatchedPts_list_blunder[i].m_Z;
+        t_flag = MatchedPts_list_blunder[i].flag;
         
         t_col         = (int)((X - rlevelinfo.Boundary[0])/(*rlevelinfo.grid_resolution) + 0.5);
         t_row         = (int)((Y - rlevelinfo.Boundary[1])/(*rlevelinfo.grid_resolution) + 0.5);
@@ -10086,7 +10085,7 @@ int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> M
             }
         }
         
-        i++;
+        //i++;
     }
 
     return total_count;
@@ -12181,9 +12180,7 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
         }
     }
     
-    //free(matchtag_check);
-    
-    memset(matchtag_check,0,sizeof(unsigned char)*data_size);// matchtag_check = (unsigned char*)calloc(sizeof(unsigned char),data_size);
+    memset(matchtag_check,0,sizeof(unsigned char)*data_size);
     
     check_size = 10*grid_rate;
     total_iteration = 0;
@@ -12265,9 +12262,6 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
         memcpy(value_pt,t_value_pt,sizeof(unsigned char)*data_size);
     }
     
-    
-    //free(matchtag_check);
-    
 #pragma omp parallel for schedule(guided)
     for (long index = 0; index < data_size ; index++)
     {
@@ -12278,7 +12272,7 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
         }
     }
     
-    memset(matchtag_check,0,sizeof(unsigned char)*data_size);// matchtag_check = (unsigned char*)calloc(sizeof(unsigned char),data_size);
+    memset(matchtag_check,0,sizeof(unsigned char)*data_size);
     
     if(grid_rate > 1)
     {

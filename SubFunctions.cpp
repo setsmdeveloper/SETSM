@@ -100,24 +100,22 @@ char* SetOutpathName(char *_path)
 
 int Maketmpfolders(ProInfo *info)
 {
-    char temp_filepath[500];
-
     int check_folder = 1;
     
     if(!info->check_checktiff)
     {
-        int status;
-        status = mkdir(info->save_filepath,0777);
-        DIR* dir = opendir(info->save_filepath);
-        if (dir == NULL)
+        int status = mkdir(info->save_filepath,0777);
+        if (opendir(info->save_filepath) == NULL)
         {
             if (status == -1)
             {
+                check_folder = 0;
                 printf("Outpath of '%s' cannot make, please check outpath!!\n",info->save_filepath);
                 exit(1);
             }
         }
-        closedir(dir);
+        
+        char temp_filepath[500];
         sprintf(temp_filepath,"%s/txt",info->save_filepath);
         mkdir(temp_filepath,0777);
         sprintf(temp_filepath,"%s/tif",info->save_filepath);
@@ -279,8 +277,6 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     char bufstr[500];
 
     info->IsRA          = true;
-    info->IsRR          = false;
-    info->IsSP          = false;
     info->IsSaveStep    = false;
     info->pre_DEMtif    = false;
     info->check_tiles_SR= false;
@@ -2021,10 +2017,10 @@ float binmedian(int n, float *x)
     }
 }
 
-float quickselect(float *arr, int n, int k)
+double quickselect(double *arr, int n, int k)
 {
     unsigned long i,ir,j,l,mid;
-    float a,temp;
+    double a,temp;
     
     l=0;
     ir=n-1;
@@ -2480,28 +2476,29 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     *count_tri = (int)(triangulation->GetAllTris(&tris));
     //printf("count tri = %d\n",*count_tri);
     std::size_t t = 0;
-    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
+    for(t = 0 ; t < tris.size() ; t++)
+    //for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = it_tr->pts[0].row;
-        col = it_tr->pts[0].col;
+        row = tris[t].pts[0].row;
+        col = tris[t].pts[0].col;
         //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = it_tr->pts[1].row;
-        col = it_tr->pts[1].col;
+        row = tris[t].pts[1].row;
+        col = tris[t].pts[1].col;
         //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = it_tr->pts[2].row;
-        col = it_tr->pts[2].col;
+        row = tris[t].pts[2].row;
+        col = tris[t].pts[2].col;
         //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
-        t++;
+        //t++;
         
         
     }
@@ -2558,29 +2555,30 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     vector<Tri>::iterator it_tr;
     *count_tri = (int)(oldTri->GetAllTris(&tris));
     std::size_t t = 0;
-    for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
+    for(t = 0 ; t < tris.size() ; t++)
+    //for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
-        row = it_tr->pts[0].row;
-        col = it_tr->pts[0].col;
+        row = tris[t].pts[0].row;
+        col = tris[t].pts[0].col;
         
         //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
-        row = it_tr->pts[1].row;
-        col = it_tr->pts[1].col;
+        row = tris[t].pts[1].row;
+        col = tris[t].pts[1].col;
         //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
-        row = it_tr->pts[2].row;
-        col = it_tr->pts[2].col;
+        row = tris[t].pts[2].row;
+        col = tris[t].pts[2].col;
         //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
-        t++;
+        //t++;
     }
     delete [] blunder_ptrs;
     delete [] grid_blunders;
