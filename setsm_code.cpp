@@ -2415,7 +2415,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     printf("minmaxH = %f\t%f\n", ori_minmaxHeight[0], ori_minmaxHeight[1]);
                 }
                 
-                if(proinfo->check_Matchtag)
+                if(proinfo->pre_DEMtif)
                 {
                     ori_minmaxHeight[1] += 1000;
                     ori_minmaxHeight[0] -= 1000;
