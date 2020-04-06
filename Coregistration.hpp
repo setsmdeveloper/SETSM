@@ -46,7 +46,7 @@ D2DPOINT* CoregParam_Image_MPs_stereo(ProInfo *proinfo,uint8 Pyramid_step, uint8
 bool postNCC_ortho_BYTE(uint8 Pyramid_step, double Ori_diff, double Left_CR,  double Left_CC, double Right_CR, double Right_CC, double **subA,double **TsubA,double **InverseSubA, uint8 Template_size,
                         NCCflag _flag, double bin_angle, CSize leftsize, CSize rightsize, unsigned char* _leftimage, unsigned char* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, F2DPOINT *peak_pos);
 float SurfaceDistance(TINinfo tininfo_ref, TINinfo tininfo_tar, D3DPOINT tar_pts, D3DPOINT tar_normal, CSize tinsize, double *tin_boundary, double gridsize,Conformalparam param, int *f_iter);
-double* CoeffMatrix_25D(D3DPOINT coord_center, D3DPOINT coord_scale,long pts_nums, long selected_pts, vector<D3DPOINT> &transformed_coord, vector<double> &dH, Conformalparam param, vector<D3DPOINT> &tar_normal,vector<double> &weight, double* sigmaX, double *sigma0);
+double* CoeffMatrix_25D(D3DPOINT coord_center, D3DPOINT coord_scale, long selected_pts, vector<D3DPOINT> &transformed_coord, vector<double> &dH, Conformalparam param, vector<D3DPOINT> &tar_normal,vector<double> &weight, double* sigmaX, double *sigma0);
 float* AdjustmentConformal3D(long pts_nums, long selected_pts, D3DPOINT* normalized_input, D3DPOINT* input, D3DPOINT coord_center, D3DPOINT coord_scale, float* dH, Conformalparam param, TINinfo tininfo_tar, CSize tinsize, double *tin_boundary, double gridsize, float *weight);
 
 

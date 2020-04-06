@@ -2060,6 +2060,49 @@ double quickselect(double *arr, int n, int k)
     }
 }
 
+double quickselect(vector<double> &arr, int n, int k)
+{
+    unsigned long i,ir,j,l,mid;
+    double a,temp;
+    
+    l=0;
+    ir=n-1;
+    for(;;) {
+        if (ir <= l+1) {
+            if (ir == l+1 && arr[ir] < arr[l]) {
+                SWAP(arr[l],arr[ir]);
+            }
+            return arr[k];
+        }
+        else {
+            mid=(l+ir) >> 1;
+            SWAP(arr[mid],arr[l+1]);
+            if (arr[l] > arr[ir]) {
+                SWAP(arr[l],arr[ir]);
+            }
+            if (arr[l+1] > arr[ir]) {
+                SWAP(arr[l+1],arr[ir]);
+            }
+            if (arr[l] > arr[l+1]) {
+                SWAP(arr[l],arr[l+1]);
+            }
+            i=l+1;
+            j=ir;
+            a=arr[l+1];
+            for (;;) {
+                do i++; while (arr[i] < a);
+                do j--; while (arr[j] > a);
+                if (j < i) break;
+                SWAP(arr[i],arr[j]);
+            }
+            arr[l+1]=arr[j];
+            arr[j]=a;
+            if (j >= k) ir=j-1;
+            if (j <= k) l=i;
+        }
+    }
+}
+
 bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb)
 {
     if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
@@ -2475,32 +2518,24 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     //printf("s3-1\n");
     *count_tri = (int)(triangulation->GetAllTris(&tris));
     //printf("count tri = %d\n",*count_tri);
-    std::size_t t = 0;
-    for(t = 0 ; t < tris.size() ; t++)
-    //for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
+    for(long t = 0 ; t < tris.size() ; t++)
     {
         int row, col;
         UI3DPOINT temp_pt;
         
         row = tris[t].pts[0].row;
         col = tris[t].pts[0].col;
-        //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
         row = tris[t].pts[1].row;
         col = tris[t].pts[1].col;
-        //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
         row = tris[t].pts[2].row;
         col = tris[t].pts[2].col;
-        //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
-        //t++;
-        
-        
     }
     //printf("s4\n");
     //delete [] tris;
@@ -2554,9 +2589,7 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     vector<Tri> tris;
     vector<Tri>::iterator it_tr;
     *count_tri = (int)(oldTri->GetAllTris(&tris));
-    std::size_t t = 0;
-    for(t = 0 ; t < tris.size() ; t++)
-    //for(it_tr = tris.begin(); it_tr != tris.end(); ++it_tr)
+    for(long t = 0 ; t < tris.size() ; t++)
     {
         int row, col;
         UI3DPOINT temp_pt;
@@ -2564,21 +2597,17 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
         row = tris[t].pts[0].row;
         col = tris[t].pts[0].col;
         
-        //trilists[t].m_X = index_in_ptslists[row * width + col];
         temp_pt.m_X = index_in_ptslists[row * width + col];
         
         row = tris[t].pts[1].row;
         col = tris[t].pts[1].col;
-        //trilists[t].m_Y = index_in_ptslists[row * width + col];
         temp_pt.m_Y = index_in_ptslists[row * width + col];
         
         row = tris[t].pts[2].row;
         col = tris[t].pts[2].col;
-        //trilists[t].m_Z = index_in_ptslists[row * width + col];
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
-        //t++;
     }
     delete [] blunder_ptrs;
     delete [] grid_blunders;

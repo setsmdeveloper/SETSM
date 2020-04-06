@@ -2150,6 +2150,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     printf("minmaxH = %f\t%f\n", ori_minmaxHeight[0], ori_minmaxHeight[1]);
                 }
                 
+                if(proinfo->pre_DEMtif)
+                {
+                    ori_minmaxHeight[1] += 1000;
+                    ori_minmaxHeight[0] -= 1000;
+                    if(ori_minmaxHeight[0] < -100)
+                        ori_minmaxHeight[0] = -100;
+                }
+                
                 if (ori_minmaxHeight[1] >9000) {
                     ori_minmaxHeight[1] = 9000;
                 }
@@ -2252,6 +2260,18 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                             }
                                             
                                             printf("meta RA %d %f %f\n",ti,Imageparams[ti][0],Imageparams[ti][1]);
+                                            
+                                            if(proinfo->number_of_images == 2 && ti == 0 && Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                            {
+                                                check_load_RA = true;
+                                                Imageparams[1][0] = Imageparams[ti][0];
+                                                Imageparams[1][1] = Imageparams[ti][1];
+
+                                                Imageparams[0][0] = 0;
+                                                Imageparams[0][1] = 0;
+                                                proinfo->check_selected_image[1] = true;
+                                            }
+                                            
                                             ti++;
                                         }
                                         else if(strstr(bufstr,"SETSM Version=")!=NULL)
@@ -2348,7 +2368,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             }
                             
                             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
-                                printf("check load RA %d %f %f\n",check_load_RA,Imageparams[ti][0],Imageparams[ti][1]);
+                                printf("check load RA %d %f %f %d\n",check_load_RA,Imageparams[ti][0],Imageparams[ti][1], proinfo->check_selected_image[ti]);
                             
                             if(!check_load_RA)
                             {
@@ -3675,14 +3695,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     
                                     for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
                                         ptslists[count_pt] = MatchedPts_list[count_pt];
-                                    /*
-                                    long count_pt = 0;
-                                    for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
-                                    {
-                                        ptslists[count_pt] = *it;
-                                        count_pt++;
-                                    }
-                                    */
+                                    
                                     DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     long tcnt;
@@ -3725,16 +3738,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 {
                                     printf("blunder detection for all points\n");
                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                    //long count_pt = 0;
                                     for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
                                         ptslists[count_pt] = MatchedPts_list[count_pt];
-                                    /*
-                                    for(it = MatchedPts_list.begin(); it != MatchedPts_list.end() ; ++it)
-                                    {
-                                        ptslists[count_pt] = *it;
-                                        count_pt++;
-                                    }
-                                    */
+                                    
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
                                     count_results[0] = 0;
@@ -3794,10 +3800,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     
                                     int i = 0;
                                     for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                    //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                     {
-                                        //ptslists[i] = *it;
-                                        
                                         ptslists[i] = MatchedPts_list_mps[i];
                                         
                                         if(minmaxBR[0] > ptslists[i].m_X)
@@ -3813,7 +3816,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             minmaxBR[4] = ptslists[i].m_Z;
                                         if(minmaxBR[5] < ptslists[i].m_Z)
                                             minmaxBR[5] = ptslists[i].m_Z;
-                                        //i++;
                                     }
                                     
                                     MatchedPts_list_mps.clear();
@@ -3859,17 +3861,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
-                                        i = 0;
                                         for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                        //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
                                         {
-                                            //ptslists[i] = *it;
-                                            
                                             ptslists[i] = MatchedPts_list_mps[i];
                                             if(level == 4)
                                                 ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
-                                            
-                                            //i++;
                                         }
                                         
                                         MatchedPts_list_mps.clear();
@@ -3884,16 +3880,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
-                                        i = 0;
                                         for(i = 0 ; i < t_trilists.size() ; i++)
                                             trilists[i] = t_trilists[i];
-                                        /*
-                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
-                                        {
-                                            trilists[i] = *it_tri;
-                                            i++;
-                                        }
-                                         */
+                                        
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         
@@ -3925,13 +3914,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             count_MPs = matched_pts;
                                             ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                             
-                                            i = 0;
                                             for( i = 0 ; i < ortho_list.size() ; i++)
-                                            //for(it = ortho_list.begin(); it != ortho_list.end() ; ++it)
                                             {
                                                 ptslists[i] = ortho_list[i];
-                                                //ptslists[i] = *it;
-                                                //i++;
                                             }
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
@@ -3946,16 +3931,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
-                                        i = 0;
                                         for(i = 0 ; i < t_trilists.size() ; i++)
                                         trilists[i] = t_trilists[i];
-                                        /*
-                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
-                                        {
-                                            trilists[i] = *it_tri;
-                                            i++;
-                                        }
-                                         */
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                           
@@ -4080,14 +4057,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         
-                                        i = 0;
                                         for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                        //for(it = MatchedPts_list_mps.begin(); it != MatchedPts_list_mps.end() ; ++it)
-                                        {
                                             ptslists[i] = MatchedPts_list_mps[i];
-                                            //ptslists[i] = *it;
-                                            //i++;
-                                        }
+                                
                                         MatchedPts_list_mps.clear();
                                         vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                         
@@ -4102,16 +4074,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         count_tri = t_trilists.size();
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
-                                        i = 0;
                                         for(i = 0 ; i < t_trilists.size() ; i++)
                                             trilists[i] = t_trilists[i];
-                                        /*
-                                        for(it_tri = t_trilists.begin(); it_tri != t_trilists.end() ; ++it_tri)
-                                        {
-                                            trilists[i] = *it_tri;
-                                            i++;
-                                        }
-                                         */
+                             
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         
