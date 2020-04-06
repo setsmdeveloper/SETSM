@@ -2415,6 +2415,13 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     printf("minmaxH = %f\t%f\n", ori_minmaxHeight[0], ori_minmaxHeight[1]);
                 }
                 
+                if(proinfo->check_Matchtag)
+                {
+                    ori_minmaxHeight[1] += 1000;
+                    ori_minmaxHeight[0] -= 1000;
+                    if(ori_minmaxHeight[0] < -100)
+                        ori_minmaxHeight[0] = -100;
+                }
                 if (ori_minmaxHeight[1] >9000) {
                     ori_minmaxHeight[1] = 9000;
                 }
@@ -2648,6 +2655,16 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                                         }
                                                         
                                                         printf("meta RA %d %f %f\n",ti,Imageparams[ti][0],Imageparams[ti][1]);
+                                                        if(proinfo->number_of_images == 2 && ti == 0 && Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
+                                                        {
+                                                            check_load_RA = true;
+                                                            Imageparams[1][0] = Imageparams[ti][0];
+                                                            Imageparams[1][1] = Imageparams[ti][1]; 
+
+                                                            Imageparams[0][0] = 0;
+                                                            Imageparams[0][1] = 0;
+                                                            proinfo->check_selected_image[1] = true;
+                                                        }
                                                         ti++;
                                                     }
                                                 }
@@ -2870,7 +2887,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                             for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                             {
-                                printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
+                                printf("RA param = %f\t%f\t%d\n",Imageparams[ti][0],Imageparams[ti][1],proinfo->check_selected_image[ti]);
                             }
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
@@ -8110,16 +8127,16 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                 for (col = 0; col < Grid_size.width; col ++) {
                     int index_grid = row*Grid_size.width + col;
                     double t_x,t_y;
-                    int index_seeddem;
-                    int row_seed, col_seed;
+                    long index_seeddem;
+                    long row_seed, col_seed;
                     
                     t_x = Boundary[0] + col*Grid_set;
                     t_y = Boundary[1] + row*Grid_set;
                     col_seed = floor((t_x - minX)/grid_size);// - cols[0];
                     row_seed = floor((maxY - t_y)/grid_size);// - rows[0];
-                    
+                   
                     index_seeddem = row_seed*data_size.width + col_seed;
-                    if(index_seeddem >= 0 && index_seeddem < data_size.width*data_size.height)
+                    if(index_seeddem >= 0 && index_seeddem < (long)data_size.width*(long)data_size.height)
                     {
                         if(seeddem[index_seeddem] > -1000)
                         {
@@ -8136,7 +8153,7 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
                                     Grid[index_grid].maxHeight = ceil(seeddem[index_seeddem] + seedDEM_sigma + 0.5);
                                 
                                 Grid[index_grid].Height        = seeddem[index_seeddem];
-                                
+                               
                                 if(proinfo->check_Matchtag)
                                 {
                                     //Grid[index_grid].Matched_flag = 1;
