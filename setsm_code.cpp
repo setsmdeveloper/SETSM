@@ -3277,6 +3277,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     printf("length %f\t%f\tdivision %d\t%d\ntotal_tile %d\tcheck_RA_divide %d\n", lengthOfX, lengthOfY, division_X, division_Y, total_tile, check_RA_divide);
                     
                     const int Py_combined_level = 0;
+                    int RA_resize_level = 0;
                     while(lower_level_match && level >= 0)
                     {
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
@@ -3284,28 +3285,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         if(proinfo->IsRA && check_new_subBoundary_RA)
                         {
                             printf("Resize RA tile\n");
-                            preBoundary[0] = subBoundary[0];
-                            preBoundary[1] = subBoundary[1];
-                            preBoundary[2] = subBoundary[2];
-                            preBoundary[3] = subBoundary[3];
-                            
-                            subBoundary[0] = new_subBoundary_RA[0];
-                            subBoundary[1] = new_subBoundary_RA[1];
-                            subBoundary[2] = new_subBoundary_RA[2];
-                            subBoundary[3] = new_subBoundary_RA[3];
-                            
-                            for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
-                            {
-                                if(proinfo->check_selected_image[image_index])
-                                {
-                                    free(SourceImages[image_index]);
-                                
-                                    SourceImages[image_index] = SetsubsetImage(proinfo, levelinfo, image_index,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
-                                    
-                                    SetPySizes(data_size_lr[image_index], Subsetsize[image_index], level+1);
-                                }
-                            }
-                            
                             //delete pre-asigned image memory
                             for(int t_level = 0 ; t_level <= pyramid_step ; t_level++)
                             {
@@ -3325,13 +3304,36 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             free(SubImages);
                             free(SubMagImages);
                             free(SubOriImages);
+                            free(SourceImages);
+                            
+                            preBoundary[0] = subBoundary[0];
+                            preBoundary[1] = subBoundary[1];
+                            preBoundary[2] = subBoundary[2];
+                            preBoundary[3] = subBoundary[3];
+                            
+                            subBoundary[0] = new_subBoundary_RA[0];
+                            subBoundary[1] = new_subBoundary_RA[1];
+                            subBoundary[2] = new_subBoundary_RA[2];
+                            subBoundary[3] = new_subBoundary_RA[3];
+                            
+                            SourceImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
+                            
+                            for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+                            {
+                                if(proinfo->check_selected_image[image_index])
+                                {
+                                    SourceImages[image_index] = SetsubsetImage(proinfo, levelinfo, image_index,param,NumOfIAparam,RPCs,t_Imageparams,subBoundary,minmaxHeight,Startpos_ori,Subsetsize);
+                                    
+                                    SetPySizes(data_size_lr[image_index], Subsetsize[image_index], pyramid_step);
+                                }
+                            }
                             
                             //new memory allocate
-                            SubImages = (uint16***)malloc(sizeof(uint16**)*(level+1));
-                            SubOriImages = (uint8***)malloc(sizeof(uint8**)*(level+1));
-                            SubMagImages = (uint16***)malloc(sizeof(uint16**)*(level+1));
+                            SubImages = (uint16***)malloc(sizeof(uint16**)*(pyramid_step+1));
+                            SubOriImages = (uint8***)malloc(sizeof(uint8**)*(pyramid_step+1));
+                            SubMagImages = (uint16***)malloc(sizeof(uint16**)*(pyramid_step+1));
                             
-                            for(int iter_level = 0 ; iter_level < (level+1); iter_level++)
+                            for(int iter_level = 0 ; iter_level < pyramid_step+1; iter_level++)
                             {
                                 SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
                                 SubOriImages[iter_level] = (uint8**)malloc(sizeof(uint8*)*proinfo->number_of_images);
@@ -3354,7 +3356,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 }
                             }
                             //pyramid image generation
-                            SetPyramidImages(proinfo, (level+1), data_size_lr, SubImages, SubMagImages, SubOriImages);
+                            SetPyramidImages(proinfo, pyramid_step+1, data_size_lr, SubImages, SubMagImages, SubOriImages);
                             
                             printf("Resize RA tile end\n");
                         }
