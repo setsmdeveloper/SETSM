@@ -791,6 +791,52 @@ double Correlate(const double *L, const double *R, const int N)
     return rho;
 }
 
+double Correlate(const vector<double> &L, const vector<double> &R, const int N)
+{
+    double Lmean = 0;
+    double Rmean = 0;
+    double rho;
+    
+    if(N > 0)
+    {
+        for (int i=0; i<N; i++)
+        {
+            Lmean += L[i];
+            Rmean += R[i];
+        }
+        Lmean = Lmean / N;
+        Rmean = Rmean / N;
+
+        double SumLR = 0;
+        double SumL2 = 0;
+        double SumR2 = 0;
+
+        for (int i=0; i<N; i++)
+        {
+            SumLR += (L[i]-Lmean)*(R[i]-Rmean);
+            SumL2 += (L[i]-Lmean)*(L[i]-Lmean);
+            SumR2 += (R[i]-Rmean)*(R[i]-Rmean);
+        }
+
+        if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
+        {
+            rho = SumLR / (sqrt(SumL2*SumR2));
+            int rI = (int)round(rho*1000);
+            rho = (double)rI / 1000.0;
+        }
+        else
+        {
+            rho = (double) -99;
+        }
+    }
+    else
+    {
+        rho = (double) -99;
+    }
+ 
+    return rho;
+}
+
 void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
 {
     TIFF *tif;

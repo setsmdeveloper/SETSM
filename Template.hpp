@@ -18,7 +18,7 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt);
 template <typename T>
 T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type);
 template <typename T>
-void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> *matched_MPs, vector<D2DPOINT> *matched_MPs_ref);
+void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref);
 template <typename T>
 bool postNCC_ortho(uint8 Pyramid_step, D2DPOINT Left, D2DPOINT Right, double subA[][6],double TsubA[][9],double InverseSubA[][6], uint8 Template_size, CSize leftsize, CSize rightsize, T* _leftimage, T* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, D2DPOINT *peak_pos);
 
@@ -486,7 +486,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
 }
 
 template <typename T>
-void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> *matched_MPs, vector<D2DPOINT> *matched_MPs_ref)
+void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref)
 {
     double subA[9][6] = {0};
     double TsubA[6][9] = {0};
@@ -535,7 +535,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **Ima
     
     long total_grid_counts = MPs.size();
     
-    printf("ID %d\ttotal pts %d\n",ti,total_grid_counts);
+    printf("total pts %d\n",total_grid_counts);
     
     sprintf(temp_path,"%s/txt/GCPs_Image_ID_%d_level_%d.txt",proinfo->save_filepath,ti,Pyramid_step);
     FILE *fid_pts = fopen(temp_path,"w");
@@ -568,8 +568,8 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **Ima
             Left_Imagecoord_p.m_X = (MPs[mps_index].m_X - Boundary_ref[0])/grid_dxy_ref.m_X;
             Left_Imagecoord_p.m_Y = (Boundary_ref[3] - MPs[mps_index].m_Y)/grid_dxy_ref.m_Y;
             
-            Right_Imagecoord_p.m_X = (MPs[mps_index].m_X - Boundary_tar[0])/grid_dxy_tar.m_X + ImageAdjust[ti][1];
-            Right_Imagecoord_p.m_Y = (Boundary_tar[3] - MPs[mps_index].m_Y)/grid_dxy_tar.m_Y + ImageAdjust[ti][0];
+            Right_Imagecoord_p.m_X = (MPs[mps_index].m_X - Boundary_tar[0])/grid_dxy_tar.m_X + ImageAdjust[1];
+            Right_Imagecoord_p.m_Y = (Boundary_tar[3] - MPs[mps_index].m_Y)/grid_dxy_tar.m_Y + ImageAdjust[0];
             
             Left_Imagecoord = OriginalToPyramid_single(Left_Imagecoord_p,Startpos,Pyramid_step);
             Right_Imagecoord = OriginalToPyramid_single(Right_Imagecoord_p,Startpos,Pyramid_step);
@@ -623,19 +623,19 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **Ima
                 sum_var_y += (shift_Y - save_pts[c_i].m_Y)*(shift_Y - save_pts[c_i].m_Y);
             }
             
-            adjust_std[ti].m_X = sqrt(sum_var_x/count_pts);
-            adjust_std[ti].m_Y = sqrt(sum_var_y/count_pts);
+            adjust_std->m_X = sqrt(sum_var_x/count_pts);
+            adjust_std->m_Y = sqrt(sum_var_y/count_pts);
             
             if(fabs(shift_Y) < 0.01 && fabs(shift_X) < 0.01)
                 check_stop = true;
             
-            fprintf(fid_stat,"%d\t%d\t%f\t%f\t%f\t%f\t%d\n",*iter_count,ti,shift_X,shift_Y,ImageAdjust[ti][1],ImageAdjust[ti][0],count_pts);
+            fprintf(fid_stat,"%d\t%f\t%f\t%f\t%f\t%d\n",*iter_count,shift_X,shift_Y,ImageAdjust[1],ImageAdjust[0],count_pts);
             
-            shift_X             += ImageAdjust[ti][1];
-            shift_Y             += ImageAdjust[ti][0];
+            shift_X             += ImageAdjust[1];
+            shift_Y             += ImageAdjust[0];
             
-            ImageAdjust[ti][1]      = shift_X;
-            ImageAdjust[ti][0]      = shift_Y;
+            ImageAdjust[1]      = shift_X;
+            ImageAdjust[0]      = shift_Y;
         }
         else
             check_stop = true;
@@ -646,16 +646,15 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double **Ima
         {
             for(long cc = 0 ; cc < count_pts ; cc++)
             {
-                matched_MPs_ref[ti].push_back(MPs[mps_index_save[cc]]);
+                matched_MPs_ref.push_back(MPs[mps_index_save[cc]]);
                 
-                matched_MPs[0].push_back(MPs[mps_index_save[cc]]);
-                D2DPOINT temp_pts(MPs[mps_index_save[cc]].m_X + ImageAdjust[ti][1]*grid_dxy_tar.m_X, MPs[mps_index_save[cc]].m_Y - ImageAdjust[ti][0]*grid_dxy_tar.m_Y);
-                matched_MPs[ti].push_back(temp_pts);
+                D2DPOINT temp_pts(MPs[mps_index_save[cc]].m_X + ImageAdjust[1]*grid_dxy_tar.m_X, MPs[mps_index_save[cc]].m_Y - ImageAdjust[0]*grid_dxy_tar.m_Y);
+                matched_MPs.push_back(temp_pts);
                 
-                fprintf(fid_pts,"%8.2f\t%8.2f\t%8.2f\t%8.2f\n",matched_MPs[0][cc].m_X,matched_MPs[0][cc].m_Y,matched_MPs[ti][cc].m_X,matched_MPs[ti][cc].m_Y);
+                fprintf(fid_pts,"%8.2f\t%8.2f\t%8.2f\t%8.2f\n",matched_MPs[cc].m_X,matched_MPs[cc].m_Y,matched_MPs[cc].m_X,matched_MPs[cc].m_Y);
             }
             
-            avg_rho[ti] = sum_max_roh/(double)(count_pts);
+            *avg_rho = sum_max_roh/(double)(count_pts);
             
             fclose(fid_pts);
             fclose(fid_stat);

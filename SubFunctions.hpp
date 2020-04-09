@@ -45,6 +45,7 @@ void SetPySizes(CSize *data_size_lr, const CSize Lsubsetsize, const int level);
 void RemoveFiles(const ProInfo *proinfo,const char *save_path, char **filename, const int py_level,const bool flag);
 
 double Correlate(const double *L, const double *R, const int N);
+double Correlate(const vector<double> &L, const vector<double> &R, const int N);
 
 void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile);
 void SetTransParam_param(TransParam *param, bool Hemisphere);
