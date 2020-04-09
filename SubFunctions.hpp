@@ -8,7 +8,6 @@
 #ifndef SubFunctions_hpp
 #define SubFunctions_hpp
 
-#include <vector>
 #include <string.h>
 #include <stdio.h>
 
@@ -27,8 +26,6 @@
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
-
-using std::vector;
 
 char* remove_ext(const char* mystr);
 char* GetFileName(char file_path[]);
@@ -86,6 +83,9 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
 
 double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2);
 void SetAngle(double &angle);
+
+void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6]);
+
 
 FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution);
 FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution);

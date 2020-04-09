@@ -19,6 +19,7 @@
 //uint definition
 #include "tiff.h"
 #include "tiffio.h"
+#include <vector>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -46,6 +47,8 @@
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
 enum PyImageSelect {OR, BD, NX};
+
+using std::vector;
 
 typedef struct tagUI2DPoint
 {
@@ -230,6 +233,15 @@ typedef struct tagD3DPoint
     {
         this->m_X = p.m_X;
         this->m_Y = p.m_Y;
+        return *this;
+    }
+    
+    tagD3DPoint& operator=(const tagD3DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        this->m_Z = p.m_Z;
+        this->flag = p.flag;
         return *this;
     }
     

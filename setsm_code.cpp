@@ -3033,6 +3033,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     
                     sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
+                    
+                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    {
+                        Imageparams[ti][0] = 0;
+                        Imageparams[ti][1] = 0;
+                    }
                 }
             }
             else
@@ -4501,11 +4507,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     }
     
     free(iterations);
-    if(proinfo->IsRA && RA_count > 0)
+    if(proinfo->IsRA)
     {
-        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+        for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
         {
-            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && ti > 0)
+            if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && RA_count[ti] > 0)
             {
                 Imageparams[ti][0] /= RA_count[ti];
                 Imageparams[ti][1] /= RA_count[ti];
@@ -10907,43 +10913,11 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
     CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
     const double left_IA[2] = {ImageAdjust[reference_id][0], ImageAdjust[reference_id][1]};
    
-    double **subA    = (double**)malloc(9*sizeof(double*));
-    double **TsubA   = (double**)malloc(6*sizeof(double*));
-    double **InverseSubA = (double**)malloc(6*sizeof(double*));
+    double subA[9][6] = {0};
+    double TsubA[6][9] = {0};
+    double InverseSubA[6][6] = {0};
 
-    for(int ii=0;ii<9;ii++)
-    {
-        subA[ii]    = (double*)malloc(6*sizeof(double));
-        if(ii < 6)
-        {
-            TsubA[ii]       = (double*)malloc(9*sizeof(double));
-            InverseSubA[ii] = (double*)malloc(6*sizeof(double));
-        }
-    }
-
-    for(int ii=0;ii<9;ii++)
-        subA[ii][0]   = 1.0;
-
-    subA[0][1] = -1.0; subA[0][2] = -1.0; subA[0][3] =  1.0; subA[0][4] =  1.0; subA[0][5] =  1.0;
-    subA[1][1] =  0.0; subA[1][2] = -1.0; subA[1][3] =  0.0; subA[1][4] =  0.0; subA[1][5] =  1.0;
-    subA[2][1] =  1.0; subA[2][2] = -1.0; subA[2][3] =  1.0; subA[2][4] = -1.0; subA[2][5] =  1.0;
-    subA[3][1] = -1.0; subA[3][2] =  0.0; subA[3][3] =  1.0; subA[3][4] =  0.0; subA[3][5] =  0.0;
-    subA[4][1] =  0.0; subA[4][2] =  0.0; subA[4][3] =  0.0; subA[4][4] =  0.0; subA[4][5] =  0.0;
-    subA[5][1] =  1.0; subA[5][2] =  0.0; subA[5][3] =  1.0; subA[5][4] =  0.0; subA[5][5] =  0.0;
-    subA[6][1] = -1.0; subA[6][2] =  1.0; subA[6][3] =  1.0; subA[6][4] = -1.0; subA[6][5] =  1.0;
-    subA[7][1] =  0.0; subA[7][2] =  1.0; subA[7][3] =  0.0; subA[7][4] =  0.0; subA[7][5] =  1.0;
-    subA[8][1] =  1.0; subA[8][2] =  1.0; subA[8][3] =  1.0; subA[8][4] =  1.0; subA[8][5] =  1.0;
-
-    for(int ii=0;ii<6;ii++)
-        for(int kk=0;kk<9;kk++)
-            TsubA[ii][kk]       = subA[kk][ii];
-
-    InverseSubA[0][0] =  0.555556; InverseSubA[0][1] =  0.000000; InverseSubA[0][2] =  0.000000; InverseSubA[0][3] = -0.333333; InverseSubA[0][4] =  0.000000; InverseSubA[0][5] = -0.333333;
-    InverseSubA[1][0] =  0.000000; InverseSubA[1][1] =  0.166667; InverseSubA[1][2] =  0.000000; InverseSubA[1][3] =  0.000000; InverseSubA[1][4] =  0.000000; InverseSubA[1][5] =  0.000000;
-    InverseSubA[2][0] =  0.000000; InverseSubA[2][1] =  0.000000; InverseSubA[2][2] =  0.166667; InverseSubA[2][3] =  0.000000; InverseSubA[2][4] =  0.000000; InverseSubA[2][5] =  0.000000;
-    InverseSubA[3][0] = -0.333333; InverseSubA[3][1] =  0.000000; InverseSubA[3][2] =  0.000000; InverseSubA[3][3] =  0.500000; InverseSubA[3][4] =  0.000000; InverseSubA[3][5] =  0.000000;
-    InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
-    InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
+    Set6by6Matrix(subA,TsubA,InverseSubA);
 
     D3DPOINT *Coord           = ps2wgs_3D(*rlevelinfo.param,NumofPts,ptslists);
 
@@ -11063,27 +11037,13 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
         }
     }
     
-    for(int ii=0;ii<9;ii++)
-    {
-        free(subA[ii]);
-        if(ii < 6)
-        {
-            free(TsubA[ii]);
-            free(InverseSubA[ii]);
-        }
-    }
-
-    free(subA);
-    free(TsubA);
-    free(InverseSubA);
-    
     free(Coord);
 
     return iter_count;
 }
 
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double **subA, double **TsubA, double **InverseSubA, uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
 {
     bool check_pt = false;
  
