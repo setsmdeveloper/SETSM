@@ -264,6 +264,14 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     if(check_overlap)
     {
         // set saving pointer for orthoimage
+        Orthoimagesize.width = DEM_size.width;
+        Orthoimagesize.height = DEM_size.height;
+        
+        OrthoBoundary[0]  = DEM_minX;
+        OrthoBoundary[1]  = DEM_maxY-DEM_size.height*DEM_resolution;
+        OrthoBoundary[2]  = DEM_minX+DEM_size.width*DEM_resolution;
+        OrthoBoundary[3]  = DEM_maxY;
+        
         uint16 *result_ortho    = (uint16*)calloc((long)Orthoimagesize.width*(long)Orthoimagesize.height,sizeof(uint16));
         
         float *DEM_value    = NULL;

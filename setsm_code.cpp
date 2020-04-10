@@ -3207,7 +3207,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 if(iter_level == 0)
                                     SubImages[iter_level][image_index] = SourceImages[image_index];
                                 else
-                                    SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                    SubImages[iter_level][image_index] = NULL;//(uint16*)malloc(sizeof(uint16)*data_length);
                                 
                                 SubOriImages[iter_level][image_index] = (uint8*)malloc(sizeof(uint8)*data_length);
                                 SubMagImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
@@ -3354,7 +3354,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         if(iter_level == 0)
                                             SubImages[iter_level][image_index] = SourceImages[image_index];
                                         else
-                                            SubImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
+                                            SubImages[iter_level][image_index] = NULL;//(uint16*)malloc(sizeof(uint16)*data_length);
                                         
                                         SubOriImages[iter_level][image_index] = (uint8*)malloc(sizeof(uint8)*data_length);
                                         SubMagImages[iter_level][image_index] = (uint16*)malloc(sizeof(uint16)*data_length);
