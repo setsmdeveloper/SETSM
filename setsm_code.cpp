@@ -22112,24 +22112,31 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
     
     if(check_overlap)
     {
+        Orthoimagesize.width = DEM_size.width;
+        Orthoimagesize.height = DEM_size.height;
+
+        OrthoBoundary[0]  = DEM_minX;
+        OrthoBoundary[1]  = DEM_maxY-DEM_size.height*DEM_resolution;
+        OrthoBoundary[2]  = DEM_minX+DEM_size.width*DEM_resolution;
+        OrthoBoundary[3]  = DEM_maxY;
         // set saving pointer for orthoimage
         uint16 *result_ortho    = (uint16*)calloc((long)Orthoimagesize.width*(long)Orthoimagesize.height,sizeof(uint16));
-        
+
         float *DEM_value    = NULL;
-        
+
         double minmaxHeight[2];
         minmaxHeight[0]     = 99999;
         minmaxHeight[1]     = -99999;
         // load DEM value;
         DEM_value = GetDEMValue(DEMFilename, DEM_size);
-        
+
         printf("%d\n",DEM_size.width);
         printf("%d\n",DEM_size.height);
         printf("%f\n",DEM_minX);
         printf("%f\n",DEM_maxY);
         printf("%f\n",DEM_resolution);
         printf("%f\n",Ortho_resolution);
-        
+
         int i, j;
         for(i=0;i<DEM_size.height;i++)
         {
@@ -22137,12 +22144,12 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
             {
                 if( (minmaxHeight[0] > DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
                     minmaxHeight[0] = DEM_value[i*DEM_size.width + j];
-                
+
                 if( (minmaxHeight[1] < DEM_value[i*DEM_size.width + j]) && (DEM_value[i*DEM_size.width + j] > -1000))
                     minmaxHeight[1] = DEM_value[i*DEM_size.width + j];
             }
         }
-        
+
         double subfactor                      = pow(4-impyramid_step,2.0);
         if(subfactor <= 1)
             subfactor                       = 1;
@@ -22150,12 +22157,12 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
         int sub_width                   = ceil(Orthoimagesize.width/subfactor);
         int height_interval             = Ortho_resolution*sub_height;
         int width_interval              = Ortho_resolution*sub_width;
-        
+
         int buffer_x                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
         int buffer_y                    = Ortho_resolution*5*ceil(1.0/OrthoGridFactor);
-        
+
         int tile_count;
-        
+
         double imageparam[2];
         if(pair == 1)
         {
@@ -22168,9 +22175,9 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
             imageparam[1] = Imageparams[1][1];
         }
         printf("Image ID %d\tRPCs bias %f\t%f\n",pair,imageparam[0],imageparam[1]);
-        
+
         printf("Orthoimage info size %d\t%d\tBR %f\t%f\t%f\t%f\n",Orthoimagesize.width,Orthoimagesize.height,OrthoBoundary[0],OrthoBoundary[1],OrthoBoundary[2],OrthoBoundary[3]);
-        
+
         for(i=0; i < subfactor;i++)
         {
             for(j=0; j<subfactor;j++)
@@ -22185,67 +22192,67 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                 double X_size[2];
                 X_size[0]        = OrthoBoundary[0] + j*width_interval;
                 X_size[1]        = OrthoBoundary[0] + (j+1)*width_interval;
-                
-                
+
+
                 X_size[0]       = X_size[0] - buffer_x;
                 Y_size[0]       = Y_size[0] - buffer_y;
                 Y_size[1]       = Y_size[1] + buffer_y;
                 X_size[1]       = X_size[1] + buffer_x;
-                
+
                 if( X_size[0] < OrthoBoundary[0])
                     X_size[0]   = OrthoBoundary[0];
-                
+
                 if (X_size[1] > OrthoBoundary[2])
                     X_size[1]   = OrthoBoundary[2];
-                
+
                 if (Y_size[0] < OrthoBoundary[1])
                     Y_size[0]   = OrthoBoundary[1];
-                
+
                 if (Y_size[1] > OrthoBoundary[3])
                     Y_size[1]   = OrthoBoundary[3];
-                
+
                 double subBoundary[4];
                 subBoundary[0] = X_size[0];
                 subBoundary[1] = Y_size[0];
                 subBoundary[2] = X_size[1];
                 subBoundary[3] = Y_size[1];
-                
+
                 D2DPOINT startpos_ori;
                 char subsetImageFilename[500];
                 char subsetImageFilename_hdr[500];
                 CSize subsetsize;
                 uint16 *subimage;
                 bool check_subsetImage = false;
-                
+
                 subimage = subsetImage_ortho(args.sensor_type, m_frameinfo, param, RPCs, ImageFilename,
-                                             subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
+                        subBoundary,  minmaxHeight, &startpos_ori, subsetImageFilename, &subsetsize,&check_subsetImage);
                 if(check_subsetImage)
                 {
                     int ori_impyramid_step = impyramid_step;
                     if(impyramid_step > 0)
                         impyramid_step = 1;
-                    
+
                     CSize data_size[impyramid_step+1];
                     D2DPOINT startpos;
                     char t_str[500];
-                    
-                    
+
+
                     SetPySizes_ortho(data_size, subsetsize, impyramid_step);
                     startpos.m_X       = (double)(startpos_ori.m_X/pwrtwo(impyramid_step));      startpos.m_Y       = (double)(startpos_ori.m_Y/pwrtwo(impyramid_step));
-                    
+
                     uint16 *pyimg;
-                    
+
                     if(impyramid_step > 0)
                         pyimg = Preprocessing_ortho(ori_impyramid_step,data_size,subimage);
-                    
+
                     Image_size  = data_size[impyramid_step];
-                    
+
                     //printf("Image_size %d\t%d\n",Image_size.width,Image_size.height);
-                    
+
                     int col_size    = (int)((X_size[1] - X_size[0])/Ortho_resolution + 0.5);
                     int row_size    = (int)((Y_size[1] - Y_size[0])/Ortho_resolution + 0.5);
-                    
-    #pragma omp parallel for schedule(guided)
+
+#pragma omp parallel for schedule(guided)
                     for(int count = 0; count < col_size*row_size ; count++)
                     {
                         double row  = ((int)(floor(count/col_size)))*Ortho_resolution + Y_size[0];
@@ -22255,44 +22262,44 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                         double t_col, t_row;
                         long int t_col_int, t_row_int;
                         double dcol,drow;
-                        
+
                         t_col       = (col - DEM_minX)/DEM_resolution;
                         t_row       = (DEM_maxY - row)/DEM_resolution;
-                        
+
                         t_col_int   = (long int)(t_col + 0.01);
                         t_row_int   = (long int)(t_row + 0.01);
-                        
+
                         dcol        = t_col - t_col_int;
                         drow        = t_row - t_row_int;
-                        
+
                         if(t_col_int >= 0 && t_col_int +1 < DEM_size.width && t_row_int >= 0 && t_row_int +1 < DEM_size.height)
                         {
                             double value1, value2, value3, value4, value;
-                            
+
                             index1  = (t_col_int   ) + (t_row_int   )*(long)DEM_size.width;
                             index2  = (t_col_int +1) + (t_row_int   )*(long)DEM_size.width;
                             index3  = (t_col_int   ) + (t_row_int +1)*(long)DEM_size.width;
                             index4  = (t_col_int +1) + (t_row_int +1)*(long)DEM_size.width;
-                            
+
                             value1      = DEM_value[index1];
                             value2      = DEM_value[index2];
                             value3      = DEM_value[index3];
                             value4      = DEM_value[index4];
-                            
-                            
+
+
                             value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
                                 + value3*(1-dcol)*drow + value4*dcol*drow;
-                            
+
                             D3DPOINT object;
                             D2DPOINT objectXY;
                             //double imageparam[2] = {0.};
                             object.m_X  = col;
                             object.m_Y  = row;
                             object.m_Z  = value;
-                            
+
                             objectXY.m_X  = col;
                             objectXY.m_Y  = row;
-                            
+
                             if(value > -1000)
                             {
                                 D2DPOINT image;
@@ -22300,7 +22307,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                                 if(args.sensor_type == SB)
                                 {
                                     D2DPOINT wgsPt = ps2wgs_single(param, objectXY);
-                                   
+
                                     object.m_X  = wgsPt.m_X;
                                     object.m_Y  = wgsPt.m_Y;
                                     image = GetObjectToImageRPC_single_ortho(RPCs, 2, imageparam, object);
@@ -22309,25 +22316,25 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                                 {
                                     D2DPOINT photo  = GetPhotoCoordinate_single(object,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera,m_frameinfo.Photoinfo[0].m_Rm);
                                     image = PhotoToImage_single(photo, m_frameinfo.m_Camera.m_CCDSize, m_frameinfo.m_Camera.m_ImageSize);
-                                    
+
                                     //printf("done photoToImage %f\t%f\n",image.m_X,image.m_Y);
                                 }
-                                
-                                
+
+
                                 temp_pt     = OriginalToPyramid_single_ortho(image, startpos, impyramid_step);
-                                
+
                                 t_col       = temp_pt.m_X;
                                 t_row       = temp_pt.m_Y;
-                                
+
                                 t_col_int   = (long int)(t_col + 0.01);
                                 t_row_int   = (long int)(t_row + 0.01);
-                                
+
                                 dcol        = t_col - t_col_int;
                                 drow        = t_row - t_row_int;
-                                
+
                                 //printf("temp_pt %f\t%f\n",temp_pt.m_X,temp_pt.m_Y);
                                 if(t_col_int >= 0 && t_col_int +1 < Image_size.width && t_row_int >= 0 && t_row_int +1 < Image_size.height
-                                   && (t_col_int +1) + (t_row_int +1)*(long)Image_size.width < (long)Image_size.width*(long)Image_size.height)
+                                        && (t_col_int +1) + (t_row_int +1)*(long)Image_size.width < (long)Image_size.width*(long)Image_size.height)
                                 {
                                     //printf("inside of image value\n");
                                     double value1, value2, value3, value4, value;
@@ -22336,7 +22343,7 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                                     index2  = (t_col_int +1) + (t_row_int   )*(long)Image_size.width;
                                     index3  = (t_col_int   ) + (t_row_int +1)*(long)Image_size.width;
                                     index4  = (t_col_int +1) + (t_row_int +1)*(long)Image_size.width;
-                                    
+
                                     if(impyramid_step > 0)
                                     {
                                         value1      = pyimg[index1];
@@ -22353,11 +22360,11 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
 
                                     value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow)
                                         + value3*(1-dcol)*drow + value4*dcol*drow;
-                                    
+
                                     t_col_int       = (long int)((col - OrthoBoundary[0])/Ortho_resolution + 0.01);
                                     t_row_int       = (long int)((OrthoBoundary[3] - row)/Ortho_resolution + 0.01);
                                     index           = t_col_int + t_row_int*(long)Orthoimagesize.width;
-                                    
+
                                     if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < (long)Orthoimagesize.width*(long)Orthoimagesize.height)
                                     {
                                         //printf("inside of ortho\n");
@@ -22367,23 +22374,23 @@ void orthogeneration(TransParam _param, ARGINFO args, char *ImageFilename, char 
                             }
                         }
                     }
-                    
+
                     if(impyramid_step > 0)
                         free(pyimg);
-                    
+
                     free(subimage);
                 }
-                
+
             }
         }
         free(RPCs);
         free(DEM_value);
-        
+
         WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.zone, _param.bHemisphere, 12);
         free(result_ortho);
-        
+
         ET = time(0);
-        
+
         gap = difftime(ET,ST);
         printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
     }
