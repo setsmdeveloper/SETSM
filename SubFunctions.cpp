@@ -2687,6 +2687,7 @@ void SetAngle(double &angle)
         angle = 360 - angle;
 }
 
+/*
 void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6])
 {
     for(int ii=0;ii<9;ii++)
@@ -2713,7 +2714,7 @@ void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6])
     InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
     InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
 }
-
+*/
 //removable functions not used in SETSM DEM main
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
 {
