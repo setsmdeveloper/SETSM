@@ -189,8 +189,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
 {
     bool ret = false;
     
-    char *ext;
-    ext = strrchr(filename,'.');
+    char *ext = strrchr(filename,'.');
     
     if(!strcmp("tif",ext+1) || !strcmp("TIF",ext+1))
     {
@@ -199,8 +198,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
     }
     else if(!strcmp("bin",ext+1))
     {
-        char *tmp;
-        tmp = remove_ext(filename);
+        char *tmp = remove_ext(filename);
         sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader(tmp);
         free(tmp);
@@ -261,7 +259,7 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        float type;
+        float type(0);
         seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size,type);
         printf("tif open\n");
         
@@ -2149,7 +2147,7 @@ double quickselect(vector<double> &arr, int n, int k)
     }
 }
 
-bool CheckOverlap(D2DPOINT br1_lt, D2DPOINT br1_rb, D2DPOINT br2_lt, D2DPOINT br2_rb)
+bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb)
 {
     if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
         return false;
@@ -3192,9 +3190,6 @@ CSize Envihdr_reader_seedDEM(TransParam _param, char *filename, double *minX, do
     char bufstr[500];
     char t_str1[500],t_str2[500],t_str[500];
     int t_int1, t_int2;
-    char* pos1;
-    char* pos2;
-    char* token = NULL;
     
     fid = fopen(filename,"r");
     

@@ -406,7 +406,7 @@ void SetHeightWithSeedDEM_SDM(ProInfo proinfo, UGRIDSDM *Grid, double *Boundary,
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        float type;
+        float type(0);
         seeddx = Readtiff_T(col_shift_path,LImagesize,cols,rows,&data_size,type);
         seeddy = Readtiff_T(row_shift_path,LImagesize,cols,rows,&data_size,type);
         printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",Grid_size.width,Grid_size.height,cols[0],cols[1],rows[0],rows[1]);
@@ -637,7 +637,7 @@ int Matching_SETSM_SDM(ProInfo proinfo,uint8 pyramid_step, uint8 Template_size, 
                                 SubOriImages_L  = LoadPyramidOriImages(proinfo.tmpdir,Lsubsetfilename,data_size_l[prc_level],prc_level);
                                 SubOriImages_R  = LoadPyramidOriImages(proinfo.tmpdir,Rsubsetfilename,data_size_r[prc_level],prc_level);
                                 
-                                printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
+                                //printf("mag var avg %f\t%f\t%f\t%f\n",left_mag_var,left_mag_avg,right_mag_var,right_mag_avg);
                                 
                                 
                                 total_matching_candidate_pts = Size_Grid2D.width*Size_Grid2D.height;
@@ -1345,30 +1345,11 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
            GetsubareaImage_SDM(proinfo,RImageFilename,RImagesize,proinfo.RBoundary,Rcols,Rrows) )
         {
             printf("image bits %d\n",proinfo.image_bits);
-            
             switch(proinfo.image_bits)
             {
-                /*case 32:
-                    float *t_data32;
-                    t_data32    = Readtiff_DEM(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize);
-                    if(t_data32)
-                    {
-                        FILE *pFile = fopen(LsubsetImage,"wb");
-                        
-                        CSize result_size;
-                        
-                        result_size.width    = Lsubsetsize->width;
-                        result_size.height    = Lsubsetsize->height;
-                        
-                        long int data_length = result_size.height*result_size.width;
-                        fwrite(t_data32,sizeof(float),data_length,pFile);
-                        
-                        fclose(pFile);
-                        free(t_data32);
-                    }
-                    break;*/
                 case 8:
-                    uint8 type_t;
+                {
+                    uint8 type_t(0);
                     uint8 *t_data8    = Readtiff_T(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize, type_t);
                     if(t_data8)
                     {
@@ -1386,8 +1367,10 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                         free(t_data8);
                     }
                     break;
+                }
                 case 12:
-                    uint16 type_tt;
+                {
+                    uint16 type_tt(0);
                     uint16 *t_data16    = Readtiff_T(LImageFilename,LImagesize,Lcols,Lrows,Lsubsetsize,type_tt);
                     if(t_data16)
                     {
@@ -1405,6 +1388,7 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                         free(t_data16);
                     }
                     break;
+                }
             }
             printf("write subimage left\n");
             
@@ -1413,27 +1397,9 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
             
             switch(proinfo.image_bits)
             {
-                /*case 32:
-                    float *t_data32;
-                    t_data32    = Readtiff_DEM(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize);
-                    if(t_data32)
-                    {
-                        FILE *pFile = fopen(RsubsetImage,"wb");
-                        
-                        CSize result_size;
-                        
-                        result_size.width    = Rsubsetsize->width;
-                        result_size.height    = Rsubsetsize->height;
-                        
-                        long int data_length = result_size.height*result_size.width;
-                        fwrite(t_data32,sizeof(float),data_length,pFile);
-                        
-                        fclose(pFile);
-                        free(t_data32);
-                    }
-                    break;*/
                 case 8:
-                    uint8 type_t;
+                {
+                    uint8 type_t(0);
                     uint8 *t_data8    = Readtiff_T(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize, type_t);
                     if(t_data8)
                     {
@@ -1451,8 +1417,10 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                         free(t_data8);
                     }
                     break;
+                }
                 case 12:
-                    uint16 type_tt;
+                {
+                    uint16 type_tt(0);
                     uint16 *t_data16    = Readtiff_T(RImageFilename,RImagesize,Rcols,Rrows,Rsubsetsize,type_tt);
                     if(t_data16)
                     {
@@ -1470,6 +1438,7 @@ bool subsetImage_SDM(ProInfo proinfo,char *LImageFilename, char *RImageFilename,
                         free(t_data16);
                     }
                     break;
+                }
             }
             
             Lstartpos->m_X    = (double)(Lcols[0]);

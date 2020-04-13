@@ -124,7 +124,11 @@ int main(int argc,char *argv[])
         
         Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
         for(int ti = 0 ; ti < args.number_of_images ; ti++)
+        {
             Imageparams[ti] = (double*)calloc(sizeof(double),2);
+            Imageparams[ti][0] = 0.0;
+            Imageparams[ti][1] = 0.0;
+        }
         
         DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
         
@@ -191,7 +195,11 @@ int main(int argc,char *argv[])
             
             Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
+            {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
+                Imageparams[ti][0] = 0.0;
+                Imageparams[ti][1] = 0.0;
+            }
             
             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
         }
@@ -219,7 +227,11 @@ int main(int argc,char *argv[])
         {
             Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
+            {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
+                Imageparams[ti][0] = 0.0;
+                Imageparams[ti][1] = 0.0;
+            }
             
             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
             
@@ -1453,7 +1465,11 @@ int main(int argc,char *argv[])
 
                         Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
                         for(int ti = 0 ; ti < args.number_of_images ; ti++)
+                        {
                             Imageparams[ti] = (double*)calloc(sizeof(double),2);
+                            Imageparams[ti][0] = 0.0;
+                            Imageparams[ti][1] = 0.0;
+                        }
                         
                         if(args.check_checktiff)
                         {
@@ -1570,7 +1586,7 @@ void DownSample(ARGINFO &args)
         rows[0] = 0;
         rows[1] = seeddem_size.height;
         
-        float type;
+        float type(0);
         float *seeddem = Readtiff_T(args.seedDEMfilename,Imagesize,cols,rows,&data_size,type);
         
         float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
@@ -1698,7 +1714,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     if(args.sensor_provider == DG)
                     {
                         double row_grid_size, col_grid_size, product_grid_size;
-                        RPCs[ti]       = OpenXMLFile_ortho(proinfo->RPCfilename[ti], &row_grid_size, &col_grid_size, &product_grid_size);
+                        BandInfo band;
+                        RPCs[ti]       = OpenXMLFile(proinfo, ti, &row_grid_size, &col_grid_size, &product_grid_size, &band);
                     }
                     else if(args.sensor_provider == PL)
                     {
@@ -5377,7 +5394,7 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
             rows[0] = 0;
             rows[1] = seeddem_size.height;
 
-            float type;
+            float type(0);
             float *seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size, type);
             printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
 
@@ -5577,7 +5594,7 @@ bool subsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const TransParam trans
                 uint16 *leftimage;
                 
                 printf("read image %d\n", ti);
-                uint16 type;
+                uint16 type(0);
                 leftimage   = Readtiff_T(proinfo->Imagefilename[ti],&Imagesize,Lcols,Lrows,&Subsetsize[ti],type);
                 if(check_checktiff)
                     exit(1);
@@ -5632,7 +5649,7 @@ uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_
         if(GetsubareaImage(proinfo, rlevelinfo, index_image, proinfo->Imagefilename[index_image], minmaxHeight, Lcols, Lrows))
         {
             printf("read image %d\n", index_image);
-            uint16 type;
+            uint16 type(0);
             outimage   = Readtiff_T(proinfo->Imagefilename[index_image],&Imagesize,Lcols,Lrows,&Subsetsize[index_image],type);
             if(proinfo->check_checktiff)
                 exit(1);
@@ -10185,7 +10202,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                     
                     if(!m_bHeight[Index])
                     {
-                        double Z = -1000.0;
+                        float Z = -1000.0;
                         bool rtn = false;
                         
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
@@ -10502,7 +10519,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
 }
 
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
+bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z)
 {
     bool rtn = false;
     
@@ -10705,7 +10722,7 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                     
                     if (m_bHeight[Index] == 0)
                     {
-                        double Z = -1000.0;
+                        float Z = -1000.0;
                         bool rtn = false;
                          
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
@@ -10921,13 +10938,13 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
 
     D3DPOINT *Coord           = ps2wgs_3D(*rlevelinfo.param,NumofPts,ptslists);
 
-    int iter_count;
+    int iter_count = 0;
     for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
         {
             bool check_stop = false;
-            int iter_count = 1;
+            iter_count = 1;
             while(!check_stop && iter_count < 10)
             {
                 bool flag_boundary = false;
@@ -11038,7 +11055,9 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
     }
     
     free(Coord);
-
+    
+    
+    
     return iter_count;
 }
 

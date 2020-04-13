@@ -625,7 +625,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 {
                     TIFF *tarhilltif = NULL;
                     tarhilltif  = TIFFOpen(tar_hill_inputfile,"r");
-                    uint8 type;
+                    uint8 type(0);
                     tar_hill = Readtiff_T(tar_hill_inputfile, &tar_dem_size, cols, rows, &tar_dem_size, type);
                     TIFFClose(tarhilltif);
                     fclose(checktif_tar);
@@ -1281,7 +1281,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
             long rows[2] = {0, ref_dem_size.height};
             
             //dem image = ref
-            float type;
+            float type(0);
             float *DEM = Readtiff_T(ref_dem_name,&ref_dem_size,cols,rows,&ref_dem_size,type);
             
             char *reffilename  = SetOutpathName(args.Image[0]);
@@ -1330,7 +1330,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                 rows[1] = tar_dem_size.height;
                 
                 //dem image
-                float type;
+                float type(0);
                 float *DEM_tar= Readtiff_T(tar_dem_name,&tar_dem_size,cols,rows,&tar_dem_size,type);
                 
                 char *reffilename  = SetOutpathName(args.Image[ti]);
