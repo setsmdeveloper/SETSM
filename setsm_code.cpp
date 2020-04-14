@@ -1761,7 +1761,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         double** Coreg_param = (double**)calloc(sizeof(double*),2);
         Coreg_param[0] = (double*)calloc(sizeof(double),2);
         Coreg_param[1] = (double*)calloc(sizeof(double),2);
-        SDM_ortho(return_param, _filename, args, _save_filepath,Coreg_param);
+        SDM_ortho(_filename, args, Coreg_param);
         free(Coreg_param);
     }
     else if(args.check_sdm_ortho == 2)
@@ -1771,7 +1771,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         printf("cal_check %d\n",cal_check);
         if(cal_check)
         {
-            SDM_ortho(return_param, _filename, args, _save_filepath,Coreg_param);
+            SDM_ortho(_filename, args, Coreg_param);
             free(Coreg_param);
         }
         free(adjust_sdt);
@@ -3030,13 +3030,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             D2DPOINT *Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
             CSize *Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
             
-            char **Subsetfilename = (char**)malloc(sizeof(char*)*proinfo->number_of_images);
             double **t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-            {
                 t_Imageparams[ti] = (double*)calloc(sizeof(double),2);
-                Subsetfilename[ti] = (char*)malloc(sizeof(char)*500);
-            }
             
             char save_file[500];
             if(proinfo->IsRA)
@@ -3084,15 +3080,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             SetSubBoundary(Boundary,subX,subY,buffer_area,col,row,subBoundary);
             
             printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
-            
-            //set subset image filenames
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
-            {
-                char *filename = GetFileName(proinfo->Imagefilename[ti]);
-                filename = remove_ext(filename);
-                sprintf(Subsetfilename[ti],"%s/%s_subset_%d_%d.raw",proinfo->tmpdir,filename,row,col);
-                free(filename);
-            }
             
             printf("subsetimage\n");
             
@@ -4511,12 +4498,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
                 if(proinfo->check_selected_image[ti])
-                {
-                    free(Subsetfilename[ti]);
                     free(t_Imageparams[ti]);
-                }
             }
-            free(Subsetfilename);
             free(t_Imageparams);
             free(Startpos_ori);
             free(Subsetsize);
@@ -5057,8 +5040,8 @@ UGRID *SetGrid3PT(const ProInfo *proinfo, LevelInfo &rlevelinfo, const double Th
 
     GridPT3                 = (UGRID*)calloc(sizeof(UGRID),total_grid_counts);
 
-#pragma omp parallel for shared(total_grid_counts,GridPT3,minmaxHeight)
-    for(long int i=0;i<total_grid_counts;i++)
+#pragma omp parallel for
+    for(long i=0;i<total_grid_counts;i++)
     {
         GridPT3[i].Matched_flag     = 0;
         GridPT3[i].roh              = DoubleToSignedChar_grid(Th_roh);
@@ -5080,126 +5063,6 @@ UGRID *SetGrid3PT(const ProInfo *proinfo, LevelInfo &rlevelinfo, const double Th
     return GridPT3;
 }
 
-
-
-bool GetsubareaImage(ProInfo *proinfo, LevelInfo &rlevelinfo, int ImageID, char *ImageFilename, const double *minmaxHeight, long int *cols, long int *rows)
-{
-    bool ret = false;
-
-    CSize Imagesize;
-    if(GetImageSize(ImageFilename,&Imagesize))
-    {
-        int i;
-        
-        D3DPOINT t_pts[8];
-        
-        D2DPOINT *ImageCoord;
-        int buffer, null_buffer;
-
-        double minX =  1000000;
-        double maxX = -1000000;
-        double minY =  1000000;
-        double maxY = -1000000;
-
-        t_pts[0].m_X    = rlevelinfo.Boundary[0];
-        t_pts[1].m_X    = rlevelinfo.Boundary[2];
-        t_pts[2].m_X    = rlevelinfo.Boundary[0];
-        t_pts[3].m_X    = rlevelinfo.Boundary[2];
-        t_pts[4].m_X    = rlevelinfo.Boundary[0];
-        t_pts[5].m_X    = rlevelinfo.Boundary[2];
-        t_pts[6].m_X    = rlevelinfo.Boundary[0];
-        t_pts[7].m_X    = rlevelinfo.Boundary[2];
-        
-        t_pts[0].m_Y    = rlevelinfo.Boundary[1];
-        t_pts[1].m_Y    = rlevelinfo.Boundary[3];
-        t_pts[2].m_Y    = rlevelinfo.Boundary[1];
-        t_pts[3].m_Y    = rlevelinfo.Boundary[3];
-        t_pts[4].m_Y    = rlevelinfo.Boundary[3];
-        t_pts[5].m_Y    = rlevelinfo.Boundary[1];
-        t_pts[6].m_Y    = rlevelinfo.Boundary[3];
-        t_pts[7].m_Y    = rlevelinfo.Boundary[1];
-
-        t_pts[0].m_Z    = minmaxHeight[0];
-        t_pts[1].m_Z    = minmaxHeight[0];
-        t_pts[2].m_Z    = minmaxHeight[1];
-        t_pts[3].m_Z    = minmaxHeight[1];
-        t_pts[4].m_Z    = minmaxHeight[0];
-        t_pts[5].m_Z    = minmaxHeight[0];
-        t_pts[6].m_Z    = minmaxHeight[1];
-        t_pts[7].m_Z    = minmaxHeight[1];
-
-        if(proinfo->sensor_type == SB)
-        {
-            D3DPOINT *t_pts1;
-            
-            t_pts1          = ps2wgs_3D(*rlevelinfo.param,8,t_pts);
-            ImageCoord      = GetObjectToImageRPC(rlevelinfo.RPCs[ImageID], *rlevelinfo.NumOfIAparam, rlevelinfo.ImageAdjust[ImageID], 8, t_pts1);
-            
-            free(t_pts1);
-        }
-        else
-        {
-            D2DPOINT *t_image;
-            t_image     = GetPhotoCoordinate(t_pts, proinfo->frameinfo.Photoinfo[ImageID], 8, proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ImageID].m_Rm);
-            
-            printf("t_image %f\t%f\n",t_image[0].m_X,t_image[0].m_Y);
-            ImageCoord  = PhotoToImage(t_image,8,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
-            printf("ImageCoord %f\t%f\n",ImageCoord[0].m_X,ImageCoord[0].m_Y);
-            
-            free(t_image);
-        }
-        
-        for(i=0;i<8;i++)
-        {
-            if(minX > ImageCoord[i].m_X)
-                minX    = ImageCoord[i].m_X;
-            if(maxX < ImageCoord[i].m_X)
-                maxX    = ImageCoord[i].m_X;
-            if(minY > ImageCoord[i].m_Y)
-                minY    = ImageCoord[i].m_Y;
-            if(maxY < ImageCoord[i].m_Y)
-                maxY    = ImageCoord[i].m_Y;
-            
-            //printf("i %d\tImageCoord %f\t%f\n",i,ImageCoord[i].m_X,ImageCoord[i].m_Y);
-        }
-
-        buffer              = 200;
-        cols[0]             = (int)(ceil(minX)-buffer);
-        cols[1]             = (int)(ceil(maxX)+buffer);
-        rows[0]             = (int)(ceil(minY)-buffer);
-        rows[1]             = (int)(ceil(maxY)+buffer);
-
-        null_buffer         = 1;
-        // Null pixel value remove
-        if(cols[0]          <= null_buffer)
-            cols[0]         = null_buffer;
-        if(rows[0]          <= null_buffer)
-            rows[0]         = null_buffer;
-        if(cols[0]          > Imagesize.width - null_buffer)
-            cols[0]         = Imagesize.width - null_buffer;
-        if(rows[0]          > Imagesize.height - null_buffer)
-            rows[0]         = Imagesize.height - null_buffer;
-
-        if(cols[1]          <= null_buffer)
-            cols[1]         = null_buffer;
-        if(rows[1]          <= null_buffer)
-            rows[1]         = null_buffer;
-        if(cols[1]          > Imagesize.width - null_buffer)
-            cols[1]         = Imagesize.width - null_buffer;
-        if(rows[1]          > Imagesize.height - null_buffer)
-            rows[1]         = Imagesize.height - null_buffer;
-
-        printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
-        
-        
-        free(ImageCoord);
-
-        ret = true;
-    }
-
-    return ret;
-}
-        
 void SetSubBoundary(const double *Boundary, const double subX, const double subY, const double buffer_area, const int col, const int row, double *subBoundary)
 {
     subBoundary[0]      = Boundary[0] + subX*(col - 1) - buffer_area;
@@ -5220,26 +5083,6 @@ void SetSubBoundary(const double *Boundary, const double subX, const double subY
         subBoundary[2] = Boundary[2];
     if(subBoundary[3] > Boundary[3])
         subBoundary[3] = Boundary[3];
-}
-
-D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D)
-{
-    D2DPOINT *GridPT = NULL;
-
-    Size_2D->width  = (int)(ceil((double)(Boundary[2] - Boundary[0])/Grid_x));
-    Size_2D->height = (int)(ceil((double)(Boundary[3] - Boundary[1])/Grid_y));
-
-    GridPT  = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(long int)Size_2D->height*(long int)Size_2D->width);
-#pragma omp parallel for schedule(guided)
-    for(long int row = 0 ; row < Size_2D->height ; row++)
-        for(long int col = 0; col < Size_2D->width ; col++)
-        {
-            long int index = row*(long int)Size_2D->width + col;
-            GridPT[index].m_X = Boundary[0] + col*Grid_x;
-            GridPT[index].m_Y = Boundary[1] + row*Grid_y;
-        }
-
-    return GridPT;
 }
 
 void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *Grid, double *minmaxHeight)
@@ -5578,64 +5421,6 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
     _boundary[3] =  ceil(maxY);
 }
 
-bool subsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff)
-{
-    bool ret = false;
-
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti ++)
-    {
-        CSize Imagesize;
-
-        if(GetImageSize(proinfo->Imagefilename[ti],&Imagesize))
-        {
-            long int Lcols[2], Lrows[2];
-            if(GetsubareaImage(proinfo, rlevelinfo, ti, proinfo->Imagefilename[ti], minmaxHeight, Lcols, Lrows))
-            {
-                uint16 *leftimage;
-                
-                printf("read image %d\n", ti);
-                uint16 type(0);
-                leftimage   = Readtiff_T(proinfo->Imagefilename[ti],&Imagesize,Lcols,Lrows,&Subsetsize[ti],type);
-                if(check_checktiff)
-                    exit(1);
-                
-                Startpos[ti].m_X  = (double)(Lcols[0]);
-                Startpos[ti].m_Y  = (double)(Lrows[0]);
-                
-
-                printf("write subimage %d\n",ti);
-                if(leftimage)
-                {
-                    FILE *pFile = fopen(SubsetImage[ti],"wb");
-
-                    CSize result_size;
-
-                    result_size.width   = Subsetsize[ti].width;
-                    result_size.height  = Subsetsize[ti].height;
-                        
-                    long int data_length = result_size.height*result_size.width;
-                    fwrite(leftimage,sizeof(uint16),data_length,pFile);
-                    fclose(pFile);
-                    
-                    free(leftimage);
-                    ret     = true;
-                }
-                else
-                    proinfo->check_selected_image[ti] = false;
-                
-            }
-        }
-    }
-
-    if(!proinfo->check_selected_image[0])
-    {
-        printf("SubsetImage : Subset of reference image is failed!!\n");
-        ret = false;
-    }
-    
-    return ret;
-}
-
 uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
 {
     bool ret = false;
@@ -5646,7 +5431,7 @@ uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_
     if(GetImageSize(proinfo->Imagefilename[index_image],&Imagesize))
     {
         long int Lcols[2], Lrows[2];
-        if(GetsubareaImage(proinfo, rlevelinfo, index_image, proinfo->Imagefilename[index_image], minmaxHeight, Lcols, Lrows))
+        if(GetsubareaImage(proinfo->sensor_type, proinfo->frameinfo, index_image, *rlevelinfo.param, rlevelinfo.ImageAdjust[index_image],  rlevelinfo.RPCs[index_image], proinfo->Imagefilename[index_image], Imagesize, rlevelinfo.Boundary, minmaxHeight, Lcols, Lrows))
         {
             printf("read image %d\n", index_image);
             uint16 type(0);
@@ -5665,28 +5450,6 @@ uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_
         proinfo->check_selected_image[index_image] = false;
   
     return outimage;
-}
-
-void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages)
-{
-    for(int iter_level = 1 ; iter_level < py_level_set; iter_level++)
-    {
-        for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
-        {
-            if(proinfo->check_selected_image[image_index])
-            {
-                long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
-   
-                SubImages[iter_level][image_index] = CreateImagePyramid(SubImages[iter_level-1][image_index],data_size_lr[image_index][iter_level-1],9,(double)(1.5));
-                
-                int16 *dirimg = (int16*)malloc(sizeof(int16)*data_length);
-                MakeSobelMagnitudeImage(data_size_lr[image_index][iter_level],SubImages[iter_level][image_index],SubMagImages[iter_level][image_index],dirimg);
-                Orientation(data_size_lr[image_index][iter_level],SubMagImages[iter_level][image_index],dirimg,15,SubOriImages[iter_level][image_index]);
-                
-                free(dirimg);
-            }
-        }
-    }
 }
 
 // temporary, 1st and 2nd image
@@ -10202,7 +9965,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                     
                     if(!m_bHeight[Index])
                     {
-                        float Z = -1000.0;
+                        double Z = -1000.0;
                         bool rtn = false;
                         
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
@@ -10519,7 +10282,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
 }
 
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z)
+bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
 {
     bool rtn = false;
     
@@ -10574,23 +10337,23 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double*
     if(resize_Size.height > 8000 || resize_Size.width > 8000)
         printf("resize memory allocation start\n");
     
-    UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),resize_Size.height*resize_Size.width);
+    UGRID *resize_GridPT3 = (UGRID *)calloc(sizeof(UGRID),(long)resize_Size.height*(long)resize_Size.width);
     
     if(resize_Size.height > 8000 || resize_Size.width > 8000)
-        printf("resize memory allocation start %ld\n",sizeof(UGRID)*resize_Size.height*resize_Size.width);
+        printf("resize memory allocation start %ld\n",sizeof(UGRID)*(long)resize_Size.height*(long)resize_Size.width);
     
-    printf("preresize memory allocation start %ld\n",sizeof(UGRID)*preSize.height*preSize.width);
+    printf("preresize memory allocation start %ld\n",sizeof(UGRID)*(long)preSize.height*(long)preSize.width);
     for(long row=0;row<resize_Size.height;row++)
     {
         for(long col=0;col<resize_Size.width;col++)
         {
-            long int index = row*(long)resize_Size.width + col;
+            long index = row*(long)resize_Size.width + col;
             double X = resize_Grid[index].m_X;
             double Y = resize_Grid[index].m_Y;
             
             int pos_c = (int)((X - Boundary[0])/pre_gridsize);
             int pos_r = (int)((Y - Boundary[1])/pre_gridsize);
-            long int pre_index = pos_r*preSize.width + pos_c;
+            long pre_index = pos_r*(long)preSize.width + pos_c;
             if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height && pre_index >= 0 && pre_index < (long)preSize.width*(long)preSize.height)
             {
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
@@ -10722,7 +10485,7 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                     
                     if (m_bHeight[Index] == 0)
                     {
-                        float Z = -1000.0;
+                        double Z = -1000.0;
                         bool rtn = false;
                          
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);

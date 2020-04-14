@@ -156,6 +156,8 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 rows[0] = 0;
                 rows[1] = OriImagesizes[i].height;
                 
+                OriImages[i] = SubsetImageFrombitsToUint16(image_bits[i], args.Image[i], cols, rows, &OriImagesizes[i]);
+                /*
                 switch(image_bits[i])
                 {
                     case 8:
@@ -183,6 +185,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     }
                         break;
                 }
+                 */
                 printf("ID %d\t %s\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",i,args.Image[i],OriImagesizes[i].width,OriImagesizes[i].height,ortho_minX[i],ortho_maxY[i],ortho_dx[i],ortho_dy[i],ImageBoundary[i][0],ImageBoundary[i][1],ImageBoundary[i][2],ImageBoundary[i][3]);
             }
             

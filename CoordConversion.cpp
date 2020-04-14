@@ -810,9 +810,23 @@ D2DPOINT GetObjectToImageRPC_single_mpp(const double * const *_rpc, const uint8 
     return IP;
 }
 
+D2DPOINT* GetObjectToImage(uint16 _numofpts, D2DPOINT *_GP, double *boundary, double imageres)
+{
+    D2DPOINT *IP;
+    
+    IP        = (D2DPOINT*)malloc(sizeof(D2DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        IP[i].m_X = ( _GP[i].m_X - boundary[0])/imageres;
+        IP[i].m_Y = (-_GP[i].m_Y + boundary[3])/imageres;
+    }
+    
+    return IP;
+}
 
-
-D2DPOINT GetObjectToImage_single_SDM(uint16 _numofpts, D2DPOINT _GP, double *boundary, double imageres)
+D2DPOINT GetObjectToImage_single(uint16 _numofpts, D2DPOINT _GP, double *boundary, double imageres)
 {
     D2DPOINT IP;
     

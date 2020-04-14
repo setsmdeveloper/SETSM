@@ -36,7 +36,11 @@ int Maketmpfolders(ProInfo *info);
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams);
 bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams);
 
+bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const int ti, const TransParam transparam, const double *ImageParam, const double * const *RPCs, char *ImageFilename, CSize Imagesize, const double *subBoundary, const double *minmaxHeight, long *cols, long *rows);
 bool GetImageSize(char *filename, CSize *Imagesize);
+
+bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesize, double *subBoundary, long *cols,long *rows);
+
 float* GetDEMValue(char *GIMP_path,CSize seeddem_size);
 
 bool OpenProject(char* _filename, ProInfo *info, ARGINFO args);
@@ -65,6 +69,11 @@ bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT b
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);
 void MakeSobelMagnitudeImage(const CSize _img_size,const uint16* _src_image, uint16* _dist_mag_image, int16* _dir);
 void Orientation(const CSize imagesize,const uint16* Gmag,const int16* Gdir,const uint8 Template_size, uint8* plhs);
+
+D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D);
+void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages);
+uint16 *SubsetImageFrombitsToUint16(const int image_bits, char *imagefile, long *cols, long *rows, CSize *subsize);
+
 uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
 uint16* LoadPyramidMagImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
 uint8* LoadPyramidOriImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
@@ -84,9 +93,6 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
 
 double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2);
 void SetAngle(double &angle);
-
-//void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6]);
-
 
 FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution);
 FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution);

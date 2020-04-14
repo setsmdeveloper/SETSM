@@ -297,7 +297,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                 CSize subsetsize;
                 bool check_subsetImage = false;
                 
-                uint16 *subimage = subsetImage_ortho(args.sensor_type, m_frameinfo, _param, RPCs, ImageFilename,
+                uint16 *subimage = subsetImage_ortho(args.sensor_type, m_frameinfo, _param, imageparam, RPCs, ImageFilename,
                                              subBoundary,  minmaxHeight, &startpos_ori, &subsetsize, &check_subsetImage);
                 if(check_subsetImage)
                 {
@@ -450,7 +450,7 @@ uint16 *Preprocessing_ortho(const uint8 py_level, CSize *data_size, uint16 *subi
     return pyimg;
 }
 
-uint16 *subsetImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, const TransParam transparam, double **RPCs, char *ImageFilename, double *subBoundary, double *minmaxHeight, D2DPOINT *startpos, CSize* subsetsize, bool *ret)
+uint16 *subsetImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, const TransParam transparam, const double *Imageparam, double **RPCs, char *ImageFilename, double *subBoundary, double *minmaxHeight, D2DPOINT *startpos, CSize* subsetsize, bool *ret)
 {
     *ret = false;
     
@@ -459,7 +459,7 @@ uint16 *subsetImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, co
     if(GetImageSize(ImageFilename,&Imagesize))
     {
         long cols[2], rows[2];
-        if(GetsubareaImage_ortho(sensor_type,m_frameinfo,transparam,RPCs,ImageFilename,&Imagesize,subBoundary,minmaxHeight,cols,rows) )
+        if(GetsubareaImage(sensor_type, m_frameinfo, 0, transparam, Imageparam, RPCs,ImageFilename, Imagesize,subBoundary,minmaxHeight,cols,rows) )
         {
             uint16 type(0);
             leftimage   = Readtiff_T(ImageFilename,&Imagesize,cols,rows,subsetsize,type);
@@ -471,109 +471,6 @@ uint16 *subsetImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, co
     }
     
     return leftimage;
-}
-
-bool GetsubareaImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, const TransParam transparam, const double * const *RPCs, char *ImageFilename, CSize *Imagesize, const double *subBoundary, const double *minmaxHeight, long *cols, long *rows)
-{
-    bool ret = false;
-    
-    if(GetImageSize(ImageFilename,Imagesize))
-    {
-        D3DPOINT t_pts[8];
-        
-        t_pts[0].m_X    = subBoundary[0];
-        t_pts[1].m_X    = subBoundary[2];
-        t_pts[2].m_X    = subBoundary[0];
-        t_pts[3].m_X    = subBoundary[2];
-        t_pts[4].m_X    = subBoundary[0];
-        t_pts[5].m_X    = subBoundary[2];
-        t_pts[6].m_X    = subBoundary[0];
-        t_pts[7].m_X    = subBoundary[2];
-        
-        t_pts[0].m_Y    = subBoundary[1];
-        t_pts[1].m_Y    = subBoundary[3];
-        t_pts[2].m_Y    = subBoundary[1];
-        t_pts[3].m_Y    = subBoundary[3];
-        t_pts[4].m_Y    = subBoundary[3];
-        t_pts[5].m_Y    = subBoundary[1];
-        t_pts[6].m_Y    = subBoundary[3];
-        t_pts[7].m_Y    = subBoundary[1];
-        
-        t_pts[0].m_Z    = minmaxHeight[0];
-        t_pts[1].m_Z    = minmaxHeight[0];
-        t_pts[2].m_Z    = minmaxHeight[1];
-        t_pts[3].m_Z    = minmaxHeight[1];
-        t_pts[4].m_Z    = minmaxHeight[0];
-        t_pts[5].m_Z    = minmaxHeight[0];
-        t_pts[6].m_Z    = minmaxHeight[1];
-        t_pts[7].m_Z    = minmaxHeight[1];
-        
-        D2DPOINT *ImageCoord = NULL;
-        if(sensor_type == SB)
-        {
-            const double ImageParam[2] = {0.};
-            D3DPOINT *t_pts1          = ps2wgs_3D(transparam,8,t_pts);
-            ImageCoord      = GetObjectToImageRPC(RPCs, 2, ImageParam, 8, t_pts1);
-            
-            free(t_pts1);
-        }
-        else
-        {
-            D2DPOINT *t_image     = GetPhotoCoordinate(t_pts, m_frameinfo.Photoinfo[0], 8, m_frameinfo.m_Camera, m_frameinfo.Photoinfo[0].m_Rm);
-            ImageCoord  = PhotoToImage(t_image,8,m_frameinfo.m_Camera.m_CCDSize,m_frameinfo.m_Camera.m_ImageSize);
-            
-            free(t_image);
-        }
-        
-        double minX =  1000000;
-        double maxX = -1000000;
-        double minY =  1000000;
-        double maxY = -1000000;
-        for(int i=0;i<8;i++)
-        {
-            if(minX > ImageCoord[i].m_X)
-                minX    = ImageCoord[i].m_X;
-            if(maxX < ImageCoord[i].m_X)
-                maxX    = ImageCoord[i].m_X;
-            if(minY > ImageCoord[i].m_Y)
-                minY    = ImageCoord[i].m_Y;
-            if(maxY < ImageCoord[i].m_Y)
-                maxY    = ImageCoord[i].m_Y;
-        }
-        
-        const int buffer              = 200;
-        cols[0]             = (int)(ceil(minX)-buffer);
-        cols[1]             = (int)(ceil(maxX)+buffer);
-        rows[0]             = (int)(ceil(minY)-buffer);
-        rows[1]             = (int)(ceil(maxY)+buffer);
-        
-        const int null_buffer         = 1;
-        // Null pixel value remove
-        if(cols[0]          <= null_buffer)
-            cols[0]         = null_buffer;
-        if(rows[0]          <= null_buffer)
-            rows[0]         = null_buffer;
-        if(cols[0]          > Imagesize->width - null_buffer)
-            cols[0]         = Imagesize->width - null_buffer;
-        if(rows[0]          > Imagesize->height - null_buffer)
-            rows[0]         = Imagesize->height - null_buffer;
-        
-        if(cols[1]          <= null_buffer)
-            cols[1]         = null_buffer;
-        if(rows[1]          <= null_buffer)
-            rows[1]         = null_buffer;
-        if(cols[1]          > Imagesize->width - null_buffer)
-            cols[1]         = Imagesize->width - null_buffer;
-        if(rows[1]          > Imagesize->height - null_buffer)
-            rows[1]         = Imagesize->height - null_buffer;
-        
-        
-        free(ImageCoord);
-        
-        ret = true;
-    }
-    
-    return ret;
 }
 
 bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary, const double * const *RPCs, const double gridspace, const CSize DEM_size, const double minX, const double maxY, const TransParam param, const double Ortho_resolution)

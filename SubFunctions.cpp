@@ -185,6 +185,106 @@ bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imagepar
     return check_load_RA;
 }
 
+bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const int ti, const TransParam transparam, const double *ImageParam, const double * const *RPCs, char *ImageFilename, CSize Imagesize, const double *subBoundary, const double *minmaxHeight, long *cols, long *rows)
+{
+    bool ret = false;
+    
+    D3DPOINT t_pts[8];
+    
+    t_pts[0].m_X    = subBoundary[0];
+    t_pts[1].m_X    = subBoundary[2];
+    t_pts[2].m_X    = subBoundary[0];
+    t_pts[3].m_X    = subBoundary[2];
+    t_pts[4].m_X    = subBoundary[0];
+    t_pts[5].m_X    = subBoundary[2];
+    t_pts[6].m_X    = subBoundary[0];
+    t_pts[7].m_X    = subBoundary[2];
+    
+    t_pts[0].m_Y    = subBoundary[1];
+    t_pts[1].m_Y    = subBoundary[3];
+    t_pts[2].m_Y    = subBoundary[1];
+    t_pts[3].m_Y    = subBoundary[3];
+    t_pts[4].m_Y    = subBoundary[3];
+    t_pts[5].m_Y    = subBoundary[1];
+    t_pts[6].m_Y    = subBoundary[3];
+    t_pts[7].m_Y    = subBoundary[1];
+    
+    t_pts[0].m_Z    = minmaxHeight[0];
+    t_pts[1].m_Z    = minmaxHeight[0];
+    t_pts[2].m_Z    = minmaxHeight[1];
+    t_pts[3].m_Z    = minmaxHeight[1];
+    t_pts[4].m_Z    = minmaxHeight[0];
+    t_pts[5].m_Z    = minmaxHeight[0];
+    t_pts[6].m_Z    = minmaxHeight[1];
+    t_pts[7].m_Z    = minmaxHeight[1];
+    
+    D2DPOINT *ImageCoord = NULL;
+    if(sensor_type == SB)
+    {
+        D3DPOINT *t_pts1          = ps2wgs_3D(transparam,8,t_pts);
+        ImageCoord      = GetObjectToImageRPC(RPCs, 2, ImageParam, 8, t_pts1);
+        
+        free(t_pts1);
+    }
+    else
+    {
+        D2DPOINT *t_image     = GetPhotoCoordinate(t_pts, m_frameinfo.Photoinfo[ti], 8, m_frameinfo.m_Camera, m_frameinfo.Photoinfo[ti].m_Rm);
+        ImageCoord  = PhotoToImage(t_image,8,m_frameinfo.m_Camera.m_CCDSize,m_frameinfo.m_Camera.m_ImageSize);
+        
+        free(t_image);
+    }
+    
+    double minX =  1000000;
+    double maxX = -1000000;
+    double minY =  1000000;
+    double maxY = -1000000;
+    for(int i=0;i<8;i++)
+    {
+        if(minX > ImageCoord[i].m_X)
+            minX    = ImageCoord[i].m_X;
+        if(maxX < ImageCoord[i].m_X)
+            maxX    = ImageCoord[i].m_X;
+        if(minY > ImageCoord[i].m_Y)
+            minY    = ImageCoord[i].m_Y;
+        if(maxY < ImageCoord[i].m_Y)
+            maxY    = ImageCoord[i].m_Y;
+    }
+    
+    const int buffer              = 200;
+    cols[0]             = (int)(ceil(minX)-buffer);
+    cols[1]             = (int)(ceil(maxX)+buffer);
+    rows[0]             = (int)(ceil(minY)-buffer);
+    rows[1]             = (int)(ceil(maxY)+buffer);
+    
+    const int null_buffer         = 1;
+    // Null pixel value remove
+    if(cols[0]          <= null_buffer)
+        cols[0]         = null_buffer;
+    if(rows[0]          <= null_buffer)
+        rows[0]         = null_buffer;
+    if(cols[0]          > Imagesize.width - null_buffer)
+        cols[0]         = Imagesize.width - null_buffer;
+    if(rows[0]          > Imagesize.height - null_buffer)
+        rows[0]         = Imagesize.height - null_buffer;
+    
+    if(cols[1]          <= null_buffer)
+        cols[1]         = null_buffer;
+    if(rows[1]          <= null_buffer)
+        rows[1]         = null_buffer;
+    if(cols[1]          > Imagesize.width - null_buffer)
+        cols[1]         = Imagesize.width - null_buffer;
+    if(rows[1]          > Imagesize.height - null_buffer)
+        rows[1]         = Imagesize.height - null_buffer;
+    
+    printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
+    
+    free(ImageCoord);
+    
+    ret = true;
+    
+    return ret;
+}
+
 bool GetImageSize(char *filename, CSize *Imagesize)
 {
     bool ret = false;
@@ -206,6 +306,83 @@ bool GetImageSize(char *filename, CSize *Imagesize)
         ret = true;
         
     }
+    return ret;
+}
+
+bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesize, double *subBoundary, long *cols,long *rows)
+{
+    bool ret = false;
+    
+    D2DPOINT t_pts[8];
+    t_pts[0].m_X    = subBoundary[0];
+    t_pts[1].m_X    = subBoundary[2];
+    t_pts[2].m_X    = subBoundary[0];
+    t_pts[3].m_X    = subBoundary[2];
+    t_pts[4].m_X    = subBoundary[0];
+    t_pts[5].m_X    = subBoundary[2];
+    t_pts[6].m_X    = subBoundary[0];
+    t_pts[7].m_X    = subBoundary[2];
+    
+    t_pts[0].m_Y    = subBoundary[1];
+    t_pts[1].m_Y    = subBoundary[3];
+    t_pts[2].m_Y    = subBoundary[1];
+    t_pts[3].m_Y    = subBoundary[3];
+    t_pts[4].m_Y    = subBoundary[3];
+    t_pts[5].m_Y    = subBoundary[1];
+    t_pts[6].m_Y    = subBoundary[3];
+    t_pts[7].m_Y    = subBoundary[1];
+    
+    D2DPOINT *ImageCoord        = GetObjectToImage(8, t_pts,subBoundary,proinfo.resolution);
+    
+    double minX =  1000000;
+    double maxX = -1000000;
+    double minY =  1000000;
+    double maxY = -1000000;
+    
+    for(int i=0;i<8;i++)
+    {
+        if(minX > ImageCoord[i].m_X)
+            minX    = ImageCoord[i].m_X;
+        if(maxX < ImageCoord[i].m_X)
+            maxX    = ImageCoord[i].m_X;
+        if(minY > ImageCoord[i].m_Y)
+            minY    = ImageCoord[i].m_Y;
+        if(maxY < ImageCoord[i].m_Y)
+            maxY    = ImageCoord[i].m_Y;
+    }
+    
+    const int buffer                = 0;
+    cols[0]                = (int)(ceil(minX)-buffer);
+    cols[1]                = (int)(ceil(maxX)+buffer);
+    rows[0]                = (int)(ceil(minY)-buffer);
+    rows[1]                = (int)(ceil(maxY)+buffer);
+    
+    const int null_buffer            = 0;
+    // Null pixel value remove
+    if(cols[0]            <= null_buffer)
+        cols[0]            = null_buffer;
+    if(rows[0]            <= null_buffer)
+        rows[0]            = null_buffer;
+    if(cols[0]            > Imagesize.width - null_buffer)
+        cols[0]            = Imagesize.width - null_buffer;
+    if(rows[0]            > Imagesize.height - null_buffer)
+        rows[0]            = Imagesize.height - null_buffer;
+    
+    if(cols[1]            <= null_buffer)
+        cols[1]            = null_buffer;
+    if(rows[1]            <= null_buffer)
+        rows[1]            = null_buffer;
+    if(cols[1]            > Imagesize.width - null_buffer)
+        cols[1]            = Imagesize.width - null_buffer;
+    if(rows[1]            > Imagesize.height - null_buffer)
+        rows[1]            = Imagesize.height - null_buffer;
+    
+    printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
+    
+    free(ImageCoord);
+    
+    ret    = true;
+    
     return ret;
 }
 
@@ -2685,34 +2862,6 @@ void SetAngle(double &angle)
         angle = 360 - angle;
 }
 
-/*
-void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6])
-{
-    for(int ii=0;ii<9;ii++)
-        subA[ii][0]   = 1.0;
-    
-    subA[0][1] = -1.0; subA[0][2] = -1.0; subA[0][3] =  1.0; subA[0][4] =  1.0; subA[0][5] =  1.0;
-    subA[1][1] =  0.0; subA[1][2] = -1.0; subA[1][3] =  0.0; subA[1][4] =  0.0; subA[1][5] =  1.0;
-    subA[2][1] =  1.0; subA[2][2] = -1.0; subA[2][3] =  1.0; subA[2][4] = -1.0; subA[2][5] =  1.0;
-    subA[3][1] = -1.0; subA[3][2] =  0.0; subA[3][3] =  1.0; subA[3][4] =  0.0; subA[3][5] =  0.0;
-    subA[4][1] =  0.0; subA[4][2] =  0.0; subA[4][3] =  0.0; subA[4][4] =  0.0; subA[4][5] =  0.0;
-    subA[5][1] =  1.0; subA[5][2] =  0.0; subA[5][3] =  1.0; subA[5][4] =  0.0; subA[5][5] =  0.0;
-    subA[6][1] = -1.0; subA[6][2] =  1.0; subA[6][3] =  1.0; subA[6][4] = -1.0; subA[6][5] =  1.0;
-    subA[7][1] =  0.0; subA[7][2] =  1.0; subA[7][3] =  0.0; subA[7][4] =  0.0; subA[7][5] =  1.0;
-    subA[8][1] =  1.0; subA[8][2] =  1.0; subA[8][3] =  1.0; subA[8][4] =  1.0; subA[8][5] =  1.0;
-    
-    for(int ii=0;ii<6;ii++)
-        for(int kk=0;kk<9;kk++)
-            TsubA[ii][kk]       = subA[kk][ii];
-    
-    InverseSubA[0][0] =  0.555556; InverseSubA[0][1] =  0.000000; InverseSubA[0][2] =  0.000000; InverseSubA[0][3] = -0.333333; InverseSubA[0][4] =  0.000000; InverseSubA[0][5] = -0.333333;
-    InverseSubA[1][0] =  0.000000; InverseSubA[1][1] =  0.166667; InverseSubA[1][2] =  0.000000; InverseSubA[1][3] =  0.000000; InverseSubA[1][4] =  0.000000; InverseSubA[1][5] =  0.000000;
-    InverseSubA[2][0] =  0.000000; InverseSubA[2][1] =  0.000000; InverseSubA[2][2] =  0.166667; InverseSubA[2][3] =  0.000000; InverseSubA[2][4] =  0.000000; InverseSubA[2][5] =  0.000000;
-    InverseSubA[3][0] = -0.333333; InverseSubA[3][1] =  0.000000; InverseSubA[3][2] =  0.000000; InverseSubA[3][3] =  0.500000; InverseSubA[3][4] =  0.000000; InverseSubA[3][5] =  0.000000;
-    InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
-    InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
-}
-*/
 //removable functions not used in SETSM DEM main
 void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
 {
@@ -2935,6 +3084,91 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     printf("s5\n");
     return triangulation;
 }
+
+D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D)
+{
+    D2DPOINT *GridPT = NULL;
+
+    Size_2D->width  = (int)(ceil((double)(Boundary[2] - Boundary[0])/Grid_x));
+    Size_2D->height = (int)(ceil((double)(Boundary[3] - Boundary[1])/Grid_y));
+
+    GridPT  = (D2DPOINT*)malloc(sizeof(D2DPOINT)*(long)Size_2D->height*(long)Size_2D->width);
+#pragma omp parallel for schedule(guided)
+    for(long row = 0 ; row < Size_2D->height ; row++)
+        for(long col = 0; col < Size_2D->width ; col++)
+        {
+            long index = row*(long)Size_2D->width + col;
+            GridPT[index].m_X = Boundary[0] + col*Grid_x;
+            GridPT[index].m_Y = Boundary[1] + row*Grid_y;
+        }
+
+    return GridPT;
+}
+
+void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages)
+{
+    for(int iter_level = 1 ; iter_level < py_level_set; iter_level++)
+    {
+        for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
+        {
+            if(proinfo->check_selected_image[image_index])
+            {
+                long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
+   
+                SubImages[iter_level][image_index] = CreateImagePyramid(SubImages[iter_level-1][image_index],data_size_lr[image_index][iter_level-1],9,(double)(1.5));
+                
+                int16 *dirimg = (int16*)malloc(sizeof(int16)*data_length);
+                MakeSobelMagnitudeImage(data_size_lr[image_index][iter_level],SubImages[iter_level][image_index],SubMagImages[iter_level][image_index],dirimg);
+                Orientation(data_size_lr[image_index][iter_level],SubMagImages[iter_level][image_index],dirimg,15,SubOriImages[iter_level][image_index]);
+                
+                free(dirimg);
+            }
+        }
+    }
+}
+
+uint16 *SubsetImageFrombitsToUint16(const int image_bits, char *imagefile, long *cols, long *rows, CSize *subsize)
+{
+    uint16 *out = NULL;
+    
+    CSize temp_size;
+    switch(image_bits)
+    {
+        case 8:
+        {
+            uint8 type_t(0);
+            uint8 *t_data8    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            if(t_data8)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint16*)malloc(sizeof(uint16)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                    out[index] = t_data8[index];
+                free(t_data8);
+            }
+            break;
+        }
+        case 12:
+        {
+            uint16 type_t(0);
+            uint16 *t_data16    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            if(t_data16)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint16*)malloc(sizeof(uint16)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                    out[index] = t_data16[index];
+                free(t_data16);
+            }
+            break;
+        }
+    }
+    
+    return out;
+}
+
 
 uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level)
 {

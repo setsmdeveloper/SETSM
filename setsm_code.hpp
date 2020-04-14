@@ -50,11 +50,7 @@ D2DPOINT *SetGrids(const ProInfo *info, const int level, const int final_level_i
 
 UGRID *SetGrid3PT(const ProInfo *proinfo, LevelInfo &rlevelinfo, const double Th_roh, double *minmaxHeight);
 
-bool GetsubareaImage(ProInfo *proinfo, LevelInfo &rlevelinfo, int ImageID, char *ImageFilename, const double *minmaxHeight, long int *cols, long int *rows);
-
 void SetSubBoundary(const double *Boundary, const double subX, const double subY, const double buffer_area, const int col, const int row, double *subBoundary);
-
-D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D);
 
 void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *Grid, double *minmaxHeight);
 
@@ -64,11 +60,7 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, double* _bou
 
 void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundary, double* _minmaxheight, double* _Hinterval);
 
-bool subsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const TransParam transparam, const uint8 NumofIAparam, const double *const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, const char * const *SubsetImage, CSize *Subsetsize, FILE *fid, const bool check_checktiff);
-
 uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize);
-
-void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages);
 
 void CalMPP_pair(double CA,double mean_product_res, double im_resolution, double *MPP_stereo_angle);
 
@@ -131,7 +123,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
 
 void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z);
+bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z);
 
 UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize resize_Size,const double* preBoundary,const double* Boundary,const D2DPOINT *resize_Grid, UGRID *preGridPT3,const double pre_gridsize,const double* minmaxheight);
