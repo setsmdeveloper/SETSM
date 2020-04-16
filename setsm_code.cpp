@@ -6514,146 +6514,6 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
     }
 }
 
-
-void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSelect check_pyimage, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
-{
-    CSize LImagesize, RImagesize;
-    if(check_pyimage == OR)
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step];
-    }
-    else if(check_pyimage == NX)
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step - 1];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step - 1];
-    }
-    else
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.blunder_selected_level];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.blunder_selected_level];
-    }
-    
-    if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
-    {
-        const long int position = (long int) pos_left.m_X + (long int) pos_left.m_Y *(long int)LImagesize.width;
-        const long int position_right = (long int) pos_right.m_X + (long int) pos_right.m_Y *(long int)RImagesize.width;
-        
-        double left_patch, left_mag_patch, right_patch, right_mag_patch;
-        
-        double dx          =  pos_left.m_X - (int)(pos_left.m_X);
-        double dy          =  pos_left.m_Y - (int)(pos_left.m_Y);
-        double dx_r        =  pos_right.m_X - (int)(pos_right.m_X);
-        double dy_r        =  pos_right.m_Y - (int)(pos_right.m_Y);
-        
-        if(check_pyimage == OR)
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.reference_id], position,LImagesize, dx, dy);
-        
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
-        else if(check_pyimage == NX)
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.reference_id], position,LImagesize, dx, dy);
-        
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
-        else
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.reference_id], position,LImagesize, dx, dy);
-        
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
-            
-        if(left_patch > 0 && right_patch > 0)
-        {
-            rkernel.left_patch_vecs[0][Count_N[0]] = left_patch;
-            rkernel.left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-            rkernel.right_patch_vecs[0][Count_N[0]] = right_patch;
-            rkernel.right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
-            Count_N[0]++;
-            
-            const int size_1        = (int)(rkernel.Half_template_size/2);
-            if(radius2 <= (rkernel.Half_template_size - size_1 + 1)*(rkernel.Half_template_size - size_1 + 1))
-            {
-                if(row >= -rkernel.Half_template_size + size_1 && row <= rkernel.Half_template_size - size_1)
-                {
-                    if(col >= -rkernel.Half_template_size + size_1 && col <= rkernel.Half_template_size - size_1)
-                    {
-                        rkernel.left_patch_vecs[1][Count_N[1]] = left_patch;
-                        rkernel.left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                        rkernel.right_patch_vecs[1][Count_N[1]] = right_patch;
-                        rkernel.right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
-                        Count_N[1]++;
-                    }
-                }
-            }
-            
-            const int size_2        = size_1 + (int)((size_1/2.0) + 0.5);
-            if(radius2 <= (rkernel.Half_template_size - size_2 + 1)*(rkernel.Half_template_size - size_2 + 1))
-            {
-                if(row >= -rkernel.Half_template_size + size_2 && row <= rkernel.Half_template_size - size_2)
-                {
-                    if(col >= -rkernel.Half_template_size + size_2 && col <= rkernel.Half_template_size - size_2)
-                    {
-                        rkernel.left_patch_vecs[2][Count_N[2]] = left_patch;
-                        rkernel.left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                        rkernel.right_patch_vecs[2][Count_N[2]] = right_patch;
-                        rkernel.right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
-                        Count_N[2]++;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi)
-{
-    if(Count_N[0] > Th_rho && Count_N[1] > Th_rho && Count_N[2] > Th_rho)
-    {
-        double temp_roh = 0;
-        double count_roh = 0;
-        double temp_NCC_roh;
-        
-        for (int k=0; k<3; k++)
-        {
-            const double ncc = Correlate(rsetkernel.left_patch_vecs[k], rsetkernel.right_patch_vecs[k], Count_N[k]);
-            if (ncc != -99)
-            {
-                count_roh++;
-                temp_roh += ncc;
-            }
-            
-            const double ncc_mag = Correlate(rsetkernel.left_mag_patch_vecs[k], rsetkernel.right_mag_patch_vecs[k], Count_N[k]);
-            if (ncc_mag != -99)
-            {
-                count_roh++;
-                temp_roh += ncc_mag;
-            }
-        }
-        if (count_roh > 0)
-        {
-            temp_NCC_roh = temp_roh/count_roh;
-            sum_NCC_multi += temp_NCC_roh;
-            count_NCC ++;
-        }
-    }
-}
-
-
 void FindPeakNcc(const int Pyramid_step, const int iteration, const long int grid_index, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, float &pre_height, int &direction, double &max_WNCC, NCCresult *nccresult)
 {
     double diff_rho;
@@ -8001,11 +7861,11 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
         SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,0,Half_template_size,patch_size);
 
 #pragma omp for schedule(guided)
-        for(int iter_count = 0 ; iter_count < numofpts ; iter_count++)
+        for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
             long pts_row = (int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
             long pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
-            long pt_index = pts_row*rlevelinfo.Size_Grid2D->width + pts_col;
+            long pt_index = pts_row*(long)rlevelinfo.Size_Grid2D->width + pts_col;
             
             
             if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
@@ -10250,88 +10110,6 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
     return result;
 }
 
-void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ)
-{
-    temp_MinZ = min(min(TriP1.m_Z,TriP2.m_Z),TriP3.m_Z);
-    temp_MaxZ = max(max(TriP1.m_Z,TriP2.m_Z),TriP3.m_Z);
-    
-    if(temp_MinZ < Total_Min_Z)
-        Total_Min_Z = temp_MinZ;
-    if(temp_MaxZ > Total_Max_Z)
-        Total_Max_Z = temp_MaxZ;
-    
-    // calculation on BoundingBox(MinMax XY) of triangle
-    const double TriMinXY[2] = { min(min(TriP1.m_X,TriP2.m_X),TriP3.m_X), min(min(TriP1.m_Y,TriP2.m_Y),TriP3.m_Y)};
-    const double TriMaxXY[2] = { max(max(TriP1.m_X,TriP2.m_X),TriP3.m_X), max(max(TriP1.m_Y,TriP2.m_Y),TriP3.m_Y)};
-    PixelMinXY[0] = (int)((TriMinXY[0] - rlevelinfo.Boundary[0])/(*rlevelinfo.grid_resolution) + 0.5);
-    PixelMinXY[1] = (int)((TriMinXY[1] - rlevelinfo.Boundary[1])/(*rlevelinfo.grid_resolution) + 0.5);
-    PixelMaxXY[0] = (int)((TriMaxXY[0] - rlevelinfo.Boundary[0])/(*rlevelinfo.grid_resolution) + 0.5);
-    PixelMaxXY[1] = (int)((TriMaxXY[1] - rlevelinfo.Boundary[1])/(*rlevelinfo.grid_resolution) + 0.5);
-    
-    PixelMinXY[0] -= 1;     PixelMinXY[1] -= 1;
-    PixelMaxXY[0] += 1;     PixelMaxXY[1] += 1;
-    
-    if (PixelMaxXY[0] >= (int)(rlevelinfo.Size_Grid2D->width))
-        PixelMaxXY[0] =  (int)(rlevelinfo.Size_Grid2D->width-1);
-    if (PixelMaxXY[1] >= (int)(rlevelinfo.Size_Grid2D->height))
-        PixelMaxXY[1] =  (int)(rlevelinfo.Size_Grid2D->height-1);
-    if (PixelMinXY[0] < 0)
-        PixelMinXY[0] = 0;
-    if (PixelMinXY[1] < 0)
-        PixelMinXY[1] = 0;
-}
-
-
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
-{
-    bool rtn = false;
-    
-    D3DPOINT v12(TriP2 - TriP1);
-    D3DPOINT v1P(CurGPXY - TriP1);
-    D3DPOINT v23(TriP3 - TriP2);
-    D3DPOINT v2P(CurGPXY - TriP2);
-    D3DPOINT v31(TriP1 - TriP3);
-    D3DPOINT v3P(CurGPXY - TriP3);
-    
-    int Sum = 3;
-    if (v12.m_X*v1P.m_Y-v12.m_Y*v1P.m_X <= 0)
-        Sum--;
-    if (v23.m_X*v2P.m_Y-v23.m_Y*v2P.m_X <= 0)
-        Sum--;
-    if (v31.m_X*v3P.m_Y-v31.m_Y*v3P.m_X <= 0)
-        Sum--;
-    
-    if (Sum==0 || Sum==3)
-    {
-        D3DPOINT v12(TriP2 - TriP1);
-        D3DPOINT v13(TriP3 - TriP1);
-        D3DPOINT Normal(v12.m_Y*v13.m_Z - v12.m_Z*v13.m_Y, v12.m_Z*v13.m_X - v12.m_X*v13.m_Z, v12.m_X*v13.m_Y - v12.m_Y*v13.m_X);
-        
-        const double Len = SQRT(Normal);
-        if(Len > 0 )
-        {
-            Normal.m_X/=Len;
-            Normal.m_Y/=Len;
-            Normal.m_Z/=Len;
-            
-            const double A = Normal.m_X;
-            const double B = Normal.m_Y;
-            const double C = Normal.m_Z;
-            const double D = -(A*TriP1.m_X+B*TriP1.m_Y+C*TriP1.m_Z);
-            
-            if(C != 0)
-            {
-                Z = -1.0 * ((A * CurGPXY.m_X) + (B * CurGPXY.m_Y) + D) / C;
-                rtn = true;
-            }
-            else
-                rtn = false;
-        }
-    }
-    
-    return rtn;
-}
-
 UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight)
 {
     if(resize_Size.height > 8000 || resize_Size.width > 8000)
@@ -12314,16 +12092,7 @@ double FindNebPts_F_M_IDW(const float *input, const unsigned char *matching_flag
 
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
-double InterpolatePatch(const uint16 *Image, const long int position, const CSize Imagesize, const double dx, const double dy)
-{
-    double patch =
-        (double) (Image[position]) * (1 - dx) * (1 - dy) + 
-        (double) (Image[position + 1]) * dx * (1 - dy) +
-        (double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
-        (double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
-    return patch;
-}
 
 
 
