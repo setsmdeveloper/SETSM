@@ -2,4 +2,5 @@
 setsm
 setsm_mpi
 *.optrpt
-
+git_description
+git_description.h
