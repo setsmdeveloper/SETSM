@@ -416,7 +416,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                     
                     free(subimage);
                     
-                    delete data_size;
+                    delete[] data_size;
                 }
                 
             }
