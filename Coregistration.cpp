@@ -321,6 +321,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     double upper = ImageAdjust_coreg[ti][0]*ortho_dy[ti];
                     printf("coreg %s\t%d\t%d\t%f\t%f\n",out_file,OriImagesizes[ti].width,OriImagesizes[ti].height,left,upper);
                     
+                    free(Ifilename);
                     free(tmp_no_ext);
                     free(GCP_value);
                 }

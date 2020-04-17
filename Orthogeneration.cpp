@@ -87,6 +87,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
 
     free(tmp_no_ext);
     free(tmp_chr);
+    free(Ifilename);
 
     printf("image = %s\n",ImageFilename);
     printf("rpc = %s\n",RPCFilename);

@@ -565,6 +565,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                         printf("after pathname %s\n",info->Outputpath_name);
                         
                         sprintf(info->tmpdir, "%s/tmp", info->save_filepath);
+
+                        free(Outputpath_name);
                     }
                     else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
                     {

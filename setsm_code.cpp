@@ -192,6 +192,8 @@ int main(int argc,char *argv[])
             
             printf("%s\n",args.Outputpath);
             printf("%s\n", args.Outputpath_name);
+
+            free(Outputpath_name);
             
             Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
@@ -219,6 +221,8 @@ int main(int argc,char *argv[])
         printf("%s\n",args.Image[1]);
         printf("%s\n",args.Outputpath);
         printf("%s\n", args.Outputpath_name);
+
+        free(Outputpath_name);
         
         char save_filepath[500];
         char LeftImagefilename[500];
@@ -493,6 +497,8 @@ int main(int argc,char *argv[])
                 sprintf(str_matchfile,"%s/%s_matchtag.raw",args.Outputpath,Outputpath_name);
                 sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",args.Outputpath,Outputpath_name);
                 sprintf(result_file,"%s/%sdem_smooth_result.txt",args.Outputpath,Outputpath_name);
+
+                free(Outputpath_name);
             }
             
             printf("dem file %s\n",str_DEMfile);
@@ -1463,6 +1469,8 @@ int main(int argc,char *argv[])
                         printf("%s\n",args.Outputpath);
                         printf("%s\n", args.Outputpath_name);
 
+                        free(Outputpath_name);
+
                         Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
                         for(int ti = 0 ; ti < args.number_of_images ; ti++)
                         {
@@ -1542,6 +1550,8 @@ int main(int argc,char *argv[])
                     
                     printf("%s\n",args.Outputpath);
                     printf("%s\n", args.Outputpath_name);
+
+                    free(Outputpath_name);
                     
                     SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
                 }
