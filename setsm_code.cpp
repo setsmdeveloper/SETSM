@@ -2878,6 +2878,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 for(int i = 0; i < proinfo->number_of_images; i++)
                     RPCsFree(RPCs[i]);
                 free(RPCs);
+                free(leftright_band);
+                free(Image_gsd_r);
+                free(Image_gsd_c);
+                free(Image_gsd);
+                free(Limagesize);
                 free(image_info);
             }
             else
