@@ -1717,7 +1717,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 TransParam param;
                 char Outputpath[500];
                 sprintf(Outputpath, "%s", args.Outputpath);
-                double ***RPCs = (double***)malloc(sizeof(double**)*proinfo->number_of_images);
+                double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
                 
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
@@ -1752,6 +1752,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 sprintf(DEMFilename, "%s", args.seedDEMfilename);
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     orthogeneration(param,args,args.Image[ti], DEMFilename, Outputpath,1,0,Imageparams);
+
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    RPCsFree(RPCs[ti]);
+                free(RPCs);
             }
         }
     }
@@ -1796,7 +1800,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 ImageInfo *image_info = (ImageInfo*)malloc(sizeof(ImageInfo)*proinfo->number_of_images);
                 CSize *Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
-                double ***RPCs = (double***)malloc(sizeof(double**)*proinfo->number_of_images);
+                double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
                 
                 sprintf(_save_filepath,"%s",proinfo->save_filepath);
                 
@@ -2870,6 +2874,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     
                     sprintf(temp_filepath,"%s/tmp",proinfo->save_filepath);
                 }
+
+                for(int i = 0; i < proinfo->number_of_images; i++)
+                    RPCsFree(RPCs[i]);
+                free(RPCs);
                 free(image_info);
             }
             else
