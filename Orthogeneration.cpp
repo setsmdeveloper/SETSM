@@ -437,6 +437,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         printf("check overlap area between DEM and image, or match a projection type of input image based on DEM projection by adding '-projection' option\n");
         free(RPCs);
     }
+
+    delete proinfo;
 }
 
 uint16 *Preprocessing_ortho(const uint8 py_level, CSize *data_size, uint16 *subimg)
