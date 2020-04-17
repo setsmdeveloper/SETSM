@@ -551,6 +551,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                                     exit(0);
                                 }
                             }
+                            free(tmp_chr);
                         }
                         count_images++;
                     }

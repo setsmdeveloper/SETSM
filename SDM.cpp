@@ -248,9 +248,12 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
         char *filename = GetFileName(proinfo.Imagefilename[0]);
         filename = remove_ext(filename);
         sprintf(Lsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,1,1);
+        free(filename);
+
         filename = GetFileName(proinfo.Imagefilename[1]);
         filename = remove_ext(filename);
         sprintf(Rsubsetfilename,"%s/%s_subset_%d_%d.raw",proinfo.tmpdir,filename,1,1);
+        free(filename);
         
         printf("subsetimage level %d\n",proinfo.pyramid_level);
         

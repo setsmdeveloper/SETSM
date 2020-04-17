@@ -65,6 +65,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     else
         fclose(fid_xml);
     
+    free(tmp_chr);
+
     tmp_chr = remove_ext(DEMFilename);
     sprintf(DEM_header,"%s.hdr",tmp_chr);
     char *Ifilename  = SetOutpathName(ImageFilename);
@@ -82,6 +84,9 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         sprintf(Ortho_header, "%s/%s_%d_ortho_%3.1f.hdr",Outputpath, tmp_no_ext,DEM_divide,args.DEM_space);
         sprintf(OrthoGEOTIFFFilename, "%s/%s_%d_ortho_%3.1f.tif",Outputpath, tmp_no_ext,DEM_divide,args.DEM_space);
     }
+
+    free(tmp_no_ext);
+    free(tmp_chr);
 
     printf("image = %s\n",ImageFilename);
     printf("rpc = %s\n",RPCFilename);
