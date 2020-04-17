@@ -55,6 +55,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile);
 void SetTransParam_param(TransParam *param, bool Hemisphere);
 void SetTransParam(double minLat, double minLon, TransParam *param);
 
+void RPCsFree(double **rpcs);
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
 double** OpenXMLFile_Planet(char* _filename);

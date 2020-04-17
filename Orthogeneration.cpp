@@ -421,7 +421,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                 
             }
         }
-        free(RPCs);
+        RPCsFree(RPCs);
         free(DEM_value);
         
         WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 12);
@@ -435,7 +435,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     else
     {
         printf("check overlap area between DEM and image, or match a projection type of input image based on DEM projection by adding '-projection' option\n");
-        free(RPCs);
+        RPCsFree(RPCs);
     }
 
     delete proinfo;
