@@ -122,7 +122,7 @@ int main(int argc,char *argv[])
         
         args.check_arg = 0;
         
-        Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
         for(int ti = 0 ; ti < args.number_of_images ; ti++)
         {
             Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -195,7 +195,7 @@ int main(int argc,char *argv[])
 
             free(Outputpath_name);
             
-            Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -229,7 +229,7 @@ int main(int argc,char *argv[])
         
         if( strcmp(args.Image[0],args.Image[1]) != 0)
         {
-            Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -1471,7 +1471,7 @@ int main(int argc,char *argv[])
 
                         free(Outputpath_name);
 
-                        Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+                        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
                         for(int ti = 0 ; ti < args.number_of_images ; ti++)
                         {
                             Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -1562,6 +1562,14 @@ int main(int argc,char *argv[])
     
     printf("# of allocated threads = %d\n",omp_get_max_threads());
             
+    if(Imageparams)
+    {
+        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+        {
+            free(Imageparams[ti]);
+        }
+    }
+    free(Imageparams);
     
     return 0;
 }
