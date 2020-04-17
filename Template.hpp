@@ -86,7 +86,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
         }
     }
 
-#pragma omp parallel for private(temp) schedule(guided)
+#pragma omp parallel for schedule(guided)
     for(long int r=0;r<result_size.height;r++)
     {
         for(long int c=0;c<result_size.width;c++)

@@ -3338,7 +3338,7 @@ D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double G
 
 void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages)
 {
-    for(int iter_level = 1 ; iter_level < py_level_set; iter_level++)
+    for(int iter_level = 0 ; iter_level < py_level_set; iter_level++)
     {
         for(int image_index = 0 ; image_index < proinfo->number_of_images ; image_index++)
         {
@@ -3346,7 +3346,10 @@ void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSiz
             {
                 long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
    
-                SubImages[iter_level][image_index] = CreateImagePyramid(SubImages[iter_level-1][image_index],data_size_lr[image_index][iter_level-1],9,(double)(1.5));
+                if(iter_level > 0)
+                {
+                    SubImages[iter_level][image_index] = CreateImagePyramid(SubImages[iter_level-1][image_index],data_size_lr[image_index][iter_level-1],9,(double)(1.5));
+                }
                 
                 int16 *dirimg = (int16*)malloc(sizeof(int16)*data_length);
                 MakeSobelMagnitudeImage(data_size_lr[image_index][iter_level],SubImages[iter_level][image_index],SubMagImages[iter_level][image_index],dirimg);

@@ -2398,7 +2398,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 
-                                Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                                Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2495,7 +2495,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
-                                Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pMetafile);
+                                Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
@@ -2949,7 +2949,7 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 }
 #endif
 
-int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy,FILE* pMetafile)
+int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -5973,8 +5973,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     const double ncc_alpha = SetNCC_alpha(Pyramid_step,iteration, IsRA);
     const double ncc_beta = 1.0 - ncc_alpha;
         
-    int sum_data2 = 0;
-    int sum_data = 0;
+    //int sum_data2 = 0;
+    //int sum_data = 0;
     const int reference_id = plevelinfo.reference_id;
     
 #pragma omp parallel
@@ -6005,18 +6005,19 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
         SetKernel rsetkernel_next(left_patch_next_vecs,left_mag_patch_next_vecs,right_patch_next_vecs,right_mag_patch_next_vecs,reference_id,1,Half_template_size,patch_size);
         
-#pragma omp for schedule(guided) reduction(+:sum_data2, sum_data,Accessable_grid)
+#pragma omp for schedule(guided) reduction(+:Accessable_grid/*,sum_data2, sum_data*/)
         for(long int iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
             long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
             long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
             long int pt_index = pts_row*(long int)plevelinfo.Size_Grid2D->width + pts_col;
             
+            /*
             if(nccresult[pt_index].check_height_change)
                 sum_data2++;
             else
                 sum_data++;
-            
+            */
             const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
             const int start_H     = GridPT3[pt_index].minHeight;
             const int end_H       = GridPT3[pt_index].maxHeight;
@@ -6361,7 +6362,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         }
     } // end omp parallel
     
-    printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
+    //printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
     
     if(check_ortho)
     {
@@ -7658,8 +7659,8 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
     
     
     const int reference_id = rlevelinfo.reference_id;
-    int count_total = 0;
-    int count_low = 0;
+    //int count_total = 0;
+    //int count_low = 0;
 #pragma omp parallel
     {
         // Make patch vectors thread private rather than private to each loop iteration
@@ -7678,7 +7679,7 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
 
         SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
         
-#pragma omp for reduction(+:count_low, count_total) schedule(guided)
+#pragma omp for /*reduction(+:count_low, count_total)*/ schedule(guided)
         for(long int iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
         {
             long int pts_row = (long int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
@@ -7696,8 +7697,8 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                         double count_GNCC = 0;
                         double nccresult = 0.0;
 
-                        if(GridPT3[pt_index].Height != -1000)
-                            count_total+=1;
+                        //if(GridPT3[pt_index].Height != -1000)
+                        //    count_total+=1;
 
                         for(int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
@@ -7754,8 +7755,8 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                                 }
                             }
 
-                            if(nccresult > -1)
-                                count_low += 1;
+                            //if(nccresult > -1)
+                            //    count_low += 1;
                         }
 
                         GridPT3[pt_index].ortho_ncc[ti] = DoubleToSignedChar_grid(nccresult);
@@ -7793,7 +7794,7 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
     if (all_im_cd)
         free(all_im_cd);
 
-    printf("%d %d\n",count_low,count_total);
+    //printf("%d %d\n",count_low,count_total);
 }
 
 bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID *GridPT3, uint8 iteration, bool bblunder)
