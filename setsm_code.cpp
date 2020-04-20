@@ -3296,7 +3296,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         {
                             printf("Resize RA tile\n");
                             //delete pre-asigned image memory
-                            for(int t_level = 0 ; t_level <= pyramid_step ; t_level++)
+                            for(int t_level = 0 ; t_level < py_level_set ; t_level++)
                             {
                                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                                 {
@@ -4441,7 +4441,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     }
                     printf("relese data size\n");
                     
-                    for(int t_level = 0 ; t_level <= pyramid_step ; t_level++)
+                    for(int t_level = 0 ; t_level < py_level_set ; t_level++)
                     {
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
