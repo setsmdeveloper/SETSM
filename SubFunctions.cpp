@@ -439,7 +439,8 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         float type(0);
         seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size,type);
         printf("tif open\n");
-        
+
+        free(LImagesize);
     }
     
     return seeddem;
