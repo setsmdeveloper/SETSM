@@ -950,8 +950,8 @@ double Correlate(const double *L, const double *R, const int N)
         if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
         {
             rho = SumLR / (sqrt(SumL2*SumR2));
-            int rI = (int)round(rho*1000);
-            rho = (double)rI / 1000.0;
+            //int rI = (int)round(rho*1000);
+            //rho = (double)rI / 1000.0;
         }
         else
         {
@@ -1022,6 +1022,9 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     char *citation;
     geocode_t projCoordTransfCode;
     double projNatOriginLat;
+    char ttt[100];
+    char hem[100];
+    
     tif  = XTIFFOpen(inputfile,"r");
     gtif = GTIFNew(tif);
     
@@ -1034,19 +1037,17 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         GTIFKeyGet(gtif, GTCitationGeoKey, citation, 0, cit_length);
         
         printf("Citation:%s\n",citation);
+        sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->utm_zone,&hem,&ttt);
     }
-    char ttt[100];
-    char hem[100];
-    sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->utm_zone,&hem,&ttt);
     
     //printf("111 citation %d\t%s\n",param.zone,hem);
-    if(!strcmp(hem,"Northern")) //utm
+    if(!strcmp(hem,"Northern") && cit_length > 0) //utm
     {
         param->bHemisphere = true;
         param->pm = 1;
         param->projection = 2;
     }
-    else if(!strcmp(hem,"Southern"))
+    else if(!strcmp(hem,"Southern") && cit_length > 0)
     {
         param->bHemisphere = false;
         param->pm = -1;
@@ -1063,11 +1064,8 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
             GTIFKeyGet(gtif, ProjCoordTransGeoKey, &projCoordTransfCode, 0, cit_length);
             
             //printf("Citation:%d\n",projCoordTransfCode);
-        }
-        
-        if(projCoordTransfCode == CT_PolarStereographic)
-        {
-            param->projection = 1;
+            if(projCoordTransfCode == CT_PolarStereographic)
+                param->projection = 1;
         }
         
         cit_length = GTIFKeyInfo( gtif, ProjNatOriginLatGeoKey, &size, &type );
@@ -2868,7 +2866,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
 bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
 {
     bool rtn = false;
-    
+    float temp_Z;
     D3DPOINT v12(TriP2 - TriP1);
     D3DPOINT v1P(CurGPXY - TriP1);
     D3DPOINT v23(TriP3 - TriP2);
@@ -2904,7 +2902,8 @@ bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP
             
             if(C != 0)
             {
-                Z = -1.0 * ((A * CurGPXY.m_X) + (B * CurGPXY.m_Y) + D) / C;
+                temp_Z = -1.0 * ((A * CurGPXY.m_X) + (B * CurGPXY.m_Y) + D) / C;
+                Z = temp_Z;
                 rtn = true;
             }
             else

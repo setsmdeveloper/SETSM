@@ -786,7 +786,7 @@ int main(int argc,char *argv[])
                     else
                     {
                         args.CCD_size = atof(argv[i+1]);
-                        printf("focal length %f\n",args.CCD_size);
+                        printf("CCD size %f\n",args.CCD_size);
                         args.check_ccd = true;
                     }
                 }
@@ -6307,6 +6307,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                 if(check_combined_WNCC_INCC)
                                                     ComputeMultiNCC(rsetkernel_next, TH_N, Count_N_next, count_INCC,  sum_INCC_multi);
                                                 
+                                                //printf("sum_INCC_multi %f\n",sum_INCC_multi);
+                                                
                                                 if(IsRA || (*plevelinfo.check_matching_rate )) //no 3D Voxel structure
                                                 {
                                                     
@@ -8177,7 +8179,9 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
     if(MPP < 1)
         MPP = 1;
     
-    double height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+    //double height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+    
+    double height_step = pwrtwo(Pyramid_step)*MPP;
     
     int start_H     = GridPT3[target_index].minHeight;
     int end_H       = GridPT3[target_index].maxHeight;
@@ -8478,7 +8482,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
         {
             long int* hist = (long int*)calloc(sizeof(long int),1000);
             long int total_roh = 0;
-            
+            const double rohconvert = 1000.0;
             for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
             {
                 long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
@@ -8487,7 +8491,8 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 
                 if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
                 {
-                    int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*100);
+                    int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
+                    //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
                     if(roh_int > 999)
                         roh_int = 999;
                     if(roh_int >= 0)
@@ -8526,11 +8531,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 {
                     sum_roh_count += hist[roh_iter];
                     sum_roh_rate = sum_roh_count/(double)total_roh;
-                    
+                    //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
                     if(sum_roh_rate > min_roh_th)
                     {
                         check_stop = true;
-                        minimum_Th = (double)roh_iter/100.0;
+                        minimum_Th = (double)roh_iter/rohconvert;
                     }
                     roh_iter--;
                 }
