@@ -996,8 +996,8 @@ double Correlate(const vector<double> &L, const vector<double> &R, const int N)
         if (SumL2 > 1e-8  &&  SumR2 > 1e-8)
         {
             rho = SumLR / (sqrt(SumL2*SumR2));
-            int rI = (int)round(rho*1000);
-            rho = (double)rI / 1000.0;
+            //int rI = (int)round(rho*1000);
+            //rho = (double)rI / 1000.0;
         }
         else
         {
@@ -2866,7 +2866,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
 bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
 {
     bool rtn = false;
-    float temp_Z;
+    //float temp_Z;
     D3DPOINT v12(TriP2 - TriP1);
     D3DPOINT v1P(CurGPXY - TriP1);
     D3DPOINT v23(TriP3 - TriP2);
@@ -2902,8 +2902,8 @@ bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP
             
             if(C != 0)
             {
-                temp_Z = -1.0 * ((A * CurGPXY.m_X) + (B * CurGPXY.m_Y) + D) / C;
-                Z = temp_Z;
+                Z = -1.0 * ((A * CurGPXY.m_X) + (B * CurGPXY.m_Y) + D) / C;
+                //Z = temp_Z;
                 rtn = true;
             }
             else

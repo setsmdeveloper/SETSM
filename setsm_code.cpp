@@ -4609,7 +4609,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
         for(long int t_i = 0 ; t_i < (*(plevelinfo.Grid_length)); t_i++)
         {
-            if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
+            //if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
             {
                 bool check_blunder_cell = true;
                 double th_height = 1000;
@@ -5605,7 +5605,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
 #pragma omp parallel for schedule(guided)
     for(long int t_i = 0 ; t_i < *plevelinfo.Grid_length; t_i++)
     {
-        if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
+        //if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
         {
             int change_step_min = 0;
             int change_step_max = 0;
@@ -5814,7 +5814,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
                 nccresult[t_i].check_height_change = false;
             }
         }
-        else
+        /*else
         {
             if(nccresult[t_i].NumOfHeight > 0)
             {
@@ -5825,7 +5825,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
             nccresult[t_i].NumOfHeight = 0;
             nccresult[t_i].check_height_change = false;
         }
-        
+        */
         if((nccresult[t_i].minHeight == 0 || nccresult[t_i].maxHeight == 0))
         {
             if(nccresult[t_i].NumOfHeight > 0)
@@ -6010,7 +6010,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         {
             long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
             long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
-            long int pt_index = pts_row*(long int)plevelinfo.Size_Grid2D->width + pts_col;
+            long int pt_index = iter_count;//pts_row*(long int)plevelinfo.Size_Grid2D->width + pts_col;
             
             /*
             if(nccresult[pt_index].check_height_change)
@@ -6022,17 +6022,10 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
             const int start_H     = GridPT3[pt_index].minHeight;
             const int end_H       = GridPT3[pt_index].maxHeight;
      
-            if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
+            //if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
             {
                 bool check_blunder_cell = false;
                 const double th_height = 1000;
-                const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
-                
-                if(IsRA || (*plevelinfo.check_matching_rate))
-                {
-                    nccresult[pt_index].check_height_change = true;
-                    nccresult[pt_index].NumOfHeight = NumOfHeights;
-                }
                 
                 if ( Pyramid_step >= 2)
                     check_blunder_cell = false;
@@ -6044,7 +6037,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                     {
                         if(Pyramid_step == 1)
                         {
-                            if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < 1000))
+                            if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
                                 check_blunder_cell = false;
                             else
                                 check_blunder_cell = true;
@@ -6069,11 +6062,11 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                     check_blunder_cell = false;
                     if(GridPT3[pt_index].maxHeight > minmaxHeight[1] || GridPT3[pt_index].minHeight < minmaxHeight[0])
                         check_blunder_cell = true;
-                    else if( (abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) > 1000) )
+                    else if( (abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) > th_height) )
                         check_blunder_cell = true;
                 }
                 
-                if(!check_blunder_cell && nccresult[pt_index].NumOfHeight > 0)
+                if(!check_blunder_cell)
                 {
                     for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
                     {
@@ -6153,7 +6146,14 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                             
                             
                             //INCC computation
-                            if(IsRA || nccresult[pt_index].check_height_change || (*plevelinfo.check_matching_rate) || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
+                            const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
+                            if(IsRA || (*plevelinfo.check_matching_rate))
+                            {
+                                nccresult[pt_index].check_height_change = true;
+                                nccresult[pt_index].NumOfHeight = NumOfHeights;
+                            }
+                            
+                            if( IsRA || (*plevelinfo.check_matching_rate) || nccresult[pt_index].check_height_change || (Pyramid_step == 0 && proinfo->DEM_resolution < 2))
                             {
                                 double pre_rho  = -1.0;
                                 float pre_height= 0.0;
@@ -6161,6 +6161,12 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                 bool check_rho  = false;
                                 double max_WNCC = -100;
                                 
+                                nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
+                                nccresult[pt_index].result2 = -1000;
+                                nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
+                                nccresult[pt_index].result3 = -1000;
+                                nccresult[pt_index].result4 = 0;
+                            
                                 for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                                 {
                                     float iter_height;
@@ -6172,15 +6178,6 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                     
                                     if(iter_height >= start_H && iter_height <= end_H)
                                     {
-                                        if(grid_voxel_hindex == 0)
-                                        {
-                                            nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
-                                            nccresult[pt_index].result2 = -1000;
-                                            nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
-                                            nccresult[pt_index].result3 = -1000;
-                                            nccresult[pt_index].result4 = 0;
-                                        }
-                                        
                                         const CSize LImagesize(plevelinfo.py_Sizes[reference_id][Pyramid_step]);
                                         const CSize RImagesize(plevelinfo.py_Sizes[ti][Pyramid_step]);
                                         
@@ -6321,7 +6318,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                         grid_voxel[pt_index][grid_voxel_hindex].INCC = DoubleToSignedChar_voxel(-1.0);
                                                 }
                                                 
-                                                //find peak position
+                                                
                                                 double temp_rho;
                                                 if(check_ortho && count_GNCC > 0) // GNCC check
                                                     temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
@@ -6333,7 +6330,14 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                         temp_rho = -1.0;
                                                 }
                                                 
-                                                FindPeakNcc(*plevelinfo.Pyramid_step, iteration, pt_index, temp_rho, iter_height, check_rho, pre_rho, pre_height, direction, max_WNCC, nccresult);
+                                                if(max_WNCC < temp_rho)
+                                                    max_WNCC = temp_rho;
+                                                
+                                                //find peak position
+                                                if(*plevelinfo.check_matching_rate)
+                                                {
+                                                    FindPeakNcc(*plevelinfo.Pyramid_step, iteration, pt_index, temp_rho, iter_height, check_rho, pre_rho, pre_height, direction, max_WNCC, nccresult);
+                                                }
                                             }
                                             else
                                             {
@@ -7450,7 +7454,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         
         long pts_row = (int)(floor(iter_count/Size_Grid2D.width));
         long pts_col = iter_count % Size_Grid2D.width;
-        long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
+        long pt_index = iter_count;//pts_row*(long)Size_Grid2D.width + pts_col;
         
         double pre_rho  = -1.0;
         double pre_rho_WNCC = -1.0;
@@ -7465,17 +7469,14 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
         double temp_nccresult = -100.0;
         double temp_nccresult_sec = -100.0;
         
+        nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
+        nccresult[pt_index].result2 = -1000;
+        nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
+        nccresult[pt_index].result3 = -1000;
+        nccresult[pt_index].result4 = 0;
+    
         for(long height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
-            if(height_step == 0)
-            {
-                nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
-                nccresult[pt_index].result2 = -1000;
-                nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
-                nccresult[pt_index].result3 = -1000;
-                nccresult[pt_index].result4 = 0;
-            }
-            
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
             if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
             {
@@ -7686,7 +7687,7 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
         {
             long int pts_row = (long int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
             long int pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
-            long int pt_index = pts_row*(long int)rlevelinfo.Size_Grid2D->width + pts_col;
+            long int pt_index = iter_count;//pts_row*(long int)rlevelinfo.Size_Grid2D->width + pts_col;
 
             if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
             {
@@ -7868,7 +7869,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
         {
             long pts_row = (int)(floor(iter_count/rlevelinfo.Size_Grid2D->width));
             long pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
-            long pt_index = pts_row*(long)rlevelinfo.Size_Grid2D->width + pts_col;
+            long pt_index = iter_count;//pts_row*(long)rlevelinfo.Size_Grid2D->width + pts_col;
             
             
             if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
@@ -8179,9 +8180,9 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
     if(MPP < 1)
         MPP = 1;
     
-    //double height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+    double height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
     
-    double height_step = pwrtwo(Pyramid_step)*MPP;
+    //double height_step = pwrtwo(Pyramid_step)*MPP;
     
     int start_H     = GridPT3[target_index].minHeight;
     int end_H       = GridPT3[target_index].maxHeight;
@@ -8461,10 +8462,6 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
     return selected_count;
 }
 
-
-
-
-
 long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* roh_height, UGRID *GridPT3, const double Th_roh, const double Th_roh_min, const double Th_roh_start, const double Th_roh_next, const int iteration, const double MPP, const int final_level_iteration,const double MPP_stereo_angle, vector<D3DPOINT> *linkedlist)
 {
     long int count_MPs = 0;
@@ -8487,7 +8484,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
             {
                 long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
                 long col     = iter_index % rlevelinfo.Size_Grid2D->width;
-                long grid_index = row*(long)rlevelinfo.Size_Grid2D->width + col;
+                long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
                 
                 if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
                 {
@@ -8593,7 +8590,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     {
         long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
         long col     = iter_index % rlevelinfo.Size_Grid2D->width;
-        long grid_index = row*(long)rlevelinfo.Size_Grid2D->width + col;
+        long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
         
         if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
         {
@@ -9049,9 +9046,6 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
     free(ortho_ncc);
 
 }
-
-
-
 
 bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp)
 {
