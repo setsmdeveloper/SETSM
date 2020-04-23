@@ -5946,11 +5946,6 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     if(check_matchtag)
         check_ortho = true;
     
-    if(iteration == 1)
-        check_ortho = true;
-    else
-        check_ortho = false;
-    
     if(Pyramid_step <= proinfo->SGM_py)
         check_ortho = false;
     
@@ -6145,12 +6140,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                     nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
                             else
-                            {
-                                if(SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[ti]) > ortho_th)
-                                    nccresult[pt_index].GNCC = GridPT3[pt_index].ortho_ncc[ti];
-                                else
-                                    nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
-                            }
+                                nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
                             
                             //INCC computation
                             const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
