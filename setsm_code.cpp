@@ -4609,7 +4609,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
         for(long int t_i = 0 ; t_i < (*(plevelinfo.Grid_length)); t_i++)
         {
-            //if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
+            if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
             {
                 bool check_blunder_cell = true;
                 double th_height = 1000;
@@ -5605,7 +5605,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
 #pragma omp parallel for schedule(guided)
     for(long int t_i = 0 ; t_i < *plevelinfo.Grid_length; t_i++)
     {
-        //if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
+        if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7))
         {
             int change_step_min = 0;
             int change_step_max = 0;
@@ -5814,7 +5814,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
                 nccresult[t_i].check_height_change = false;
             }
         }
-        /*else
+        else
         {
             if(nccresult[t_i].NumOfHeight > 0)
             {
@@ -5825,7 +5825,7 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
             nccresult[t_i].NumOfHeight = 0;
             nccresult[t_i].check_height_change = false;
         }
-        */
+        
         if((nccresult[t_i].minHeight == 0 || nccresult[t_i].maxHeight == 0))
         {
             if(nccresult[t_i].NumOfHeight > 0)
@@ -6022,7 +6022,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
             const int start_H     = GridPT3[pt_index].minHeight;
             const int end_H       = GridPT3[pt_index].maxHeight;
      
-            //if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
+            if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
             {
                 bool check_blunder_cell = false;
                 const double th_height = 1000;
@@ -8536,6 +8536,8 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                     }
                     roh_iter--;
                 }
+                if(minimum_Th > 0.7)
+                    minimum_Th = 0.7;
             }
             else
                 minimum_Th = 0.2;
