@@ -629,6 +629,7 @@ typedef struct taglevelinfo
     const double *Hinterval;
     //double *minmaxHeight; //iteratively changed
     const int *Py_combined_level;
+    const unsigned char *iteration;
     bool *check_matching_rate;
 } LevelInfo;
 

@@ -3527,12 +3527,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         
                         if(proinfo->pre_DEMtif && !flag_start)
-                        {
-                            if(proinfo->check_Matchtag)
-                                VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
-                            else
-                                VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
-                        }
+                            VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
                         
                         iteration       = 1;
                         if(level == 0)
@@ -3602,6 +3597,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
                         {
                             levelinfo.ImageAdjust = t_Imageparams;
+                            levelinfo.iteration = &iteration;
                             
                             if(level == 0 &&  iteration == 3)
                                 matching_change_rate = 0.001;
@@ -5947,11 +5943,16 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     if(pre_DEMtif && !(Pyramid_step == 4 && iteration == 1))
         check_ortho = true;
     
-    if(Pyramid_step <= proinfo->SGM_py)
-        check_ortho = false;
-    
     if(check_matchtag)
         check_ortho = true;
+    
+    if(iteration == 1)
+        check_ortho = true;
+    else
+        check_ortho = false;
+    
+    if(Pyramid_step <= proinfo->SGM_py)
+        check_ortho = false;
     
     //orthoimage pixel information save
     D2DPOINT **all_im_cd = NULL;
@@ -6143,7 +6144,13 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                 else
                                     nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
-                            
+                            else
+                            {
+                                if(SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[ti]) > ortho_th)
+                                    nccresult[pt_index].GNCC = GridPT3[pt_index].ortho_ncc[ti];
+                                else
+                                    nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
+                            }
                             
                             //INCC computation
                             const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
@@ -7658,7 +7665,10 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
     long int sub_imagesize_w_next, sub_imagesize_h_next;
     
     all_im_cd = (D2DPOINT**)malloc(sizeof(D2DPOINT*)*proinfo->number_of_images);
-    SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, 0, OR, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
+    if(proinfo->check_Matchtag)
+        SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, 0, BD, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
+    else
+        SetOrthoImageCoord(proinfo, rlevelinfo, GridPT3, 0, OR, im_resolution, im_resolution_next, sub_imagesize_w, sub_imagesize_h, sub_imagesize_w_next, sub_imagesize_h_next, all_im_cd, all_im_cd_next);
     
     
     const int reference_id = rlevelinfo.reference_id;
@@ -7728,7 +7738,10 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
-                                            SetVecKernelValue(rlevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
+                                            if(proinfo->check_Matchtag)
+                                                SetVecKernelValue(rlevelinfo, rsetkernel,BD, row, col, pos_left,pos_right, radius2, Count_N);
+                                            else
+                                                SetVecKernelValue(rlevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 }  // if(radius2 <= ...
@@ -8180,9 +8193,11 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
     if(MPP < 1)
         MPP = 1;
     
-    double height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
-    
-    //double height_step = pwrtwo(Pyramid_step)*MPP;
+    double height_step;
+    if(*rlevelinfo.iteration <= 2)
+        height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+    else
+        height_step = pwrtwo(Pyramid_step)*MPP;
     
     int start_H     = GridPT3[target_index].minHeight;
     int end_H       = GridPT3[target_index].maxHeight;
