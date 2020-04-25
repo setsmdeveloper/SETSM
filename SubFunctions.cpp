@@ -2863,7 +2863,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
         PixelMinXY[1] = 0;
 }
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, double &Z)
+bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z)
 {
     bool rtn = false;
     //float temp_Z;

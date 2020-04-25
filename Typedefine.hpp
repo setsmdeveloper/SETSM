@@ -99,15 +99,15 @@ typedef struct tagUI3DPoint
 
 typedef struct tagD2DPoint
 {
-    double m_X;
-    double m_Y;
+    float m_X;
+    float m_Y;
     
     tagD2DPoint()
     {
         m_X = 0;
         m_Y = 0;
     }
-    tagD2DPoint(double m_X, double m_Y):m_X(m_X),m_Y(m_Y)
+    tagD2DPoint(float m_X, float m_Y):m_X(m_X),m_Y(m_Y)
     {
         
     }
@@ -140,9 +140,9 @@ typedef struct tagD2DPoint
 
 typedef struct tagD3DPoint
 {
-    double m_X;
-	double m_Y;
-	double m_Z;
+    float m_X;
+	float m_Y;
+	float m_Z;
     uint8 flag;
     
     tagD3DPoint()
@@ -152,7 +152,7 @@ typedef struct tagD3DPoint
         m_Z = 0;
         flag = false;
     }
-    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    tagD3DPoint(float m_X, float m_Y, float m_Z, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
     {
         
     }

@@ -1622,7 +1622,7 @@ void SetShiftFromTIN(const long numOfPts, const long numOfTri, UGRIDSDM *GridPT3
                     
                     if(!m_bHeight[Index])
                     {
-                        double Z = -1000.0;
+                        float Z = -1000.0;
                         bool rtn = false;
                         
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);

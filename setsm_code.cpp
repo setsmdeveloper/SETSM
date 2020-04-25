@@ -6021,7 +6021,9 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
             if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,Half_template_size))
             {
                 bool check_blunder_cell = false;
-                const double th_height = 1000;
+                double th_height = 1000;
+                if(proinfo->DEM_resolution <= 4)
+                    th_height = 500;
                 
                 if ( Pyramid_step >= 2)
                     check_blunder_cell = false;
@@ -8184,9 +8186,9 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
         MPP = 1;
     
     double height_step;
-    if(*rlevelinfo.iteration <= 2)
-        height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
-    else
+    //if(*rlevelinfo.iteration <= 2)
+    //    height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+    //else
         height_step = pwrtwo(Pyramid_step)*MPP;
     
     int start_H     = GridPT3[target_index].minHeight;
@@ -8482,9 +8484,10 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     {
         if(Pyramid_step > 0)
         {
-            long int* hist = (long int*)calloc(sizeof(long int),1000);
+            const int rohconvert = 100;
+            long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
             long int total_roh = 0;
-            const double rohconvert = 1000.0;
+            
             for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
             {
                 long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
@@ -8495,8 +8498,8 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 {
                     int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
                     //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
-                    if(roh_int > 999)
-                        roh_int = 999;
+                    if(roh_int > rohconvert - 1)
+                        roh_int = rohconvert - 1;
                     if(roh_int >= 0)
                         hist[roh_int]++;
                     
@@ -8524,7 +8527,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                         min_roh_th = 0.5;
                 }
                 
-                int roh_iter = 999;
+                int roh_iter = rohconvert - 1;
                 bool check_stop = false;
                 minimum_Th = 0.2;
                 int sum_roh_count = 0;
@@ -8537,12 +8540,12 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                     if(sum_roh_rate > min_roh_th)
                     {
                         check_stop = true;
-                        minimum_Th = (double)roh_iter/rohconvert;
+                        minimum_Th = (double)roh_iter/(double)rohconvert;
                     }
                     roh_iter--;
                 }
-                if(minimum_Th > 0.7)
-                    minimum_Th = 0.7;
+                if(minimum_Th > 0.95)
+                    minimum_Th = 0.95;
             }
             else
                 minimum_Th = 0.2;
@@ -9832,7 +9835,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                     
                     if(!m_bHeight[Index])
                     {
-                        double Z = -1000.0;
+                        float Z = -1000.0;
                         bool rtn = false;
                         
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
@@ -10270,7 +10273,7 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                     
                     if (m_bHeight[Index] == 0)
                     {
-                        double Z = -1000.0;
+                        float Z = -1000.0;
                         bool rtn = false;
                          
                         D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
