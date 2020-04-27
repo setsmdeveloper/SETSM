@@ -3803,34 +3803,36 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 
                                 if(level == 0 && iteration == 3)
                                 {
-                                    ptslists = (D3DPOINT*)calloc(count_MPs,sizeof(D3DPOINT));
+                                    D3DPOINTSAVE *ptslists_save = (D3DPOINTSAVE*)calloc(count_MPs,sizeof(D3DPOINTSAVE));
                                     double minmaxBR[6] = {10000000, 10000000, -10000000, -10000000, 100000, -100000};
                                     
                                     int i = 0;
                                     for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
                                     {
-                                        ptslists[i] = MatchedPts_list_mps[i];
+                                        ptslists_save[i].m_X = MatchedPts_list_mps[i].m_X;
+                                        ptslists_save[i].m_Y = MatchedPts_list_mps[i].m_Y;
+                                        ptslists_save[i].m_Z = MatchedPts_list_mps[i].m_Z;
                                         
-                                        if(minmaxBR[0] > ptslists[i].m_X)
-                                            minmaxBR[0]     = ptslists[i].m_X;
-                                        if(minmaxBR[1] > ptslists[i].m_Y)
-                                            minmaxBR[1]     = ptslists[i].m_Y;
+                                        if(minmaxBR[0] > ptslists_save[i].m_X)
+                                            minmaxBR[0]     = ptslists_save[i].m_X;
+                                        if(minmaxBR[1] > ptslists_save[i].m_Y)
+                                            minmaxBR[1]     = ptslists_save[i].m_Y;
                                         
-                                        if(minmaxBR[2] < ptslists[i].m_X)
-                                            minmaxBR[2]     = ptslists[i].m_X;
-                                        if(minmaxBR[3] < ptslists[i].m_Y)
-                                            minmaxBR[3]     = ptslists[i].m_Y;
-                                        if(minmaxBR[4] > ptslists[i].m_Z)
-                                            minmaxBR[4] = ptslists[i].m_Z;
-                                        if(minmaxBR[5] < ptslists[i].m_Z)
-                                            minmaxBR[5] = ptslists[i].m_Z;
+                                        if(minmaxBR[2] < ptslists_save[i].m_X)
+                                            minmaxBR[2]     = ptslists_save[i].m_X;
+                                        if(minmaxBR[3] < ptslists_save[i].m_Y)
+                                            minmaxBR[3]     = ptslists_save[i].m_Y;
+                                        if(minmaxBR[4] > ptslists_save[i].m_Z)
+                                            minmaxBR[4] = ptslists_save[i].m_Z;
+                                        if(minmaxBR[5] < ptslists_save[i].m_Z)
+                                            minmaxBR[5] = ptslists_save[i].m_Z;
                                     }
                                     
                                     MatchedPts_list_mps.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_mps);
                                     
                                     FILE *pFile = fopen(filename_mps,"wb");
-                                    fwrite(ptslists,sizeof(D3DPOINT),count_MPs,pFile);
+                                    fwrite(ptslists_save,sizeof(D3DPOINTSAVE),count_MPs,pFile);
                                     fclose(pFile);
                                     
                                     if(!proinfo->IsRA)
@@ -3852,7 +3854,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         echoprint_Gridinfo(proinfo,nccresult,row,col,level,iteration,0,&Size_Grid2D,GridPT3,(char*)"final");
                                     }
-                                    free(ptslists);
+                                    free(ptslists_save);
                                     
                                     matching_change_rate = 0.001;
                                 }
@@ -8187,9 +8189,9 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
     
     double height_step;
     //if(*rlevelinfo.iteration <= 2)
-    //    height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
+        height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
     //else
-        height_step = pwrtwo(Pyramid_step)*MPP;
+    //    height_step = pwrtwo(Pyramid_step)*MPP;
     
     int start_H     = GridPT3[target_index].minHeight;
     int end_H       = GridPT3[target_index].maxHeight;
@@ -8473,7 +8475,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
 {
     long int count_MPs = 0;
 
-    double minimum_Th;
+    double minimum_Th = 0.2;
     int SGM_th_py = proinfo->SGM_py;
     const int Pyramid_step = *rlevelinfo.Pyramid_step;
     if(proinfo->IsRA)
@@ -11298,8 +11300,8 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
                         
                         long count_MPs;
                         fscanf(c_hfile,"%ld\n",&count_MPs);
-                        D3DPOINT *temp_pts = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                        fread(temp_pts,sizeof(D3DPOINT),count_MPs,pfile);
+                        D3DPOINTSAVE *temp_pts = (D3DPOINTSAVE*)malloc(sizeof(D3DPOINTSAVE)*count_MPs);
+                        fread(temp_pts,sizeof(D3DPOINTSAVE),count_MPs,pfile);
                         printf("read count_MPs %d\t%d\n",count_MPs,buffer_clip);
                         
                         long count_read = 0;
@@ -11307,7 +11309,7 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
 #pragma omp parallel for schedule(guided) reduction(+:count_read,count_out)
                         for(long int t_i = 0 ; t_i < count_MPs ; t_i++)
                         {
-                            if(temp_pts[t_i].flag != 1)
+                            //if(temp_pts[t_i].flag != 1)
                             {
                                 long pos_col = (long)((temp_pts[t_i].m_X - minX)/proinfo->DEM_resolution);
                                 long pos_row = (long)((maxY - temp_pts[t_i].m_Y)/proinfo->DEM_resolution);
