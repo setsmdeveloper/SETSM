@@ -3365,6 +3365,7 @@ uint16 *SubsetImageFrombitsToUint16(const int image_bits, char *imagefile, long 
     uint16 *out = NULL;
     
     CSize temp_size;
+    GetImageSize(imagefile,&temp_size);
     switch(image_bits)
     {
         case 8:
