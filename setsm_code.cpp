@@ -5152,21 +5152,18 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
         }
         fclose(pFile_meta);
     }
-    else
+    if(check_ftype == 1)
     {
-        if(check_ftype == 1)
-        {
-            seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
-        }
-        else if(check_ftype == 2)
-        {
-            char* hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.hdr",hdr_path);
+        seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
+    }
+    else if(check_ftype == 2)
+    {
+        char* hdr_path = remove_ext(GIMP_path);
+        sprintf(hdr_path,"%s.hdr",hdr_path);
 
-            printf("hdr path %s\n",hdr_path);
-            seeddem_size  = Envihdr_reader_seedDEM(*rlevelinfo.param,hdr_path, &minX, &maxY, &grid_size);
-            free(hdr_path);
-        }
+        printf("hdr path %s\n",hdr_path);
+        seeddem_size  = Envihdr_reader_seedDEM(*rlevelinfo.param,hdr_path, &minX, &maxY, &grid_size);
+        free(hdr_path);
     }
 
     maxX    = minX + grid_size*((double)seeddem_size.width);
