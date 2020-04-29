@@ -36,7 +36,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.2.1";
+const char setsm_version[] = "4.2.2";
 
 //const double RA_resolution = 16;
 
@@ -7954,21 +7954,19 @@ void SetHeightWithSeedDEM(ProInfo *proinfo,TransParam param, UGRID *Grid, double
         }
         fclose(pFile_meta);
     }
-    else
+        
+	if(check_ftype == 1)
     {
-        if(check_ftype == 1)
-        {
-            seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
-        }
-        else if(check_ftype == 2)
-        {
-            hdr_path = remove_ext(GIMP_path);
-            sprintf(hdr_path,"%s.hdr",hdr_path);
+        seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
+    }
+    else if(check_ftype == 2)
+    {
+        hdr_path = remove_ext(GIMP_path);
+        sprintf(hdr_path,"%s.hdr",hdr_path);
 
-            printf("hdr path %s\n",hdr_path);
-            seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &minX, &maxY, &grid_size);
-            free(hdr_path);
-        }
+        printf("hdr path %s\n",hdr_path);
+        seeddem_size  = Envihdr_reader_seedDEM(param,hdr_path, &minX, &maxY, &grid_size);
+        free(hdr_path);
     }
     
     maxX    = minX + grid_size*((double)seeddem_size.width);
