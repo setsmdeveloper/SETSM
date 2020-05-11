@@ -1036,8 +1036,15 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         citation = (char*)malloc(sizeof(char)*cit_length );
         GTIFKeyGet(gtif, GTCitationGeoKey, citation, 0, cit_length);
         
-        printf("Citation:%s\n",citation);
+        printf("1 Citation:%s\n",citation);
         sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->utm_zone,&hem,&ttt);
+        if(strcmp(hem,"Northern") && strcmp(hem,"Southern"))
+        {
+            char hemzone[500];
+            printf("11 Citation:%s\n",citation);
+            sscanf(citation,"%s %s / %s %s %d%s",&ttt,&ttt,&ttt,&ttt,&param->utm_zone,&hem);
+            printf("hemzone %s %d\n",hem,param->utm_zone);
+        }
     }
     
     //printf("111 citation %d\t%s\n",param.zone,hem);
@@ -1048,6 +1055,18 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         param->projection = 2;
     }
     else if(!strcmp(hem,"Southern") && cit_length > 0)
+    {
+        param->bHemisphere = false;
+        param->pm = -1;
+        param->projection = 2;
+    }
+    else if(!strcmp(hem,"N") && cit_length > 0) //utm
+    {
+        param->bHemisphere = true;
+        param->pm = 1;
+        param->projection = 2;
+    }
+    else if(!strcmp(hem,"S") && cit_length > 0)
     {
         param->bHemisphere = false;
         param->pm = -1;
@@ -1077,7 +1096,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
             
             GTIFKeyGet(gtif, ProjNatOriginLatGeoKey, &projNatOriginLat, 0, cit_length);
             
-            printf("Citation:%lf\n",projNatOriginLat);
+            printf("2 Citation:%lf\n",projNatOriginLat);
             
             if(projNatOriginLat > 0)
                 param->bHemisphere = true;
@@ -1088,7 +1107,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     GTIFFree(gtif);
     XTIFFClose(tif);
     
-    //printf("param %d\t%d\t%d\t%lf\n",param.projection,param.bHemisphere,projCoordTransfCode,projNatOriginLat);
+    //printf("param %d\t%d\t%d\t%lf\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat);
     
     D2DPOINT minXmaxY;
     double t_minXY_X;
@@ -1159,7 +1178,7 @@ void SetTransParam(double minLat, double minLon, TransParam *param)
     
     SetTransParam_param(param,param->bHemisphere);
  
-    printf("%f %f %f %f %f\n",param->sa,param->sb,param->e2,param->e2cuadrada,param->c);
+    printf("%f %f %f %f %f %f %f\n",param->sa,param->sb,param->e2,param->e2cuadrada,param->c, minLat, minLon);
     double Lat = minLat;
     char direction[2];
     
