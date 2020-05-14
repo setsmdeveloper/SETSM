@@ -439,7 +439,8 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         float type(0);
         seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size,type);
         printf("tif open\n");
-        
+
+        free(LImagesize);
     }
     
     return seeddem;
@@ -551,6 +552,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                                     exit(0);
                                 }
                             }
+                            free(tmp_chr);
                         }
                         count_images++;
                     }
@@ -564,6 +566,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                         printf("after pathname %s\n",info->Outputpath_name);
                         
                         sprintf(info->tmpdir, "%s/tmp", info->save_filepath);
+
+                        free(Outputpath_name);
                     }
                     else if (args.check_seeddem == 0 && strstr(bufstr,"seeddempath")!=NULL)
                     {
@@ -1238,6 +1242,12 @@ void SetTransParam(double minLat, double minLon, TransParam *param)
         param->utm_zone = (int)( ( minLon / 6 ) + 31);
 }
 
+void RPCsFree(double **rpcs) {
+    for(int i = 0; i < 7; i++) {
+        free(rpcs[i]);
+    }
+    free(rpcs);
+}
 
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
 {
@@ -1262,10 +1272,10 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
     {
         if(proinfo->sensor_type == SB) //RPCs info
         {
-            out = (double**)malloc(sizeof(double*)*7);
-            out[0] = (double*)malloc(sizeof(double)*5);
-            out[1] = (double*)malloc(sizeof(double)*5);
-            out[6] = (double*)malloc(sizeof(double)*2);
+            out = (double**)calloc(7, sizeof(double*));
+            out[0] = (double*)calloc(5, sizeof(double));
+            out[1] = (double*)calloc(5, sizeof(double));
+            out[6] = (double*)calloc(2, sizeof(double));
             
             while(!feof(pFile))
             {
@@ -1433,7 +1443,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 
                 if(strcmp(token,"<LINENUMCOEFList") == 0)
                 {
-                    out[2] = (double*)malloc(sizeof(double)*20);
+                    out[2] = (double*)calloc(20, sizeof(double));
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
@@ -1455,7 +1465,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 }
                 if(strcmp(token,"<LINEDENCOEFList") == 0)
                 {
-                    out[3] = (double*)malloc(sizeof(double)*20);
+                    out[3] = (double*)calloc(20, sizeof(double));
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
@@ -1473,7 +1483,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 }
                 if(strcmp(token,"<SAMPNUMCOEFList") == 0)
                 {
-                    out[4] = (double*)malloc(sizeof(double)*20);
+                    out[4] = (double*)calloc(20, sizeof(double));
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
@@ -1494,7 +1504,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 }
                 if(strcmp(token,"<SAMPDENCOEFList") == 0)
                 {
-                    out[5] = (double*)malloc(sizeof(double)*20);
+                    out[5] = (double*)calloc(20, sizeof(double));
                     fgets(linestr,sizeof(linestr),pFile);
                     pos1 = strstr(linestr,">")+1;
                     pos2 = strtok(pos1,"<");
@@ -1559,7 +1569,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
 
 double** OpenXMLFile_Pleiades(char* _filename)
 {
-    double** out;
+    double** out = NULL;
     
     FILE *pFile;
     char temp_str[1000];
@@ -1574,7 +1584,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
     pFile           = fopen(_filename,"r");
     if(pFile)
     {
-        out = (double**)malloc(sizeof(double*)*7);
+        out = (double**)calloc(7, sizeof(double*));
         while(!feof(pFile))
         {
             fscanf(pFile,"%s",temp_str);
@@ -1583,7 +1593,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 fgets(linestr,sizeof(linestr),pFile);
                 
                 printf("sample num\n");
-                out[4] = (double*)malloc(sizeof(double)*20);
+                out[4] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1595,7 +1605,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 }
                 
                 printf("sample den\n");
-                out[5] = (double*)malloc(sizeof(double)*20);
+                out[5] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1607,7 +1617,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 }
                 
                 printf("line num\n");
-                out[2] = (double*)malloc(sizeof(double)*20);
+                out[2] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1619,7 +1629,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 }
                 
                 printf("line den\n");
-                out[3] = (double*)malloc(sizeof(double)*20);
+                out[3] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1630,7 +1640,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     printf("%f\n",out[3][i]);
                 }
                 
-                out[6] = (double*)malloc(sizeof(double)*2);
+                out[6] = (double*)calloc(2, sizeof(double));
                 for(i=0;i<2;i++)
                 {
                     
@@ -1645,8 +1655,8 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 for(i=0;i<14;i++)
                     fgets(linestr,sizeof(linestr),pFile);
                 
-                out[0] = (double*)malloc(sizeof(double)*5); //offset
-                out[1] = (double*)malloc(sizeof(double)*5); //scale
+                out[0] = (double*)calloc(5, sizeof(double)); //offset
+                out[1] = (double*)calloc(5, sizeof(double)); //scale
                 
                 fgets(linestr,sizeof(linestr),pFile);
                 pos1 = strstr(linestr,">")+1;
@@ -1717,7 +1727,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
 
 double** OpenXMLFile_Planet(char* _filename)
 {
-    double** out;
+    double** out = NULL;
     
     FILE *pFile;
     char temp_str[1000];
@@ -1733,11 +1743,11 @@ double** OpenXMLFile_Planet(char* _filename)
     printf("RPC filename %s\n",_filename);
     if(pFile)
     {
-        out = (double**)malloc(sizeof(double*)*7);
+        out = (double**)calloc(7, sizeof(double*));
         //while(!feof(pFile))
         {
-            out[0] = (double*)malloc(sizeof(double)*5); //offset
-            out[1] = (double*)malloc(sizeof(double)*5); //scale
+            out[0] = (double*)calloc(5, sizeof(double)); //offset
+            out[1] = (double*)calloc(5, sizeof(double)); //scale
             
             fgets(linestr,sizeof(linestr),pFile);
             sscanf(linestr,"%s %lf\n",temp_str,&out[0][0]);
@@ -1781,7 +1791,7 @@ double** OpenXMLFile_Planet(char* _filename)
             //if(strcmp(temp_str,"<Inverse_Model>") == 0)
             {
                 printf("line num\n");
-                out[2] = (double*)malloc(sizeof(double)*20);
+                out[2] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1790,7 +1800,7 @@ double** OpenXMLFile_Planet(char* _filename)
                 }
                 
                 printf("line den\n");
-                out[3] = (double*)malloc(sizeof(double)*20);
+                out[3] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1800,7 +1810,7 @@ double** OpenXMLFile_Planet(char* _filename)
                 }
                 
                 printf("sample num\n");
-                out[4] = (double*)malloc(sizeof(double)*20);
+                out[4] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
@@ -1810,7 +1820,7 @@ double** OpenXMLFile_Planet(char* _filename)
                 }
                 
                 printf("sample den\n");
-                out[5] = (double*)malloc(sizeof(double)*20);
+                out[5] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);

@@ -65,6 +65,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     else
         fclose(fid_xml);
     
+    free(tmp_chr);
+
     tmp_chr = remove_ext(DEMFilename);
     sprintf(DEM_header,"%s.hdr",tmp_chr);
     char *Ifilename  = SetOutpathName(ImageFilename);
@@ -82,6 +84,10 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         sprintf(Ortho_header, "%s/%s_%d_ortho_%3.1f.hdr",Outputpath, tmp_no_ext,DEM_divide,args.DEM_space);
         sprintf(OrthoGEOTIFFFilename, "%s/%s_%d_ortho_%3.1f.tif",Outputpath, tmp_no_ext,DEM_divide,args.DEM_space);
     }
+
+    free(tmp_no_ext);
+    free(tmp_chr);
+    free(Ifilename);
 
     printf("image = %s\n",ImageFilename);
     printf("rpc = %s\n",RPCFilename);
@@ -416,12 +422,12 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                     
                     free(subimage);
                     
-                    delete data_size;
+                    delete[] data_size;
                 }
                 
             }
         }
-        free(RPCs);
+        RPCsFree(RPCs);
         free(DEM_value);
         
         WriteGeotiff(OrthoGEOTIFFFilename, result_ortho, Orthoimagesize.width, Orthoimagesize.height, Ortho_resolution, OrthoBoundary[0], OrthoBoundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 12);
@@ -435,8 +441,10 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     else
     {
         printf("check overlap area between DEM and image, or match a projection type of input image based on DEM projection by adding '-projection' option\n");
-        free(RPCs);
+        RPCsFree(RPCs);
     }
+
+    delete proinfo;
 }
 
 uint16 *Preprocessing_ortho(const uint8 py_level, CSize *data_size, uint16 *subimg)

@@ -170,8 +170,9 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
     double minX, maxX, minY,maxY;
     if(check_ftype == 1)
     {
-        char *hdr_path = remove_ext(GIMP_path);
-        sprintf(hdr_path,"%s.tfw",hdr_path);
+        char *tmp_str = remove_ext(GIMP_path);
+        char *hdr_path = (char*)calloc(strlen(tmp_str) + 1 + 4, 1); //null term + extlen
+        sprintf(hdr_path,"%s.tfw",tmp_str);
         
         FILE *pfile = fopen(hdr_path,"r");
         if(pfile)
@@ -201,12 +202,14 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
             check_open_header = true;
         }
 
+        free(tmp_str);
         free(hdr_path);
     }
     else if(check_ftype == 2)
     {
-        char *hdr_path = remove_ext(GIMP_path);
-        sprintf(hdr_path,"%s.hdr",hdr_path);
+        char *tmp_str = remove_ext(GIMP_path);
+        char *hdr_path = (char*)calloc(strlen(tmp_str) + 1 + 4, 1); //null term + extlen
+        sprintf(hdr_path,"%s.hdr",tmp_str);
         
         printf("hdr path %s\n",hdr_path);
         FILE *phdr = fopen(hdr_path,"r");
@@ -218,6 +221,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         }
 
         free(hdr_path);
+        free(tmp_str);
     }
     
     if(pFile_meta && !check_open_header)

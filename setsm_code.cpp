@@ -122,7 +122,7 @@ int main(int argc,char *argv[])
         
         args.check_arg = 0;
         
-        Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
         for(int ti = 0 ; ti < args.number_of_images ; ti++)
         {
             Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -192,8 +192,10 @@ int main(int argc,char *argv[])
             
             printf("%s\n",args.Outputpath);
             printf("%s\n", args.Outputpath_name);
+
+            free(Outputpath_name);
             
-            Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -219,13 +221,15 @@ int main(int argc,char *argv[])
         printf("%s\n",args.Image[1]);
         printf("%s\n",args.Outputpath);
         printf("%s\n", args.Outputpath_name);
+
+        free(Outputpath_name);
         
         char save_filepath[500];
         char LeftImagefilename[500];
         
         if( strcmp(args.Image[0],args.Image[1]) != 0)
         {
-            Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
             for(int ti = 0 ; ti < args.number_of_images ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -493,6 +497,8 @@ int main(int argc,char *argv[])
                 sprintf(str_matchfile,"%s/%s_matchtag.raw",args.Outputpath,Outputpath_name);
                 sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",args.Outputpath,Outputpath_name);
                 sprintf(result_file,"%s/%sdem_smooth_result.txt",args.Outputpath,Outputpath_name);
+
+                free(Outputpath_name);
             }
             
             printf("dem file %s\n",str_DEMfile);
@@ -1463,7 +1469,9 @@ int main(int argc,char *argv[])
                         printf("%s\n",args.Outputpath);
                         printf("%s\n", args.Outputpath_name);
 
-                        Imageparams = (double**)malloc(sizeof(double*)*(args.number_of_images));
+                        free(Outputpath_name);
+
+                        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
                         for(int ti = 0 ; ti < args.number_of_images ; ti++)
                         {
                             Imageparams[ti] = (double*)calloc(sizeof(double),2);
@@ -1542,6 +1550,8 @@ int main(int argc,char *argv[])
                     
                     printf("%s\n",args.Outputpath);
                     printf("%s\n", args.Outputpath_name);
+
+                    free(Outputpath_name);
                     
                     SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
                 }
@@ -1552,6 +1562,14 @@ int main(int argc,char *argv[])
     
     printf("# of allocated threads = %d\n",omp_get_max_threads());
             
+    if(Imageparams)
+    {
+        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+        {
+            free(Imageparams[ti]);
+        }
+    }
+    free(Imageparams);
     
     return 0;
 }
@@ -1707,7 +1725,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 TransParam param;
                 char Outputpath[500];
                 sprintf(Outputpath, "%s", args.Outputpath);
-                double ***RPCs = (double***)malloc(sizeof(double**)*proinfo->number_of_images);
+                double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
                 
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
@@ -1742,6 +1760,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 sprintf(DEMFilename, "%s", args.seedDEMfilename);
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     orthogeneration(param,args,args.Image[ti], DEMFilename, Outputpath,1,0,Imageparams);
+
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    RPCsFree(RPCs[ti]);
+                free(RPCs);
             }
         }
     }
@@ -1786,7 +1808,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 ImageInfo *image_info = (ImageInfo*)malloc(sizeof(ImageInfo)*proinfo->number_of_images);
                 CSize *Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
-                double ***RPCs = (double***)malloc(sizeof(double**)*proinfo->number_of_images);
+                double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
                 
                 sprintf(_save_filepath,"%s",proinfo->save_filepath);
                 
@@ -2860,6 +2882,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     
                     sprintf(temp_filepath,"%s/tmp",proinfo->save_filepath);
                 }
+
+                for(int i = 0; i < proinfo->number_of_images; i++)
+                    RPCsFree(RPCs[i]);
+                free(RPCs);
+                free(leftright_band);
+                free(Image_gsd_r);
+                free(Image_gsd_c);
+                free(Image_gsd);
+                free(Limagesize);
                 free(image_info);
             }
             else

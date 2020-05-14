@@ -217,6 +217,8 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 
                 data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(py_level+1));
                 SetPySizes(data_size_lr[ti], OriImagesizes[ti], py_level);
+
+                free(filename);
             }
             
             total_ET = time(0);
@@ -319,6 +321,8 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     double upper = ImageAdjust_coreg[ti][0]*ortho_dy[ti];
                     printf("coreg %s\t%d\t%d\t%f\t%f\n",out_file,OriImagesizes[ti].width,OriImagesizes[ti].height,left,upper);
                     
+                    free(Ifilename);
+                    free(tmp_no_ext);
                     free(GCP_value);
                 }
                 
@@ -405,6 +409,7 @@ void Preprocessing_Coreg(ProInfo *proinfo, char *save_path,uint16 **Oriimage, ch
             free(data_size);
         if(pFile_check_file)
             fclose(pFile_check_file);
+        free(filename_py);
     }
 }
 
