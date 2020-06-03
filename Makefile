@@ -4,15 +4,15 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATH=/home/noh.56/software/tiff-4.0.3/libtiff
-TIFFINC=-I/home/noh.56/software/tiff-4.0.3/include
-TIFFLIB=-L/home/noh.56/software/tiff-4.0.3/lib
+#TIFFPATH=/home/noh.56/software/tiff-4.0.3/libtiff
+#TIFFINC=-I/home/noh.56/software/tiff-4.0.3/include
+#TIFFLIB=-L/home/noh.56/software/tiff-4.0.3/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH=/home/noh.56/software/libgeotiff-1.4.2/libxtiff
-GEOTIFFINC=-I/home/noh.56/software/libgeotiff-1.4.2/include
-GEOTIFFLIB=-L/home/noh.56/software/libgeotiff-1.4.2/lib
+#GEOTIFFPATH=/home/noh.56/software/libgeotiff-1.4.2/libxtiff
+#GEOTIFFINC=-I/home/noh.56/software/libgeotiff-1.4.2/include
+#GEOTIFFLIB=-L/home/noh.56/software/libgeotiff-1.4.2/lib
 
 MPIFLAGS = -DBUILDMPI
 
@@ -28,7 +28,7 @@ ifeq ($(COMPILER), intel)
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise 
-  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise
+  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise -g
 else ifeq ($(COMPILER), pgi)
   CC=pgcc
   CXX=pgc++
@@ -45,7 +45,7 @@ else
   CXXFLAGS=-std=c++11 -O3 -fopenmp 
 endif
 
-$(shell git describe --always --tags --dirty > git_description)
+$(shell ./update_git_description.sh)
 GIT_DESCRIPTION:=$(shell cat git_description)
 export GIT_DESCRIPTION
 
