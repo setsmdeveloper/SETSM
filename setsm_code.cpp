@@ -36,7 +36,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.2.2";
+const char setsm_version[] = "4.2.3";
 
 //const double RA_resolution = 16;
 
