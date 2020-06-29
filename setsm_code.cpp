@@ -9275,11 +9275,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         if(pyramid_step >= 1)
         {
             GSD = gridspace;
-            if(pyramid_step >= 3 && gridspace < 0.5*pow(2.0,pyramid_step))
-                GSD = 0.5*pow(2.0,pyramid_step);
+            if(pyramid_step >= 3 && gridspace < pwrtwo(pyramid_step-1))
+                GSD = pwrtwo(pyramid_step-1);
         }
         else
-            GSD = 0.5*pow(2.0,pyramid_step);
+            GSD = pwrtwo(pyramid_step-1);
         
         const double height_th_1(*rlevelinfo.Hinterval);
         double height_th_2(GSD*10);
@@ -10537,7 +10537,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                 double t_sum_weight_Y       = 0;
                 double t_sum_max_roh        = 0;
                 
-                 const double b_factor             = pow(2.0,(total_pyramid-Pyramid_step))*2;
+                 const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
@@ -10614,8 +10614,8 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
 
                 if(count_pts > 10)
                 {
-                    double shift_X             = sum_weight_X/sum_max_roh*pow(2.0,Pyramid_step);
-                    double shift_Y             = sum_weight_Y/sum_max_roh*pow(2.0,Pyramid_step);
+                    double shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
+                    double shift_Y             = sum_weight_Y/sum_max_roh*pwrtwo(Pyramid_step);
                     if(fabs(shift_Y) < 0.1 && fabs(shift_X) < 0.1)
                         check_stop = true;
          

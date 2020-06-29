@@ -535,7 +535,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
         double sum_max_roh      = 0;
         
         //calculation image coord from object coord by RFM in left and right image
-        const double b_factor             = pow(2.0,(2-Pyramid_step))*2;
+        const double b_factor             = pwrtwo(3-Pyramid_step);
         const uint8 Half_template_size   = (int)(Template_size/2.0);
         
         int count_pts = 0;

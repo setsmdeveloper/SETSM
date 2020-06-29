@@ -110,7 +110,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 printf("image resolution %f\n",proinfo.resolution);
                 
                 int end_level = floor(log10(proinfo.DEM_resolution/(proinfo.resolution*15))/log10(2));
-                int th_grid = proinfo.resolution*pow(2.0,end_level);
+                int th_grid = proinfo.resolution*pwrtwo(end_level);
                 
                 if(end_level < 0)
                     end_level = 0;
@@ -123,7 +123,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 
                 printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
                 
-                int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+                int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
             printf("sdm_kernel size %f\t%f\t%f\t%f\t%d\n",sdm_kernal_size,proinfo.SDM_AS,proinfo.SDM_days,proinfo.resolution,proinfo.pyramid_level);
                 if(proinfo.pre_DEMtif)
                 {
@@ -147,7 +147,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                         while(!check_while)
                         {
                             proinfo.pyramid_level++;
-                            sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pow(2.0,proinfo.pyramid_level)));
+                            sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
                             if(sdm_kernal_size > 3)
                                 proinfo.SDM_SS = sdm_kernal_size;
                             else
@@ -277,8 +277,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
             printf("Completion of subsetImage!!\n");
             const int pyramid_step = proinfo.pyramid_level;
             
-            if( subsetsize[0].height > Template_size/2*pwrtwo(pyramid_step) && subsetsize[0].width > Template_size/2*pwrtwo(pyramid_step) &&
-               subsetsize[1].height > Template_size/2*pwrtwo(pyramid_step) && subsetsize[1].width > Template_size/2*pwrtwo(pyramid_step) )
+            if( subsetsize[0].height > Template_size*pwrtwo(pyramid_step-1) && subsetsize[0].width > Template_size*pwrtwo(pyramid_step-1) &&
+               subsetsize[1].height > Template_size*pwrtwo(pyramid_step-1) && subsetsize[1].width > Template_size*pwrtwo(pyramid_step-1) )
             {
                 double pre_grid_resolution = 0;
                 
@@ -1299,8 +1299,8 @@ long SelectMPs_SDM(ProInfo proinfo, LevelInfo &rlevelinfo, NCCresultSDM* roh_hei
             if(roh_index && rlevelinfo.GridPts[grid_index].m_X > rlevelinfo.Boundary[0] && rlevelinfo.GridPts[grid_index].m_X < rlevelinfo.Boundary[2] && rlevelinfo.GridPts[grid_index].m_Y > rlevelinfo.Boundary[1] && rlevelinfo.GridPts[grid_index].m_Y < rlevelinfo.Boundary[3])
             {
                 count_MPs++;
-                D3DPOINT temp_col(rlevelinfo.GridPts[grid_index].m_X, rlevelinfo.GridPts[grid_index].m_Y, roh_height[grid_index].result3.m_X*pow(2.0,prc_level), 1);
-                D3DPOINT temp_row(rlevelinfo.GridPts[grid_index].m_X, rlevelinfo.GridPts[grid_index].m_Y, roh_height[grid_index].result3.m_Y*pow(2.0,prc_level), 1);
+                D3DPOINT temp_col(rlevelinfo.GridPts[grid_index].m_X, rlevelinfo.GridPts[grid_index].m_Y, roh_height[grid_index].result3.m_X*pwrtwo(prc_level), 1);
+                D3DPOINT temp_row(rlevelinfo.GridPts[grid_index].m_X, rlevelinfo.GridPts[grid_index].m_Y, roh_height[grid_index].result3.m_Y*pwrtwo(prc_level), 1);
                 Matched_pts_col.push_back(temp_col);
                 Matched_pts_row.push_back(temp_row);
          
@@ -1333,11 +1333,11 @@ void echoprint_Gridinfo_SDM(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int
             double coord_x = rlevelinfo.Boundary[0] + j*proinfo.DEM_resolution;
             double coord_y = rlevelinfo.Boundary[1] + k*proinfo.DEM_resolution;
             
-            int pos_lc = (int)((coord_x - proinfo.LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_lr = (int)((proinfo.LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lc = (int)((coord_x - proinfo.LBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_lr = (int)((proinfo.LBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
-            int pos_rc = (int)((coord_x - proinfo.RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_rr = (int)((proinfo.RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rc = (int)((coord_x - proinfo.RBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_rr = (int)((proinfo.RBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
             long int l_index = pos_lr*LImagesize.width + pos_lc;
             long int r_index = pos_rr*RImagesize.width + pos_rc;
@@ -1394,11 +1394,11 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
             double coord_x = rlevelinfo.Boundary[0] + j*proinfo.DEM_resolution;
             double coord_y = rlevelinfo.Boundary[1] + k*proinfo.DEM_resolution;
             
-            int pos_lc = (int)((coord_x - proinfo.LBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_lr = (int)((proinfo.LBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_lc = (int)((coord_x - proinfo.LBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_lr = (int)((proinfo.LBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
-            int pos_rc = (int)((coord_x - proinfo.RBoundary[0])/(proinfo.resolution*pow(2.0,prc_level)));
-            int pos_rr = (int)((proinfo.RBoundary[3] - coord_y)/(proinfo.resolution*pow(2.0,prc_level)));
+            int pos_rc = (int)((coord_x - proinfo.RBoundary[0])/(proinfo.resolution*pwrtwo(prc_level)));
+            int pos_rr = (int)((proinfo.RBoundary[3] - coord_y)/(proinfo.resolution*pwrtwo(prc_level)));
             
             long int l_index = pos_lr*LImagesize.width + pos_lc;
             long int r_index = pos_rr*RImagesize.width + pos_rc;
