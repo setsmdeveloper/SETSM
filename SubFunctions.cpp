@@ -5,6 +5,7 @@
 //  Created by Myoung-Jong Noh on 3/30/20.
 //
 #include "SubFunctions.hpp"
+int numcols[7] = {6,5,5,5,4,3,0};
 
 char* remove_ext(const char* mystr)
 {
@@ -2446,26 +2447,28 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
     }
 
     const int bin_count = 18;
-#pragma omp parallel for
+    const double sub_ratio = (double)bin_count / 4.0;
+    const double bin_angle = 360.0 / (double)bin_count;
+#pragma omp parallel for collapse(2)
     for (long int mask_row = 0; mask_row < main_row; mask_row++)
     {
         for (long int mask_col = 0; mask_col < main_col; mask_col++)
         {
-            const double sub_ratio = (double)bin_count / 4.0;
-            const double bin_angle = 360.0 / (double)bin_count;
             double bin[bin_count] = {0.0};
             double sub_bin[4] = {0.0};
 
             //calulation of major direction, refering to SIFT descriptor based on gradient
             for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++)
             {
-                for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
+                int dcol = numcols[abs(row)];
+                //for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
+                for (int col = -dcol; col <= dcol; col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
-                    long int radius2 = (row * row + col * col);
+                    //long int radius2 = (row * row + col * col);
                     long int pixel_row = mask_row + row;
                     long int pixel_col = mask_col + col;
-                    if (radius2 <= (Half_template_size - 1) * (Half_template_size - 1) && pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
+                    if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
                     {
                         double mag = Gmag[pixel_row * main_col + pixel_col];
                         double theta = (double) (Gdir[pixel_row * main_col + pixel_col]);

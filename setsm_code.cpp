@@ -6002,6 +6002,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     //int sum_data2 = 0;
     //int sum_data = 0;
     const int reference_id = plevelinfo.reference_id;
+    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
     
 #pragma omp parallel
     {
@@ -6044,7 +6045,6 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
             else
                 sum_data++;
             */
-            const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
             const int start_H     = GridPT3[pt_index].minHeight;
             const int end_H       = GridPT3[pt_index].maxHeight;
      
