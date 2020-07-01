@@ -2441,8 +2441,8 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
     {
         for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
         {
-            double angle_sigma = 1.5;
-            gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col] = exp(-(double) (row * row + col * col) / (2 * angle_sigma * angle_sigma));
+            //double angle_sigma = 1.5;
+            gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col] = exp(-(double) (row * row + col * col) / 4.5 /*(2 * angle_sigma * angle_sigma)*/);
         }
     }
 
@@ -2461,7 +2461,6 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++)
             {
                 int dcol = numcols[abs(row)];
-                //for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
                 for (int col = -dcol; col <= dcol; col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
@@ -3233,10 +3232,10 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSe
         
         double left_patch, left_mag_patch, right_patch, right_mag_patch;
         
-        double dx          =  pos_left.m_X - (int)(pos_left.m_X);
-        double dy          =  pos_left.m_Y - (int)(pos_left.m_Y);
-        double dx_r        =  pos_right.m_X - (int)(pos_right.m_X);
-        double dy_r        =  pos_right.m_Y - (int)(pos_right.m_Y);
+        double dx          =   pos_left.m_X - floor(pos_left.m_X);
+        double dy          =   pos_left.m_Y - floor(pos_left.m_Y);
+        double dx_r        =  pos_right.m_X - floor(pos_right.m_X);
+        double dy_r        =  pos_right.m_Y - floor(pos_right.m_Y);
         
         if(check_pyimage == OR)
         {

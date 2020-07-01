@@ -61,23 +61,25 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
     
     result_size.width = _img_size.width/2;
     result_size.height = _img_size.height/2;
-    scale=sqrt(2*PI)*sigma;
+    scale=1/(sqrt(2*PI)*sigma);
     
     int half_filter_size = (int)(_filter_size/2);
     
     result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
+    double tmp = -1/(2*sigma*sigma);
 
+#pragma omp parallel for schedule(guided) private(temp) collapse(2) reduction(+:sum)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            temp = -1.0*(i*i+j*j)/(2*sigma*sigma);
-            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)/scale;
-            sum += exp(temp)/scale;
+            temp = (i*i+j*j)*tmp; //-1.0*(i*i+j*j)/(2*sigma*sigma);
+            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)*scale;
+            sum += exp(temp)*scale;
         }
     }
 
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided) collapse(2)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
@@ -86,7 +88,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
         }
     }
 
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(guided) collapse(2)
     for(long int r=0;r<result_size.height;r++)
     {
         for(long int c=0;c<result_size.width;c++)
