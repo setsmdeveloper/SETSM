@@ -2458,17 +2458,18 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             double sub_bin[4] = {0.0};
 
             //calulation of major direction, refering to SIFT descriptor based on gradient
-            for (int row = -Half_template_size + 1; row <= Half_template_size - 1; row++)
+            for (int row = max(-mask_row, -Half_template_size + 1); row <= min(main_row-mask_row-1, Half_template_size - 1); row++)
             {
                 int dcol = numcols[abs(row)];
-                for (int col = -dcol; col <= dcol; col++)
+                for (int col = max(-mask_row, -dcol); col <= min(dcol, main_col-mask_col-1); col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
                     //long int radius2 = (row * row + col * col);
                     long int pixel_row = mask_row + row;
                     long int pixel_col = mask_col + col;
-                    if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
+                    //if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
                     {
+//printf("mask_row=%d, mask_col=%d, row=%d, col=%d\n", mask_row, mask_col, row, col);
                         double mag = Gmag[pixel_row * main_col + pixel_col];
                         double theta = (double) (Gdir[pixel_row * main_col + pixel_col]);
 
