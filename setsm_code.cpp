@@ -6138,7 +6138,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                     D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                                     D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                                     
-                                                    SetVecKernelValue(plevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N_ortho);
+                                                    SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N_ortho);
                                                     
                                                     if(check_combined_WNCC)
                                                     {
@@ -6151,7 +6151,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             pos_left  = all_im_cd_next[reference_id][pt_index_temp];
                                                             pos_right = all_im_cd_next[ti][pt_index_temp];
                                                             
-                                                            SetVecKernelValue(plevelinfo, rsetkernel_next,NX, row, col, pos_left, pos_right, radius2, Count_N_ortho_next);
+                                                            SetVecKernelValue(rsetkernel_next,plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1], plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1], plevelinfo.py_Images_next, plevelinfo.py_MagImages_next, row, col, pos_left,pos_right, radius2, Count_N_ortho_next);
                                                         }
                                                     }
                                                 }
@@ -6307,7 +6307,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             D2DPOINT temp_pos(cos0*col - sin0*row, sin0*col + cos0*row);
                                                             D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
                                                             
-                                                            SetVecKernelValue(plevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
+                                                            SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
                                                             
                                                             if(check_combined_WNCC_INCC)
                                                             {
@@ -6315,7 +6315,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                                 D2DPOINT temp_pos_next(cos0*col - sin0*row, sin0*col + cos0*row);
                                                                 D2DPOINT pos_right_next(Tar_Imagecoord_py_next[0].m_X + temp_pos_next.m_X,Tar_Imagecoord_py_next[0].m_Y + temp_pos_next.m_Y);
                                                                 
-                                                                SetVecKernelValue(plevelinfo, rsetkernel_next,NX, row, col, pos_left_next, pos_right_next, radius2, Count_N_next);
+                                                                SetVecKernelValue(rsetkernel_next,plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1], plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1], plevelinfo.py_Images_next, plevelinfo.py_MagImages_next, row, col, pos_left_next,pos_right_next, radius2, Count_N_next);
                                                                 
                                                             }  // if(check_combined_WNCC_INCC)
                                                         }
@@ -7761,9 +7761,9 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
                                             if(proinfo->check_Matchtag)
-                                                SetVecKernelValue(rlevelinfo, rsetkernel,BD, row, col, pos_left,pos_right, radius2, Count_N);
+                                                SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level], rlevelinfo.py_BImages, rlevelinfo.py_BMagImages, row, col, pos_left,pos_right, radius2, Count_N);
                                             else
-                                                SetVecKernelValue(rlevelinfo, rsetkernel,OR, row, col, pos_left,pos_right, radius2, Count_N);
+                                                SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.Pyramid_step], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.Pyramid_step], rlevelinfo.py_Images, rlevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 }  // if(radius2 <= ...
@@ -7947,7 +7947,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
-                                            SetVecKernelValue(rlevelinfo, rsetkernel,BD, row, col, pos_left,pos_right, radius2, Count_N);
+                                            SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level], rlevelinfo.py_BImages, rlevelinfo.py_BMagImages, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 } // if(radius <= Half_template_size-1)

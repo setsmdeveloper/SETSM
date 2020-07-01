@@ -3206,25 +3206,8 @@ double InterpolatePatch(const uint16 *Image, const long int position, const CSiz
     return patch;
 }
 
-void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSelect check_pyimage, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
+void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, const uint16 * const *PyImages, const uint16 * const *PyMagImages, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
 {
-    CSize LImagesize, RImagesize;
-    if(check_pyimage == OR)
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step];
-    }
-    else if(check_pyimage == NX)
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.Pyramid_step - 1];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.Pyramid_step - 1];
-    }
-    else
-    {
-        LImagesize = plevelinfo.py_Sizes[rkernel.reference_id][*plevelinfo.blunder_selected_level];
-        RImagesize = plevelinfo.py_Sizes[rkernel.ti][*plevelinfo.blunder_selected_level];
-    }
-    
     if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
     {
         const long int position = (long int) pos_left.m_X + (long int) pos_left.m_Y *(long int)LImagesize.width;
@@ -3237,36 +3220,13 @@ void SetVecKernelValue(LevelInfo &plevelinfo, SetKernel &rkernel, enum PyImageSe
         double dx_r        =  pos_right.m_X - floor(pos_right.m_X);
         double dy_r        =  pos_right.m_Y - floor(pos_right.m_Y);
         
-        if(check_pyimage == OR)
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.reference_id], position,LImagesize, dx, dy);
+        //interpolate left_patch
+        left_patch = InterpolatePatch(PyImages[rkernel.reference_id], position, LImagesize, dx, dy);
+        left_mag_patch = InterpolatePatch(PyMagImages[rkernel.reference_id], position,LImagesize, dx, dy);
         
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_Images[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
-        else if(check_pyimage == NX)
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.reference_id], position,LImagesize, dx, dy);
-        
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_Images_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_MagImages_next[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
-        else
-        {
-            //interpolate left_patch
-            left_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.reference_id], position, LImagesize, dx, dy);
-            left_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.reference_id], position,LImagesize, dx, dy);
-        
-            //interpolate right_patch
-            right_patch = InterpolatePatch(plevelinfo.py_BImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-            right_mag_patch = InterpolatePatch(plevelinfo.py_BMagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        }
+        //interpolate right_patch
+        right_patch = InterpolatePatch(PyImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+        right_mag_patch = InterpolatePatch(PyMagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
             
         if(left_patch > 0 && right_patch > 0)
         {
