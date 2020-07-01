@@ -2446,15 +2446,15 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
         }
     }
 
-    const int bin_count = 18;
-    const double sub_ratio = (double)bin_count / 4.0;
-    const double bin_angle = 360.0 / (double)bin_count;
+    //const int bin_count = 18;
+    //const double sub_ratio = 4.6; //(double)bin_count / 4.0;
+    //const double bin_angle = 20.0; //360.0 / (double)bin_count;
 #pragma omp parallel for collapse(2)
     for (long int mask_row = 0; mask_row < main_row; mask_row++)
     {
         for (long int mask_col = 0; mask_col < main_col; mask_col++)
         {
-            double bin[bin_count] = {0.0};
+            double bin[18] = {0.0};
             double sub_bin[4] = {0.0};
 
             //calulation of major direction, refering to SIFT descriptor based on gradient
@@ -2477,11 +2477,11 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
                         else if(theta > 360)
                             theta -= 360;
 
-                        long int index = (long int) (theta / bin_angle);
+                        long int index = (long int) (theta / 20.0);
                         if (index >= 0 && index < 18)
                         {
                             bin[index] += mag * gu_weight;
-                            sub_bin[(int) (index / sub_ratio)] += mag * gu_weight;
+                            sub_bin[(int) (index / SUB_RATIO)] += mag * gu_weight;
                         }
                     }
                 }
@@ -2499,7 +2499,7 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             }
 
             max_th = -100;
-            for (int i = (int) (sub_th * sub_ratio); i < (int) (sub_th * sub_ratio + sub_ratio); i++)
+            for (int i = (int) (sub_th * SUB_RATIO); i < (int) (sub_th * SUB_RATIO + SUB_RATIO); i++)
             {
                 if (bin[i] > max_th)
                 {

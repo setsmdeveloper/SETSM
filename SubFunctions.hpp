@@ -26,6 +26,7 @@
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
+#define SUB_RATIO 4.6
 
 char* remove_ext(const char* mystr);
 char* GetFileName(char file_path[]);
