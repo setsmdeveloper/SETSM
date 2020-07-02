@@ -2442,7 +2442,7 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
         for (int col = -Half_template_size + 1; col <= Half_template_size - 1; col++)
         {
             //double angle_sigma = 1.5;
-            gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col] = exp(-(double) (row * row + col * col) / 4.5 /*(2 * angle_sigma * angle_sigma)*/);
+            gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col] = exp(-(double) (row * row + col * col) / 4.5);
         }
     }
 
@@ -2469,7 +2469,6 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
                     long int pixel_col = mask_col + col;
                     //if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
                     {
-//printf("mask_row=%d, mask_col=%d, row=%d, col=%d\n", mask_row, mask_col, row, col);
                         double mag = Gmag[pixel_row * main_col + pixel_col];
                         double theta = (double) (Gdir[pixel_row * main_col + pixel_col]);
 
