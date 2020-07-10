@@ -10279,6 +10279,7 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
     
     uint8 *m_bHeight       = (uint8*)calloc(*rlevelinfo.Grid_length,sizeof(uint8));
     
+#pragma omp parallel for schedule(guided)
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
         const UI3DPOINT t_tri(tris[tcnt]);
