@@ -6032,7 +6032,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
         SetKernel rsetkernel_next(left_patch_next_vecs,left_mag_patch_next_vecs,right_patch_next_vecs,right_mag_patch_next_vecs,reference_id,1,Half_template_size,patch_size);
         
-#pragma omp for schedule(guided) reduction(+:Accessable_grid/*,sum_data2, sum_data*/)
+#pragma omp for schedule(dynamic,1) reduction(+:Accessable_grid/*,sum_data2, sum_data*/)
         for(long int iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
             long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
@@ -8023,7 +8023,7 @@ int Ortho_blunder(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP, D3DPOINT 
         double* com_count = (double*)calloc(sizeof(double),numOfPts);
         double* com_FNCC = (double*)calloc(sizeof(double),numOfPts);
         
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(dynamic, 1)
         for(int tcnt=0;tcnt<(int)(num_triangles);tcnt++)
         {
             if(tris_check[tcnt] == 0)
