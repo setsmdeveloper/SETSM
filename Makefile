@@ -36,6 +36,13 @@ else ifeq ($(COMPILER), pgi)
   MPICXX=mpicxx
   CFLAGS=-c99 -O3 -mp=allcores -fast
   CXXFLAGS=-std=c++11 -O3 -mp=allcores -fast
+else ifeq ($(COMPILER), cray)
+  CC=cc
+  CXX=CC
+  MPICC=mpicc
+  MPICXX=mpicxx
+  CFLAGS=
+  CXXFLAGS=-hstd=c++11
 else
   CC=gcc
   CXX=g++
