@@ -43,7 +43,7 @@ else ifeq ($(COMPILER), cray)
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=
-  CXXFLAGS=-hstd=c++11
+  CXXFLAGS=-hstd=c++11 -h aggress
 else
   CC=gcc
   CXX=g++
@@ -82,6 +82,7 @@ $(OBJS) : $(HDRS)
 clean :
 	rm -f setsm setsm_mpi
 	rm -f *.o git_description git_description.h
+	rm -rf program_library
 
 git_description.h: git_description
 	echo "#define GIT_DESCRIPTION \"$(GIT_DESCRIPTION)\"" > $@
