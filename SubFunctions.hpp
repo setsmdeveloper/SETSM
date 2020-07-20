@@ -74,7 +74,19 @@ void Orientation(const CSize imagesize,const uint16* Gmag,const int16* Gdir,cons
 
 double InterpolatePatch(const uint16 *Image, const long int position, const CSize Imagesize, const double dx, const double dy);
 
-void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, const uint16 * const *PyImages, const uint16 * const *PyMagImages, const int row, const int col, const D2DPOINT &pos_left, const D2DPOINT &pos_right, const int radius2, int *Count_N);
+struct KernelPatchArg {
+    SetKernel &rkernel;
+
+    CSize LImagesize;
+    CSize RImagesize;
+
+    const uint16 *left_image;
+    const uint16 *left_mag_image;
+    const uint16 *right_image;
+    const uint16 *right_mag_image;
+};
+
+void SetVecKernelValue(const KernelPatchArg &kernel_patch, const int row, const int col, const D2DPOINT &pos_left, const D2DPOINT &pos_right, const int radius2, int *Count_N);
 
 void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi);
 

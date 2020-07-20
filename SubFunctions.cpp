@@ -3195,23 +3195,15 @@ FullTriangulation *TINCreate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilis
     return triangulation;
 }
 */
-double InterpolatePatch(const uint16 *Image, const long int position, const CSize Imagesize, const double dx, const double dy)
-{
-    double patch =
-        (double) (Image[position]) * (1 - dx) * (1 - dy) +
-        (double) (Image[position + 1]) * dx * (1 - dy) +
-        (double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
-        (double) (Image[position + 1 + Imagesize.width]) * dx * dy;
 
-    return patch;
-}
 
-void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, const uint16 * const *PyImages, const uint16 * const *PyMagImages, const int row, const int col, const D2DPOINT &pos_left, const D2DPOINT &pos_right, const int radius2, int *Count_N)
+void SetVecKernelValue(const KernelPatchArg &patch, const int row, const int col, const D2DPOINT &pos_left, const D2DPOINT &pos_right, const int radius2, int *Count_N)
 {
-    if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
+
+    if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < patch.RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < patch.RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < patch.LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < patch.LImagesize.width)
     {
-        const long int position = (long int) pos_left.m_X + (long int) pos_left.m_Y *(long int)LImagesize.width;
-        const long int position_right = (long int) pos_right.m_X + (long int) pos_right.m_Y *(long int)RImagesize.width;
+        const long int position = (long int) pos_left.m_X + (long int) pos_left.m_Y *(long int)patch.LImagesize.width;
+        const long int position_right = (long int) pos_right.m_X + (long int) pos_right.m_Y *(long int)patch.RImagesize.width;
         
         double left_patch, left_mag_patch, right_patch, right_mag_patch;
         
@@ -3219,14 +3211,16 @@ void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, c
         double dy          =   pos_left.m_Y - floor(pos_left.m_Y);
         double dx_r        =  pos_right.m_X - floor(pos_right.m_X);
         double dy_r        =  pos_right.m_Y - floor(pos_right.m_Y);
-        
+
         //interpolate left_patch
-        left_patch = InterpolatePatch(PyImages[rkernel.reference_id], position, LImagesize, dx, dy);
-        left_mag_patch = InterpolatePatch(PyMagImages[rkernel.reference_id], position,LImagesize, dx, dy);
+        left_patch = InterpolatePatch(patch.left_image, position, patch.LImagesize, dx, dy);
+        left_mag_patch = InterpolatePatch(patch.left_mag_image, position,patch.LImagesize, dx, dy);
         
         //interpolate right_patch
-        right_patch = InterpolatePatch(PyImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
-        right_mag_patch = InterpolatePatch(PyMagImages[rkernel.ti], position_right,RImagesize, dx_r, dy_r);
+        right_patch = InterpolatePatch(patch.right_image, position_right,patch.RImagesize, dx_r, dy_r);
+        right_mag_patch = InterpolatePatch(patch.right_mag_image, position_right,patch.RImagesize, dx_r, dy_r);
+
+        auto &rkernel = patch.rkernel;
             
         if(left_patch > 0 && right_patch > 0)
         {
@@ -3269,6 +3263,17 @@ void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, c
             }
         }
     }
+}
+
+double InterpolatePatch(const uint16 *Image, const long int position, const CSize Imagesize, const double dx, const double dy)
+{
+    double patch =
+        (double) (Image[position]) * (1 - dx) * (1 - dy) +
+        (double) (Image[position + 1]) * dx * (1 - dy) +
+        (double) (Image[position + Imagesize.width]) * (1 - dx) * dy +
+        (double) (Image[position + 1 + Imagesize.width]) * dx * dy;
+
+    return patch;
 }
 
 void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N, double &count_NCC, double &sum_NCC_multi)

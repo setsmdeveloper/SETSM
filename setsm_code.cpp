@@ -6083,6 +6083,25 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                             
                             rsetkernel.ti = ti;
                             rsetkernel_next.ti = ti;
+
+                            KernelPatchArg patch{
+                                rsetkernel,
+                                plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step],
+                                plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step],
+                                plevelinfo.py_Images[rsetkernel.reference_id],
+                                plevelinfo.py_MagImages[rsetkernel.reference_id],
+                                plevelinfo.py_Images[rsetkernel.ti],
+                                plevelinfo.py_MagImages[rsetkernel.ti]};
+
+                            KernelPatchArg patch_next{
+                                    rsetkernel_next,
+                                    plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1],
+                                    plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1],
+                                    plevelinfo.py_Images_next[rsetkernel_next.reference_id],
+                                    plevelinfo.py_MagImages_next[rsetkernel_next.reference_id],
+                                    plevelinfo.py_Images_next[rsetkernel_next.ti],
+                                    plevelinfo.py_MagImages_next[rsetkernel_next.ti]};
+
                             
                             //GNCC computation
                             if(check_ortho && SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[ti]) > ortho_th)
@@ -6115,7 +6134,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                     D2DPOINT &pos_left = all_im_cd[reference_id][pt_index_temp];
                                                     D2DPOINT &pos_right = all_im_cd[ti][pt_index_temp];
                                                     
-                                                    SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N_ortho);
+                                                    SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N_ortho);
                                                     
                                                     if(check_combined_WNCC)
                                                     {
@@ -6128,7 +6147,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             auto &pos_left  = all_im_cd_next[reference_id][pt_index_temp];
                                                             auto &pos_right = all_im_cd_next[ti][pt_index_temp];
                                                             
-                                                            SetVecKernelValue(rsetkernel_next,plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1], plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1], plevelinfo.py_Images_next, plevelinfo.py_MagImages_next, row, col, pos_left,pos_right, radius2, Count_N_ortho_next);
+                                                            SetVecKernelValue(patch_next, row, col, pos_left,pos_right, radius2, Count_N_ortho_next);
                                                         }
                                                     }
                                                 }
@@ -6284,7 +6303,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             D2DPOINT temp_pos(cos0*col - sin0*row, sin0*col + cos0*row);
                                                             D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
                                                             
-                                                            SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
+                                                            SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                                                             
                                                             if(check_combined_WNCC_INCC)
                                                             {
@@ -6292,7 +6311,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                                 D2DPOINT temp_pos_next(cos0*col - sin0*row, sin0*col + cos0*row);
                                                                 D2DPOINT pos_right_next(Tar_Imagecoord_py_next[0].m_X + temp_pos_next.m_X,Tar_Imagecoord_py_next[0].m_Y + temp_pos_next.m_Y);
                                                                 
-                                                                SetVecKernelValue(rsetkernel_next,plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1], plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1], plevelinfo.py_Images_next, plevelinfo.py_MagImages_next, row, col, pos_left_next,pos_right_next, radius2, Count_N_next);
+                                                                SetVecKernelValue(patch_next, row, col, pos_left_next,pos_right_next, radius2, Count_N_next);
                                                                 
                                                             }  // if(check_combined_WNCC_INCC)
                                                         }
@@ -7684,6 +7703,24 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                         double count_GNCC = 0;
                         double nccresult = 0.0;
 
+                        KernelPatchArg patch = proinfo->check_Matchtag ?
+                            KernelPatchArg{
+                                rsetkernel,
+                                rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level],
+                                rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level],
+                                rlevelinfo.py_BImages[rsetkernel.reference_id],
+                                rlevelinfo.py_BMagImages[rsetkernel.reference_id],
+                                rlevelinfo.py_BImages[rsetkernel.ti],
+                                rlevelinfo.py_BMagImages[rsetkernel.ti]}
+                          : KernelPatchArg{
+                                rsetkernel,
+                                rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.Pyramid_step],
+                                 rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.Pyramid_step],
+                                 rlevelinfo.py_Images[rsetkernel.reference_id],
+                                 rlevelinfo.py_MagImages[rsetkernel.reference_id],
+                                 rlevelinfo.py_Images[rsetkernel.ti],
+                                 rlevelinfo.py_MagImages[rsetkernel.ti]};
+                        
                         //if(GridPT3[pt_index].Height != -1000)
                         //    count_total+=1;
 
@@ -7712,10 +7749,7 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
-                                            if(proinfo->check_Matchtag)
-                                                SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level], rlevelinfo.py_BImages, rlevelinfo.py_BMagImages, row, col, pos_left,pos_right, radius2, Count_N);
-                                            else
-                                                SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.Pyramid_step], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.Pyramid_step], rlevelinfo.py_Images, rlevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
+                                            SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 }  // if(radius2 <= ...
@@ -7849,6 +7883,16 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                     if(proinfo->check_selected_image[ti])
                     {
                         rsetkernel.ti = ti;
+
+                        KernelPatchArg patch{
+                                rsetkernel,
+                                rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level],
+                                rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level],
+                                rlevelinfo.py_BImages[rsetkernel.reference_id],
+                                rlevelinfo.py_BMagImages[rsetkernel.reference_id],
+                                rlevelinfo.py_BImages[rsetkernel.ti],
+                                rlevelinfo.py_BMagImages[rsetkernel.ti]};
+
                         
                         int Count_N[3] = {0};
                         double count_GNCC = 0;
@@ -7879,7 +7923,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             
-                                            SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.blunder_selected_level], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.blunder_selected_level], rlevelinfo.py_BImages, rlevelinfo.py_BMagImages, row, col, pos_left,pos_right, radius2, Count_N);
+                                            SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 } // if(radius <= Half_template_size-1)

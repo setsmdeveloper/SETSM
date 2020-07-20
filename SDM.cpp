@@ -1167,6 +1167,16 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                 if(GridPT3[pt_index].ortho_ncc < 0.8)
                 {
                     bool check_false_h = false;
+
+                    KernelPatchArg patch{
+                        rsetkernel,
+                        plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step],
+                        plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step],
+                        plevelinfo.py_Images[rsetkernel.reference_id],
+                        plevelinfo.py_MagImages[rsetkernel.reference_id],
+                        plevelinfo.py_Images[rsetkernel.ti],
+                        plevelinfo.py_MagImages[rsetkernel.ti]};
+
                     for(int kernel_row = -kernel_size ; kernel_row <= kernel_size ; kernel_row++)
                     {
                         for(int kernel_col = -kernel_size ; kernel_col <= kernel_size ; kernel_col++)
@@ -1217,7 +1227,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                                             D2DPOINT pos_left(Left_Imagecoord_py.m_X + col_pixel_left, Left_Imagecoord_py.m_Y + row_pixel_left);
                                             D2DPOINT pos_right(Right_Imagecoord_py.m_X + col_pixel_right, Right_Imagecoord_py.m_Y + row_pixel_right);
                                             
-                                            SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
+                                            SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
                                 }
@@ -1472,7 +1482,7 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
             long pts_row = floor(iter_count/rlevelinfo.Size_Grid2D->width);
             long pts_col = iter_count % rlevelinfo.Size_Grid2D->width;
             long pt_index = pts_row*(long)rlevelinfo.Size_Grid2D->width + pts_col;
-            
+
             if(pt_index < *rlevelinfo.Grid_length && pts_row < rlevelinfo.Size_Grid2D->height && pts_col < rlevelinfo.Size_Grid2D->width && pts_row >= 0 && pts_col >= 0)
             {
                 const CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step]);
@@ -1494,6 +1504,16 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
                     int Count_N[3] = {0};
                     double total_NCC = 0;
                     double temp_INCC_roh = 0;
+
+                    KernelPatchArg patch{
+                            rsetkernel,
+                            rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.Pyramid_step],
+                            rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.Pyramid_step],
+                            rlevelinfo.py_Images[rsetkernel.reference_id],
+                            rlevelinfo.py_MagImages[rsetkernel.reference_id],
+                            rlevelinfo.py_Images[rsetkernel.ti],
+                            rlevelinfo.py_MagImages[rsetkernel.ti]};
+            
                     
                     double im_resolution_mask = (gsd_image1.pro_GSD + gsd_image2.pro_GSD)/2.0;
                     
@@ -1516,7 +1536,7 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
                                 D2DPOINT pos_left(Left_Imagecoord_py.m_X + col_pixel_left, Left_Imagecoord_py.m_Y + row_pixel_left);
                                 D2DPOINT pos_right(Right_Imagecoord_py.m_X + col_pixel_right, Right_Imagecoord_py.m_Y + row_pixel_right);
                                 
-                                SetVecKernelValue(rsetkernel,rlevelinfo.py_Sizes[rsetkernel.reference_id][*rlevelinfo.Pyramid_step], rlevelinfo.py_Sizes[rsetkernel.ti][*rlevelinfo.Pyramid_step], rlevelinfo.py_Images, rlevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N);
+                                SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                             }
                         }
                     }
