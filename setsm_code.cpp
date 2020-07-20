@@ -6135,8 +6135,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                             {
                                                 if(GridPT3[pt_index_dem].Height != -1000)
                                                 {
-                                                    D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
-                                                    D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
+                                                    D2DPOINT &pos_left = all_im_cd[reference_id][pt_index_temp];
+                                                    D2DPOINT &pos_right = all_im_cd[ti][pt_index_temp];
                                                     
                                                     SetVecKernelValue(rsetkernel,plevelinfo.py_Sizes[rsetkernel.reference_id][*plevelinfo.Pyramid_step], plevelinfo.py_Sizes[rsetkernel.ti][*plevelinfo.Pyramid_step], plevelinfo.py_Images, plevelinfo.py_MagImages, row, col, pos_left,pos_right, radius2, Count_N_ortho);
                                                     
@@ -6148,8 +6148,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                         
                                                         if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w_next*sub_imagesize_h_next && t_col < sub_imagesize_w_next && t_row < sub_imagesize_h_next)
                                                         {
-                                                            pos_left  = all_im_cd_next[reference_id][pt_index_temp];
-                                                            pos_right = all_im_cd_next[ti][pt_index_temp];
+                                                            auto &pos_left  = all_im_cd_next[reference_id][pt_index_temp];
+                                                            auto &pos_right = all_im_cd_next[ti][pt_index_temp];
                                                             
                                                             SetVecKernelValue(rsetkernel_next,plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1], plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1], plevelinfo.py_Images_next, plevelinfo.py_MagImages_next, row, col, pos_left,pos_right, radius2, Count_N_ortho_next);
                                                         }

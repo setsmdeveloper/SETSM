@@ -3206,7 +3206,7 @@ double InterpolatePatch(const uint16 *Image, const long int position, const CSiz
     return patch;
 }
 
-void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, const uint16 * const *PyImages, const uint16 * const *PyMagImages, const int row, const int col, const D2DPOINT pos_left, const D2DPOINT pos_right, const int radius2, int *Count_N)
+void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, const uint16 * const *PyImages, const uint16 * const *PyMagImages, const int row, const int col, const D2DPOINT &pos_left, const D2DPOINT &pos_right, const int radius2, int *Count_N)
 {
     if( pos_right.m_Y >= 0 && pos_right.m_Y + 1 < RImagesize.height && pos_right.m_X  >= 0 && pos_right.m_X + 1 < RImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y + 1 < LImagesize.height && pos_left.m_X >= 0 && pos_left.m_X + 1  < LImagesize.width)
     {
