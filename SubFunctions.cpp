@@ -3230,10 +3230,10 @@ void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, c
             
         if(left_patch > 0 && right_patch > 0)
         {
-            rkernel.left_patch_vecs[0][Count_N[0]] = left_patch;
-            rkernel.left_mag_patch_vecs[0][Count_N[0]] = left_mag_patch;
-            rkernel.right_patch_vecs[0][Count_N[0]] = right_patch;
-            rkernel.right_mag_patch_vecs[0][Count_N[0]] = right_mag_patch;
+            rkernel.left_patch_vecs(0, Count_N[0]) = left_patch;
+            rkernel.left_mag_patch_vecs(0, Count_N[0]) = left_mag_patch;
+            rkernel.right_patch_vecs(0, Count_N[0]) = right_patch;
+            rkernel.right_mag_patch_vecs(0, Count_N[0]) = right_mag_patch;
             Count_N[0]++;
             
             const int size_1        = (int)(rkernel.Half_template_size/2);
@@ -3243,10 +3243,10 @@ void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, c
                 {
                     if(col >= -rkernel.Half_template_size + size_1 && col <= rkernel.Half_template_size - size_1)
                     {
-                        rkernel.left_patch_vecs[1][Count_N[1]] = left_patch;
-                        rkernel.left_mag_patch_vecs[1][Count_N[1]] = left_mag_patch;
-                        rkernel.right_patch_vecs[1][Count_N[1]] = right_patch;
-                        rkernel.right_mag_patch_vecs[1][Count_N[1]] = right_mag_patch;
+                        rkernel.left_patch_vecs(1, Count_N[1]) = left_patch;
+                        rkernel.left_mag_patch_vecs(1, Count_N[1]) = left_mag_patch;
+                        rkernel.right_patch_vecs(1, Count_N[1]) = right_patch;
+                        rkernel.right_mag_patch_vecs(1, Count_N[1]) = right_mag_patch;
                         Count_N[1]++;
                     }
                 }
@@ -3259,10 +3259,10 @@ void SetVecKernelValue(SetKernel &rkernel, CSize LImagesize, CSize RImagesize, c
                 {
                     if(col >= -rkernel.Half_template_size + size_2 && col <= rkernel.Half_template_size - size_2)
                     {
-                        rkernel.left_patch_vecs[2][Count_N[2]] = left_patch;
-                        rkernel.left_mag_patch_vecs[2][Count_N[2]] = left_mag_patch;
-                        rkernel.right_patch_vecs[2][Count_N[2]] = right_patch;
-                        rkernel.right_mag_patch_vecs[2][Count_N[2]] = right_mag_patch;
+                        rkernel.left_patch_vecs(2, Count_N[2]) = left_patch;
+                        rkernel.left_mag_patch_vecs(2, Count_N[2]) = left_mag_patch;
+                        rkernel.right_patch_vecs(2, Count_N[2]) = right_patch;
+                        rkernel.right_mag_patch_vecs(2, Count_N[2]) = right_mag_patch;
                         Count_N[2]++;
                     }
                 }
@@ -3281,14 +3281,14 @@ void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N
         
         for (int k=0; k<3; k++)
         {
-            const double ncc = Correlate(rsetkernel.left_patch_vecs[k], rsetkernel.right_patch_vecs[k], Count_N[k]);
+            const double ncc = Correlate(rsetkernel.left_patch_vecs.row(k), rsetkernel.right_patch_vecs.row(k), Count_N[k]);
             if (ncc != -99)
             {
                 count_roh++;
                 temp_roh += ncc;
             }
             
-            const double ncc_mag = Correlate(rsetkernel.left_mag_patch_vecs[k], rsetkernel.right_mag_patch_vecs[k], Count_N[k]);
+            const double ncc_mag = Correlate(rsetkernel.left_mag_patch_vecs.row(k), rsetkernel.right_mag_patch_vecs.row(k), Count_N[k]);
             if (ncc_mag != -99)
             {
                 count_roh++;

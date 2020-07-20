@@ -6006,31 +6006,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     
 #pragma omp parallel
     {
-        // Make patch vectors thread private rather than private to each loop iteration
-        double *left_patch_vecs[3];
-        double *right_patch_vecs[3];
-        double *left_mag_patch_vecs[3];
-        double *right_mag_patch_vecs[3];
-        double *left_patch_next_vecs[3];
-        double *right_patch_next_vecs[3];
-        double *left_mag_patch_next_vecs[3];
-        double *right_mag_patch_next_vecs[3];
-        //const int max_half_template = max(Half_template_size,Template_size/2);
-        const int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-        for (int k=0; k<3; k++)
-        {
-            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_next_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        }
-        
-        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
-        SetKernel rsetkernel_next(left_patch_next_vecs,left_mag_patch_next_vecs,right_patch_next_vecs,right_mag_patch_next_vecs,reference_id,1,Half_template_size,patch_size);
+        SetKernel rsetkernel(reference_id,1,Half_template_size);
+        SetKernel rsetkernel_next(reference_id,1,Half_template_size);
         
 #pragma omp for schedule(dynamic,1) reduction(+:Accessable_grid/*,sum_data2, sum_data*/)
         for(long int iter_count = 0 ; iter_count < numofpts ; iter_count++)
@@ -6384,17 +6361,6 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                 }//end check blunder cell
             }//end check_image_boundary
         } // end omp for
-        for (int k=0; k<3; k++)
-        {
-            free(left_patch_vecs[k]);
-            free(right_patch_vecs[k]);
-            free(left_mag_patch_vecs[k]);
-            free(right_mag_patch_vecs[k]);
-            free(left_patch_next_vecs[k]);
-            free(right_patch_next_vecs[k]);
-            free(left_mag_patch_next_vecs[k]);
-            free(right_mag_patch_next_vecs[k]);
-        }
     } // end omp parallel
     
     //printf("check height cell %d\t%d\t%d\t%f\t%f\n",sum_data2,sum_data,sum_data2+sum_data,(double)sum_data2/(double)(sum_data2+sum_data)*100,(double)sum_data/(double)(sum_data2+sum_data)*100);
@@ -7698,21 +7664,7 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
     //int count_low = 0;
 #pragma omp parallel
     {
-        // Make patch vectors thread private rather than private to each loop iteration
-        double *left_patch_vecs[3];
-        double *right_patch_vecs[3];
-        double *left_mag_patch_vecs[3];
-        double *right_mag_patch_vecs[3];
-        int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-        for (int k=0; k<3; k++)
-        {
-            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        }
-
-        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,1,Half_template_size,patch_size);
+        SetKernel rsetkernel(reference_id,1,Half_template_size);
         
 #pragma omp for /*reduction(+:count_low, count_total)*/ schedule(guided)
         for(long int iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
@@ -7812,14 +7764,6 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
             }
         } // end omp for
 
-        // free thread-private vectors
-        for (int k=0; k<3; k++)
-        {
-            free(left_patch_vecs[k]);
-            free(right_patch_vecs[k]);
-            free(left_mag_patch_vecs[k]);
-            free(right_mag_patch_vecs[k]);
-        }
     } // end omp parallel
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
@@ -7884,20 +7828,8 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
 #pragma omp parallel
     {
         // Make patch vectors thread private rather than private to each loop iteration
-        double *left_patch_vecs[3];
-        double *right_patch_vecs[3];
-        double *left_mag_patch_vecs[3];
-        double *right_mag_patch_vecs[3];
-        int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-        for (int k=0; k<3; k++)
-        {
-            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        }
         
-        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,0,Half_template_size,patch_size);
+        SetKernel rsetkernel(reference_id,0,Half_template_size);
 
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
@@ -7967,15 +7899,6 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                 nccresult[pt_index] = max_ncc;
             }
         } // end omp for
-        
-        // free thread-private vectors
-        for (int k=0; k<3; k++)
-        {
-            free(left_patch_vecs[k]);
-            free(right_patch_vecs[k]);
-            free(left_mag_patch_vecs[k]);
-            free(right_mag_patch_vecs[k]);
-        }
     } // end omp parallel
  
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)

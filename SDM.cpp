@@ -1143,20 +1143,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
     const int target_id = 1;
 #pragma omp parallel
     {
-        // Make patch vectors thread private rather than private to each loop iteration
-        double *left_patch_vecs[3];
-        double *right_patch_vecs[3];
-        double *left_mag_patch_vecs[3];
-        double *right_mag_patch_vecs[3];
-        const int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-        for (int k=0; k<3; k++)
-        {
-            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        }
-        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,target_id,Half_template_size,patch_size);
+        SetKernel rsetkernel(reference_id,target_id,Half_template_size);
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
@@ -1258,13 +1245,6 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                     nccresult[pt_index].result3.m_Y = GridPT3[pt_index].row_shift/pwrtwo(Pyramid_step);
                 }
             }
-        }
-        for (int k=0; k<3; k++)
-        {
-            free(left_patch_vecs[k]);
-            free(right_patch_vecs[k]);
-            free(left_mag_patch_vecs[k]);
-            free(right_mag_patch_vecs[k]);
         }
     }
     
@@ -1483,21 +1463,8 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
     const int target_id = 1;
 #pragma omp parallel
     {
-        // Make patch vectors thread private rather than private to each loop iteration
-        double *left_patch_vecs[3];
-        double *right_patch_vecs[3];
-        double *left_mag_patch_vecs[3];
-        double *right_mag_patch_vecs[3];
-        const int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
-        for (int k=0; k<3; k++)
-        {
-            left_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            left_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-            right_mag_patch_vecs[k] = (double *)malloc(sizeof(double)*patch_size);
-        }
         
-        SetKernel rsetkernel(left_patch_vecs,left_mag_patch_vecs,right_patch_vecs,right_mag_patch_vecs,reference_id,target_id,Half_template_size,patch_size);
+        SetKernel rsetkernel(reference_id,target_id,Half_template_size);
 
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
@@ -1560,13 +1527,6 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
             }
         }
         
-        for (int k=0; k<3; k++)
-        {
-            free(left_patch_vecs[k]);
-            free(right_patch_vecs[k]);
-            free(left_mag_patch_vecs[k]);
-            free(right_mag_patch_vecs[k]);
-        }
     }
     
     return true;

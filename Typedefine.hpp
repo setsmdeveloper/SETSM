@@ -20,6 +20,8 @@
 #include "tiff.h"
 #include "tiffio.h"
 #include <vector>
+#include <cstdlib>
+#include <cstring>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -640,18 +642,114 @@ typedef struct taglevelinfo
     bool *check_matching_rate;
 } LevelInfo;
 
+class Matrix {
+public:
+    Matrix(unsigned rows, unsigned cols)
+      : rows_ {rows},
+        cols_ {cols},
+        data_ {new double[rows_ * cols_]()}
+    {
+    }
+
+    ~Matrix() {
+        delete[] data_;
+    }
+
+    Matrix(const Matrix& m)
+    : rows_{m.rows_},
+      cols_{m.cols_},
+      data_ {new double[rows_ * cols_]}
+    {
+        memcpy(data_, m.data_, sizeof(double) * rows_ * cols_);
+    }
+
+    Matrix(Matrix &&m)
+    : rows_{m.rows_},
+      cols_{m.cols_},
+      data_{m.data_}
+    {
+        m.data_ = nullptr;
+        m.rows_ = 0;
+        m.cols_ = 0;
+    }
+
+    Matrix& operator= (const Matrix& m)
+    {
+        double *p = new double[m.rows_ * m.cols_];
+
+        memcpy(p, m.data_, sizeof(double) * m.rows_ * m.cols_);
+
+        delete[] data_;
+        data_ = p;
+        rows_ = m.rows_;
+        cols_ = m.cols_;
+
+        return *this;
+
+    }
+    Matrix& operator= (Matrix &&m)
+    {
+        delete[] data_;
+
+        data_ = m.data_;
+        rows_ = m.rows_;
+        cols_ = m.cols_;
+    
+        m.data_ = nullptr;
+        m.rows_ = 0;
+        m.cols_ = 0;
+
+        return *this;
+    }
+
+    double& operator() (unsigned row, unsigned col)
+    {
+        return data_[cols_*row + col];
+    }
+
+    double operator() (unsigned row, unsigned col) const
+    {
+        return data_[cols_*row + col];
+    }
+
+    inline
+    const double * row(unsigned i) const
+    {
+        return data_ + cols_*i;
+    }
+
+private:
+    unsigned rows_ = 0;
+    unsigned cols_ = 0;
+    double *data_ = nullptr;
+};
+
 typedef struct tagSetKernel
 {
-    double **left_patch_vecs;
-    double **left_mag_patch_vecs;
-    double **right_patch_vecs;
-    double **right_mag_patch_vecs;
     const int reference_id;
     int ti;
     const int Half_template_size;
-    const int patch_size;
-    tagSetKernel(double **left_patch_vecs,double **left_mag_patch_vecs,double **right_patch_vecs,double **right_mag_patch_vecs,const int reference_id,const int ti,const int Half_template_size,const int patch_size):left_patch_vecs(left_patch_vecs),left_mag_patch_vecs(left_mag_patch_vecs),right_patch_vecs(right_patch_vecs),right_mag_patch_vecs(right_mag_patch_vecs),reference_id(reference_id),ti(ti),Half_template_size(Half_template_size),patch_size(patch_size)
+    unsigned patch_size;
+
+    Matrix left_patch_vecs;
+    Matrix left_mag_patch_vecs;
+    Matrix right_patch_vecs;
+    Matrix right_mag_patch_vecs;
+
+
+    tagSetKernel(const int reference_id,const int ti,const int Half_template_size):
+        reference_id(reference_id),
+        ti(ti),
+        Half_template_size(Half_template_size),
+        patch_size((2*Half_template_size+1) * (2*Half_template_size+1)),
+        left_patch_vecs{3, patch_size},
+        left_mag_patch_vecs{3, patch_size},
+        right_patch_vecs{3, patch_size},
+        right_mag_patch_vecs{3, patch_size}
     {
+    }
+
+    ~tagSetKernel() {
     }
 } SetKernel;
 #endif
