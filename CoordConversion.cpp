@@ -854,17 +854,6 @@ D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
     
 }
 
-D2DPOINT OriginalToPyramid_single(const D2DPOINT InCoord, const D2DPOINT Startpos, const uint8 Pyramid_step)
-{
-    D2DPOINT out;
-
-    out.m_X      = (InCoord.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
-    out.m_Y      = (InCoord.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
-
-    return out;
-    
-}
-
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step)
 {
     int i;

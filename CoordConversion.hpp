@@ -32,7 +32,16 @@ D2DPOINT GetObjectToImage_single(uint16 _numofpts, D2DPOINT _GP, double *boundar
 
 //Pyramid coord conversion
 D2DPOINT* OriginalToPyramid(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
-D2DPOINT OriginalToPyramid_single(const D2DPOINT InCoord, const D2DPOINT Startpos, const uint8 Pyramid_step);
+static D2DPOINT OriginalToPyramid_single(const D2DPOINT InCoord, const D2DPOINT Startpos, const uint8 Pyramid_step)
+{
+    D2DPOINT out;
+
+    out.m_X      = (InCoord.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+    out.m_Y      = (InCoord.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
+
+    return out;
+    
+}
 D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos, uint8 Pyramid_step);
 
 //Air-borne frame sensor coord conversion : photo to object
