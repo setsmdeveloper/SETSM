@@ -8883,7 +8883,6 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
     while(flag == true && count < max_count && count_tri > 20)
     {
         long int count_blunders = 0;
-        double mt_minmaxheight[2];
         long blunder_count[2] = {0};
         
         float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
@@ -8893,7 +8892,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
         if(proinfo->IsRA != 1)
         {
             //printf("DecisionMP : start VerticalLineLocus_blunder 1 iteration %d\n",count);
-            SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,count_tri, GridPT3, mt_minmaxheight);
+            SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,count_tri, GridPT3);
             VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, true);
             //printf("DecisionMP : end VerticalLineLocus_blunder 1\n");
         }
@@ -9013,8 +9012,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
         //printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,*rlevelinfo.grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
     }
 
-    double mt_minmaxheight[2];
-    SetHeightRange_blunder(rlevelinfo,ptslists, count_Results[0], trilists,count_tri, GridPT3, mt_minmaxheight);
+    SetHeightRange_blunder(rlevelinfo,ptslists, count_Results[0], trilists,count_tri, GridPT3);
    
     free(trilists);
     
@@ -9033,8 +9031,6 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
     const int count_MPs       = count_MPs_input;
     const double gridspace            = *rlevelinfo.grid_resolution;
     
-    double mt_minmaxheight[2];
-    
     BL blunder_param;
     blunder_param.Boundary  = rlevelinfo.Boundary;
     blunder_param.gridspace = *rlevelinfo.grid_resolution;
@@ -9048,7 +9044,7 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
     
     float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     
-    SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,numoftri, GridPT3, mt_minmaxheight);
+    SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,numoftri, GridPT3);
     
     VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
 
@@ -10241,17 +10237,17 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
     return resize_GridPT3;
 }
 
-bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3, double *mt_minmaxheight)
+bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
-    double Total_Min_Z      =  100000;
-    double Total_Max_Z      = -100000;
     
-    uint8 *m_bHeight       = (uint8*)calloc(*rlevelinfo.Grid_length,sizeof(uint8));
-    
+    bool *m_bHeight = new bool[*rlevelinfo.Grid_length]();
 #pragma omp parallel for schedule(guided)
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
-        const UI3DPOINT t_tri(tris[tcnt]);
+        double Total_Min_Z      =  100000;
+        double Total_Max_Z      = -100000;
+
+        const UI3DPOINT &t_tri = (tris[tcnt]);
         const int pdex0 = t_tri.m_X;
         const int pdex1 = t_tri.m_Y;
         const int pdex2 = t_tri.m_Z;
@@ -10280,38 +10276,44 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                 for (long Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                 {
                     const int Index= (long)rlevelinfo.Size_Grid2D->width*Row + Col;
-                    
-                    if (m_bHeight[Index] == 0)
-                    {
-                        float Z = -1000.0;
-                        bool rtn = false;
-                         
-                        D3DPOINT CurGPXY(
-                            (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
-                            (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
-                            0,
-                            0);
 
-                        rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
-                        
-                        if (rtn)
+                    // Note: We don't set it here, just try to prevent a little work
+                    // if possible. It's only updated if we are actually inside the TIN.
+                    bool seen;
+#pragma omp atomic read
+                    seen = m_bHeight[Index];
+                    if(seen)
+                        continue;
+
+                    float Z = -1000.0;
+                    bool rtn = false;
+                     
+                    D3DPOINT CurGPXY(
+                        (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
+                        (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
+                        0,
+                        0);
+
+                    rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
+                    
+                    if (rtn)
+                    {
+#pragma omp atomic capture
                         {
-                            m_bHeight[Index] = 1;
-                            GridPT3[Index].Height = (float)Z;
+                            //omp version of fetch and store
+                            seen = m_bHeight[Index];
+                            m_bHeight[Index] = true;
+
                         }
+                        // only update if we haven't already
+                        if(!seen)
+                            GridPT3[Index].Height = (float)Z;
                     }
                 }
             }
         }
     }
-
-    if(m_bHeight)
-        free(m_bHeight);
-    
-    mt_minmaxheight[0] = Total_Min_Z;
-    mt_minmaxheight[1] = Total_Max_Z;
-    
-    
+    delete[] m_bHeight;
     return true;
 }
 
