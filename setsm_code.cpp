@@ -8824,12 +8824,19 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
 
 void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, D3DPOINT *ptslists)
 {
-    const long int count_MPs       = count_MPs_input;
-    const int Th_pts = 1;
     
     *minz_mp = 100000;
     *maxz_mp = -100000;
+
+    if((*rlevelinfo.Pyramid_step == 0 && iteration == 3))
+    {
+        return;
+    }
+
+    const long int count_MPs       = count_MPs_input;
+    const int Th_pts = 1;
  
+    // Determine max count
     uint8 max_count         = 30;
     if(!flag_blunder) //anchor points
         max_count = 10;
@@ -8844,186 +8851,181 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
     }
     
     long count = 0;
-    if( !(*rlevelinfo.Pyramid_step == 0 && iteration == 3))
+    double min_max[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
+    
+    UI3DPOINT *trilists = NULL;
+    FullTriangulation *origTri = NULL;
+    vector<UI3DPOINT> t_trilists;
+    int count_tri;
+    
+    //Save triangulation for later use as we will remove blunders directly from this triangulation
+    origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
+    
+    count_tri = t_trilists.size();
+    
+    //TODO why do we do this copy here?
+    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+    for(long i = 0 ; i < t_trilists.size() ; i++)
     {
-        double min_max[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
-        
-        UI3DPOINT *trilists = NULL;
-        FullTriangulation *origTri = NULL;
-        vector<UI3DPOINT> t_trilists;
-        int count_tri;
-        
-        //Save triangulation for later use as we will remove blunders directly from this triangulation
-        origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
-        
-        count_tri = t_trilists.size();
-        
-        trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-        vector<UI3DPOINT>::iterator it;
-        //long i = 0;
-        for(long i = 0 ; i < t_trilists.size() ; i++)
-        //for(it = t_trilists.begin(); it != t_trilists.end() ; ++it)
-        {
-            trilists[i] = t_trilists[i];
-            //i++;
-        }
-        t_trilists.clear();
-        vector<UI3DPOINT>().swap(t_trilists);
-        
-        
-        bool flag               = true;
-        double blunder_dh = 0;
-        long pre_count_blunder = -100;
-        long pre_count_MPs = -100;
-        
-        
-        while(flag == true && count < max_count && count_tri > 20)
-        {
-            long int count_blunders = 0;
-            double mt_minmaxheight[2];
-            long blunder_count[2] = {0};
-            
-            float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
-            
-            bool *detBlunders = (bool*)calloc(sizeof(bool), count_MPs);
-            
-            if(proinfo->IsRA != 1)
-            {
-                //printf("DecisionMP : start VerticalLineLocus_blunder 1 iteration %d\n",count);
-                SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,count_tri, GridPT3, mt_minmaxheight);
-                VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, true);
-                //printf("DecisionMP : end VerticalLineLocus_blunder 1\n");
-            }
-            
-            //printf("blunder_detection_TIN start\n");
-            blunder_detection_TIN(proinfo, rlevelinfo, iteration, ortho_ncc, flag_blunder, count, ptslists, detBlunders, count_MPs, trilists, count_tri, GridPT3, blunder_count,minz_mp,maxz_mp);
-            //printf("blunder_detection_TIN end\n");
-            
-            free(ortho_ncc);
-            
-            if(count > 0)
-                count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
-            else
-                count_blunders = blunder_count[1];
-            
-            if(count_blunders < Th_pts)
-                flag = false;
-            
-            if(blunder_count[0] < Th_pts)
-                flag = false;
-            
-            if(pre_count_blunder == blunder_count[1] && pre_count_MPs == blunder_count[0])
-                flag = false;
-            else
-            {
-                pre_count_MPs = blunder_count[0];
-                pre_count_blunder = blunder_count[1];
-            }
-            
-            //printf("start TIN\n");
-            D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
-            D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
-            uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
-            
-            long int new_blunder_cnt = 0;
-            long int t_tri_counts = 0;
-            for(long int i=0;i<count_MPs;i++)
-            {
-                //Check for newly found blunders, and save them to be removed from triangulation
-                if (detBlunders[i])
-                {
-                    input_blunder_pts[new_blunder_cnt].m_X = ptslists[i].m_X;
-                    input_blunder_pts[new_blunder_cnt].m_Y = ptslists[i].m_Y;
-                    new_blunder_cnt++;
-                }
-                if(flag)
-                {
-                    if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
-                    {
-                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                        check_id[t_tri_counts]          = i;
-                        t_tri_counts++;
-                    }
-                }
-                else
-                {
-                    if(ptslists[i].flag != 1)
-                    {
-                        input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
-                        input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
-                        check_id[t_tri_counts]          = i;
-                        t_tri_counts++;
-                    }
-                }
-            }
-            
-            if (new_blunder_cnt > 0)
-            {
-                free(trilists);
-                vector<UI3DPOINT> tt_trilists;
-                //If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
-                //Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
-                if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
-                {
-                    //Must delete old triangulation and create new one, should be faster
-                    delete origTri;
-                    origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution);
-                }
-                else
-                {
-                    //Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
-                    TINUpdate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
-                }
-                
-                count_tri = tt_trilists.size();
-                
-                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                
-                vector<UI3DPOINT>::iterator itt;
-                for(long i = 0 ; i < tt_trilists.size() ; i++)
-                //for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
-                {
-                    trilists[i].m_X = check_id[tt_trilists[i].m_X];
-                    trilists[i].m_Y = check_id[tt_trilists[i].m_Y];
-                    trilists[i].m_Z = check_id[tt_trilists[i].m_Z];
-                    //i++;
-                }
-                tt_trilists.clear();
-                vector<UI3DPOINT>().swap(tt_trilists);
-            }
-            
-            free(input_blunder_pts);
-            free(input_tri_pts);
-            free(detBlunders);
-            free(check_id);
-            
-            //printf("end TIN\n");
-            
-            count_Results[0]    = count_MPs;
-            count_Results[1]    = count_tri;
-            
-            count++;
-            if(count >= max_count || count_tri <= 20)
-                flag = false;
-            
-            //printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,*rlevelinfo.grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
-        }
-
+        trilists[i] = t_trilists[i];
+    }
+    t_trilists.clear();
+    vector<UI3DPOINT>().swap(t_trilists);
+    
+    
+    bool flag               = true;
+    double blunder_dh = 0;
+    long pre_count_blunder = -100;
+    long pre_count_MPs = -100;
+    
+    
+    // runs between 10 and 30 times (by max_count at least)
+    while(flag == true && count < max_count && count_tri > 20)
+    {
+        long int count_blunders = 0;
         double mt_minmaxheight[2];
-        SetHeightRange_blunder(rlevelinfo,ptslists, count_Results[0], trilists,count_tri, GridPT3, mt_minmaxheight);
-       
-        free(trilists);
+        long blunder_count[2] = {0};
         
-        float* ortho_ncc = (float*)calloc(sizeof(float),*rlevelinfo.Grid_length);
+        float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
         
-        //printf("DecisionMP : start VerticalLineLocus_blunder 2\n");
-        VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
-        //printf("DecisionMP : end VerticalLineLocus_blunder 2\n");
+        bool *detBlunders = (bool*)calloc(sizeof(bool), count_MPs);
+        
+        if(proinfo->IsRA != 1)
+        {
+            //printf("DecisionMP : start VerticalLineLocus_blunder 1 iteration %d\n",count);
+            SetHeightRange_blunder(rlevelinfo,ptslists, count_MPs, trilists,count_tri, GridPT3, mt_minmaxheight);
+            VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, true);
+            //printf("DecisionMP : end VerticalLineLocus_blunder 1\n");
+        }
+        
+        //printf("blunder_detection_TIN start\n");
+        blunder_detection_TIN(proinfo, rlevelinfo, iteration, ortho_ncc, flag_blunder, count, ptslists, detBlunders, count_MPs, trilists, count_tri, GridPT3, blunder_count,minz_mp,maxz_mp);
+        //printf("blunder_detection_TIN end\n");
         
         free(ortho_ncc);
-        delete origTri;
+        
+        if(count > 0)
+            count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
+        else
+            count_blunders = blunder_count[1];
+        
+        if(count_blunders < Th_pts)
+            flag = false;
+        
+        if(blunder_count[0] < Th_pts)
+            flag = false;
+        
+        if(pre_count_blunder == blunder_count[1] && pre_count_MPs == blunder_count[0])
+            flag = false;
+        else
+        {
+            pre_count_MPs = blunder_count[0];
+            pre_count_blunder = blunder_count[1];
+        }
+        
+        //printf("start TIN\n");
+        D3DPOINT *input_blunder_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),count_blunders);
+        D3DPOINT *input_tri_pts = (D3DPOINT*)calloc(sizeof(D3DPOINT),blunder_count[0]);
+        uint32 *check_id        = (uint32*)calloc(sizeof(uint32),blunder_count[0]);
+        
+        long int new_blunder_cnt = 0;
+        long int t_tri_counts = 0;
+        for(long int i=0;i<count_MPs;i++)
+        {
+            //Check for newly found blunders, and save them to be removed from triangulation
+            if (detBlunders[i])
+            {
+                input_blunder_pts[new_blunder_cnt].m_X = ptslists[i].m_X;
+                input_blunder_pts[new_blunder_cnt].m_Y = ptslists[i].m_Y;
+                new_blunder_cnt++;
+            }
+            if(flag)
+            {
+                if(ptslists[i].flag != 1 && ptslists[i].flag != 2)
+                {
+                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                    check_id[t_tri_counts]          = i;
+                    t_tri_counts++;
+                }
+            }
+            else
+            {
+                if(ptslists[i].flag != 1)
+                {
+                    input_tri_pts[t_tri_counts].m_X = ptslists[i].m_X;
+                    input_tri_pts[t_tri_counts].m_Y = ptslists[i].m_Y;
+                    check_id[t_tri_counts]          = i;
+                    t_tri_counts++;
+                }
+            }
+        }
+        
+        if (new_blunder_cnt > 0)
+        {
+            free(trilists);
+            vector<UI3DPOINT> tt_trilists;
+            //If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
+            //Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
+            if (TINUPD_THRSHLD*new_blunder_cnt > t_tri_counts)
+            {
+                //Must delete old triangulation and create new one, should be faster
+                delete origTri;
+                origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution);
+            }
+            else
+            {
+                //Rather than recreating entire triangulation, edit saved triangulation and only remove new blunders
+                TINUpdate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution, origTri, input_blunder_pts, new_blunder_cnt);
+            }
+            
+            count_tri = tt_trilists.size();
+            
+            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+            
+            vector<UI3DPOINT>::iterator itt;
+            for(long i = 0 ; i < tt_trilists.size() ; i++)
+            //for(itt = tt_trilists.begin(); itt != tt_trilists.end() ; ++itt)
+            {
+                trilists[i].m_X = check_id[tt_trilists[i].m_X];
+                trilists[i].m_Y = check_id[tt_trilists[i].m_Y];
+                trilists[i].m_Z = check_id[tt_trilists[i].m_Z];
+                //i++;
+            }
+            tt_trilists.clear();
+            vector<UI3DPOINT>().swap(tt_trilists);
+        }
+        
+        free(input_blunder_pts);
+        free(input_tri_pts);
+        free(detBlunders);
+        free(check_id);
+        
+        //printf("end TIN\n");
+        
+        count_Results[0]    = count_MPs;
+        count_Results[1]    = count_tri;
+        
+        count++;
+        if(count >= max_count || count_tri <= 20)
+            flag = false;
+        
+        //printf("iter = %d\tGridsize = %f\tMPs = %d\tBlunder = %d\tcount_tri = %d\tflag = %d\n",count,*rlevelinfo.grid_resolution,blunder_count[0],count_blunders,count_tri,flag);
     }
+
+    double mt_minmaxheight[2];
+    SetHeightRange_blunder(rlevelinfo,ptslists, count_Results[0], trilists,count_tri, GridPT3, mt_minmaxheight);
+   
+    free(trilists);
+    
+    float* ortho_ncc = (float*)calloc(sizeof(float),*rlevelinfo.Grid_length);
+    
+    //printf("DecisionMP : start VerticalLineLocus_blunder 2\n");
+    VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
+    //printf("DecisionMP : end VerticalLineLocus_blunder 2\n");
+    
+    free(ortho_ncc);
+    delete origTri;
 }
 
 void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri)
