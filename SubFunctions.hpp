@@ -112,9 +112,9 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
 //void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 
-void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
+void SetTinBoundary(LevelInfo &rlevelinfo, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z);
+bool IsTinInside(const D3DPOINT &CurGPXY, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, float &Z);
 
 double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2);
 void SetAngle(double &angle);

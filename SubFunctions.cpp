@@ -2863,7 +2863,7 @@ void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilist
     delete [] grid_blunders;
 }
 
-void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ)
+void SetTinBoundary(LevelInfo &rlevelinfo, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ)
 {
     temp_MinZ = min(min(TriP1.m_Z,TriP2.m_Z),TriP3.m_Z);
     temp_MaxZ = max(max(TriP1.m_Z,TriP2.m_Z),TriP3.m_Z);
@@ -2894,7 +2894,7 @@ void SetTinBoundary(LevelInfo &rlevelinfo, D3DPOINT TriP1, D3DPOINT TriP2, D3DPO
         PixelMinXY[1] = 0;
 }
 
-bool IsTinInside(D3DPOINT CurGPXY, D3DPOINT TriP1, D3DPOINT TriP2, D3DPOINT TriP3, float &Z)
+bool IsTinInside(const D3DPOINT &CurGPXY, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, float &Z)
 {
     bool rtn = false;
     //float temp_Z;

@@ -10258,12 +10258,22 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
         
         if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
         {
-            D3DPOINT TriP1(pts[pdex0]);
-            D3DPOINT TriP2(pts[pdex1]);
-            D3DPOINT TriP3(pts[pdex2]);
+            const D3DPOINT &TriP1 = (pts[pdex0]);
+            const D3DPOINT &TriP2 = (pts[pdex1]);
+            const D3DPOINT &TriP3 = (pts[pdex2]);
             int PixelMinXY[2], PixelMaxXY[2];
             double temp_MinZ, temp_MaxZ;
-            SetTinBoundary(rlevelinfo, TriP1, TriP2, TriP3, PixelMinXY, PixelMaxXY, Total_Min_Z, Total_Max_Z, temp_MinZ, temp_MaxZ);
+            SetTinBoundary(
+                rlevelinfo,
+                TriP1,
+                TriP2,
+                TriP3,
+                PixelMinXY,
+                PixelMaxXY,
+                Total_Min_Z,
+                Total_Max_Z,
+                temp_MinZ,
+                temp_MaxZ);
             
             for (long Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
             {
@@ -10276,7 +10286,12 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                         float Z = -1000.0;
                         bool rtn = false;
                          
-                        D3DPOINT CurGPXY((Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],(Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],0,0);
+                        D3DPOINT CurGPXY(
+                            (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
+                            (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
+                            0,
+                            0);
+
                         rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
                         
                         if (rtn)

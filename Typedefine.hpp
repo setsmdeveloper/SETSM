@@ -182,13 +182,13 @@ typedef struct tagD3DPoint
         return *this;
     }
     
-    tagD3DPoint operator+(const tagD3DPoint &p)
+    tagD3DPoint operator+(const tagD3DPoint &p) const
     {
         tagD3DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y, this->m_Z + p.m_Z, 0);
         return temp;
     }
     
-    tagD3DPoint operator-(const tagD3DPoint &p)
+    tagD3DPoint operator-(const tagD3DPoint &p) const
     {
         tagD3DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y, this->m_Z - p.m_Z, 0);
         return temp;
