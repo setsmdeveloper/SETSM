@@ -9790,7 +9790,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
     
     uint8 *m_bHeight       = (uint8*)calloc(*rlevelinfo.Grid_length,sizeof(uint8));
     float *NewHeight = (float*)malloc(sizeof(float)*(*rlevelinfo.Grid_length));
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(static)
     for (long counter = 0; counter < *rlevelinfo.Grid_length; counter++)
         NewHeight[counter]          = -1000.0;
     
@@ -9957,7 +9957,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
     double maxH_temp = *maxH_grid;
     
     UGRID *GridPT3_temp = (UGRID*)malloc(sizeof(UGRID)*(*rlevelinfo.Grid_length));
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for schedule(static)
     for (long counter = 0; counter < *rlevelinfo.Grid_length; counter++)
     {
         GridPT3[counter].Height = NewHeight[counter];
