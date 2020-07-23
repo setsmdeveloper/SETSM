@@ -36,7 +36,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.2.3";
+const char setsm_version[] = "4.2.4";
 
 //const double RA_resolution = 16;
 
@@ -8996,9 +8996,10 @@ void SetDEMBoundary(double** _rpcs, double* _res,TransParam _param, bool _hemisp
     double minLat = (double) (-1.2 * _rpcs[1][3] + _rpcs[0][3]);
     double maxLat = (double) (1.2 * _rpcs[1][3] + _rpcs[0][3]);
     
-    _minmaxheight[0] =  floor(-1.5 * _rpcs[1][4] + _rpcs[0][4]);
-    _minmaxheight[1] =  ceil(1.5 * _rpcs[1][4] + _rpcs[0][4]);
+    _minmaxheight[0] =  floor((-1.5 * _rpcs[1][4] + _rpcs[0][4])/10.0)*10;
+    _minmaxheight[1] =  ceil((1.5 * _rpcs[1][4] + _rpcs[0][4])/10.0)*10;
     
+    printf("minmaxheight %f\t%f\n",_minmaxheight[0],_minmaxheight[1]);
     int oriminmaxH[2];
     oriminmaxH[0] = floor(-1.0 * _rpcs[1][4] + _rpcs[0][4]);
     oriminmaxH[1] = ceil(1.0 * _rpcs[1][4] + _rpcs[0][4]);
