@@ -2855,6 +2855,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 fprintf(pMetafile,"Output dimensions=%d\t%d\n",seeddem_size.width,seeddem_size.height);
                                 fprintf(pMetafile,"Upper left coordinates=%f\t%f\n",tminX,tmaxY);
                                 
+                                if (args.check_minH)
+                                    fprintf(pMetafile,"user_defined_minH=%f\n",args.minHeight);
+                                if (args.check_maxH)
+                                    fprintf(pMetafile,"user_defined_maxH=%f\n",args.maxHeight);
+                                
                                 if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
                                 {
                                     ST = time(0);
