@@ -2945,7 +2945,7 @@ bool IsTinInside(const D3DPOINT &CurGPXY, const D3DPOINT &TriP1, const D3DPOINT 
     return rtn;
 }
 
-double SetNormalAngle(D3DPOINT pts0, D3DPOINT pts1, D3DPOINT pts2)
+double SetNormalAngle(const D3DPOINT &pts0, const D3DPOINT &pts1, const D3DPOINT &pts2)
 {
     double angle;
     
