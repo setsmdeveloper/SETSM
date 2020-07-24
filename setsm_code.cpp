@@ -9794,16 +9794,16 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
     
     for(long tcnt = 0;tcnt < num_triangles;tcnt++)
     {
-        const UI3DPOINT t_tri(tris[tcnt]);
+        const UI3DPOINT &t_tri = (tris[tcnt]);
         const int pdex0 = t_tri.m_X;
         const int pdex1 = t_tri.m_Y;
         const int pdex2 = t_tri.m_Z;
         
         if(pdex0 < numOfPts && pdex1 < numOfPts && pdex2 < numOfPts)
         {
-            D3DPOINT TriP1(pts[pdex0]);
-            D3DPOINT TriP2(pts[pdex1]);
-            D3DPOINT TriP3(pts[pdex2]);
+            const D3DPOINT &TriP1(pts[pdex0]);
+            const D3DPOINT &TriP2(pts[pdex1]);
+            const D3DPOINT &TriP3(pts[pdex2]);
             int PixelMinXY[2], PixelMaxXY[2];
             double temp_MinZ, temp_MaxZ;
             SetTinBoundary(rlevelinfo, TriP1, TriP2, TriP3, PixelMinXY, PixelMaxXY, Total_Min_Z, Total_Max_Z, temp_MinZ, temp_MaxZ);
