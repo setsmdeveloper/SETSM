@@ -10246,7 +10246,6 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
     
-    bool *m_bHeight = new bool[*rlevelinfo.Grid_length]();
 #pragma omp parallel for schedule(guided)
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
@@ -10283,14 +10282,6 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                 {
                     const int Index= (long)rlevelinfo.Size_Grid2D->width*Row + Col;
 
-                    // Note: We don't set it here, just try to prevent a little work
-                    // if possible. It's only updated if we are actually inside the TIN.
-                    bool seen;
-#pragma omp atomic read
-                    seen = m_bHeight[Index];
-                    if(seen)
-                        continue;
-
                     float Z = -1000.0;
                     bool rtn = false;
                      
@@ -10304,22 +10295,13 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                     
                     if (rtn)
                     {
-#pragma omp atomic capture
-                        {
-                            //omp version of fetch and store
-                            seen = m_bHeight[Index];
-                            m_bHeight[Index] = true;
-
-                        }
-                        // only update if we haven't already
-                        if(!seen)
-                            GridPT3[Index].Height = (float)Z;
+#pragma omp atomic write
+                        GridPT3[Index].Height = (float)Z;
                     }
                 }
             }
         }
     }
-    delete[] m_bHeight;
     return true;
 }
 
