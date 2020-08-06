@@ -82,7 +82,6 @@ $(OBJS) : $(HDRS)
 clean :
 	rm -f setsm setsm_mpi
 	rm -f *.o git_description git_description.h
-	rm -rf program_library
 
 git_description.h: git_description
 	echo "#define GIT_DESCRIPTION \"$(GIT_DESCRIPTION)\"" > $@
