@@ -3422,6 +3422,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             blunder_selected_level = level + 1;
                         else
                             blunder_selected_level = level + 1;
+                        
+                        blunder_selected_level = level;
                         printf("selected_bl %d\n",blunder_selected_level);
                         
                         uint8 iteration;
