@@ -276,7 +276,6 @@ typedef struct UpdateGrid{
 	short minHeight;
 	short maxHeight;
 	
-	
 	short roh;
 	short ortho_ncc[MaxNCC];
     short Mean_ortho_ncc;
@@ -284,6 +283,10 @@ typedef struct UpdateGrid{
     unsigned char Matched_flag;
 	unsigned char anchor_flag;
     
+    unsigned char selected_pair;
+    unsigned char total_images;
+    unsigned char ncc_seleceted_pair;
+    unsigned char height_counts;
 }UGRID;
 
 typedef struct tagVoxelinfo
@@ -299,6 +302,11 @@ typedef struct LSFinfo{
     //unsigned char lsf_std;
     unsigned char lsf_kernel;
 }LSFINFO;
+
+typedef struct tagPairInfo{
+    int NumberOfPairs;
+    UI2DPOINT *pairs;
+}PairInfo;
 
 typedef struct BlunderIP{
 	CSize Size_Grid2D;
@@ -640,6 +648,9 @@ typedef struct taglevelinfo
     const int *Py_combined_level;
     const unsigned char *iteration;
     bool *check_matching_rate;
+    const PairInfo *pairinfo;
+    const CSize *Imagesize_ori;
+    float pair_select_gncc;
 } LevelInfo;
 
 class Matrix {
