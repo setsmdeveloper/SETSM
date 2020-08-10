@@ -6099,14 +6099,16 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                 plevelinfo.py_Images[rsetkernel.ti],
                                 plevelinfo.py_MagImages[rsetkernel.ti]};
 
-                            KernelPatchArg patch_next{
+                            KernelPatchArg patch_next = check_combined_WNCC ?
+                                KernelPatchArg{
                                     rsetkernel_next,
                                     plevelinfo.py_Sizes[rsetkernel_next.reference_id][*plevelinfo.Pyramid_step-1],
                                     plevelinfo.py_Sizes[rsetkernel_next.ti][*plevelinfo.Pyramid_step-1],
                                     plevelinfo.py_Images_next[rsetkernel_next.reference_id],
                                     plevelinfo.py_MagImages_next[rsetkernel_next.reference_id],
                                     plevelinfo.py_Images_next[rsetkernel_next.ti],
-                                    plevelinfo.py_MagImages_next[rsetkernel_next.ti]};
+                                    plevelinfo.py_MagImages_next[rsetkernel_next.ti]}
+                                : KernelPatchArg{rsetkernel_next,}; // unused, bit need to init ref type
 
                             
                             //GNCC computation
