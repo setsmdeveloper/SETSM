@@ -3423,7 +3423,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         else
                             blunder_selected_level = level + 1;
                         
-                        blunder_selected_level = level;
+                        //blunder_selected_level = level;
                         printf("selected_bl %d\n",blunder_selected_level);
                         
                         uint8 iteration;
@@ -5922,6 +5922,43 @@ double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA)
     
 }
 
+double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_height, double tar_height, double step_height)
+{
+    double gncc_weight = 1.0;
+    
+    if(Pyramid_step < 2)
+    {
+        gncc_weight = 1.0;
+    }
+    else
+    {
+        double height_diff_th = 5;
+        
+        double weight = 0.5;
+        double height_step_diff = fabs(matched_height - tar_height)/step_height;
+     
+        if(INCC >= 0 && GNCC >= 0)
+        {
+            if(height_step_diff <= height_diff_th)
+            {
+                if(height_step_diff == 0)
+                    gncc_weight = 1.0;
+                else
+                    gncc_weight = 1.0 - weight*(1.0 - GNCC)*(1.0/(1.0+(height_diff_th - height_step_diff)*(height_diff_th - height_step_diff)));
+            }
+            else
+                gncc_weight = 1.0 - weight*(1.0 - GNCC);
+        }
+        else
+        {
+            gncc_weight = 1.0 - weight;
+        }
+    }
+    
+    //gncc_weight = 1.0;
+    return gncc_weight;
+}
+
 int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
@@ -6355,15 +6392,31 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                 
                                                 
                                                 double temp_rho;
-                                                if(check_ortho && count_GNCC > 0) // GNCC check
-                                                    temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
-                                                else
+                                                
+                                                double db_INCC = sum_INCC_multi/count_INCC;
+                                                double db_GNCC = sum_GNCC_multi/count_GNCC;
+                                                
+                                                double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, *plevelinfo.height_step);
+                                                
+                                                if((Pyramid_step == 4 && iteration == 1))
+                                                    gncc_weight = 1.0;
+                                                
+                                                if(count_INCC > 0)
                                                 {
-                                                    if(count_INCC > 0)
-                                                        temp_rho = sum_INCC_multi/count_INCC;
+                                                    if(check_ortho && count_GNCC > 0) // GNCC check
+                                                    {
+                                                        if(db_GNCC > ortho_th)
+                                                            temp_rho = sum_INCC_multi/count_INCC*ncc_alpha + sum_GNCC_multi/count_GNCC*ncc_beta;
+                                                        else
+                                                            temp_rho = sum_INCC_multi/count_INCC*gncc_weight;
+                                                    }
                                                     else
-                                                        temp_rho = -1.0;
+                                                    {
+                                                        temp_rho = sum_INCC_multi/count_INCC*gncc_weight;
+                                                    }
                                                 }
+                                                else
+                                                    temp_rho = -1.0;
                                                 
                                                 if(max_WNCC < temp_rho)
                                                     max_WNCC = temp_rho;
@@ -7467,6 +7520,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
     
     const double ncc_alpha = SetNCC_alpha(Pyramid_step,iteration, proinfo->IsRA);
     const double ncc_beta = 1.0 - ncc_alpha;
+    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
     
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < (long)Size_Grid2D.height*(long)Size_Grid2D.width ; iter_count++)
@@ -7508,22 +7562,41 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 double WNCC_temp_rho = 0;
                 double WNCC_sum = -1;
                 
+                double db_GNCC = SignedCharToDouble_grid(nccresult[pt_index].GNCC);
+                double db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC);
+                
+                double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
+                if(Pyramid_step == 4 && iteration == 1)
+                    gncc_weight = 1.0;
+                
                 if(check_SGM_peak)
                 {
                     temp_rho = SumCost[pt_index][height_step];
                     
                     if(check_ortho && SignedCharToDouble_result(nccresult[pt_index].GNCC) > -1.0)
-                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + SignedCharToDouble_result(nccresult[pt_index].GNCC)*ncc_beta;
+                    {
+                        if(db_GNCC > ortho_th)
+                            WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + SignedCharToDouble_result(nccresult[pt_index].GNCC)*ncc_beta;
+                        else
+                            WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*gncc_weight;
+                    }
                     else
-                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC);
+                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*gncc_weight;
+                    
                     WNCC_temp_rho = WNCC_sum;
                 }
                 else
                 {
                     if(check_ortho && SignedCharToDouble_result(nccresult[pt_index].GNCC) > -1.0)
-                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + SignedCharToDouble_result(nccresult[pt_index].GNCC)*ncc_beta;
+                    {
+                        if(db_GNCC > ortho_th)
+                            WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*ncc_alpha + SignedCharToDouble_result(nccresult[pt_index].GNCC)*ncc_beta;
+                        else
+                            WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*gncc_weight;
+                    }
                     else
-                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC);
+                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC)*gncc_weight;;
+              
                     WNCC_temp_rho = WNCC_sum;
                 
                     temp_rho = WNCC_sum;
@@ -8491,7 +8564,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     {
         if(Pyramid_step > 0)
         {
-            const int rohconvert = 100;
+            const int rohconvert = 10;
             long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
             long int total_roh = 0;
             
@@ -8519,21 +8592,21 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 double min_roh_th;
                 
                 if(Pyramid_step == 4)
-                    min_roh_th = 0.05 + (iteration-1)*0.01;
+                    min_roh_th = 0.4;//0.05 + (iteration-1)*0.01;
                 else if(Pyramid_step == 3)
-                    min_roh_th = 0.15 + (iteration-1)*0.01;
+                    min_roh_th = 0.5;//0.15 + (iteration-1)*0.01;
                 else if(Pyramid_step == 2)
-                    min_roh_th = 0.60;
+                    min_roh_th = 0.7;//0.60;
                 else if(Pyramid_step == 1)
-                    min_roh_th = 0.80;
-                
+                    min_roh_th = 0.9;//0.80;
+                /*
                 if(Pyramid_step <= SGM_th_py )
                 {
                     min_roh_th = 0.95 - Pyramid_step*0.1;
                     if(min_roh_th < 0.5)
                         min_roh_th = 0.5;
                 }
-                
+                */
                 int roh_iter = rohconvert - 1;
                 bool check_stop = false;
                 minimum_Th = 0.2;
@@ -8551,8 +8624,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                     }
                     roh_iter--;
                 }
-                if(minimum_Th > 0.95)
-                    minimum_Th = 0.95;
+                //if(minimum_Th > 0.95)
+                //    minimum_Th = 0.95;
+                
+                if(minimum_Th > 0.80)
+                    minimum_Th = 0.80;
             }
             else
                 minimum_Th = 0.2;
@@ -8567,8 +8643,10 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     
     bool check_iter_end = false;
     
-    const double roh_th = 0.05;
-     
+    double roh_th = 0.05;
+    if(iteration == 1)
+        roh_th = 0.10;
+    
     if(Pyramid_step == 0)
     {
         if(Th_roh - 0.10 < Th_roh_min)
@@ -8603,6 +8681,8 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
         }
     }
 
+    double height_step = GetHeightStep(Pyramid_step, proinfo->resolution);
+    
     for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
     {
         long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
@@ -8624,9 +8704,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
             roh_index       = false;
      
             //ratio of 1st peak roh / 2nd peak roh
-            if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2))
+            double peak_step_diff = fabs(roh_height[grid_index].result2 - roh_height[grid_index].result3)/height_step;
+            
+            /*if((iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2))
                 ROR = 1.0;
-            else
+            else*/
             {
                 if(fabs(SignedCharToDouble_result(roh_height[grid_index].result0)) > 0)
                     ROR         = (SignedCharToDouble_result(roh_height[grid_index].result0) - SignedCharToDouble_result(roh_height[grid_index].result1))/SignedCharToDouble_result(roh_height[grid_index].result0);
@@ -8644,6 +8726,9 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 if(ROR >= 0.1 && SignedCharToDouble_result(roh_height[grid_index].result0) > minimum_Th)
                     index_2 = true;
             }
+            
+            if(!index_2 && peak_step_diff < 10 && SignedCharToDouble_result(roh_height[grid_index].result0) > minimum_Th)
+                index_2 = true;
             
             // threshold of 1st peak roh
             if(SignedCharToDouble_result(roh_height[grid_index].result0) > SignedCharToDouble_grid(GridPT3[grid_index].roh) - roh_th)

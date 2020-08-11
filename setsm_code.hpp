@@ -74,6 +74,8 @@ double GetHeightStep(int Pyramid_step, double im_resolution);
 
 double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA);
 
+double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_height, double tar_height, double step_height);
+
 int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, const UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
 
 void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
