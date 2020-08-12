@@ -123,7 +123,12 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, CSize preSize, CSize resize_Size, double*
 UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize resize_Size,const double* preBoundary,const double* Boundary,const D2DPOINT *resize_Grid, UGRID *preGridPT3,const double pre_gridsize,const double* minmaxheight);
 
 void echoprint_Gridinfo(ProInfo *proinfo, NCCresult* roh_height, int row,int col,int level, int iteration, double update_flag, CSize *Size_Grid2D, UGRID *GridPT3, char *add_str);
+void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* roh_height,int row,int col,int level, int iteration, CSize Size_Grid2D, UGRID *GridPT3);
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str);
+
+void SetPairs(ProInfo *proinfo, PairInfo &pairinfo);
+
+void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[]);
 
 int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy);
 

@@ -2059,6 +2059,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         }
                     }
                     
+                    findOverlappArea(proinfo,param,RPCs,Image_res,lonlatboundary);
+                    
                     if(proinfo->sensor_type == SB)
                     {
                         printf("lonlatboundary = %f\t%f\t%f\t%f\n",lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
@@ -2989,6 +2991,86 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
 }
 #endif
 
+void SetPairs(ProInfo *proinfo, PairInfo &pairinfo)
+{
+    int pair_number = 0;
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+            pair_number++;
+    }
+    pairinfo.NumberOfPairs = pair_number;
+    
+    pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*pair_number);
+    pair_number = 0;
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        {
+            pairinfo.pairs[pair_number].m_X = ref_ti;
+            pairinfo.pairs[pair_number].m_Y = ti;
+            pair_number++;
+        }
+    }
+}
+
+void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
+{
+    Boundary[0] = 10000000;
+    Boundary[1] = 10000000;
+    Boundary[2] = -10000000;
+    Boundary[3] = -10000000;
+    
+    double LBoundary[4],LminmaxHeight[2];
+    double LHinterval;
+    
+    
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        double lonlatboundary_ref[4] = {0.0};
+        
+        if(proinfo->sensor_type == SB)
+            SetDEMBoundary(RPCs[ref_ti],Image_res,param,LBoundary,LminmaxHeight,&LHinterval);
+        else
+            SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ref_ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ref_ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+        
+        for(int i=0;i<4;i++)
+            lonlatboundary_ref[i] = LBoundary[i];
+        
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        {
+            double lonlatboundary[4] = {0.0};
+            if(proinfo->sensor_type == SB)
+                SetDEMBoundary(RPCs[ti],Image_res,param,LBoundary,LminmaxHeight,&LHinterval);
+            else
+                SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+            
+            printf("tar %d\tboundary %f\t%f\t%f\t%f\n",ti,LBoundary[0],LBoundary[1],LBoundary[2],LBoundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    lonlatboundary[i] = max(LBoundary[i], lonlatboundary_ref[i]);
+                else
+                    lonlatboundary[i] = min(LBoundary[i], lonlatboundary_ref[i]);
+            }
+            
+            printf("ref %d tar %d\tboundary %f\t%f\t%f\t%f\n",ref_ti,ti,lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    Boundary[i] = min(Boundary[i], lonlatboundary[i]);
+                else
+                    Boundary[i] = max(Boundary[i], lonlatboundary[i]);
+            }
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+        }
+    }
+}
+
+
 int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
 {
 #ifdef BUILDMPI
@@ -3063,6 +3145,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         if(check_cal || check_cal_2)
         {
             printf("start cal tile\n");
+            
+            bool temp_asc_fprint = false;
             
             FILE *fid = NULL;
             FILE *fid_header = NULL;
@@ -3159,7 +3243,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             levelinfo.ImageAdjust = t_Imageparams;
             levelinfo.param = &param;
             levelinfo.NumOfIAparam = &NumOfIAparam;
-            
+            levelinfo.pair_select_gncc = 0.0;
+            levelinfo.Imagesize_ori = Imagesizes;
             uint16 **SourceImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
             int count_available_images = 0;
             for(int index_image = 0 ; index_image < proinfo->number_of_images ; index_image++)
@@ -3175,6 +3260,15 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                 
                 if( check_kernel_size(proinfo, Subsetsize, Template_size, pyramid_step))
                 {
+                    PairInfo pairinfo;
+                    SetPairs(proinfo,pairinfo);
+                    levelinfo.pairinfo = &pairinfo;
+                    
+                    for(int kk = 0 ; kk < levelinfo.pairinfo->NumberOfPairs ; kk++)
+                    {
+                        printf("ref\t%d\ttar\t%d\n",levelinfo.pairinfo->pairs[kk].m_X,levelinfo.pairinfo->pairs[kk].m_Y);
+                    }
+                    
                     double total_memory = 0.0;
                     double py_resolution = 0;
                     double grid_resolution = 0;
@@ -3269,18 +3363,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     printf("row = %d/%d\tcol = %d/%d\tDEM generation start!!\n",row,iter_row_end,col,t_col_end);
                     
                     int blunder_selected_level;
-                    int pre_blunder_selected_level;
-                    if(proinfo->DEM_resolution == 8)
-                        pre_blunder_selected_level = 4;
-                    else if(proinfo->DEM_resolution == 4)
-                        pre_blunder_selected_level = 3;
-                    else if(proinfo->DEM_resolution == 2)
-                        pre_blunder_selected_level = 2;
-                    else if(proinfo->DEM_resolution == 1)
-                        pre_blunder_selected_level = 1;
-                    else
-                        pre_blunder_selected_level = 0;
-                    
                     
                     int final_level_iteration = 1;
                     if(proinfo->check_Matchtag)
@@ -3650,6 +3732,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             
                             char filename_mps[500];
                             char filename_mps_asc[500];
+                            char filename_mps_anchor[500];
+                            char filename_mps_blunder[500];
+                            char filename_mps_all[500];
                             
                             int count_results[2];
                             int count_results_anchor[2];
@@ -3679,11 +3764,19 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 sprintf(filename_mps,"%s/txt/RA_matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_asc,"%s/txt/RA_matched_pts_%d_%d_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration);
+                                
+                                sprintf(filename_mps_anchor,"%s/txt/RA_matched_pts_%d_%d_%d_%d_anchor.txt",proinfo->save_filepath,row,col,level,iteration);
+                                sprintf(filename_mps_blunder,"%s/txt/RA_matched_pts_%d_%d_%d_%d_blunder.txt",proinfo->save_filepath,row,col,level,iteration);
+                                sprintf(filename_mps_all,"%s/txt/RA_matched_pts_%d_%d_%d_%d_all.txt",proinfo->save_filepath,row,col,level,iteration);
                             }
                             else
                             {
                                 sprintf(filename_mps,"%s/txt/matched_pts_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                                 sprintf(filename_mps_asc,"%s/txt/matched_pts_%d_%d_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration);
+                                
+                                sprintf(filename_mps_anchor,"%s/txt/matched_pts_%d_%d_%d_%d_anchor.txt",proinfo->save_filepath,row,col,level,iteration);
+                                sprintf(filename_mps_blunder,"%s/txt/matched_pts_%d_%d_%d_%d_blunder.txt",proinfo->save_filepath,row,col,level,iteration);
+                                sprintf(filename_mps_all,"%s/txt/matched_pts_%d_%d_%d_%d_all.txt",proinfo->save_filepath,row,col,level,iteration);
                             }
                             
                             printf("template size =%d\n",Template_size);
@@ -3735,6 +3828,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             vector<D3DPOINT> MatchedPts_list_blunder;
                             vector<D3DPOINT> MatchedPts_list_anchor;
                             
+                            FILE *pMT_all = NULL;
                             if(count_MPs > 10)
                             {
                                 if (check_ortho_cal && proinfo->IsRA != 1)
@@ -3743,11 +3837,21 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     //anchor points
                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
                                     
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_all,"w");
                                     for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                    {
                                         ptslists[count_pt] = MatchedPts_list[count_pt];
+                                        if(temp_asc_fprint)
+                                            fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
+                                    }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_anchor,"w");
                                     long tcnt;
                                     count_results_anchor[0] = 0;
                                     for(tcnt=0;tcnt<count_MPs;tcnt++)
@@ -3756,9 +3860,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         {
                                             MatchedPts_list_anchor.push_back(ptslists[tcnt]);
                                             count_results_anchor[0]++;
+                                            
+                                            if(temp_asc_fprint)
+                                                fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
                                         }
                                         ptslists[tcnt].flag = 0;
                                     }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
                                     
@@ -3766,6 +3875,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     //blunder detection
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
                                     
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_blunder,"w");
                                     count_results[0] = 0;
                                     for(tcnt=0;tcnt<count_MPs;tcnt++)
                                     {
@@ -3774,12 +3885,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             MatchedPts_list_blunder.push_back(ptslists[tcnt]);
                                             count_results[0]++;
                                             
+                                            if(temp_asc_fprint)
+                                                fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
+                                            
                                             if(minH_mps > ptslists[tcnt].m_Z)
                                                 minH_mps        = ptslists[tcnt].m_Z;
                                             if(maxH_mps < ptslists[tcnt].m_Z)
                                                 maxH_mps       = ptslists[tcnt].m_Z;
                                         }
                                     }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     free(ptslists);
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
@@ -3787,11 +3903,24 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                 else
                                 {
                                     printf("blunder detection for all points\n");
+                                    
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_all,"w");
+                                    
                                     ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
                                     for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                    {
                                         ptslists[count_pt] = MatchedPts_list[count_pt];
+                                        if(temp_asc_fprint)
+                                            fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
+                                    }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                    
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_blunder,"w");
                                     
                                     count_results[0] = 0;
                                     for(int tcnt=0;tcnt<count_MPs;tcnt++)
@@ -3801,12 +3930,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             MatchedPts_list_mps.push_back(ptslists[tcnt]);
                                             count_results[0]++;
                                             
+                                            if(temp_asc_fprint)
+                                                fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
+                                            
                                             if(minH_mps > ptslists[tcnt].m_Z)
                                                 minH_mps        = ptslists[tcnt].m_Z;
                                             if(maxH_mps < ptslists[tcnt].m_Z)
                                                 maxH_mps       = ptslists[tcnt].m_Z;
                                         }
                                     }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     count_MPs       = count_results[0];
                                     
@@ -3849,6 +3983,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     double minmaxBR[6] = {10000000, 10000000, -10000000, -10000000, 100000, -100000};
                                     
                                     int i = 0;
+                                    
+                                    if(temp_asc_fprint)
+                                        pMT_all = fopen(filename_mps_asc,"w");
                                     for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
                                     {
                                         ptslists_save[i].m_X = MatchedPts_list_mps[i].m_X;
@@ -3868,7 +4005,12 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             minmaxBR[4] = ptslists_save[i].m_Z;
                                         if(minmaxBR[5] < ptslists_save[i].m_Z)
                                             minmaxBR[5] = ptslists_save[i].m_Z;
+                                        
+                                        if(temp_asc_fprint)
+                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists_save[i].m_X,ptslists_save[i].m_Y,ptslists_save[i].m_Z);
                                     }
+                                    if(temp_asc_fprint)
+                                        fclose(pMT_all);
                                     
                                     MatchedPts_list_mps.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_mps);
@@ -3894,6 +4036,11 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         fprintf(fid_count,"%d\n",count_MPs);
                                         fclose(fid_count);
                                         
+                                        if(temp_asc_fprint)
+                                        {
+                                            echoprint_Gridinfo_asc(proinfo,levelinfo, nccresult,row,col,level,iteration,Size_Grid2D,GridPT3);
+                                        }
+                                        
                                         echoprint_Gridinfo(proinfo,nccresult,row,col,level,iteration,0,&Size_Grid2D,GridPT3,(char*)"final");
                                     }
                                     free(ptslists_save);
@@ -3916,8 +4063,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
                                         {
                                             ptslists[i] = MatchedPts_list_mps[i];
-                                            if(level == 4)
-                                                ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                            //if(level == 4)
+                                            //    ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
                                         }
                                         
                                         MatchedPts_list_mps.clear();
@@ -3946,7 +4093,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         free(trilists);
                                         
                                         printf("end ortho_blunder %d\n",count_results[0]);
-                                        
+                                        /*
                                         int matched_pts = 0;
                                         i = 0;
                                         
@@ -3973,7 +4120,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
                                         }
-                                        
+                                        */
                                         printf("load ortho_blunder pts %d\n",count_MPs);
                                         
                                         //Save triangulation and delete it since we will not use it
@@ -3984,7 +4131,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
                                         
                                         for(i = 0 ; i < t_trilists.size() ; i++)
-                                        trilists[i] = t_trilists[i];
+                                            trilists[i] = t_trilists[i];
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                           
@@ -4053,6 +4200,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
                                         
+                                        if(temp_asc_fprint)
+                                            echoprint_Gridinfo_asc(proinfo, levelinfo, nccresult,row,col,level,iteration,Size_Grid2D,GridPT3);
+                                        
                                         if(level == 0)
                                         {
                                             if(MPP_stereo_angle > 5)
@@ -4092,6 +4242,16 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                 MPP = MPP_simgle_image;
                                             
                                             GridPT3     = SetHeightRange(proinfo, levelinfo, nccresult, count_MPs, count_tri, GridPT3, iteration, &minH_grid, &maxH_grid, ptslists, trilists, MPP, check_matching_rate);
+                                        }
+                                        
+                                        if(temp_asc_fprint)
+                                        {
+                                            pMT_all = fopen(filename_mps_asc,"w");
+                                            for( i = 0 ; i < count_MPs ; i++)
+                                            {
+                                                fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                            }
+                                            fclose(pMT_all);
                                         }
                                         
                                         free(trilists);
@@ -4199,6 +4359,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
                                                 check_level_end = true;
                                         }
+                                        
+                                        if(temp_asc_fprint)
+                                            echoprint_Gridinfo_asc(proinfo, levelinfo, nccresult,row,col,level,iteration,Size_Grid2D,GridPT3);
                                         
                                         if(level == 0)
                                         {
@@ -4318,6 +4481,17 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                                 }
                                             }
                                         }
+                                        
+                                        if(temp_asc_fprint)
+                                        {
+                                            pMT_all = fopen(filename_mps_asc,"w");
+                                            for( i = 0 ; i < count_MPs ; i++)
+                                            {
+                                                fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[i].m_X,ptslists[i].m_Y,ptslists[i].m_Z);
+                                            }
+                                            fclose(pMT_all);
+                                        }
+                                        
                                         free(ptslists);
                                     }
                                 }
@@ -4509,6 +4683,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                     free(data_size_lr);
                     
                     free(GridPT3);
+                    
+                    
+                    free(pairinfo.pairs);
                     
                     printf("release GridTP3\n");
                     PreET = time(0);
@@ -10515,6 +10692,61 @@ void echoprint_Gridinfo(ProInfo *proinfo,NCCresult* roh_height,int row,int col,i
             fclose(outfile_roh[ti]);*/
         /*fclose(outfile_flag);*/
     }
+}
+
+void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* roh_height,int row,int col,int level, int iteration, CSize Size_Grid2D, UGRID *GridPT3)
+{
+    CSize temp_S;
+    char t_str[500];
+    int k,j;
+    FILE **outfile_roh;
+    FILE *outfile_sp, *outfile_tp, * outfile_ttp;
+    
+    outfile_roh = (FILE**)malloc(sizeof(FILE*)*rlevelinfo.pairinfo->NumberOfPairs);
+    sprintf(t_str,"%s/txt/selected_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
+    outfile_sp = fopen(t_str,"w");
+    sprintf(t_str,"%s/txt/total_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
+    outfile_tp = fopen(t_str,"w");
+    
+    sprintf(t_str,"%s/txt/bin_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
+    outfile_ttp = fopen(t_str,"w");
+    for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
+    {
+        sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration,ti);
+        outfile_roh[ti] = fopen(t_str,"w");
+    }
+
+    temp_S.height   = Size_Grid2D.height;
+    temp_S.width    = Size_Grid2D.width;
+    
+    for(k=0;k<temp_S.height;k++)
+    {
+        for(j=0;j<temp_S.width;j++)
+        {
+            int matlab_index    = k*temp_S.width + j;
+
+            fprintf(outfile_sp,"%d\t",GridPT3[matlab_index].ncc_seleceted_pair);
+            fprintf(outfile_tp,"%d\t",GridPT3[matlab_index].total_images);
+            fprintf(outfile_ttp,"%d\t",GridPT3[matlab_index].height_counts);
+            
+            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
+            {
+                fprintf(outfile_roh[pair_number],"%f\t",SignedCharToDouble_grid(GridPT3[matlab_index].ortho_ncc[pair_number]));
+            }
+        }
+        fprintf(outfile_sp,"\n");
+        fprintf(outfile_tp,"\n");
+        fprintf(outfile_ttp,"\n");
+        for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
+            fprintf(outfile_roh[ti],"\n");
+    }
+
+    fclose(outfile_sp);
+    fclose(outfile_tp);
+    fclose(outfile_ttp);
+    for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
+        fclose(outfile_roh[ti]);
+    
 }
 
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, NCCresult *nccresult, CSize *Size_Grid2D, char *add_str)
