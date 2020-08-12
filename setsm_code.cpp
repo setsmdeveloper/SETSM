@@ -3423,7 +3423,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                         if(level >= pyramid_step)
                             blunder_selected_level = level;
                         else if(level >= 2)
-                            blunder_selected_level = level + 1;
+                            blunder_selected_level = level;
                         else
                             blunder_selected_level = level + 1;
                         
@@ -6155,6 +6155,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
 
                             
                             //GNCC computation
+                            /*
                             if(check_ortho && SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[ti]) > ortho_th)
                             {
                                 int Count_N_ortho[3] = {0};
@@ -6220,6 +6221,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                             }  // if(check_ortho && GridPT3[pt_index].ortho_ncc[ti] > ortho_th)
                             else
                                 nccresult[pt_index].GNCC = DoubleToSignedChar_result(-1.0);
+                            */
+                            nccresult[pt_index].GNCC = GridPT3[pt_index].ortho_ncc[ti];
                             
                             //INCC computation
                             const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
@@ -7912,7 +7915,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
     
     int Half_template_size = (int)(Template_size/2.0);
     
-    if(bblunder)
+    /*if(bblunder)
     {
         if(*rlevelinfo.Pyramid_step == 4)
         {
@@ -7931,7 +7934,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
             Half_template_size = (int)(Template_size/2.0);
         }
     }
-    
+    */
     
     const double subBoundary[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
     const long numofpts = *rlevelinfo.Grid_length;
@@ -9177,6 +9180,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         long int dh_count = 0;
         
         //compute dh statistics
+        const double ortho_ncc_thread = -1;
         for(long tcnt=0;tcnt<num_triangles;tcnt++)
         {
             bool check_pt_index = true;
@@ -9196,7 +9200,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 t_col         = (int)((pt0.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt0.m_Y - boundary[1])/gridspace + 0.5);
                 int pt0_index     = gridsize.width*t_row + t_col;
-                if( ortho_ncc[pt0_index] > -1)
+                if( ortho_ncc[pt0_index] > ortho_ncc_thread)
                 {
                     sum_oncc += ortho_ncc[pt0_index];
                     sum2_oncc += ortho_ncc[pt0_index]* ortho_ncc[pt0_index];
@@ -9218,7 +9222,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 t_col         = (int)((pt1.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt1.m_Y - boundary[1])/gridspace + 0.5);
                 int pt1_index     = gridsize.width*t_row + t_col;
-                if( ortho_ncc[pt1_index] > -1)
+                if( ortho_ncc[pt1_index] > ortho_ncc_thread)
                 {
                     sum_oncc += ortho_ncc[pt1_index];
                     sum2_oncc += ortho_ncc[pt1_index]* ortho_ncc[pt1_index];
@@ -9240,7 +9244,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 t_col         = (int)((pt2.m_X - boundary[0])/gridspace + 0.5);
                 t_row         = (int)((pt2.m_Y - boundary[1])/gridspace + 0.5);
                 int pt2_index     = gridsize.width*t_row + t_col;
-                if( ortho_ncc[pt2_index] > -1)
+                if( ortho_ncc[pt2_index] > ortho_ncc_thread)
                 {
                     sum_oncc += ortho_ncc[pt2_index];
                     sum2_oncc += ortho_ncc[pt2_index]* ortho_ncc[pt2_index];
@@ -9286,32 +9290,45 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         const double oncc_mean    =  sum_oncc/total_oncc_count;
         const double oncc_std =   sqrt(fabs(sum2_oncc - (sum_oncc)*(sum_oncc)/total_oncc_count)/total_oncc_count);
         
-        double ortho_ncc_th = 0.5 + (iteration-1)*0.02;
-        double temp_oncc_th = oncc_mean - oncc_std;
-        if(temp_oncc_th < ortho_ncc_th)
-            ortho_ncc_th = temp_oncc_th;
-        else
-        {
-            temp_oncc_th = oncc_mean - 2*oncc_std;
-            if(temp_oncc_th < ortho_ncc_th)
-                ortho_ncc_th = temp_oncc_th;
-        }
+        //printf("oncc mean %f\tstd%f\n",oncc_mean,oncc_std);
+        
+        double ortho_ncc_th;// = 0.7 + (iteration-1)*0.02;
         
         if(pyramid_step == 4 )
-            ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.6;// - (iteration - 1)*0.01;
         else if(pyramid_step >= 3)
-            ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.5;// - (iteration - 1)*0.01;
         else if(pyramid_step == 2)
-            ortho_ncc_th = 0.4 - (iteration - 1)*0.01;
+            ortho_ncc_th = 0.4;// - (iteration - 1)*0.01;
         else if(pyramid_step == 1)
             ortho_ncc_th = 0.3 ;
         else
             ortho_ncc_th = 0.2 ;
- 
-        const double ortho_ancc_th = 100.;
-        double th_ref_ncc = 0.1 + (iteration-1)*0.05;
+        
+        double temp_oncc_th = oncc_mean - 1*oncc_std;
+        if(temp_oncc_th > 0)
+        {
+            if(temp_oncc_th < ortho_ncc_th)
+                ortho_ncc_th = temp_oncc_th;
+            else
+            {
+                temp_oncc_th = oncc_mean - 2*oncc_std;
+                if(temp_oncc_th < ortho_ncc_th)
+                    ortho_ncc_th = temp_oncc_th;
+            }
+        }
+        if(ortho_ncc_th < 0.2)
+            ortho_ncc_th = 0.2;
+        
+        double ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
+        if(ortho_ancc_th > 0.95)
+            ortho_ancc_th = 0.95;
+        
+        double th_ref_ncc = 0.1;// + (iteration-1)*0.05;
         if(th_ref_ncc > ortho_ncc_th)
             th_ref_ncc = ortho_ncc_th;
+        
+        printf("ortho_ncc_th %f\t ortho_ancc_th %f\t th_ref_ncc %f\n",ortho_ncc_th,ortho_ancc_th,temp_oncc_th);
         
         //set height_th
         const int blunder_pyramid_step = 3;
@@ -9339,11 +9356,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         if(pyramid_step >= 1)
         {
             GSD = gridspace;
-            if(pyramid_step >= 3 && gridspace < pwrtwo(pyramid_step-1))
-                GSD = pwrtwo(pyramid_step-1);
+            if(pyramid_step >= 3 && gridspace < proinfo->resolution*pow(2.0,pyramid_step))
+                GSD = proinfo->resolution*pow(2.0,pyramid_step);
         }
         else
-            GSD = pwrtwo(pyramid_step-1);
+            GSD = proinfo->resolution*pow(2.0,pyramid_step);
         
         const double height_th_1(*rlevelinfo.Hinterval);
         double height_th_2(GSD*10);
@@ -9415,6 +9432,8 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         
         free(hdiffbin);
         
+        //printf("height_th %f\titeration %d\n",height_th,iteration);
+        
 #pragma omp parallel for schedule(guided)
         for(long index=0;index<num_points;index++)
         {
@@ -9444,14 +9463,14 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                     if(ortho_ncc[ref_index] < th_ref_ncc && pyramid_step >= 2)
                         pts[index].flag = 1;
                 }
-                if(pyramid_step >= 3 && iteration >= 4)
+                /*if(pyramid_step >= 3 && iteration >= 4)
                 {
                     if(ortho_ncc[ref_index] >= 0.95 && flag_blunder)
                     {
                         Gridpts[ref_index].anchor_flag = 1;
                     }
                 }
-                
+                */
                 for(long iter = 0 ; iter < max_iter ; iter++)
                 {
                     if(savenode[(long)index*(long)max_nodes+(long)iter] < num_triangles && savenode[(long)index*(long)max_nodes+(long)iter] > 0)
