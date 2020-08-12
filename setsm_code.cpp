@@ -2888,9 +2888,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     sprintf(temp_filepath,"%s/tmp",proinfo->save_filepath);
                 }
 
-                for(int i = 0; i < proinfo->number_of_images; i++)
-                    RPCsFree(RPCs[i]);
-                free(RPCs);
+                if(proinfo->sensor_type != AB)
+                {
+                    for(int i = 0; i < proinfo->number_of_images; i++)
+                        RPCsFree(RPCs[i]);
+                    free(RPCs);
+                }
                 free(leftright_band);
                 free(Image_gsd_r);
                 free(Image_gsd_c);
@@ -2905,10 +2908,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     
     if(!cal_check && args.check_sdm_ortho == 2)
     {
-    
+        printf("No start computation time\n");
     }
     else
     {
+        printf("start computation time\n");
         total_ET = time(0);
         total_gap = difftime(total_ET,total_ST);
         
