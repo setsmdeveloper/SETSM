@@ -4063,7 +4063,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
                                         {
                                             ptslists[i] = MatchedPts_list_mps[i];
-                                            //if(level == 4)
+                                            //if(level >= 3)
                                             //    ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
                                         }
                                         
@@ -4093,12 +4093,10 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         free(trilists);
                                         
                                         printf("end ortho_blunder %d\n",count_results[0]);
-                                        /*
-                                        int matched_pts = 0;
-                                        i = 0;
                                         
-                                        if(level == 4)
+                                        if(level >= 3)
                                         {
+                                            int matched_pts = 0;
                                             vector<D3DPOINT> ortho_list;
                                             for(i=0;i<count_MPs;i++)
                                             {
@@ -4120,7 +4118,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             ortho_list.clear();
                                             vector<D3DPOINT>().swap(ortho_list);
                                         }
-                                        */
+                                        
                                         printf("load ortho_blunder pts %d\n",count_MPs);
                                         
                                         //Save triangulation and delete it since we will not use it
