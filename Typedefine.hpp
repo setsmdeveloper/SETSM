@@ -294,7 +294,7 @@ typedef struct tagVoxelinfo
     //float ANCC;
     //float height;
     bool flag_cal;
-    short INCC;
+    short INCC[17];
     //float *INCC_multi;
 }VOXEL;
 
@@ -737,7 +737,7 @@ private:
 
 typedef struct tagSetKernel
 {
-    const int reference_id;
+    int reference_id;
     int ti;
     const int Half_template_size;
     unsigned patch_size;
