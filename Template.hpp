@@ -18,7 +18,7 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt);
 template <typename T>
 T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type);
 template <typename T>
-void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref);
+void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref, vector<D2DPOINT> &MPs);
 template <typename T>
 bool postNCC_ortho(uint8 Pyramid_step, D2DPOINT Left, D2DPOINT Right, double subA[][6],double TsubA[][9],double InverseSubA[][6], uint8 Template_size, CSize leftsize, CSize rightsize, T* _leftimage, T* _rightimage, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, D2DPOINT *peak_pos);
 
@@ -490,7 +490,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
 }
 
 template <typename T>
-void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref)
+void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *ImageAdjust, uint8 Template_size, T *Image_ref, CSize Imagesizes_ref, T *Image_tar, CSize Imagesizes_tar, double *Boundary_ref, double *Boundary_tar, D2DPOINT grid_dxy_ref, D2DPOINT grid_dxy_tar, int grid_space, double *over_Boundary, double* avg_rho, int* iter_count, D2DPOINT *adjust_std, vector<D2DPOINT> &matched_MPs, vector<D2DPOINT> &matched_MPs_ref, vector<D2DPOINT> &MPs)
 {
     double subA[9][6] = {0};
     double TsubA[6][9] = {0};
@@ -504,16 +504,22 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     printf("Grid_size %d\t%d\n",grid_size.width,grid_size.height);
     
     char temp_path[500];
-    vector<D2DPOINT> MPs;
-    for(long row = 0 ; row < grid_size.height ; row ++)
+    //vector<D2DPOINT> MPs;
+    if(MPs.size() == 0)
     {
-        for(long col = 0 ; col < grid_size.width ; col ++)
+        for(long row = 0 ; row < grid_size.height ; row ++)
         {
-            long index = row*(long)grid_size.width + col;
-            D2DPOINT temp_pts(over_Boundary[0] + col*grid_space, over_Boundary[1] + row*grid_space);
-            MPs.push_back(temp_pts);
+            for(long col = 0 ; col < grid_size.width ; col ++)
+            {
+                long index = row*(long)grid_size.width + col;
+                D2DPOINT temp_pts(over_Boundary[0] + col*grid_space, over_Boundary[1] + row*grid_space);
+                MPs.push_back(temp_pts);
+            }
         }
+        printf("no rock masked\n");
     }
+    else
+        printf("rock masked\n");
     
     long total_grid_counts = MPs.size();
     
@@ -528,7 +534,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     int* mps_index_save = (int*)calloc(sizeof(int),total_grid_counts);
     
     bool check_stop = false;
-    const int max_iteration = 20;
+    const int max_iteration = 100;
     *iter_count = 1;
     while(!check_stop && *iter_count < max_iteration)
     {
@@ -537,7 +543,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
         double sum_max_roh      = 0;
         
         //calculation image coord from object coord by RFM in left and right image
-        const double b_factor             = pwrtwo(3-Pyramid_step);
+        const double b_factor             = pow(2.0,(2-Pyramid_step))*2;
         const uint8 Half_template_size   = (int)(Template_size/2.0);
         
         int count_pts = 0;

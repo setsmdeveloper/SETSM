@@ -306,6 +306,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                         data_size_lr[image_index] = (CSize*)malloc(sizeof(CSize)*(level+1));
                         SetPySizes(data_size_lr[image_index], subsetsize[image_index], level);
                         
+                        
                         long data_length = (long)data_size_lr[image_index][iter_level].height*(long)data_size_lr[image_index][iter_level].width;
                         
                         if(iter_level == 0)
@@ -460,6 +461,12 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 
                             if(check_size < 3)
                                 check_size = 3;
+                            
+                            double template_area = 5.0;
+                            int t_Template_size = (int)((template_area/(proinfo.resolution*pwrtwo(prc_level)))/2.0)*2+1;
+                            if(check_size < (int)(t_Template_size/2.0))
+                                check_size = (int)(t_Template_size/2.0);
+                            
                             int total_size = (2*check_size+1)*(2*check_size+1);
                             int sm_iter = 0;
                             
@@ -467,6 +474,9 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             float* temp_col_shift = (float*)calloc(sizeof(float),*levelinfo.Grid_length);
                             float* temp_row_shift = (float*)calloc(sizeof(float),*levelinfo.Grid_length);
                             
+                            double min_ncc_th = 0.3;
+                            if(prc_level < 2 && proinfo.resolution <= 1)
+                                min_ncc_th = 0.0;
                             while(check_while == 0 && sm_iter < 20)
                             {
                                 #pragma omp parallel for schedule(guided)
@@ -533,7 +543,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         count_cell++;
                                                     }
                                                     
-                                                    if(GridPT3[t_index].ortho_ncc < 0.3)
+                                                    if(GridPT3[t_index].ortho_ncc < min_ncc_th)
                                                         null_count_cell ++;
                                                 }
                                             }
@@ -1144,6 +1154,19 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
 #pragma omp parallel
     {
         SetKernel rsetkernel(reference_id,target_id,Half_template_size);
+
+
+
+
+
+
+
+
+
+
+
+
+
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
@@ -1256,6 +1279,13 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                 }
             }
         }
+        
+        
+        
+        
+        
+        
+        
     }
     
     return true;
@@ -1267,7 +1297,10 @@ long SelectMPs_SDM(ProInfo proinfo, LevelInfo &rlevelinfo, NCCresultSDM* roh_hei
     long count_MPs = 0;
     
     double minimum_Th = 0.3;
-    printf("minimum TH %f\n",minimum_Th);
+    if(prc_level < 2 && proinfo.resolution <= 1)
+        minimum_Th = 0.0;
+    
+    printf("minimum TH %f\tlevel %d\n",minimum_Th,prc_level);
     double roh_th    = 0.10;
     
     for(long iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
@@ -1369,7 +1402,8 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     outfile_Yshift    = fopen(t_str,"w");
 
     printf("Size_Grid2D %d\t%d\tres = %f\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,proinfo.resolution);
-    
+    printf("1 imagesize %d\t%d\n",LImagesize.width,LImagesize.height);
+    printf("2 imagesize %d\t%d\n",RImagesize.width,RImagesize.height);
     float* Mag = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     float* VxShift = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     float* VyShift = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
@@ -1430,21 +1464,26 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
                 fprintf(outfile_Yshift,"0\t");
                 VxShift[grid_index] = 0;
                 VyShift[grid_index] = 0;
+                
+                
             }
-            fprintf(outfile_Xshift,"\n");
-            fprintf(outfile_Yshift,"\n");
         }
+        fprintf(outfile_Xshift,"\n");
+        fprintf(outfile_Yshift,"\n");
     }
     fclose(outfile_Xshift);
     fclose(outfile_Yshift);
     
-    char DEM_str[500];
-    sprintf(DEM_str, "%s/%s_dx.tif", proinfo.save_filepath, proinfo.Outputpath_name);
-    WriteGeotiff(DEM_str, VxShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    sprintf(DEM_str, "%s/%s_dy.tif", proinfo.save_filepath, proinfo.Outputpath_name);
-    WriteGeotiff(DEM_str, VyShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    sprintf(DEM_str, "%s/%s_dmag.tif", proinfo.save_filepath, proinfo.Outputpath_name);
-    WriteGeotiff(DEM_str, Mag, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
+    if(level == 0 && iteration == 3)
+    {
+        char DEM_str[500];
+        sprintf(DEM_str, "%s/%s_dx.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+        WriteGeotiff(DEM_str, VxShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
+        sprintf(DEM_str, "%s/%s_dy.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+        WriteGeotiff(DEM_str, VyShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
+        sprintf(DEM_str, "%s/%s_dmag.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+        WriteGeotiff(DEM_str, Mag, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
+    }
     
     free(VxShift);
     free(VyShift);
@@ -1476,6 +1515,19 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
         
         SetKernel rsetkernel(reference_id,target_id,Half_template_size);
 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
         {
@@ -1546,6 +1598,13 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
                 }
             }
         }
+        
+        
+        
+        
+        
+     
+        
         
     }
     
@@ -1684,6 +1743,11 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
         kernal_size = 7;
     else if(pyramid_step == 2)
         kernal_size = 5;
+    
+    double template_area = 5.0;
+    int t_Template_size = (int)((template_area/(proinfo.resolution*pwrtwo(pyramid_step)))/2.0)*2+1;
+    if(kernal_size < (int)(t_Template_size/2.0))
+        kernal_size = (int)(t_Template_size/2.0);
     
     printf("level %d\tshift_max_pixel %d\n",proinfo.pyramid_level,shift_max_pixel);
 #pragma omp parallel for schedule(guided)

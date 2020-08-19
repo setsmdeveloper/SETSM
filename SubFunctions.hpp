@@ -93,6 +93,7 @@ void ComputeMultiNCC(SetKernel &rsetkernel, const int Th_rho, const int *Count_N
 D2DPOINT *SetDEMGrid(const double *Boundary, const double Grid_x, const double Grid_y, CSize *Size_2D);
 void SetPyramidImages(const ProInfo *proinfo, const int py_level_set, const CSize * const *data_size_lr, uint16 ***SubImages, uint16 ***SubMagImages, uint8 ***SubOriImages);
 uint16 *SubsetImageFrombitsToUint16(const int image_bits, char *imagefile, long *cols, long *rows, CSize *subsize);
+uint8 *SubsetImageFrombitsToUint8(const int image_bits, char *imagefile, long *cols, long *rows, CSize *subsize);
 
 uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);
 uint16* LoadPyramidMagImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level);

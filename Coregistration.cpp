@@ -71,9 +71,37 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             
             int py_level = proinfo->pyramid_level;
             
+            
+            uint8* rock_masked_data = NULL;
+            CSize rock_masked_size;
+            double rock_minX, rock_maxY;
+            double rock_dx, rock_dy;
+            double rock_boundary[4];
+            if(args.check_seeddem)
+            {
+                uint8 seed_bit = ReadGeotiff_bits(args.seedDEMfilename);
+                rock_masked_size = ReadGeotiff_info_dxy(args.seedDEMfilename,&rock_minX,&rock_maxY,&rock_dx,&rock_dy);
+                
+                rock_boundary[0] = rock_minX;
+                rock_boundary[1] = rock_maxY - rock_dy*rock_masked_size.height;
+                rock_boundary[2] = rock_minX + rock_dx*rock_masked_size.width;
+                rock_boundary[3] = rock_maxY;
+                
+                printf("seed bit %d\t%f\t%f\t%f\t%f\n",seed_bit,rock_boundary[0],rock_boundary[1],rock_boundary[2],rock_boundary[3]);
+                
+                cols[0] = 0;
+                cols[1] = rock_masked_size.width;
+                
+                rows[0] = 0;
+                rows[1] = rock_masked_size.height;
+                
+                rock_masked_data = SubsetImageFrombitsToUint8(seed_bit, args.seedDEMfilename, cols, rows, &rock_masked_size);
+            }
+            
+            
             if(args.check_sdm_ortho > 0)
             {
-                if(py_level < 2)
+                //if(py_level < 2)
                     py_level = 2;
             }
             
@@ -257,7 +285,34 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     D2DPOINT grid_dxy_ref(ortho_dx[reference_id], ortho_dy[reference_id]);
                     D2DPOINT grid_dxy_tar(ortho_dx[ti], ortho_dy[ti]);
                     
-                    CoregParam_Image(proinfo, ti, level, ImageAdjust_coreg[ti], 15, SubImages_ref, data_size_lr[reference_id][level], SubImages_tar, data_size_lr[ti][level], ImageBoundary[reference_id], ImageBoundary[ti], grid_dxy_ref, grid_dxy_tar, Grid_space[level], Boundary[ti], &avg_roh, &iter_counts, &adjust_std[ti], matched_MPs, matched_MPs_ref);
+                    vector<D2DPOINT> MPs;
+                    if(args.check_seeddem)
+                    {
+                        double GridSize_width = Boundary[ti][2] - Boundary[ti][0];
+                        double GridSize_height = Boundary[ti][3] - Boundary[ti][1];
+                        CSize grid_size(floor(GridSize_width/Grid_space[level]), floor(GridSize_height/Grid_space[level]));
+                        
+                        for(long row = 0 ; row < grid_size.height ; row ++)
+                        {
+                            for(long col = 0 ; col < grid_size.width ; col ++)
+                            {
+                                long index = row*(long)grid_size.width + col;
+                                D2DPOINT temp_pts(Boundary[ti][0] + col*Grid_space[level], Boundary[ti][1] + row*Grid_space[level]);
+                                
+                                long pos_c = (long)((temp_pts.m_X - rock_boundary[0])/rock_dx);
+                                long pos_r = (long)((rock_boundary[3] - temp_pts.m_Y)/rock_dy);
+                                index = pos_r*(long)rock_masked_size.width + pos_c;
+                                
+                                if(pos_c >= 0 && pos_c < rock_masked_size.width && pos_r >= 0 && pos_r < rock_masked_size.height)
+                                {
+                                    if(rock_masked_data[index] == 1)
+                                        MPs.push_back(temp_pts);
+                                }
+                            }
+                        }
+                    }
+                    
+                    CoregParam_Image(proinfo, ti, level, ImageAdjust_coreg[ti], 15, SubImages_ref, data_size_lr[reference_id][level], SubImages_tar, data_size_lr[ti][level], ImageBoundary[reference_id], ImageBoundary[ti], grid_dxy_ref, grid_dxy_tar, Grid_space[level], Boundary[ti], &avg_roh, &iter_counts, &adjust_std[ti], matched_MPs, matched_MPs_ref, MPs);
                      
                     printf("%d\t%d\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%4.2f\t%d\n",level,ti,ImageAdjust_coreg[ti][0], ImageAdjust_coreg[ti][1],
                            -ImageAdjust_coreg[ti][0]*ortho_dy[ti], ImageAdjust_coreg[ti][1]*ortho_dx[ti],matched_MPs.size(),avg_roh,iter_counts);
@@ -351,6 +406,8 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             free(Boundary);
             free(GridSize_width);
             free(GridSize_height);
+            
+            free(rock_masked_data);
         }
     }
     

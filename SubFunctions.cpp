@@ -3399,6 +3399,84 @@ uint16 *SubsetImageFrombitsToUint16(const int image_bits, char *imagefile, long 
     return out;
 }
 
+uint8 *SubsetImageFrombitsToUint8(const int image_bits, char *imagefile, long *cols, long *rows, CSize *subsize)
+{
+    uint8 *out = NULL;
+    
+    CSize temp_size;
+    GetImageSize(imagefile,&temp_size);
+    switch(image_bits)
+    {
+        case 8:
+        {
+            uint8 type_t(0);
+            uint8 *t_data8    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            if(t_data8)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint8*)malloc(sizeof(uint8)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                    out[index] = t_data8[index];
+                free(t_data8);
+            }
+            break;
+        }
+        case 12:
+        {
+            uint16 type_t(0);
+            uint16 *t_data16    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            if(t_data16)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint8*)malloc(sizeof(uint8)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                    out[index] = t_data16[index];
+                free(t_data16);
+            }
+            break;
+        }
+        case 32:
+        {
+            float type_t(0);
+            float *t_datafloat    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            int count = 0;
+            if(t_datafloat)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint8*)malloc(sizeof(uint8)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                {
+                    out[index] = t_datafloat[index];
+                    if(out[index] == 1)
+                        count++;
+                }
+                printf("count %d\ttotal count %d\n",count,data_size);
+                free(t_datafloat);
+            }
+            break;
+        }
+        case 64:
+        {
+            double type_t(0);
+            double *t_datafloat    = Readtiff_T(imagefile,&temp_size,cols,rows,subsize, type_t);
+            if(t_datafloat)
+            {
+                long data_size = (long)subsize->width*(long)subsize->height;
+                out = (uint8*)malloc(sizeof(uint8)*data_size);
+                #pragma omp parallel for schedule(guided)
+                for(long index = 0 ; index < data_size ; index++)
+                    out[index] = t_datafloat[index];
+                free(t_datafloat);
+            }
+            break;
+        }
+    }
+    
+    return out;
+}
 
 uint16* LoadPyramidImages(const char *save_path,char *subsetfile,const CSize data_size,const uint8 py_level)
 {
