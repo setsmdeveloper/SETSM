@@ -13,11 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "tiff.h"
-
 #ifndef _Typedefine_H_
 #define _Typedefine_H_
+
+//uint definition
+#include "tiff.h"
+#include "tiffio.h"
+#include <vector>
+#include <cstdlib>
+#include <cstring>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -26,20 +30,48 @@
 #define MMToUM 1000
 #define MaxImages 100
 #define MaxNCC 2
-
+#define Nodata -9999
 #ifndef bool
 //#define bool unsigned char
 #define true 0x1
 #define false 0x0
+#define SQ(x)         (x) * (x)
+#define SWAP(a,b) temp=a;a=b;b=temp;
+#define MAXRAND     0x7fffffff
+#define BIGNUM         1e37
+#define WEEBIT         0.000000000001
+#define MAXDIM         10
+#define MAXSTR         48
+#define pwrtwo(x) (1 << (x))
+
 #endif
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
+enum PyImageSelect {OR, BD, NX};
+
+using std::vector;
 
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
 	uint32 m_Y;
+    
+    tagUI2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagUI2DPoint(uint32 m_X, uint32 m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagUI2DPoint(const tagUI2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
 } UI2DPOINT;
 
 typedef struct tagUI3DPoint
@@ -47,36 +79,129 @@ typedef struct tagUI3DPoint
 	uint32 m_X;
 	uint32 m_Y;
 	uint32 m_Z;
+    
+    tagUI3DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+        m_Z = 0;
+    }
+    tagUI3DPoint(uint32 m_X, uint32 m_Y, uint32 m_Z):m_X(m_X),m_Y(m_Y),m_Z(m_Z)
+    {
+        
+    }
+    tagUI3DPoint(const tagUI3DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+        m_Z = p.m_Z;
+    }
+    
 } UI3DPOINT;
-
-
-typedef struct tagF2DPoint
-{
-	float m_X;
-	float m_Y;
-} F2DPOINT;
-
-typedef struct tagF3DPoint
-{
-	float m_X;
-	float m_Y;
-	float m_Z;
-	uint8 flag;
-} F3DPOINT;
 
 typedef struct tagD2DPoint
 {
-	float m_X;
-	float m_Y;
+    double m_X;
+    double m_Y;
+    
+    tagD2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagD2DPoint(double m_X, double m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagD2DPoint(const tagD2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
+    tagD2DPoint& operator=(const tagD2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
+    
+    tagD2DPoint operator+(const tagD2DPoint &p)
+    {
+        tagD2DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y);
+        return temp;
+    }
+    
+    tagD2DPoint operator-(const tagD2DPoint &p)
+    {
+        tagD2DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y);
+        return temp;
+    }
+    
 } D2DPOINT;
 
 typedef struct tagD3DPoint
 {
-	float m_X;
-	float m_Y;
-	float m_Z;
+    double m_X;
+	double m_Y;
+	double m_Z;
     uint8 flag;
+    
+    tagD3DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+        m_Z = 0;
+        flag = false;
+    }
+    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    {
+        
+    }
+    tagD3DPoint(const tagD3DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+        m_Z = p.m_Z;
+        flag = p.flag;
+    }
+    
+    tagD3DPoint& operator=(const tagD2DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        return *this;
+    }
+    
+    tagD3DPoint& operator=(const tagD3DPoint &p)
+    {
+        this->m_X = p.m_X;
+        this->m_Y = p.m_Y;
+        this->m_Z = p.m_Z;
+        this->flag = p.flag;
+        return *this;
+    }
+    
+    tagD3DPoint operator+(const tagD3DPoint &p) const
+    {
+        tagD3DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y, this->m_Z + p.m_Z, 0);
+        return temp;
+    }
+    
+    tagD3DPoint operator-(const tagD3DPoint &p) const
+    {
+        tagD3DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y, this->m_Z - p.m_Z, 0);
+        return temp;
+    }
+    
 } D3DPOINT;
+
+typedef struct tagD3DPointSave
+{
+    float m_X;
+    float m_Y;
+    float m_Z;
+} D3DPOINTSAVE;
 
 typedef struct tagTransParam
 {
@@ -89,11 +214,10 @@ typedef struct tagTransParam
 	double phi_c, lambda_0;
 	
 	int pm;
-	int zone;
 	int projection;
     int utm_zone;
 	
-	char direction[10];
+	char direction[2];
 	bool bHemisphere;
 } TransParam;
 
@@ -101,6 +225,18 @@ typedef struct tagCSize
 {
 	unsigned int width;
 	unsigned int height;
+    
+    tagCSize(){}
+    
+    tagCSize(const int width, const int height):width(width), height(height)
+    {
+    }
+    
+    tagCSize(const tagCSize &size)
+    {
+        width = size.width;
+        height = size.height;
+    }
 } CSize;
 
 typedef struct tagNCCflag
@@ -124,13 +260,13 @@ typedef struct tagNCCresult
 	short max_WNCC;
     
     short GNCC;
+    unsigned short NumOfHeight;
     //float *GNCC_multi;
 	unsigned char result4; //peak count
     
     //int max_WNCC_pos;
 	
     
-    unsigned short NumOfHeight;
     bool check_height_change;
 	//int roh_count;
 } NCCresult;
@@ -145,8 +281,8 @@ typedef struct UpdateGrid{
 	short ortho_ncc[MaxNCC];
     short Mean_ortho_ncc;
 
-    uint8 Matched_flag;
-	uint8 anchor_flag;
+    unsigned char Matched_flag;
+	unsigned char anchor_flag;
     
 }UGRID;
 
@@ -168,7 +304,7 @@ typedef struct BlunderIP{
 	CSize Size_Grid2D;
 	double gridspace;
 	double Hinterval; 
-	double* Boundary;
+	const double* Boundary;
 	uint8 Pyramid_step;
 	uint8 iteration;
 	bool height_check_flag;
@@ -224,13 +360,12 @@ typedef struct ProjectInfo{
 	double seedDEMsigma;
     double LBoundary[4];
     double RBoundary[4];
+    double GCP_spacing;
     
 	double minHeight;
 	double maxHeight;
 	double System_memory;
-    double DS_sigma;
     
-    int DS_kernel;
 	int start_row;
 	int end_row;
 	int start_col;
@@ -303,6 +438,7 @@ typedef struct ArgumentInfo{
     double DS_sigma;
     double DS_tx;
     double DS_ty;
+    double GCP_spacing;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -436,7 +572,6 @@ typedef struct UpdateGridSDM{
     float ortho_ncc;
     float col_shift;
     float row_shift;
-    
 }UGRIDSDM;
 
 typedef struct tagNCCresultSDM
@@ -448,7 +583,7 @@ typedef struct tagNCCresultSDM
 
 typedef struct tagTINinfo
 {
-    F3DPOINT *normal;
+    D3DPOINT *normal;
     uint16 *slope;
     uint16 *aspect;
     float *ncc;
@@ -465,5 +600,157 @@ typedef struct tagConformalparam
     float Ty;
     float Tz;
 } Conformalparam;
+
+typedef struct taglevelinfo
+{
+    const uint16 * const *py_Images;
+    const uint8 * const *py_OriImages;
+    const uint16 * const *py_MagImages;
+    
+    const uint16 * const *py_BImages;
+    const uint16 * const *py_BMagImages;
+
+    const uint16 * const *py_Images_next;
+    const uint8 * const *py_OriImages_next;
+    const uint16 * const *py_MagImages_next;
+    
+    const D2DPOINT *py_Startpos;
+    const D2DPOINT *py_BStartpos;
+    const D2DPOINT *py_Startpos_next;
+    
+    const double * const * const *RPCs;
+    const double *Boundary;
+    const int *Pyramid_step;
+    const CSize * const *py_Sizes;
+    const unsigned char *Template_size;
+    const double * const *ImageAdjust;
+    const TransParam *param;
+    const unsigned char *NumOfIAparam;
+    const double *bin_angle;
+    const int *blunder_selected_level; 
+    const CSize *Size_Grid2D;
+    const long int *Grid_length;
+    const D2DPOINT* GridPts;
+    const D2DPOINT* Grid_wgs;
+    int reference_id;
+    const double *height_step;
+    const double *grid_resolution;
+    const double *Hinterval;
+    //double *minmaxHeight; //iteratively changed
+    const int *Py_combined_level;
+    const unsigned char *iteration;
+    bool *check_matching_rate;
+} LevelInfo;
+
+class Matrix {
+public:
+    Matrix(unsigned rows, unsigned cols)
+      : rows_ {rows},
+        cols_ {cols},
+        data_ {new double[rows_ * cols_]()}
+    {
+    }
+
+    ~Matrix() {
+        delete[] data_;
+    }
+
+    Matrix(const Matrix& m)
+    : rows_{m.rows_},
+      cols_{m.cols_},
+      data_ {new double[rows_ * cols_]}
+    {
+        memcpy(data_, m.data_, sizeof(double) * rows_ * cols_);
+    }
+
+    Matrix(Matrix &&m)
+    : rows_{m.rows_},
+      cols_{m.cols_},
+      data_{m.data_}
+    {
+        m.data_ = nullptr;
+        m.rows_ = 0;
+        m.cols_ = 0;
+    }
+
+    Matrix& operator= (const Matrix& m)
+    {
+        double *p = new double[m.rows_ * m.cols_];
+
+        memcpy(p, m.data_, sizeof(double) * m.rows_ * m.cols_);
+
+        delete[] data_;
+        data_ = p;
+        rows_ = m.rows_;
+        cols_ = m.cols_;
+
+        return *this;
+
+    }
+    Matrix& operator= (Matrix &&m)
+    {
+        delete[] data_;
+
+        data_ = m.data_;
+        rows_ = m.rows_;
+        cols_ = m.cols_;
+    
+        m.data_ = nullptr;
+        m.rows_ = 0;
+        m.cols_ = 0;
+
+        return *this;
+    }
+
+    double& operator() (unsigned row, unsigned col)
+    {
+        return data_[cols_*row + col];
+    }
+
+    double operator() (unsigned row, unsigned col) const
+    {
+        return data_[cols_*row + col];
+    }
+
+    inline
+    const double * row(unsigned i) const
+    {
+        return data_ + cols_*i;
+    }
+
+private:
+    unsigned rows_ = 0;
+    unsigned cols_ = 0;
+    double *data_ = nullptr;
+};
+
+typedef struct tagSetKernel
+{
+    const int reference_id;
+    int ti;
+    const int Half_template_size;
+    unsigned patch_size;
+
+    Matrix left_patch_vecs;
+    Matrix left_mag_patch_vecs;
+    Matrix right_patch_vecs;
+    Matrix right_mag_patch_vecs;
+
+
+    tagSetKernel(const int reference_id,const int ti,const int Half_template_size):
+        reference_id(reference_id),
+        ti(ti),
+        Half_template_size(Half_template_size),
+        patch_size((2*Half_template_size+1) * (2*Half_template_size+1)),
+        left_patch_vecs{3, patch_size},
+        left_mag_patch_vecs{3, patch_size},
+        right_patch_vecs{3, patch_size},
+        right_mag_patch_vecs{3, patch_size}
+    {
+    }
+
+    ~tagSetKernel() {
+    }
+} SetKernel;
 #endif
 
