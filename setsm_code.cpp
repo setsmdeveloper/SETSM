@@ -113,7 +113,7 @@ int main(int argc,char *argv[])
     
     args.ra_line[0] = 0.0;  //first image is a reference for RPCs bias computation
     args.ra_sample[0] = 0.0;
-    args.System_memory = 50.0; //default system memory
+    args.System_memory = getSystemMemory(); //default system memory
     
     int DEM_divide = 0;
     double **Imageparams = NULL;
@@ -2626,10 +2626,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             else
                                 Final_DEMsize = DEM_final_Size(proinfo->save_filepath, iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,FinalDEM_boundary);
                             
-                            double total_memory = CalMemorySize_Post(Final_DEMsize,Final_DEMsize);
-                            
+                            double total_memory;
                             if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
                                 total_memory = CalMemorySize_Post_LSF(Final_DEMsize,Final_DEMsize);
+                            else
+                                total_memory = CalMemorySize_Post(Final_DEMsize,Final_DEMsize);
                             
                             printf("total tile memory %f\t%f\t%d\t%d\n",proinfo->System_memory,total_memory,Final_DEMsize.width,Final_DEMsize.height);
                             
