@@ -796,7 +796,9 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                     D2DPOINT grid_dxy_ref(ref_dx, ref_dy);
                     D2DPOINT grid_dxy_tar(tar_dx, tar_dy);
                     
-                    CoregParam_Image(proinfo, ti, level, ImageAdjust_coreg, 15, SubImages_ref[level], data_size_ref[level], SubImages_tar[level],  data_size_tar[level], ImageBoundary_ref, ImageBoundary_tar, grid_dxy_ref, grid_dxy_tar, Grid_space, Boundary, &avg_roh, &iter_counts, &adjust_std, MPs_2D_mat, MPs_2D);
+                    vector<D2DPOINT> MPs;
+                    
+                    CoregParam_Image(proinfo, ti, level, ImageAdjust_coreg, 15, SubImages_ref[level], data_size_ref[level], SubImages_tar[level],  data_size_tar[level], ImageBoundary_ref, ImageBoundary_tar, grid_dxy_ref, grid_dxy_tar, Grid_space, Boundary, &avg_roh, &iter_counts, &adjust_std, MPs_2D_mat, MPs_2D, MPs);
                     
                     printf("%d\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%4.2f\t\t%d\t%4.2f\t%d\t%4.2f\t%4.2f\n",level,ImageAdjust_coreg[0], ImageAdjust_coreg[1],-ImageAdjust_coreg[0]*tar_dy, ImageAdjust_coreg[1]*tar_dx,MPs_2D.size(),avg_roh,iter_counts,adjust_std.m_X,adjust_std.m_Y);
                     free(SubImages_tar[level]);
