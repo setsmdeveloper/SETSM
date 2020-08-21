@@ -8658,15 +8658,11 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
         min_th_sncc = 0.5;
     }
     
-    const int reference_id = rlevelinfo.reference_id;
+    int reference_id = rlevelinfo.reference_id;
     double selected_count = 0;
     
     for(long count_height = 0 ; count_height < NumOfHeights ; count_height++)
     {
-        double sum_NCC = 0;
-        int count_NCC = 0;
-        int sum_count_N = 0;
-        
         float iter_height      = start_H + count_height*height_step;
         
         D3DPOINT TriP1(ref1_pt.m_X, ref1_pt.m_Y, ref1_pt.m_Z, 0);
@@ -8699,9 +8695,17 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
             double *left_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
             double *right_mag_patch_vec = (double *)malloc(sizeof(double)*patch_size);
             
-            for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
+            double sum_NCC = -1.0;
+            bool count_NCC = false;
+            int sum_count_N = 0;
+            int total_ncc_count = 0;
+            
+            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
             {
-                if(proinfo->check_selected_image[ti])
+                reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
+                const int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
+                
+                if(reference_id == GridPT3[target_index].selected_pair || ti == GridPT3[target_index].selected_pair)
                 {
                     int Count_N = 0;
 
@@ -8868,21 +8872,65 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                         
                         double ncc;
                         if (count_roh > 0)
+                        {
                             ncc = temp_roh/count_roh;
+                            
+                            if(sum_NCC < ncc)//maximum
+                            {
+                                sum_count_N = Count_N;
+                                sum_NCC = ncc;
+                                count_NCC = true;
+                                total_ncc_count = 1;
+                            }
+                        }
                         else
                             ncc = -1;
 
-                        sum_count_N += Count_N;
-                        sum_NCC += ncc;
-                        count_NCC++;
+                        //sum_count_N += Count_N;
+                        //sum_NCC += ncc;
+                        //count_NCC++;
                     }
                 }
             }  // end ti loop
+            
             free(left_patch_vec);
             free(right_patch_vec);
             free(left_mag_patch_vec);
             free(right_mag_patch_vec);
         
+            if(count_NCC)
+            {
+                double sncc = sum_NCC;
+                double avg_ncc_count = (double)sum_count_N;
+                if(avg_ncc_count >= th_count)
+                {
+                    if(sncc > min_th_sncc)
+                    {
+                        if(F_NCC < sncc)
+                        {
+                            F_NCC = sncc;
+                            *F_Height = (double)iter_height;
+                            selected_count =  avg_ncc_count;
+                            *F_sncc = F_NCC;
+                        }
+                    }
+                }
+                else if(avg_ncc_count > min_th_count)
+                {
+                    if(sncc > min_th_sncc  + 0.2)
+                    {
+                        if(F_NCC < sncc)
+                        {
+                            F_NCC = sncc;
+                            *F_Height = (ref1_pt.m_Z + ref2_pt.m_Z)/2.0;
+                            selected_count =  avg_ncc_count;
+                            *F_sncc = F_NCC;
+                        }
+                    }
+                }
+            }
+            
+            /*
             if(count_NCC > 0)
             {
                 if(sum_count_N/count_NCC >= th_count)
@@ -8916,6 +8964,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                     }
                 }
             }
+             */
         }
     }
     
