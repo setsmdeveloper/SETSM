@@ -6327,7 +6327,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
         
     //int sum_data2 = 0;
     //int sum_data = 0;
-    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+    const double ortho_th = 0.4 - (4 - Pyramid_step)*0.10;
     int reference_id = 0;
 #pragma omp parallel
     {
@@ -7926,7 +7926,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
     
     const double ncc_alpha = SetNCC_alpha(Pyramid_step,iteration, proinfo->IsRA);
     const double ncc_beta = 1.0 - ncc_alpha;
-    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+    const double ortho_th = 0.4 - (4 - Pyramid_step)*0.10;
     
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < (long)Size_Grid2D.height*(long)Size_Grid2D.width ; iter_count++)
