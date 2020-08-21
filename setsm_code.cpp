@@ -10521,10 +10521,15 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                 std::array<double*, 3>* left_patch_vecs_array;
                 std::array<double*, 3>* right_patch_vecs_array;
 
+                // sum reduction on doubles makes this nondeterminisitc
+#ifndef DETERMINISTIC
 #pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#endif
                 {
                     
+#ifndef DETERMINISTIC
 #pragma omp single
+#endif
                     {
                         // Make patch vectors thread private rather than private to each loop iteration
                         // These are used by postNCC but allocated here for efficiency
@@ -10539,7 +10544,9 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                         }
                     }
                     
+#ifndef DETERMINISTIC
 #pragma omp for schedule(guided)
+#endif
                     for(long i = 0; i<NumofPts ; i++)
                     {
                         double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
@@ -10573,7 +10580,9 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                         }
                     } // end omp for
                     
+#ifndef DETERMINISTIC
 #pragma omp single
+#endif
                     {
                         // free thread-private vectors
                         for (int th=0; th<omp_get_num_threads(); th++) {
@@ -10589,6 +10598,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                     
                 } // end omp parallel
 
+                printf("in AdjustParam, count_pts is %d\n", count_pts);
                 if(count_pts > 10)
                 {
                     double shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
