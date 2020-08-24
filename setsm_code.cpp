@@ -10247,8 +10247,13 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
 
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
-    
+    // Interpolates height values from triangles. Points on
+    // edges can fall in more than one triangle, and have
+    // slightly different edge values. So, here order
+    // matters for determinism
+#ifndef DETERMINISTIC
 #pragma omp parallel for schedule(guided)
+#endif
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
         double Total_Min_Z      =  100000;
