@@ -1053,8 +1053,8 @@ D2DPOINT *SetGrids_SDM(ProInfo proinfo, const int prc_level, const int level, co
         }
     }
     
-    if(*py_resolution > 100)
-        *py_resolution = (int)((*py_resolution)/50.0)*50.0;
+    //if(*py_resolution > 100)
+    //    *py_resolution = (int)((*py_resolution)/50.0)*50.0;
     
     *grid_resolution = *py_resolution;
     
