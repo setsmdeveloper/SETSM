@@ -9323,8 +9323,15 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         }
         
         free(hdiffbin);
-        
+
+        // Iterates through points, updating the flag value
+        // for each point. But, also grabs the triangle for
+        // each point, and may update flag for points
+        // corresponding to those vertices. So, not safe to
+        // parallelize
+#ifndef DETERMINISTIC
 #pragma omp parallel for schedule(guided)
+#endif
         for(long index=0;index<num_points;index++)
         {
             if(pts[index].flag != 1)
