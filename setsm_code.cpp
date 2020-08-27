@@ -23,10 +23,17 @@
 #include "mpi.h"
 #endif
 
+#include <sstream>
+
 const char setsm_version[] = "4.3.2";
 
 int main(int argc,char *argv[])
 {
+    StopWatch main_pre;
+    StopWatch main_post;
+    main_post.start();
+    main_pre.start();
+
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
@@ -1488,7 +1495,15 @@ int main(int argc,char *argv[])
                         }
                         else if( strcmp(args.Image[0],args.Image[1]) != 0)
                         {
+                            main_pre.stop();
+                            std::ostringstream os;
+                            os << "main pre time is "
+                               << std::chrono::duration_cast<std::chrono::seconds>(main_pre.get_elapsed_time()).count()
+                               << " seconds";
+                            printf("%s\n", os.str().c_str());
+
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
+                            main_post.start();
 
                             char DEMFilename[500];
                             char Outputpath[500];
@@ -1573,7 +1588,15 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
+
+    main_post.stop();
     
+    std::ostringstream os;
+    os << "main post time is "
+       << std::chrono::duration_cast<std::chrono::seconds>(main_post.get_elapsed_time()).count()
+       << " seconds";
+    printf("%s\n", os.str().c_str());
+
     return 0;
 }
 
@@ -1655,6 +1678,12 @@ void DownSample(ARGINFO &args)
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
 {
+    StopWatch post_time;
+    StopWatch pre_time;
+    StopWatch ra_time;
+    post_time.start(); // just in case
+    pre_time.start();
+    ra_time.start(); // just in case
 #ifdef BUILDMPI
     char a;
     char *pa = &a;
@@ -2401,7 +2430,16 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 
+                                ra_time.start();
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
+                                ra_time.stop();
+
+                                std::ostringstream os;
+                                os << "RA time is "
+                                   << std::chrono::duration_cast<std::chrono::seconds>(ra_time.get_elapsed_time()).count()
+                                   << " seconds";
+                                printf("%s\n", os.str().c_str());
+
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2498,7 +2536,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
+                                pre_time.stop();
+                                std::ostringstream os;
+                                os << "pre time is "
+                                   << std::chrono::duration_cast<std::chrono::seconds>(pre_time.get_elapsed_time()).count()
+                                   << " seconds";
+                                printf("%s\n", os.str().c_str());
+
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
+                                post_time.start();
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
@@ -2506,6 +2552,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if(rank != 0)
                                 exit(0);
 #endif
+
+                            post_time.start();
                             if(!args.check_ortho)
                             {
                                 char check_file[500];
@@ -2926,6 +2974,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     }
 #endif
     
+    post_time.stop();
+    std::ostringstream os;
+    os << "post time is "
+       << std::chrono::duration_cast<std::chrono::seconds>(post_time.get_elapsed_time()).count()
+       << " seconds";
+    printf("%s\n", os.str().c_str());
     return DEM_divide;
 }
 
@@ -3007,6 +3061,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     {
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
+
+        StopWatch tile_time;
+        tile_time.start();
         
 #ifdef BUILDMPI
         // Skip this tile if it belongs to a different MPI rank
@@ -4520,6 +4577,14 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             free(Startpos_ori);
             free(Subsetsize);
         }
+
+        tile_time.stop();
+
+        std::ostringstream os;
+        os << "Computation time for tile (" << row << ", " << col << ") is "
+           << std::chrono::duration_cast<std::chrono::seconds>(tile_time.get_elapsed_time()).count()
+           << " seconds";
+        printf("%s\n", os.str().c_str());
     }
     
     free(iterations);

@@ -23,6 +23,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
+#include <chrono>
+#include <string>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -753,5 +755,34 @@ typedef struct tagSetKernel
     ~tagSetKernel() {
     }
 } SetKernel;
+
+class StopWatch
+{
+public:
+    void start() {
+        if(is_running)
+            stop();
+
+        start_time = std::chrono::high_resolution_clock::now();
+        is_running = true;
+    }
+    void stop() {
+        auto stop_time = std::chrono::high_resolution_clock::now();
+        duration = stop_time - start_time;
+        is_running = false;
+    }
+
+    std::chrono::high_resolution_clock::duration get_elapsed_time() {
+        return duration;
+    }
+
+private:
+    std::chrono::high_resolution_clock::time_point start_time;
+    std::chrono::high_resolution_clock::duration duration;
+    bool is_running;
+
+
+};
+
 #endif
 
