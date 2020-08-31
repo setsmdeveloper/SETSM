@@ -29,7 +29,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
-#define MaxNCC 2
+#define MaxNCC 15
 #define Nodata -9999
 #ifndef bool
 //#define bool unsigned char
@@ -259,7 +259,7 @@ typedef struct tagNCCresult
 	short result1; //second peak roh
 	short max_WNCC;
     
-    short GNCC;
+    //short GNCC;
     unsigned short NumOfHeight;
     //float *GNCC_multi;
 	unsigned char result4; //peak count
@@ -293,8 +293,8 @@ typedef struct tagVoxelinfo
 {
     //float ANCC;
     //float height;
-    bool flag_cal;
-    short INCC[17];
+    bool flag_cal[MaxNCC];
+    short INCC[MaxNCC];
     //float *INCC_multi;
 }VOXEL;
 
