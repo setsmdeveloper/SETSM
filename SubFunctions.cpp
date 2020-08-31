@@ -1119,10 +1119,10 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     double t_minXY_Y;
     
     double grid_size_c;
-    ReadGeotiff_info(inputfile,&t_minXY_X,&t_minXY_Y,&grid_size_c);
+    CSize imagesize = ReadGeotiff_info(inputfile,&t_minXY_X,&t_minXY_Y,&grid_size_c);
     
-    minXmaxY.m_X = (float)t_minXY_X;
-    minXmaxY.m_Y = (float)t_minXY_Y;
+    minXmaxY.m_X = (float)(t_minXY_X + grid_size_c*imagesize.width/2.0);
+    minXmaxY.m_Y = (float)(t_minXY_Y - grid_size_c*imagesize.height/2.0);
     
     //printf("coord %f\t%f\n",minXmaxY.m_X,minXmaxY.m_Y);
     SetTransParam_param(param,param->bHemisphere);
