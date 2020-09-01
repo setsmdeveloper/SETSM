@@ -259,7 +259,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         {
             printf("tile\n");
             int tileL,count_W,count_L,starttileL,starttileW;
-            uint16 start_row,start_col,end_row,end_col;
+            long start_row,start_col,end_row,end_col;
             tdata_t buf;
             T* t_data;
             
@@ -269,16 +269,18 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             starttileL      = (int)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
+            printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
             starttileW      = (int)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
+            printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
             if(end_col > Imagesize->width)
                 end_col = Imagesize->width;
             
-            
+            printf("start %d\t%d\t end %d\t%d\n",start_col,start_row,end_col,end_row);
             cols[0]         = start_col;
             cols[1]         = end_col;
             rows[0]         = start_row;

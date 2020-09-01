@@ -2411,7 +2411,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!check_load_RA)
                             {
-                                tile_size           = 50000;
+                                tile_size           = 40000;
                                 
                                 args.RA_row         = 1;
                                 
