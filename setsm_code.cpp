@@ -16,14 +16,16 @@
 
 #include <atomic>
 #include <memory>
-
-#include "setsm_code.hpp"
+#include <sstream>
 
 #ifdef BUILDMPI
 #include "mpi.h"
+#include "counter.hpp"
 #endif
 
-#include <sstream>
+
+#include "setsm_code.hpp"
+
 
 const char setsm_version[] = "4.3.2";
 
@@ -2983,6 +2985,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     return DEM_divide;
 }
 
+class TileIndexer {
+    public:
+    virtual int next() = 0;
+    virtual ~TileIndexer() {};
+};
+
 #ifdef BUILDMPI
 // Reorder tiles for static load balancing with MPI
 int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
@@ -3019,7 +3027,44 @@ int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_
     free(temp);
     return length;
 }
+
+class MPITileIndexer : public TileIndexer {
+private:
+    std::shared_ptr<MPICounter> counter;
+    int length;
+    int rank;
+public:
+    MPITileIndexer(int length, int rank) : counter(new MPICounter), length(length), rank(rank) {}
+    int next() {
+        printf("DBG: rank %d calling counter->next()...\n", rank);
+        int i = counter->next();
+        printf("DBG: rank %d counter->next() returned %d\n", rank, i);
+        if(i < length) {
+            printf("DBG: rank %d (%d < %d), returning %d from next()\n", rank, i, length, i);
+            return i;
+        }
+        printf("DBG: rank %d (%d >= %d), returning %d from next()\n", rank, i, length, -1);
+        return -1;
+    }
+};
 #endif
+
+class SerialTileIndexer : public TileIndexer {
+private:
+    int i;
+    int length;
+public:
+    SerialTileIndexer(int length) : i(0), length(length) {}
+    int next() {
+        int ret = -1;
+        if(i < length) {
+            ret = i;
+            i++;
+        }
+        printf("DBG: SerialTileIndexer returning %d\n", ret);
+        return ret;
+    }
+};
 
 int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
 {
@@ -3048,17 +3093,27 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             length+=1;
         }
     }
-    
+
+    printf("DBG: rank %d initializing SerialTileIndexer for length %d\n", rank, length);
+    std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
-    //Reorder list of tiles for static load balancing
     if (length > 1) {
-        reorder_list_of_tiles(iterations, length, col_length, row_length);
+        // Setup MPI work queue for tiles for non-RA case
+        printf("DBG: rank %d initializing MPITileIndexer for length %d\n", rank, length);
+        tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
+    } else if(rank != 0) {
+        // only rank 0 will be doing RA, so all other ranks get no tiles
+        tile_indices = std::move(std::unique_ptr<SerialTileIndexer>(new SerialTileIndexer(0)));
+
     }
+#else
 #endif
-    
+
     int tile_iter, i;
-    for(tile_iter = 0; tile_iter < length; tile_iter += 1)
+    while((tile_iter = tile_indices->next()) != -1)
     {
+        printf("DBG: rank %d got index %d\n", rank, tile_iter);
+
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
 
@@ -3066,9 +3121,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         tile_time.start();
         
 #ifdef BUILDMPI
-        // Skip this tile if it belongs to a different MPI rank
-        if (tile_iter % size != rank)
-            continue;
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
         bool check_cal = false;
