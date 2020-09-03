@@ -22,6 +22,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -285,7 +286,7 @@ typedef struct UpdateGrid{
     
     unsigned char selected_pair;
     unsigned char total_images;
-    unsigned char ncc_seleceted_pair;
+    signed char ncc_seleceted_pair;
     unsigned char height_counts;
 }UGRID;
 
