@@ -287,7 +287,7 @@ typedef struct UpdateGrid{
     unsigned char selected_pair;
     unsigned char total_images;
     signed char ncc_seleceted_pair;
-    unsigned char height_counts;
+    float height_counts;
 }UGRID;
 
 typedef struct tagVoxelinfo

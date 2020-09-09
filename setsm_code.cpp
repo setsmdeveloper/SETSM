@@ -7405,6 +7405,8 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
     if(Pyramid_step <= SGM_th_py )
         check_SGM = true;
     
+    double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
+    
     if(check_SGM)
     {
         long total_grid_size = (long)Size_Grid2D.width*(long)Size_Grid2D.height;
@@ -7970,7 +7972,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
         
     }
     
-    printf("find peak pairs %d\n",rlevelinfo.pairinfo->NumberOfPairs);
+    printf("find peak pairs %d\t%f\n",rlevelinfo.pairinfo->NumberOfPairs,im_resolution);
     
     bool pre_DEMtif = proinfo->pre_DEMtif;
     bool check_ortho = false;
@@ -8302,9 +8304,13 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
             if(rlevelinfo.pairinfo->NumberOfPairs < 2)
                GridPT3[pt_index].total_images = 1;
             
-            int height_interval = 30 - 10*(4-Pyramid_step);
-            if(height_interval < 5)
-                height_interval = 5;
+            double height_interval = 30;// - 5*(4-Pyramid_step);
+            if(height_interval < 10)
+                height_interval = 10;
+            
+            height_interval = im_resolution*5;
+            
+            double bin_interval = height_interval*2;
             
             if(check_SGM)
             {
@@ -8354,7 +8360,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                                 
                                 if( check_cal)
                                 {
-                                    GridPT3[pt_index].height_counts++;
+                                    //GridPT3[pt_index].height_counts++;
                                     height_sum_1 += nccresult_pairs[pair_number].result2*temp_nccresult_multi[pair_number];
                                     db_gncc_sum += temp_nccresult_multi[pair_number];
                                 }
@@ -8387,19 +8393,19 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                     int selected_pair_gncc = -1;
                     int count_positive = 0;
                     
-                    int height_bin = ceil((double)nccresult[pt_index].NumOfHeight/(double)height_interval);
+                    //int height_bin = ceil((double)nccresult[pt_index].NumOfHeight/(double)height_interval);
+                    int height_bin = ceil((nccresult[pt_index].maxHeight - nccresult[pt_index].minHeight)/(double)bin_interval) + 1;
                     unsigned char *height_hist = NULL;
                     vector<unsigned char> *save_pair = NULL;
                     
-                    if(height_bin > 3)
+                    if(height_bin >= 3)
                     {
                         height_hist = (unsigned char*)calloc(sizeof(unsigned char),height_bin);
                         save_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),height_bin);
                     }
                     
-                    int AWNCC_pair_height_step = 0;
-                    
                     //select optimal pair from its WNCC and GNCC (maximum)
+                    vector<unsigned char> AWNCC_pair_selected;
                     for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
                     {
                         int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
@@ -8410,9 +8416,14 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                             {
                                 GridPT3[pt_index].total_images++;
                                 
-                                double pair_pos = fabs(nccresult_pairs[AWNCC_id].result2 - nccresult_pairs[pair_number].result2)/step_height;
-                                if(pair_pos < height_interval/2.0)
-                                    AWNCC_pair_height_step ++;
+                                //if(temp_nccresult_multi[pair_number] > 0)
+                                {
+                                    double pair_pos = fabs(nccresult_pairs[AWNCC_id].result2 - nccresult_pairs[pair_number].result2);///step_height;
+                                    if(pair_pos < height_interval/2.0)
+                                    {
+                                        AWNCC_pair_selected.push_back(pair_number);
+                                    }
+                                }
                                 
                                 double db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
                                 bool check_cal = false;
@@ -8451,7 +8462,9 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                                 {
                                     if(height_bin > 3)
                                     {
-                                        int bin_pos = floor((double)(nccresult_pairs[pair_number].result2 - nccresult[pt_index].minHeight)/(double)step_height/(double)height_interval);
+                                        //int bin_pos = floor((double)(nccresult_pairs[pair_number].result2 - nccresult[pt_index].minHeight)/(double)step_height/(double)height_interval);
+                                        
+                                        int bin_pos = floor((double)(nccresult_pairs[pair_number].result2 - nccresult[pt_index].minHeight)/(double)bin_interval);
                                         
                                         if(bin_pos < height_bin && bin_pos >= 0 )
                                         {
@@ -8467,12 +8480,20 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                     //select optimal pair with selected single pair and average WNCC
                     bool check_single_pair = false;
                     double min_ortho_ncc = ortho_th - 0.1;
-                    double ratio_images = (double)AWNCC_pair_height_step/(double)GridPT3[pt_index].total_images;
+                    double ratio_images = (double)AWNCC_pair_selected.size()/(double)GridPT3[pt_index].total_images;
                     
-                    if(GridPT3[pt_index].total_images > 1)
-                        check_single_pair = temp_nccresult_multi[AWNCC_id] < ortho_th - 0.1 || ratio_images < 0.5 - 0.05*(4-Pyramid_step);
+                    if(ratio_images >= 0.5 && GridPT3[pt_index].total_images > 1 /*&& temp_nccresult_multi[AWNCC_id] > min_ortho_ncc*/) //AWNCC
+                    {
+                        check_single_pair = false;// - 0.05*(4-Pyramid_step);
+                        GridPT3[pt_index].height_counts = AWNCC_pair_selected.size();
+                    }
                     else
-                        check_single_pair = temp_nccresult_multi[AWNCC_id] < ortho_th - 0.1;
+                    {
+                        check_single_pair = true;
+                        GridPT3[pt_index].height_counts = 0;
+                    }
+                    //else
+                    //    check_single_pair = temp_nccresult_multi[AWNCC_id] < ortho_th - 0.1;
                     
                     //if(ratio_images < 0.3)
                     //    selected_pair = -1;
@@ -8489,17 +8510,18 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                     
                     //selected_ncc_pair = selected_pair;
                     
-                    
-                    
+                    //printf("selected_pair %d\theight_bin %d\tcheck_single_pair %d\n",selected_pair,height_bin,check_single_pair);
+                    /*
                     if(selected_pair > -1)
                     {
-                        if(temp_nccresult_multi[selected_pair] < GridPT3[pt_index].roh - 0.1)
+                        //if(temp_nccresult_multi[selected_pair] < GridPT3[pt_index].roh - 0.1)
                         {
                             if(check_single_pair)
                             {
+                                
                                 if(GridPT3[pt_index].total_images > 1) // less than 0.5
                                 {
-                                    if(height_bin > 3)
+                                    if(height_bin >= 3)
                                     {
                                         int max_count = -10;
                                         int max_pos = 0;
@@ -8528,7 +8550,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                                                 double ncc_gncc;
                                                 ncc_gncc = temp_nccresult_multi[pair_ID];
                                                 //ncc_gncc = (temp_nccresult_multi[pair_ID] + 1)*(db_GNCC + 1);
-                                                if(max_ncc < ncc_gncc && max_gncc < db_GNCC)
+                                                if(max_ncc < ncc_gncc)// && max_gncc < db_GNCC)
                                                 {
                                                     max_ncc = ncc_gncc;
                                                     max_gncc = db_GNCC;
@@ -8536,10 +8558,36 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                                                 }
                                             }
                                             
-                                            double ROR = (temp_nccresult_multi[max_pair] - temp_nccresult_sec_multi[max_pair])/temp_nccresult_multi[max_pair];
+                                            //double ROR = (temp_nccresult_multi[max_pair] - temp_nccresult_sec_multi[max_pair])/temp_nccresult_multi[max_pair];
                                             //if(temp_nccresult_multi[max_pair] >= 0.2)
                                             {
                                                 selected_pair = max_pair;
+                                                
+                                                double wheight = 0;
+                                                double weight = 0;
+                                                double height_diff;
+                                                for(int count = 0 ; count < save_pair[max_pos].size() ; count++)
+                                                {
+                                                    int pair_number = save_pair[max_pos][count];
+                                                    if(pair_number == selected_pair)
+                                                        height_diff = 1.0;
+                                                    else
+                                                    {
+                                                        if(nccresult_pairs[pair_number].result2 == nccresult_pairs[selected_pair].result2)
+                                                            height_diff = 1.0;
+                                                        else
+                                                            height_diff = nccresult_pairs[pair_number].result2 - nccresult_pairs[selected_pair].result2;
+                                                    }
+                                                    height_diff = 1.0/(height_diff*height_diff);
+                                                    
+                                                    wheight += temp_nccresult_multi[pair_number]*nccresult_pairs[pair_number].result2*height_diff;
+                                                    weight += temp_nccresult_multi[pair_number]*height_diff;
+                                                }
+                                                
+                                                double weight_height = wheight/weight;
+                                                nccresult_pairs[selected_pair].result2 = weight_height;
+                                                
+                                                GridPT3[pt_index].height_counts = save_pair[max_pos].size();
                                                 
                                             }
                                         }
@@ -8550,12 +8598,32 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                             }
                             else
                             {
-                                //selected_pair = AWNCC_id;
+                                selected_pair = AWNCC_id;
+                                double wheight = 0;
+                                double weight = 0;
+                                
+                                for(int count = 0 ; count < AWNCC_pair_selected.size() ; count++)
+                                {
+                                    int pair_number = AWNCC_pair_selected[count];
+                                    double height_diff;
+                                    if(nccresult_pairs[pair_number].result2 == nccresult_pairs[selected_pair].result2)
+                                        height_diff = 1.0;
+                                    else
+                                        height_diff = nccresult_pairs[pair_number].result2 - nccresult_pairs[selected_pair].result2;
+                                    
+                                    height_diff = 1.0/(height_diff*height_diff);
+                                    
+                                    wheight += temp_nccresult_multi[pair_number]*nccresult_pairs[pair_number].result2*height_diff;
+                                    weight += temp_nccresult_multi[pair_number]*height_diff;
+                                }
+                                
+                                double weight_height = wheight/weight;
+                                nccresult_pairs[selected_pair].result2 = weight_height;
                             }
                         }
                     }
-                    
-                    if(height_bin > 3)
+                    */
+                    if(height_bin >= 3)
                     {
                         for(int count = 0 ; count < height_bin ; count++)
                             save_pair[count].clear();
@@ -8598,7 +8666,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                     }
                     
                     nccresult[pt_index].result4 = nccresult_pairs[selected_pair].result4;
-                    
+                    /*
                     if(Pyramid_step >= 0 && GridPT3[pt_index].total_images > 1)
                     {
                         for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
@@ -8637,11 +8705,11 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size
                         
                         //printf("select_pair %d\t%d\t%d\t",selected_pair,nccresult[pt_index].result0,nccresult[pt_index].result1);
                     }
-                    else
+                    else*/
                     {
                         nccresult[pt_index].result2 = nccresult_pairs[selected_pair].result2;
                         nccresult[pt_index].result3 = nccresult_pairs[selected_pair].result3;
-                        GridPT3[pt_index].height_counts = 1;
+                        //GridPT3[pt_index].height_counts = 1;
                     }
                     
                     //GridPT3[pt_index].single_height = nccresult[pt_index].result2;
@@ -8996,7 +9064,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                 
                 if(Pyramid_step >= 0)
                 {
-                    if(check_AWNCC && GridPT3[pt_index].total_images > 0)
+                    if(check_AWNCC && GridPT3[pt_index].total_images > 1)
                     {
                         GridPT3[pt_index].Mean_ortho_ncc = DoubleToSignedChar_grid(max_ncc); //WNCC weight
                         nccresult[pt_index] = SignedCharToDouble_grid(GridPT3[pt_index].Mean_ortho_ncc); //blunder detection
@@ -11655,7 +11723,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* r
 
             fprintf(outfile_sp,"%d\t",GridPT3[matlab_index].ncc_seleceted_pair);
             fprintf(outfile_tp,"%d\t",GridPT3[matlab_index].total_images);
-            fprintf(outfile_ttp,"%d\t",GridPT3[matlab_index].height_counts);
+            fprintf(outfile_ttp,"%3.2f\t",GridPT3[matlab_index].height_counts);
             
             for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
             {
