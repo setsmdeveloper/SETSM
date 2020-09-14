@@ -51,10 +51,6 @@ static Matrix CreateGaussianFilter(int filter_size, double sigma) {
 
     Matrix GaussianFilter(filter_size, filter_size);
 
-    // sum reduction of double makes this nondeterministic
-#ifndef DETERMINISTIC
-#pragma omp parallel for schedule(guided) collapse(2) reduction(+:sum)
-#endif
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
@@ -66,9 +62,6 @@ static Matrix CreateGaussianFilter(int filter_size, double sigma) {
         }
     }
 
-#ifndef DETERMINISTIC
-#pragma omp parallel for schedule(guided) collapse(2)
-#endif
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
