@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <atomic>
+#include <memory>
+
 #include "setsm_code.hpp"
 
 #ifdef BUILDMPI
@@ -10252,31 +10255,61 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
     return resize_GridPT3;
 }
 
+static void update_max(std::atomic<float> *cur, float val) {
+    float prev = *cur;
+    // exit this loop if cur becomes larger (or is larger) than val,
+    // or if cur is updated to val. This update will only happen when
+    // val is larger than cur.
+    //
+    // See here for a similar construct: https://stackoverflow.com/a/16190791
+    while(val > prev) {
+        if(cur->compare_exchange_weak(prev, val)) {
+            break;
+        }
+    }
+}
+
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
-    // Interpolates height values from triangles. Points on
-    // edges can fall in more than one triangle, and have
-    // slightly different edge values. So, here order
-    // matters for determinism
-#ifndef DETERMINISTIC
+
+    int len = rlevelinfo.Size_Grid2D->width * rlevelinfo.Size_Grid2D->height;
+
+    constexpr double unset = -1000;
+    std::unique_ptr<std::atomic<float>[]> heights(new std::atomic<float>[len]);
+    for(int i = 0; i < len; i++) {
+        heights[i] = unset;
+    }
+
 #pragma omp parallel for schedule(guided)
-#endif
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
+        //unused in this function, but SetTinBoundary requres them
         double Total_Min_Z      =  100000;
         double Total_Max_Z      = -100000;
 
+        // get triangle and it's indicies
         const UI3DPOINT &t_tri = (tris[tcnt]);
         const int pdex0 = t_tri.m_X;
         const int pdex1 = t_tri.m_Y;
         const int pdex2 = t_tri.m_Z;
         
+        // if triangle not entirely within grid, continue
+        // this is mostly a sanity check I think
         if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
         {
+            // Get the point corresponding to each triangle
+            // vertex
             const D3DPOINT &TriP1 = (pts[pdex0]);
             const D3DPOINT &TriP2 = (pts[pdex1]);
             const D3DPOINT &TriP3 = (pts[pdex2]);
+
+
+            // These will be pooulated with a bounding box
+            // around the triangle
             int PixelMinXY[2], PixelMaxXY[2];
+
+            // These are unused in this function, but
+            // SetTinBoundary requries them
             double temp_MinZ, temp_MaxZ;
             SetTinBoundary(
                 rlevelinfo,
@@ -10290,30 +10323,42 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                 temp_MinZ,
                 temp_MaxZ);
             
+            // iterate through points in the triangle bounding box
             for (long Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
             {
                 for (long Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                 {
+                    //Index of the point in GridPT3
                     const int Index= (long)rlevelinfo.Size_Grid2D->width*Row + Col;
 
                     float Z = -1000.0;
                     bool rtn = false;
                      
+                    // The point on object/world coordinates
+                    // x, y, z, flag
                     D3DPOINT CurGPXY(
                         (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
                         (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
                         0,
                         0);
 
+                    // checks to see if point is inside triangle
+                    // if it is, returns true
+                    // if inside, interpolates height value of point
+                    // and puts that value in Z
                     rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
                     
                     if (rtn)
                     {
-#pragma omp atomic write
-                        GridPT3[Index].Height = (float)Z;
+                        update_max(&heights[Index], (float)Z);
                     }
                 }
             }
+        }
+    }
+    for(int i = 0; i < len; i++) {
+        if(heights[i] != unset) {
+            GridPT3[i].Height = heights[i];
         }
     }
     return true;
