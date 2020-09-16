@@ -307,6 +307,7 @@ typedef struct LSFinfo{
 typedef struct tagPairInfo{
     int NumberOfPairs;
     UI2DPOINT *pairs;
+    float *BHratio;
 }PairInfo;
 
 typedef struct BlunderIP{
