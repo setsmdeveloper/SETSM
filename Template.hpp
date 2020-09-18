@@ -62,6 +62,7 @@ static Matrix CreateGaussianFilter(int filter_size, double sigma) {
         }
     }
 
+#pragma omp parallel for schedule(guided) collapse(2)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
