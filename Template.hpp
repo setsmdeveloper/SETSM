@@ -51,6 +51,10 @@ static Matrix CreateGaussianFilter(int filter_size, double sigma) {
 
     Matrix GaussianFilter(filter_size, filter_size);
 
+// This parallel section introduces nondeterminism, so disable
+// it for now. Consider re-enabling it if performance in this
+// code becomes an issue.
+//#pragma omp parallel for schedule(guided) collapse(2) reduction(+:sum)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
