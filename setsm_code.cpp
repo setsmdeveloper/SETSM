@@ -36,6 +36,20 @@ int main(int argc,char *argv[])
     main_post.start();
     main_pre.start();
 
+#ifdef BUILDMPI
+    int provided = 1;
+    int requested = MPI_THREAD_MULTIPLE;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0)
+    {
+      int size;
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      printf("MPI: Number of processes: %d\n", size);
+    }
+#endif
+
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
@@ -1687,20 +1701,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     pre_time.start();
     ra_time.start(); // just in case
 #ifdef BUILDMPI
-    char a;
-    char *pa = &a;
-    char **ppa = &pa;
-    int argc = 0;
-    int provided = 1;
-    MPI_Init_thread(&argc, &ppa, MPI_THREAD_FUNNELED, &provided);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0)
-    {
-      int size;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
-      printf("MPI: Number of processes: %d\n", size);
-    }
 #endif
 
     int DEM_divide = 0;
