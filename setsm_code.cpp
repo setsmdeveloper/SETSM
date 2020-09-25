@@ -3129,12 +3129,18 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     }
 
     printf("DBG: rank %d initializing SerialTileIndexer for length %d\n", rank, length);
+    // async_progressor should come before TileIndexer, need to to be destroyed second
+    std::unique_ptr<MPIProgressor> async_progressor = nullptr;
     std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
     if (length > 1 && !proinfo->IsRA) {
         // Setup MPI work queue for tiles for non-RA case
         printf("DBG: rank %d initializing MPITileIndexer for length %d\n", rank, length);
         tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
+        if(rank == 0) {
+            async_progressor = std::unique_ptr<MPIProgressor>(new MPIProgressor(
+                std::chrono::milliseconds(750)));
+        }
     } else if(rank != 0) {
         // only rank 0 will be doing RA, so all other ranks get no tiles
         tile_indices = std::move(std::unique_ptr<SerialTileIndexer>(new SerialTileIndexer(0)));

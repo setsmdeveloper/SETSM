@@ -6,6 +6,10 @@
 #include <sstream>
 #include <chrono>
 #include <cstdarg>
+#include <mutex>
+#include <chrono>
+#include <thread>
+#include <condition_variable>
 
 static void log(const char *fmt, ...) {
     static bool started = 0;
@@ -43,6 +47,69 @@ static void log(const char *fmt, ...) {
     printf("%s", buf);
 
 }
+
+// adapted from https://stackoverflow.com/a/29775639
+class InterruptableTimer {
+public:
+    /** sleep for time, interruptable
+     *
+     * Returns false if interrupted, otherwise true
+     **/
+    template<class R, class P>
+    bool sleep( std::chrono::duration<R,P> const& time ) {
+        auto is_stopped = [&](){ return _stop; };
+
+        std::unique_lock<std::mutex> lock(m);
+        return !cv.wait_for(lock, time, is_stopped);
+    }
+
+    void stop() {
+        std::unique_lock<std::mutex> lock(m);
+        _stop = true;
+        cv.notify_all();
+    }
+
+private:
+    std::mutex m;
+    std::condition_variable cv;
+    bool _stop = false;
+
+};
+
+template<class R, class P>
+void async_progress(InterruptableTimer &timer, std::chrono::duration<R,P> interval) {
+    int flag;
+    MPI_Status status;
+    while(timer.sleep(interval)) {
+        log("timer hit, probing MPI\n");
+        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
+    }
+    log("worker existing...\n");
+}
+
+class MPIProgressor {
+public:
+    template<class R, class P>
+    MPIProgressor(std::chrono::duration<R,P> interval) :
+        worker(&async_progress<R, P>, std::ref(timer), interval) {
+            log("progressor starting\n");
+        }
+
+    ~MPIProgressor() {
+        log("MPIProgressor destructor entrance. stopping timer..\n");
+        timer.stop();
+        log("timer stopped...\n");
+        worker.join();
+        log("worked has joined, MPIProgressor exiting destructor\n");
+    }
+        
+
+private:
+    InterruptableTimer timer;
+    std::thread worker;
+
+
+};
 
 
 class MPIException: public std::exception
