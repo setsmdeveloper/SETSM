@@ -84,6 +84,20 @@ to the Makefile.
 If SETSM is built with both MPI and OpenMP it is usually best to run one 
 MPI process per compute node and allow multithreading within the node.
 
+MPI in SETSM **requires** async progress support. Most MPI implementations
+provide this, though it may be disabled by default. Usually it can be enabled
+using environment variables. To enable async progress for intelmpi, set
+`I_MPI_ASYNC_PROGRESS=1`/ Similarly, for mavpich2, set `MV2_ASYNC_PROGRESS=1`.
+
+Some MPI implementations do not support async progress. Notably, the MPI
+implementation provided by cray has some issues on this front. For these
+cases, SETSM can provide it's own async progress support. To enable this,
+set `SETSM_CUSTOM_ASYNC=1` in the environment. This mode requires that
+the MPI implementation provide multthreaded support. Again, most
+implementations support this, but may not have it enabled by default. For
+example, some cray systems may require that an environment variable be
+set: `MPICH_MAX_THREAD_SAFETY=multiple`. 
+
 #### A note about precision
 
 SETSM can be quite sensitive to roundoff error for some terrains.  We have 
