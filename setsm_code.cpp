@@ -34,7 +34,7 @@ int main(int argc,char *argv[])
     int provided = 1;
     int requested = need_custom_async_progress() ? MPI_THREAD_MULTIPLE : MPI_THREAD_FUNNELED;
     MPI_Init_thread(&argc, &argv, requested, &provided);
-    if(provided != requested) {
+    if(provided < requested) {
         printf("ERROR: mpi requested threading support level %d but got %d\n", requested, provided);
         MPI_Finalize();
         exit(1);
