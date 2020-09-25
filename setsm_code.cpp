@@ -3131,7 +3131,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     printf("DBG: rank %d initializing SerialTileIndexer for length %d\n", rank, length);
     std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
-    if (length > 1) {
+    if (length > 1 && !proinfo->IsRA) {
         // Setup MPI work queue for tiles for non-RA case
         printf("DBG: rank %d initializing MPITileIndexer for length %d\n", rank, length);
         tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
