@@ -26,8 +26,14 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
-#define min(a, b)  (((a) < (b)) ? (a) : (b))
-#define max(a, b)  (((a) > (b)) ? (a) : (b))
+// Don't use macros here, they break things in the c++ stdlibrary
+// see here for rationale:
+// https://en.cppreference.com/w/cpp/language/template_argument_deduction
+template<typename T> struct identity { typedef T type; };
+template <typename T>
+constexpr  const T& min(const T& a, const typename identity<T>::type& b) { return a < b ? a : b; }
+template <typename T>
+constexpr  const T& max(const T& a, const typename identity<T>::type& b) { return a > b ? a : b; }
 #define SUB_RATIO 4.6
 
 char* remove_ext(const char* mystr);
