@@ -20,8 +20,8 @@ MPIFLAGS = -DBUILDMPI
 INCS = $(TIFFINC) $(GEOTIFFINC)
 LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) $(PROJLIB)
 
-OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o
-HDRS = Typedefine.hpp CoordConversion.hpp SubFunctions.hpp Template.hpp LSF.hpp Orthogeneration.hpp Coregistration.hpp SDM.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp git_description.h counter.hpp
+OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o log.o
+HDRS = Typedefine.hpp CoordConversion.hpp SubFunctions.hpp Template.hpp LSF.hpp Orthogeneration.hpp Coregistration.hpp SDM.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp git_description.h counter.hpp log.hpp
 
 ifeq ($(COMPILER), intel)
   CC=icc
