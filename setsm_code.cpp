@@ -24,6 +24,7 @@
 #endif
 
 
+#include "log.hpp"
 #include "setsm_code.hpp"
 
 
@@ -1517,11 +1518,7 @@ int main(int argc,char *argv[])
                         else if( strcmp(args.Image[0],args.Image[1]) != 0)
                         {
                             main_pre.stop();
-                            std::ostringstream os;
-                            os << "main pre time is "
-                               << std::chrono::duration_cast<std::chrono::seconds>(main_pre.get_elapsed_time()).count()
-                               << " seconds";
-                            printf("%s\n", os.str().c_str());
+                            printf("main pre time is %ld seconds\n", main_pre.get_elapsed_seconds());
 
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
                             main_post.start();
@@ -1611,12 +1608,7 @@ int main(int argc,char *argv[])
     free(Imageparams);
 
     main_post.stop();
-    
-    std::ostringstream os;
-    os << "main post time is "
-       << std::chrono::duration_cast<std::chrono::seconds>(main_post.get_elapsed_time()).count()
-       << " seconds";
-    printf("%s\n", os.str().c_str());
+    printf("main post time is %ld seconds\n", main_post.get_elapsed_seconds());
 
     return 0;
 }
@@ -2442,12 +2434,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 ra_time.start();
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
                                 ra_time.stop();
-
-                                std::ostringstream os;
-                                os << "RA time is "
-                                   << std::chrono::duration_cast<std::chrono::seconds>(ra_time.get_elapsed_time()).count()
-                                   << " seconds";
-                                printf("%s\n", os.str().c_str());
+                                printf("RA time is %ld seconds\n", ra_time.get_elapsed_seconds());
 
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
@@ -2546,25 +2533,16 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if(!args.check_gridonly)
                             {
                                 pre_time.stop();
-                                std::ostringstream os;
-                                os << "pre time is "
-                                   << std::chrono::duration_cast<std::chrono::seconds>(pre_time.get_elapsed_time()).count()
-                                   << " seconds";
-                                printf("%s\n", os.str().c_str());
+                                printf("pre time is %ld seconds\n", pre_time.get_elapsed_seconds());
 
                                 StopWatch match_time;
                                 match_time.start();
                                 printf("calling matching setsm\n");
+
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
-                                printf("matching setsm returned\n");
-                                {
-                                    match_time.stop();
-                                    std::ostringstream os;
-                                    os << "matching time is "
-                                       << std::chrono::duration_cast<std::chrono::seconds>(match_time.get_elapsed_time()).count()
-                                       << " seconds";
-                                    printf("%s\n", os.str().c_str());
-                                }
+
+                                match_time.stop();
+                                printf("matching time is %ld seconds\n", match_time.get_elapsed_seconds());
 
                                 post_time.start();
                             }
@@ -2805,35 +2783,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         
                                         Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
 
-                                        {
-                                            StopWatch sw;
-                                            sw.start();
+                                        MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
 
-                                            MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
 
-                                            sw.stop();
-                                            std::ostringstream os;
-                                            os << "MergeTiles_Ortho time is "
-                                               << std::chrono::duration_cast<std::chrono::minutes>(
-                                                        sw.get_elapsed_time()).count()
-                                               << " minutes";
-                                            printf("%s\n", os.str().c_str());
-                                        }
-                                        
-                                        {
-                                            StopWatch sw;
-                                            sw.start();
-
-                                            NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
-
-                                            sw.stop();
-                                            std::ostringstream os;
-                                            os << "NNA_M_MT time is "
-                                               << std::chrono::duration_cast<std::chrono::minutes>(
-                                                        sw.get_elapsed_time()).count()
-                                               << " minutes";
-                                            printf("%s\n", os.str().c_str());
-                                        }
+                                        NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
                                         
                                         ET = time(0);
                                         gap = difftime(ET,ST);
@@ -3030,11 +2983,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
 #endif
     
     post_time.stop();
-    std::ostringstream os;
-    os << "post time is "
-       << std::chrono::duration_cast<std::chrono::seconds>(post_time.get_elapsed_time()).count()
-       << " seconds";
-    printf("%s\n", os.str().c_str());
+    printf("post time is %ld seconds\n", post_time.get_elapsed_seconds());
+
     return DEM_divide;
 }
 
@@ -4689,12 +4639,8 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         }
 
         tile_time.stop();
-
-        std::ostringstream os;
-        os << "Computation time for tile (" << row << ", " << col << ") is "
-           << std::chrono::duration_cast<std::chrono::seconds>(tile_time.get_elapsed_time()).count()
-           << " seconds";
-        printf("%s\n", os.str().c_str());
+        printf("Computation time for tile (%d,%d) is %ld seconds\n",
+            row, col, tile_time.get_elapsed_seconds());
     }
     
     free(iterations);
