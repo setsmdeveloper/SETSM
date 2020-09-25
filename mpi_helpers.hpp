@@ -71,10 +71,8 @@ void async_progress(InterruptableTimer &timer, std::chrono::duration<R,P> interv
     int flag;
     MPI_Status status;
     while(timer.sleep(interval)) {
-        LOG("timer hit, probing MPI\n");
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
     }
-    LOG("worker exiting...\n");
 }
 
 class MPIProgressor {
@@ -82,15 +80,11 @@ public:
     template<class R, class P>
     MPIProgressor(std::chrono::duration<R,P> interval) :
         worker(&async_progress<R, P>, std::ref(timer), interval) {
-            LOG("progressor starting\n");
         }
 
     ~MPIProgressor() {
-        LOG("MPIProgressor destructor entrance. stopping timer..\n");
         timer.stop();
-        LOG("timer stopped...\n");
         worker.join();
-        LOG("worked has joined, MPIProgressor exiting destructor\n");
     }
         
 
@@ -154,12 +148,8 @@ class MPICounter {
     }
 
     ~MPICounter() {
-        LOG("freeing window...\n");
         MPI_Win_free(&win);
-        LOG("window freed\n");
-        LOG("freeing memory...\n");
         MPI_Free_mem(local);
-        LOG("memory freed\n");
 
     }
 
@@ -167,13 +157,11 @@ class MPICounter {
     MPICounter operator=(const MPICounter&) = delete;
 
     int next() {
-        LOG("locking window...\n");
         int ret = MPI_Win_lock(MPI_LOCK_SHARED, 0, 0, win);
         if(ret != MPI_SUCCESS) {
             throw MPIException("MPI_Win_lock", ret, "Failed to lock counter window");
         }
 
-        LOG("window locked. Fetching and updaating...\n");
         const int one = 1;
         int val;
         ret = MPI_Fetch_and_op(&one, &val, MPI_INT, 0, 0, MPI_SUM, win);
@@ -181,12 +169,10 @@ class MPICounter {
             throw MPIException("MPI_Fetch_and_op", ret, "failed to get and increment counter");
         }
 
-        LOG("fetch and update done. unlocking...\n");
         ret = MPI_Win_unlock(0, win);
         if(ret != MPI_SUCCESS) {
             throw MPIException("MPI_win_unlock", ret, "Failed to unlock window for counter");
         }
-        LOG("unlocked. returning %d\n", val);
 
         return val;
     }
@@ -204,14 +190,10 @@ private:
 public:
     MPITileIndexer(int length, int rank) : counter(new MPICounter), length(length), rank(rank) {}
     int next() {
-        printf("DBG: rank %d calling counter->next()...\n", rank);
         int i = counter->next();
-        printf("DBG: rank %d counter->next() returned %d\n", rank, i);
         if(i < length) {
-            printf("DBG: rank %d (%d < %d), returning %d from next()\n", rank, i, length, i);
             return i;
         }
-        printf("DBG: rank %d (%d >= %d), returning %d from next()\n", rank, i, length, -1);
         return -1;
     }
 };
