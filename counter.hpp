@@ -4,6 +4,46 @@
 #include <mpi.h>
 #include <string>
 #include <sstream>
+#include <chrono>
+#include <cstdarg>
+
+static void log(const char *fmt, ...) {
+    static bool started = 0;
+    static long start_time;
+    static int rank;
+
+    unsigned long now = 
+        std::chrono::duration_cast<std::chrono::milliseconds>
+        (std::chrono::system_clock::now().time_since_epoch()).count();
+
+    if(!started) {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank == 0) {
+            start_time = now;
+        }
+        int ret = MPI_Bcast(&start_time, 1,MPI_LONG, 0, MPI_COMM_WORLD);
+        if(ret != MPI_SUCCESS) {
+            printf("FAILED to init logging!\n");
+            return;
+        }
+        started = 1;
+    }
+    double elapsed = now - start_time;
+    elapsed /= 1000;
+
+    char buf[1024];
+
+    int n = sprintf(buf, "%02d - %06.2f: ", rank, elapsed);
+
+    va_list ap;
+    va_start(ap, fmt);
+    vsprintf(buf + n, fmt, ap);
+    va_end(ap);
+
+    printf("%s", buf);
+
+}
+
 
 class MPIException: public std::exception
 {
@@ -57,12 +97,12 @@ class MPICounter {
     }
 
     ~MPICounter() {
-        printf("freeing window...\n");
+        log("freeing window...\n");
         MPI_Win_free(&win);
-        printf("window freed\n");
-        printf("freeing memory...\n");
+        log("window freed\n");
+        log("freeing memory...\n");
         MPI_Free_mem(local);
-        printf("memory freed\n");
+        log("memory freed\n");
 
     }
 
@@ -70,13 +110,13 @@ class MPICounter {
     MPICounter operator=(const MPICounter&) = delete;
 
     int next() {
-        printf("locking window...\n");
+        log("locking window...\n");
         int ret = MPI_Win_lock(MPI_LOCK_SHARED, 0, 0, win);
         if(ret != MPI_SUCCESS) {
             throw MPIException("MPI_Win_lock", ret, "Failed to lock counter window");
         }
 
-        printf("window locked. Fetching and updaating...\n");
+        log("window locked. Fetching and updaating...\n");
         const int one = 1;
         int val;
         ret = MPI_Fetch_and_op(&one, &val, MPI_INT, 0, 0, MPI_SUM, win);
@@ -84,12 +124,12 @@ class MPICounter {
             throw MPIException("MPI_Fetch_and_op", ret, "failed to get and increment counter");
         }
 
-        printf("fetch and update done. unlocking...\n");
+        log("fetch and update done. unlocking...\n");
         ret = MPI_Win_unlock(0, win);
         if(ret != MPI_SUCCESS) {
             throw MPIException("MPI_win_unlock", ret, "Failed to unlock window for counter");
         }
-        printf("unlocked. returning %d\n", val);
+        log("unlocked. returning %d\n", val);
 
         return val;
     }
