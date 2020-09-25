@@ -29,10 +29,6 @@ const char setsm_version[] = "4.3.2";
 
 int main(int argc,char *argv[])
 {
-    StopWatch main_pre;
-    StopWatch main_post;
-    main_post.start();
-    main_pre.start();
 
 #ifdef BUILDMPI
     int provided = 1;
@@ -1514,11 +1510,7 @@ int main(int argc,char *argv[])
                         }
                         else if( strcmp(args.Image[0],args.Image[1]) != 0)
                         {
-                            main_pre.stop();
-                            printf("main pre time is %ld seconds\n", main_pre.get_elapsed_seconds());
-
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
-                            main_post.start();
 
                             char DEMFilename[500];
                             char Outputpath[500];
@@ -1603,10 +1595,7 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
-
-    main_post.stop();
-    printf("main post time is %ld seconds\n", main_post.get_elapsed_seconds());
-
+    
     return 0;
 }
 
@@ -1688,12 +1677,6 @@ void DownSample(ARGINFO &args)
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
 {
-    StopWatch post_time;
-    StopWatch pre_time;
-    StopWatch ra_time;
-    post_time.start(); // just in case
-    pre_time.start();
-    ra_time.start(); // just in case
 #ifdef BUILDMPI
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -2428,11 +2411,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 
-                                ra_time.start();
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
-                                ra_time.stop();
-                                printf("RA time is %ld seconds\n", ra_time.get_elapsed_seconds());
-
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2529,30 +2508,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
-                                pre_time.stop();
-                                printf("pre time is %ld seconds\n", pre_time.get_elapsed_seconds());
-
-                                StopWatch match_time;
-                                match_time.start();
-                                printf("calling matching setsm\n");
-
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
-
-                                match_time.stop();
-                                printf("matching time is %ld seconds\n", match_time.get_elapsed_seconds());
-
-                                post_time.start();
                             }
-                            printf("before MPI barrier and finalize\n");
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
                             MPI_Finalize();
                             if(rank != 0)
                                 exit(0);
 #endif
-                            printf("after MPI barrier and finalize\n");
-
-                            post_time.start();
                             if(!args.check_ortho)
                             {
                                 char check_file[500];
@@ -2779,9 +2742,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         ST = time(0);
                                         
                                         Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
-
                                         MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
-
 
                                         NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
                                         
@@ -2863,15 +2824,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 else
                                 {
                                     ST = time(0);
-                                    printf("allocating space for Ortho_values\n");
                                     
                                     Ortho_values = (signed char*)malloc(sizeof(signed char)*Final_DEMsize.width*Final_DEMsize.height);
-                                    printf("Calling MergeTiles_Ortho\n");
                                     MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,Final_DEMsize,FinalDEM_boundary);
-                                    printf("Calling NNA_M_MT\n");
                                     
                                     NNA_M_MT(proinfo, param, iter_row_start, t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, 0, Ortho_values, H_value, MT_value, Final_DEMsize, FinalDEM_boundary);
-                                    printf("NNA_M_MT Done\n");
                                     
                                     ET = time(0);
                                     gap = difftime(ET,ST);
@@ -2979,9 +2936,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     }
 #endif
     
-    post_time.stop();
-    printf("post time is %ld seconds\n", post_time.get_elapsed_seconds());
-
     return DEM_divide;
 }
 
@@ -3060,9 +3014,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
 
-        StopWatch tile_time;
-        tile_time.start();
-        
 #ifdef BUILDMPI
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
@@ -4572,10 +4523,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             free(Startpos_ori);
             free(Subsetsize);
         }
-
-        tile_time.stop();
-        printf("Computation time for tile (%d,%d) is %ld seconds\n",
-            row, col, tile_time.get_elapsed_seconds());
     }
     
     free(iterations);
