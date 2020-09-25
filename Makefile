@@ -40,8 +40,8 @@ else ifeq ($(COMPILER), pgi)
 else ifeq ($(COMPILER), cray)
   CC=cc
   CXX=CC
-  MPICC=mpicc
-  MPICXX=mpicxx
+  MPICC=cc
+  MPICXX=CC
   CFLAGS=
   CXXFLAGS=-hstd=c++11 -h aggress
 else
