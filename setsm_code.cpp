@@ -39,7 +39,12 @@ int main(int argc,char *argv[])
 #ifdef BUILDMPI
     int provided = 1;
     int requested = MPI_THREAD_MULTIPLE;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    MPI_Init_thread(&argc, &argv, requested, &provided);
+    if(provided != requested) {
+        printf("ERROR: need mpi multi thread support\n");
+        MPI_Finalize();
+        exit(1);
+    }
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0)
