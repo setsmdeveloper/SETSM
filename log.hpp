@@ -38,6 +38,6 @@ private:
     bool is_running;
 };
 
-void init_logging();
+int init_logging();
 void LOG(const char *fmt, ...);
 #endif

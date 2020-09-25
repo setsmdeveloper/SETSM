@@ -12,7 +12,11 @@ static bool started = 0;
 static long start_time;
 static int rank;
 
-static int _init_logging(long now) {
+int init_logging() {
+    unsigned long now =
+        std::chrono::duration_cast<std::chrono::milliseconds>
+        (std::chrono::system_clock::now().time_since_epoch()).count();
+
 #ifdef BUILDMPI
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank == 0) {
@@ -37,8 +41,12 @@ void LOG(const char *fmt, ...) {
         (std::chrono::system_clock::now().time_since_epoch()).count();
 
     if(!started) {
-        if(_init_logging(now))
-            return;
+        printf("WARNING: logging not initialized, defaulting to printf\n");
+        va_list ap;
+        va_start(ap, fmt);
+        vprintf(fmt, ap);
+        va_end(ap);
+        return;
     }
 
     double elapsed = now - start_time;
@@ -56,6 +64,3 @@ void LOG(const char *fmt, ...) {
     printf("%s", buf);
 }
 
-void init_logging() {
-    LOG("logging initialized\n");
-}

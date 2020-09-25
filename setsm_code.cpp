@@ -49,6 +49,8 @@ int main(int argc,char *argv[])
     }
 #endif
 
+    init_logging();
+
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
