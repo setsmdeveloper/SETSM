@@ -2552,15 +2552,30 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                    << " seconds";
                                 printf("%s\n", os.str().c_str());
 
+                                StopWatch match_time;
+                                match_time.start();
+                                printf("calling matching setsm\n");
                                 Matching_SETSM(proinfo,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
+                                printf("matching setsm returned\n");
+                                {
+                                    match_time.stop();
+                                    std::ostringstream os;
+                                    os << "matching time is "
+                                       << std::chrono::duration_cast<std::chrono::seconds>(match_time.get_elapsed_time()).count()
+                                       << " seconds";
+                                    printf("%s\n", os.str().c_str());
+                                }
+
                                 post_time.start();
                             }
+                            printf("before MPI barrier and finalize\n");
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
                             MPI_Finalize();
                             if(rank != 0)
                                 exit(0);
 #endif
+                            printf("after MPI barrier and finalize\n");
 
                             post_time.start();
                             if(!args.check_ortho)
@@ -2898,11 +2913,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 else
                                 {
                                     ST = time(0);
+                                    printf("allocating space for Ortho_values\n");
                                     
                                     Ortho_values = (signed char*)malloc(sizeof(signed char)*Final_DEMsize.width*Final_DEMsize.height);
+                                    printf("Calling MergeTiles_Ortho\n");
                                     MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,Final_DEMsize,FinalDEM_boundary);
+                                    printf("Calling NNA_M_MT\n");
                                     
                                     NNA_M_MT(proinfo, param, iter_row_start, t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, 0, Ortho_values, H_value, MT_value, Final_DEMsize, FinalDEM_boundary);
+                                    printf("NNA_M_MT Done\n");
                                     
                                     ET = time(0);
                                     gap = difftime(ET,ST);
