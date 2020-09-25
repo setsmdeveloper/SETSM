@@ -2789,9 +2789,36 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         ST = time(0);
                                         
                                         Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
-                                        MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
+
+                                        {
+                                            StopWatch sw;
+                                            sw.start();
+
+                                            MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
+
+                                            sw.stop();
+                                            std::ostringstream os;
+                                            os << "MergeTiles_Ortho time is "
+                                               << std::chrono::duration_cast<std::chrono::minutes>(
+                                                        sw.get_elapsed_time()).count()
+                                               << " minutes";
+                                            printf("%s\n", os.str().c_str());
+                                        }
                                         
-                                        NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
+                                        {
+                                            StopWatch sw;
+                                            sw.start();
+
+                                            NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
+
+                                            sw.stop();
+                                            std::ostringstream os;
+                                            os << "NNA_M_MT time is "
+                                               << std::chrono::duration_cast<std::chrono::minutes>(
+                                                        sw.get_elapsed_time()).count()
+                                               << " minutes";
+                                            printf("%s\n", os.str().c_str());
+                                        }
                                         
                                         ET = time(0);
                                         gap = difftime(ET,ST);
