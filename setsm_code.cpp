@@ -16,11 +16,10 @@
 
 #include <atomic>
 #include <memory>
-#include <sstream>
 
 #ifdef BUILDMPI
 #include "mpi.h"
-#include "counter.hpp"
+#include "mpi_helpers.hpp"
 #endif
 
 
@@ -39,10 +38,10 @@ int main(int argc,char *argv[])
 
 #ifdef BUILDMPI
     int provided = 1;
-    int requested = MPI_THREAD_MULTIPLE;
+    int requested = need_custom_async_progress() ? MPI_THREAD_MULTIPLE : MPI_THREAD_FUNNELED;
     MPI_Init_thread(&argc, &argv, requested, &provided);
     if(provided != requested) {
-        printf("ERROR: need mpi multi thread support\n");
+        printf("ERROR: mpi requested threading support level %d but got %d\n", requested, provided);
         MPI_Finalize();
         exit(1);
     }
@@ -2988,70 +2987,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     return DEM_divide;
 }
 
-class TileIndexer {
-    public:
-    virtual int next() = 0;
-    virtual ~TileIndexer() {};
-};
-
-#ifdef BUILDMPI
-// Reorder tiles for static load balancing with MPI
-int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
-{
-    int i,j;
-
-    int *temp = (int*)malloc(col_length*row_length*2*sizeof(int));
-    int midrow = ceil(row_length / 2.0);
-    int midcol = ceil(col_length / 2.0);
-
-    for (i = 0; i < length*2; i += 2)
-    {
-        int closest = 0;
-        int closest_dist = midrow + midcol;
-        for (j = 0; j < length*2; j += 2)
-        {
-            int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
-            if (new_dist <= closest_dist)
-            {
-                closest_dist = new_dist;
-                closest = j;
-            }
-        }
-        temp[i] = iterations[closest];
-        temp[i+1] = iterations[closest+1];
-        iterations[closest] = -1;
-        iterations[closest+1] = -1;
-    }
-
-    for (i = 0; i < length*2; i++)
-    {
-        iterations[i] = temp[i];
-    }
-    free(temp);
-    return length;
-}
-
-class MPITileIndexer : public TileIndexer {
-private:
-    std::shared_ptr<MPICounter> counter;
-    int length;
-    int rank;
-public:
-    MPITileIndexer(int length, int rank) : counter(new MPICounter), length(length), rank(rank) {}
-    int next() {
-        printf("DBG: rank %d calling counter->next()...\n", rank);
-        int i = counter->next();
-        printf("DBG: rank %d counter->next() returned %d\n", rank, i);
-        if(i < length) {
-            printf("DBG: rank %d (%d < %d), returning %d from next()\n", rank, i, length, i);
-            return i;
-        }
-        printf("DBG: rank %d (%d >= %d), returning %d from next()\n", rank, i, length, -1);
-        return -1;
-    }
-};
-#endif
-
 class SerialTileIndexer : public TileIndexer {
 private:
     int i;
@@ -3059,12 +2994,13 @@ private:
 public:
     SerialTileIndexer(int length) : i(0), length(length) {}
     int next() {
+        if(i >= length)
+            return -1;
         int ret = -1;
         if(i < length) {
             ret = i;
             i++;
         }
-        printf("DBG: SerialTileIndexer returning %d\n", ret);
         return ret;
     }
 };
@@ -3107,7 +3043,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         // Setup MPI work queue for tiles for non-RA case
         printf("DBG: rank %d initializing MPITileIndexer for length %d\n", rank, length);
         tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
-        if(rank == 0) {
+
+        // only enable custom async progress if it was requested
+        if(rank == 0 && need_custom_async_progress()) {
             async_progressor = std::unique_ptr<MPIProgressor>(new MPIProgressor(
                 std::chrono::milliseconds(750)));
         }
@@ -3116,7 +3054,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         tile_indices = std::move(std::unique_ptr<SerialTileIndexer>(new SerialTileIndexer(0)));
 
     }
-#else
 #endif
 
     int tile_iter, i;

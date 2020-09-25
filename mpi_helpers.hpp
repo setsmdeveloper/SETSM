@@ -9,8 +9,34 @@
 #include <chrono>
 #include <thread>
 #include <condition_variable>
+#include <array>
+#include <cstdlib>
+#include <cstring>
 
 #include "log.hpp"
+#include "setsm_code.hpp"
+
+static bool need_custom_async_progress() {
+    static const std::array<std::string, 6> enable_strs = {
+        "1", "y", "on", "yes", "enable" };
+
+    const char *s = getenv("SETSM_CUSTOM_ASYNC");
+    if(!s)
+        return false;
+    
+    // convert to lowercase for comparison
+    std::unique_ptr<char []> lower(new char[strlen(s) +1]());
+    for(int i = 0; s[i]; i++){
+          lower[i] = tolower(s[i]);
+    }
+
+    for(auto &s : enable_strs) {
+        if(s == lower.get()) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // adapted from https://stackoverflow.com/a/29775639
 class InterruptableTimer {
@@ -169,3 +195,24 @@ private:
     MPI_Win win;
 
 };
+
+class MPITileIndexer : public TileIndexer {
+private:
+    std::shared_ptr<MPICounter> counter;
+    int length;
+    int rank;
+public:
+    MPITileIndexer(int length, int rank) : counter(new MPICounter), length(length), rank(rank) {}
+    int next() {
+        printf("DBG: rank %d calling counter->next()...\n", rank);
+        int i = counter->next();
+        printf("DBG: rank %d counter->next() returned %d\n", rank, i);
+        if(i < length) {
+            printf("DBG: rank %d (%d < %d), returning %d from next()\n", rank, i, length, i);
+            return i;
+        }
+        printf("DBG: rank %d (%d >= %d), returning %d from next()\n", rank, i, length, -1);
+        return -1;
+    }
+};
+
