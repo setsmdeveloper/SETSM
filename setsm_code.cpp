@@ -3106,6 +3106,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // async_progressor should come before TileIndexer, needs to to be destroyed second
+    std::unique_ptr<MPIProgressor> async_progressor = nullptr;
 #endif
 
     int final_iteration = -1;
@@ -3128,9 +3131,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         }
     }
 
-    printf("DBG: rank %d initializing SerialTileIndexer for length %d\n", rank, length);
-    // async_progressor should come before TileIndexer, need to to be destroyed second
-    std::unique_ptr<MPIProgressor> async_progressor = nullptr;
+    printf("DBG: initializing SerialTileIndexer for length %d\n", length);
     std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
     if (length > 1 && !proinfo->IsRA) {
@@ -3152,8 +3153,6 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     int tile_iter, i;
     while((tile_iter = tile_indices->next()) != -1)
     {
-        printf("DBG: rank %d got index %d\n", rank, tile_iter);
-
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
 
