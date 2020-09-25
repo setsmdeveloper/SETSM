@@ -81,7 +81,7 @@ $(MPI_OBJS) : $(HDRS)
 	$(CXX) -c $(CXXFLAGS) $(INCS) $< -o $@
 
 %_mpi.o : %.cpp
-	$(CXX) -c $(CXXFLAGS) $(MPIFLAGS) $(INCS) $< -o $@
+	$(MPICXX) -c $(CXXFLAGS) $(MPIFLAGS) $(INCS) $< -o $@
 
 .PHONY: clean
 
