@@ -146,6 +146,7 @@ typedef struct tagD3DPoint
     double m_X;
 	double m_Y;
 	double m_Z;
+    short m_roh;
     uint8 flag;
     
     tagD3DPoint()
@@ -153,9 +154,10 @@ typedef struct tagD3DPoint
         m_X = 0;
         m_Y = 0;
         m_Z = 0;
+        m_roh = 0;
         flag = false;
     }
-    tagD3DPoint(double m_X, double m_Y, double m_Z, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),flag(flag)
+    tagD3DPoint(double m_X, double m_Y, double m_Z, short roh = 0, uint8 flag = 0):m_X(m_X),m_Y(m_Y),m_Z(m_Z),m_roh(roh),flag(flag)
     {
         
     }
@@ -164,6 +166,7 @@ typedef struct tagD3DPoint
         m_X = p.m_X;
         m_Y = p.m_Y;
         m_Z = p.m_Z;
+        m_roh = p.m_roh;
         flag = p.flag;
     }
     
@@ -179,19 +182,20 @@ typedef struct tagD3DPoint
         this->m_X = p.m_X;
         this->m_Y = p.m_Y;
         this->m_Z = p.m_Z;
+        this->m_roh = p.m_roh;
         this->flag = p.flag;
         return *this;
     }
     
     tagD3DPoint operator+(const tagD3DPoint &p) const
     {
-        tagD3DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y, this->m_Z + p.m_Z, 0);
+        tagD3DPoint temp(this->m_X + p.m_X, this->m_Y + p.m_Y, this->m_Z + p.m_Z, this->m_roh + p.m_roh, 0);
         return temp;
     }
     
     tagD3DPoint operator-(const tagD3DPoint &p) const
     {
-        tagD3DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y, this->m_Z - p.m_Z, 0);
+        tagD3DPoint temp(this->m_X - p.m_X, this->m_Y - p.m_Y, this->m_Z - p.m_Z, this->m_roh - p.m_roh, 0);
         return temp;
     }
     
@@ -272,13 +276,20 @@ typedef struct tagNCCresult
 	//int roh_count;
 } NCCresult;
 
+typedef struct tagMultiMPs
+{
+    short peak_roh; //first peak roh
+    float peak_height; //first peak height
+    bool check_matched;
+} MultiMPs;
+
 typedef struct UpdateGrid{
     float Height; //after blunder detection
 	short minHeight;
 	short maxHeight;
 	
 	short roh;
-	short ortho_ncc[MaxNCC];
+	short *ortho_ncc;
     short Mean_ortho_ncc;
 
     unsigned char Matched_flag;
@@ -650,7 +661,7 @@ typedef struct taglevelinfo
     const int *Py_combined_level;
     const unsigned char *iteration;
     bool *check_matching_rate;
-    const PairInfo *pairinfo;
+    PairInfo *pairinfo;
     const CSize *Imagesize_ori;
     float pair_select_gncc;
 } LevelInfo;
