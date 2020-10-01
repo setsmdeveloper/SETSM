@@ -42,40 +42,27 @@ inline float SignedCharToFloat(signed char val);
 
 inline void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6]);
 
-//definition
-template <typename T>
-T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
-{
-    //_filter_size = 7, sigma = 1.6
-    double sigma = _sigma;
-    double temp,scale;
+static Matrix CreateGaussianFilter(int filter_size, double sigma) {
+
+    int half_filter_size = (int)(filter_size/2);
     double sum = 0;
-    double** GaussianFilter;
-    CSize result_size;
-    T* result_img;
-
-    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
-    for(int i=0;i<_filter_size;i++)
-        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
-
-    
-    result_size.width = _img_size.width/2;
-    result_size.height = _img_size.height/2;
-    scale=1/(sqrt(2*PI)*sigma);
-    
-    int half_filter_size = (int)(_filter_size/2);
-    
-    result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
     double tmp = -1/(2*sigma*sigma);
+    double scale=1/(sqrt(2*PI)*sigma);
 
-#pragma omp parallel for schedule(guided) private(temp) collapse(2) reduction(+:sum)
+    Matrix GaussianFilter(filter_size, filter_size);
+
+// This parallel section introduces nondeterminism, so disable
+// it for now. Consider re-enabling it if performance in this
+// code becomes an issue.
+//#pragma omp parallel for schedule(guided) collapse(2) reduction(+:sum)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            temp = (i*i+j*j)*tmp; //-1.0*(i*i+j*j)/(2*sigma*sigma);
-            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)*scale;
-            sum += exp(temp)*scale;
+            double temp = (i*i+j*j)*tmp;
+            double val = exp(temp)*scale;
+            GaussianFilter(i+half_filter_size, j+half_filter_size)=val;
+            sum += val;
         }
     }
 
@@ -84,9 +71,28 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            GaussianFilter[i+half_filter_size][j+half_filter_size]/=sum;
+            GaussianFilter(i+half_filter_size, j+half_filter_size)/=sum;
         }
     }
+    return GaussianFilter;
+}
+
+//definition
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
+{
+
+    int half_filter_size = (int)(_filter_size/2);
+
+    Matrix GaussianFilter = CreateGaussianFilter(_filter_size, _sigma);
+
+    CSize result_size;
+    result_size.width = _img_size.width/2;
+    result_size.height = _img_size.height/2;
+    
+    
+    T *result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
+
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for(long int r=0;r<result_size.height;r++)
@@ -105,13 +111,14 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     {
                         if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
                         {
-                            temp_v += GaussianFilter[l + half_filter_size][k + half_filter_size]*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
                             count ++;
                         }
                     }
                 }
             }
 
+            // only use filter value if entire filter was applied
             if(count == _filter_size*_filter_size)
                 result_img[r*result_size.width + c] = (T)temp_v;
             else
@@ -119,14 +126,6 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
         }
     }
     
-    for(int i=0;i<_filter_size;i++)
-        if(GaussianFilter[i])
-            free(GaussianFilter[i]);
-
-    if(GaussianFilter)
-        free(GaussianFilter);
-    
-
     return result_img;
 }
 

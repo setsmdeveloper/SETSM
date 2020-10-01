@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include <atomic>
+#include <memory>
+
 #include "setsm_code.hpp"
 
 #ifdef BUILDMPI
@@ -9323,8 +9326,15 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         }
         
         free(hdiffbin);
-        
+
+        // Iterates through points, updating the flag value
+        // for each point. But, also grabs the triangle for
+        // each point, and may update flag for points
+        // corresponding to those vertices. So, not safe to
+        // parallelize
+#ifndef DETERMINISTIC
 #pragma omp parallel for schedule(guided)
+#endif
         for(long index=0;index<num_points;index++)
         {
             if(pts[index].flag != 1)
@@ -10245,26 +10255,61 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,const CSize preSize,const CSize r
     return resize_GridPT3;
 }
 
+static void update_max(std::atomic<float> *cur, float val) {
+    float prev = *cur;
+    // exit this loop if cur becomes larger (or is larger) than val,
+    // or if cur is updated to val. This update will only happen when
+    // val is larger than cur.
+    //
+    // See here for a similar construct: https://stackoverflow.com/a/16190791
+    while(val > prev) {
+        if(cur->compare_exchange_weak(prev, val)) {
+            break;
+        }
+    }
+}
+
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
-    
+
+    int len = rlevelinfo.Size_Grid2D->width * rlevelinfo.Size_Grid2D->height;
+
+    constexpr double unset = -1000;
+    std::unique_ptr<std::atomic<float>[]> heights(new std::atomic<float>[len]);
+    for(int i = 0; i < len; i++) {
+        heights[i] = unset;
+    }
+
 #pragma omp parallel for schedule(guided)
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
+        //unused in this function, but SetTinBoundary requres them
         double Total_Min_Z      =  100000;
         double Total_Max_Z      = -100000;
 
+        // get triangle and it's indicies
         const UI3DPOINT &t_tri = (tris[tcnt]);
         const int pdex0 = t_tri.m_X;
         const int pdex1 = t_tri.m_Y;
         const int pdex2 = t_tri.m_Z;
         
+        // if triangle not entirely within grid, continue
+        // this is mostly a sanity check I think
         if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
         {
+            // Get the point corresponding to each triangle
+            // vertex
             const D3DPOINT &TriP1 = (pts[pdex0]);
             const D3DPOINT &TriP2 = (pts[pdex1]);
             const D3DPOINT &TriP3 = (pts[pdex2]);
+
+
+            // These will be pooulated with a bounding box
+            // around the triangle
             int PixelMinXY[2], PixelMaxXY[2];
+
+            // These are unused in this function, but
+            // SetTinBoundary requries them
             double temp_MinZ, temp_MaxZ;
             SetTinBoundary(
                 rlevelinfo,
@@ -10278,30 +10323,42 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                 temp_MinZ,
                 temp_MaxZ);
             
+            // iterate through points in the triangle bounding box
             for (long Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
             {
                 for (long Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                 {
+                    //Index of the point in GridPT3
                     const int Index= (long)rlevelinfo.Size_Grid2D->width*Row + Col;
 
                     float Z = -1000.0;
                     bool rtn = false;
                      
+                    // The point on object/world coordinates
+                    // x, y, z, flag
                     D3DPOINT CurGPXY(
                         (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
                         (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
                         0,
                         0);
 
+                    // checks to see if point is inside triangle
+                    // if it is, returns true
+                    // if inside, interpolates height value of point
+                    // and puts that value in Z
                     rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
                     
                     if (rtn)
                     {
-#pragma omp atomic write
-                        GridPT3[Index].Height = (float)Z;
+                        update_max(&heights[Index], (float)Z);
                     }
                 }
             }
+        }
+    }
+    for(int i = 0; i < len; i++) {
+        if(heights[i] != unset) {
+            GridPT3[i].Height = heights[i];
         }
     }
     return true;
@@ -10521,10 +10578,15 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                 std::array<double*, 3>* left_patch_vecs_array;
                 std::array<double*, 3>* right_patch_vecs_array;
 
+                // sum reduction on doubles makes this nondeterminisitc
+#ifndef DETERMINISTIC
 #pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#endif
                 {
                     
+#ifndef DETERMINISTIC
 #pragma omp single
+#endif
                     {
                         // Make patch vectors thread private rather than private to each loop iteration
                         // These are used by postNCC but allocated here for efficiency
@@ -10539,7 +10601,9 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                         }
                     }
                     
+#ifndef DETERMINISTIC
 #pragma omp for schedule(guided)
+#endif
                     for(long i = 0; i<NumofPts ; i++)
                     {
                         double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
@@ -10573,7 +10637,9 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                         }
                     } // end omp for
                     
+#ifndef DETERMINISTIC
 #pragma omp single
+#endif
                     {
                         // free thread-private vectors
                         for (int th=0; th<omp_get_num_threads(); th++) {
@@ -10589,6 +10655,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                     
                 } // end omp parallel
 
+                printf("in AdjustParam, count_pts is %d\n", count_pts);
                 if(count_pts > 10)
                 {
                     double shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
