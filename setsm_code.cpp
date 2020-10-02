@@ -1708,6 +1708,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     
     bool cal_check;
     
+    if(args.System_memory <= 0) {
+        printf("ERROR: Cannot determine system memory. Specify system memory on the command line with the '-mem' option.\n");
+        exit(1);
+    }
     ProInfo *proinfo = new ProInfo;
     proinfo->number_of_images = args.number_of_images;
     proinfo->sensor_type = args.sensor_type;
