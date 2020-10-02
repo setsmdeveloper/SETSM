@@ -92,6 +92,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
 
 void AWNCC_single(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, int pair_number);
 
+void AWNCC_AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
+
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, MultiMPs **multimps, vector<D3DPOINT> &MatchedPts_list_mps);
 
 void AWNCC_multi(ProInfo *proinfo, VOXEL **grid_voxel, LevelInfo &rlevelinfo, CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
@@ -150,7 +152,9 @@ bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize,const int Templ
 
 bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, int &selected_images);
 
-bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, int &selected_images);
+bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int pair_number);
+
+bool check_image_boundary_height(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double Height, const int H_template_size, const int pair_number);
 
 double CalMemorySize_Post(CSize DEM_size,CSize Final_DEMsize);
 

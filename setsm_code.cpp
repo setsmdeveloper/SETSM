@@ -1714,7 +1714,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->check_full_cal = args.check_full_cal;
     proinfo->SGM_py = args.SGM_py;
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
-    printf("sgm level %d\n",proinfo->SGM_py);
+    printf("sgm level %d\t system memory %f\n",proinfo->SGM_py,proinfo->System_memory);
     
     if(args.check_ortho)
     {
@@ -5139,12 +5139,56 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     lower_level_match = false;
                                     MultiMPs **multimps = (MultiMPs**)calloc(sizeof(MultiMPs*),Grid_length);
                                     for(long count = 0 ; count < Grid_length ; count++)
-                                        multimps[count] = (MultiMPs*)calloc(sizeof(MultiMPs),levelinfo.pairinfo->NumberOfPairs);
+                                    {
+                                        multimps[count] = (MultiMPs*)calloc(sizeof(MultiMPs),levelinfo.pairinfo->NumberOfPairs+1);
+                                        for(int temp_i = 0 ; temp_i < levelinfo.pairinfo->NumberOfPairs+1 ; temp_i++)
+                                        {
+                                            multimps[count][temp_i].peak_height = Nodata;
+                                            multimps[count][temp_i].check_matched = false;
+                                        }
+                                    }
                                     
                                     long max_count_MPs = 0;
+                                    long total_count_MPs = 0 ;
+                                    
+                                    AWNCC_AWNCC(proinfo,grid_voxel,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight);
+                                    
+                                    count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, MPP, final_level_iteration, MPP_stereo_angle, &MatchedPts_list);
+                                    
+                                    float min_pair_H = 9999;
+                                    float max_pair_H = -9999;
+                                    for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
+                                    {
+                                        long t_col         = (long)((MatchedPts_list[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
+                                        long t_row         = (long)((MatchedPts_list[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
+                                        const long ref_index((long)Size_Grid2D.width*t_row + t_col);
+                                        
+                                        if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
+                                        {
+                                            multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_roh = MatchedPts_list[tcnt].m_roh;
+                                            multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_height = MatchedPts_list[tcnt].m_Z;
+                                            multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].check_matched = true;
+                                            total_count_MPs++;
+                                            //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps[ref_index][pair_number].peak_roh,multimps[ref_index][pair_number].peak_height);
+                                            
+                                            //fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
+                                            if(min_pair_H > multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_height)
+                                                min_pair_H = multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_height;
+                                            if(max_pair_H < multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_height)
+                                                max_pair_H = multimps[ref_index][levelinfo.pairinfo->NumberOfPairs].peak_height;
+                                            
+                                        }
+                                    }
+                                    
+                                    printf("AWNCC row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                    
+                                    MatchedPts_list.clear();
                                     
                                     for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->NumberOfPairs ; pair_number++)
                                     {
+                                        min_pair_H = 9999;
+                                        max_pair_H = -9999;
+                                        
                                         AWNCC_single(proinfo,grid_voxel,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,pair_number);
                                         
                                         printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd computation of NCC!! minmax %f %f\n",row,col,level,iteration,minmaxHeight[0], minmaxHeight[1]);
@@ -5152,332 +5196,410 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, MPP, final_level_iteration, MPP_stereo_angle, &MatchedPts_list);
                                         
-                                        printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
+                                        if(max_count_MPs < count_MPs)
+                                            max_count_MPs = count_MPs;
                                         
-                                        if(count_MPs > 10)
+                                        char filename_pair[500];
+                                        sprintf(filename_pair,"%s/txt/matched_pts_%d_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration,pair_number);
+                                        FILE *pfile_pair = fopen(filename_pair,"w");
+                                        for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
                                         {
-                                            if (check_ortho_cal && proinfo->IsRA != 1)
-                                            {
-                                                printf("blunder detection for anchor points\n");
-                                                //anchor points
-                                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                                
-                                                if(temp_asc_fprint)
-                                                    pMT_all = fopen(filename_mps_all,"w");
-                                                for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
-                                                {
-                                                    ptslists[count_pt] = MatchedPts_list[count_pt];
-                                                    if(temp_asc_fprint)
-                                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
-                                                }
-                                                if(temp_asc_fprint)
-                                                    fclose(pMT_all);
-                                                
-                                                DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
-                                                
-                                                if(temp_asc_fprint)
-                                                    pMT_all = fopen(filename_mps_anchor,"w");
-                                                long tcnt;
-                                                count_results_anchor[0] = 0;
-                                                for(tcnt=0;tcnt<count_MPs;tcnt++)
-                                                {
-                                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
-                                                    {
-                                                        MatchedPts_list_anchor.push_back(ptslists[tcnt]);
-                                                        count_results_anchor[0]++;
-                                                        
-                                                        if(temp_asc_fprint)
-                                                            fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
-                                                    }
-                                                    ptslists[tcnt].flag = 0;
-                                                }
-                                                if(temp_asc_fprint)
-                                                    fclose(pMT_all);
-                                                
-                                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
-                                                
-                                                printf("blunder detection for all points\n");
-                                                //blunder detection
-                                                DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
-                                                
-                                                if(temp_asc_fprint)
-                                                    pMT_all = fopen(filename_mps_blunder,"w");
-                                                count_results[0] = 0;
-                                                for(tcnt=0;tcnt<count_MPs;tcnt++)
-                                                {
-                                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
-                                                    {
-                                                        MatchedPts_list_blunder.push_back(ptslists[tcnt]);
-                                                        count_results[0]++;
-                                                        
-                                                        if(temp_asc_fprint)
-                                                            fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
-                                                        
-                                                        if(minH_mps > ptslists[tcnt].m_Z)
-                                                            minH_mps        = ptslists[tcnt].m_Z;
-                                                        if(maxH_mps < ptslists[tcnt].m_Z)
-                                                            maxH_mps       = ptslists[tcnt].m_Z;
-                                                    }
-                                                }
-                                                if(temp_asc_fprint)
-                                                    fclose(pMT_all);
-                                                
-                                                free(ptslists);
-                                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
-                                                
-                                                
-                                                if(check_ortho_cal && proinfo->IsRA != 1)
-                                                {
-                                                    printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
-                                                    count_MPs = SetttingFlagOfGrid(levelinfo, GridPT3, MatchedPts_list_anchor, MatchedPts_list_blunder, &MatchedPts_list_mps);
-                                                    MatchedPts_list_anchor.clear();
-                                                    vector<D3DPOINT>().swap(MatchedPts_list_anchor);
-                                                    MatchedPts_list_blunder.clear();
-                                                    vector<D3DPOINT>().swap(MatchedPts_list_blunder);
-                                                }
-                                                printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
-                                                count_MPs = MatchedPts_list_mps.size();
-                                                
-                                                
-                                                
-                                                long i;
-                                                
-                                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                                
-                                                for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                                {
-                                                    ptslists[i] = MatchedPts_list_mps[i];
-                                                    //if(level >= 3)
-                                                    //    ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
-                                                }
-                                                
-                                                MatchedPts_list_mps.clear();
-                                                //vector<D3DPOINT>().swap(MatchedPts_list_mps);
-                                                
-                                                FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
-                                                delete origTri;
-                                                
-                                                count_tri = t_trilists.size();
-                                                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                                
-                                                for(i = 0 ; i < t_trilists.size() ; i++)
-                                                    trilists[i] = t_trilists[i];
-                                                
-                                                t_trilists.clear();
-                                                vector<UI3DPOINT>().swap(t_trilists);
-                                                
-                                                fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
-                                                
-                                                printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
-                                                
-                                                count_results[0] = Ortho_blunder(proinfo, levelinfo, MPP_simgle_image, ptslists, count_MPs, trilists,count_tri, GridPT3);
-                                                free(trilists);
-                                                
-                                                printf("end ortho_blunder %d\n",count_results[0]);
-                                                
-                                                if(level >= 3)
-                                                {
-                                                    int matched_pts = 0;
-                                                    vector<D3DPOINT> ortho_list;
-                                                    for(i=0;i<count_MPs;i++)
-                                                    {
-                                                        if(ptslists[i].flag != 1)
-                                                        {
-                                                            ortho_list.push_back(ptslists[i]);
-                                                            matched_pts++;
-                                                        }
-                                                    }
-                                                    
-                                                    free(ptslists);
-                                                    count_MPs = matched_pts;
-                                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                                    
-                                                    for( i = 0 ; i < ortho_list.size() ; i++)
-                                                    {
-                                                        ptslists[i] = ortho_list[i];
-                                                    }
-                                                    ortho_list.clear();
-                                                    vector<D3DPOINT>().swap(ortho_list);
-                                                }
-                                                
-                                                printf("load ortho_blunder pts %d\n",count_MPs);
-                                                
-                                                //Save triangulation and delete it since we will not use it
-                                                FullTriangulation *origTri_2 = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
-                                                delete origTri_2;
-                                                
-                                                count_tri = t_trilists.size();
-                                                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                                
-                                                for(i = 0 ; i < t_trilists.size() ; i++)
-                                                    trilists[i] = t_trilists[i];
-                                                
-                                                t_trilists.clear();
-                                                vector<UI3DPOINT>().swap(t_trilists);
-                                                
-                                                DecisionMPs_setheight(proinfo, levelinfo, count_MPs,GridPT3, iteration, Hinterval, minmaxHeight, ptslists,trilists,count_tri);
-                                                
-                                                free(trilists);
-                                                
-                                                printf("end decision_setheight\n");
-                                                
-                                                if(pre_matched_pts == 0)
-                                                    matching_change_rate = 0;
-                                                else
-                                                    matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-                                                
-                                                matching_rate = count_MPs/(double)(Accessable_grid);
-                                                
-                                                printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
-                                                pre_matched_pts = count_MPs;
-                                                
-                                                //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
-                                                //    level_check_matching_rate = true;
-                                                
-                                                if(max_count_MPs < count_MPs)
-                                                    max_count_MPs = count_MPs;
-                                                
-                                                printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
-                                                
-                                                final_iteration = iteration;
-                                                
-                                            }
-                                            else
-                                            {
-                                                printf("blunder detection for all points\n");
-                                                
-                                                if(temp_asc_fprint)
-                                                    pMT_all = fopen(filename_mps_all,"w");
-                                                
-                                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
-                                                for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
-                                                {
-                                                    ptslists[count_pt] = MatchedPts_list[count_pt];
-                                                    if(temp_asc_fprint)
-                                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
-                                                }
-                                                if(temp_asc_fprint)
-                                                    fclose(pMT_all);
-                                                
-                                                DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
-                                                
-                                                if(temp_asc_fprint)
-                                                    pMT_all = fopen(filename_mps_blunder,"w");
-                                                
-                                                count_results[0] = 0;
-                                                for(int tcnt=0;tcnt<count_MPs;tcnt++)
-                                                {
-                                                    if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
-                                                    {
-                                                        MatchedPts_list_mps.push_back(ptslists[tcnt]);
-                                                        count_results[0]++;
-                                                        
-                                                        if(temp_asc_fprint)
-                                                            fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
-                                                        
-                                                        if(minH_mps > ptslists[tcnt].m_Z)
-                                                            minH_mps        = ptslists[tcnt].m_Z;
-                                                        if(maxH_mps < ptslists[tcnt].m_Z)
-                                                            maxH_mps       = ptslists[tcnt].m_Z;
-                                                    }
-                                                }
-                                                if(temp_asc_fprint)
-                                                    fclose(pMT_all);
-                                                
-                                                count_MPs       = count_results[0];
-                                                
-                                                free(ptslists);
-                                                printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
-                                                
-                                                printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
-                                                count_MPs = MatchedPts_list_mps.size();
-                                                
-                                                long i;
-                                                
-                                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                                
-                                                for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                                    ptslists[i] = MatchedPts_list_mps[i];
-                                                
-                                                MatchedPts_list_mps.clear();
-                                                //vector<D3DPOINT>().swap(MatchedPts_list_mps);
-                                                /*
-                                                //Save triangulation and delete it since we will not use it
-                                                FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
-                                                delete origTri;
-                                                
-                                                count_tri = t_trilists.size();
-                                                trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                                
-                                                for(i = 0 ; i < t_trilists.size() ; i++)
-                                                    trilists[i] = t_trilists[i];
-                                                
-                                                t_trilists.clear();
-                                                vector<UI3DPOINT>().swap(t_trilists);
-                                                */
-                                                if(pre_matched_pts == 0)
-                                                    matching_change_rate = 0;
-                                                else
-                                                    matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
-                                                
-                                                printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
-                                                pre_matched_pts = count_results[0];
-                                                
-                                                matching_rate = count_MPs/(double)(Accessable_grid);
-                                                printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
-                                                
-                                                //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
-                                                //    level_check_matching_rate = true;
-                                                if(max_count_MPs < count_MPs)
-                                                    max_count_MPs = count_MPs;
-                                                
-                                                bool check_level_end = false;
-                                                
-                                                if(level != 0)
-                                                {
-                                                    if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
-                                                        check_level_end = true;
-                                                }
-                                            }
+                                            long t_col         = (long)((MatchedPts_list[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
+                                            long t_row         = (long)((MatchedPts_list[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
+                                            const long ref_index((long)Size_Grid2D.width*t_row + t_col);
                                             
-                                            for(long tcnt=0;tcnt<count_MPs;tcnt++)
+                                            if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
                                             {
-                                                long t_col         = (long)((ptslists[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
-                                                long t_row         = (long)((ptslists[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
-                                                const long ref_index((long)Size_Grid2D.width*t_row + t_col);
+                                                multimps[ref_index][pair_number].peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                multimps[ref_index][pair_number].peak_height = MatchedPts_list[tcnt].m_Z;
+                                                multimps[ref_index][pair_number].check_matched = true;
+                                                total_count_MPs++;
+                                                //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps[ref_index][pair_number].peak_roh,multimps[ref_index][pair_number].peak_height);
                                                 
-                                                if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
-                                                {
-                                                    multimps[ref_index][pair_number].peak_roh = ptslists[tcnt].m_roh;
-                                                    multimps[ref_index][pair_number].peak_height = ptslists[tcnt].m_Z;
-                                                    multimps[ref_index][pair_number].check_matched = true;
-                                                    
-                                                    //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps[ref_index][pair_number].peak_roh,multimps[ref_index][pair_number].peak_height);
-                                                }
+                                                fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
+                                                
+                                                if(min_pair_H > multimps[ref_index][pair_number].peak_height)
+                                                    min_pair_H = multimps[ref_index][pair_number].peak_height;
+                                                if(max_pair_H < multimps[ref_index][pair_number].peak_height)
+                                                    max_pair_H = multimps[ref_index][pair_number].peak_height;
                                             }
-                                            //exit(1);
-                                            
-                                            free(ptslists);
-                                            //free(trilists);
-                                            
-                                            lower_level_match = true;
                                         }
-                                        //else
-                                        //    lower_level_match = false;
+                                        
+                                        printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                         
                                         MatchedPts_list.clear();
-                                        vector<D3DPOINT>().swap(MatchedPts_list);
-                                        
-                                        fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
-                                        
-                                        printf("pair number %d\tEnd computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",pair_number,
-                                               count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
-                                        
-                                        //exit(1);
+                                        fclose(pfile_pair);
                                     }
+                                    
+                                    
+                                    //MatchedPts_list.clear();
+                                    printf("start AWNCC_MPs %d\t%d\n",MatchedPts_list.size(),total_count_MPs);
+                                    AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list);
+                                    
+                                    count_MPs = MatchedPts_list.size();
+                                    printf("Done AWNCC_MPs %d\t%d\n",count_MPs,max_count_MPs);
+                                    for(long count = 0 ; count < Grid_length ; count++)
+                                        free(multimps[count]);
+                                    free(multimps);
+                                    printf("free multimps\n");
+                                    
+                                    min_pair_H = 9999;
+                                    max_pair_H = -9999;
+                                    
+                                    char filename_pair[500];
+                                    sprintf(filename_pair,"%s/txt/matched_pts_%d_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration,levelinfo.pairinfo->NumberOfPairs);
+                                    FILE *pfile_pair = fopen(filename_pair,"w");
+                                    for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
+                                    {
+                                        fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
+                                        
+                                        if(min_pair_H > MatchedPts_list[tcnt].m_Z)
+                                            min_pair_H = MatchedPts_list[tcnt].m_Z;
+                                        if(max_pair_H < MatchedPts_list[tcnt].m_Z)
+                                            max_pair_H = MatchedPts_list[tcnt].m_Z;
+                                    }
+                                    fclose(pfile_pair);
+                                    
+                                    printf("merge row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                    
+                                    //exit(1);
+                                    if(count_MPs > 10)
+                                    {
+                                        if (check_ortho_cal && proinfo->IsRA != 1)
+                                        {
+                                            printf("blunder detection for anchor points\n");
+                                            //anchor points
+                                            ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                            
+                                            if(temp_asc_fprint)
+                                                pMT_all = fopen(filename_mps_all,"w");
+                                            for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                            {
+                                                ptslists[count_pt] = MatchedPts_list[count_pt];
+                                                if(temp_asc_fprint)
+                                                    fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
+                                            }
+                                            if(temp_asc_fprint)
+                                                fclose(pMT_all);
+                                            
+                                            MatchedPts_list.clear();
+                                            vector<D3DPOINT>().swap(MatchedPts_list);
+                                            
+                                            DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                            
+                                            if(temp_asc_fprint)
+                                                pMT_all = fopen(filename_mps_anchor,"w");
+                                            long tcnt;
+                                            count_results_anchor[0] = 0;
+                                            for(tcnt=0;tcnt<count_MPs;tcnt++)
+                                            {
+                                                if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                                {
+                                                    MatchedPts_list_anchor.push_back(ptslists[tcnt]);
+                                                    count_results_anchor[0]++;
+                                                    
+                                                    if(temp_asc_fprint)
+                                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
+                                                }
+                                                ptslists[tcnt].flag = 0;
+                                            }
+                                            if(temp_asc_fprint)
+                                                fclose(pMT_all);
+                                            
+                                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd anchor points\n",row,col,level,iteration);
+                                            
+                                            printf("blunder detection for all points\n");
+                                            //blunder detection
+                                            DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                            
+                                            if(temp_asc_fprint)
+                                                pMT_all = fopen(filename_mps_blunder,"w");
+                                            count_results[0] = 0;
+                                            for(tcnt=0;tcnt<count_MPs;tcnt++)
+                                            {
+                                                if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                                {
+                                                    MatchedPts_list_blunder.push_back(ptslists[tcnt]);
+                                                    count_results[0]++;
+                                                    
+                                                    if(temp_asc_fprint)
+                                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
+                                                    
+                                                    if(minH_mps > ptslists[tcnt].m_Z)
+                                                        minH_mps        = ptslists[tcnt].m_Z;
+                                                    if(maxH_mps < ptslists[tcnt].m_Z)
+                                                        maxH_mps       = ptslists[tcnt].m_Z;
+                                                }
+                                            }
+                                            if(temp_asc_fprint)
+                                                fclose(pMT_all);
+                                            
+                                            free(ptslists);
+                                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
+                                            
+                                            
+                                            if(check_ortho_cal && proinfo->IsRA != 1)
+                                            {
+                                                printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
+                                                count_MPs = SetttingFlagOfGrid(levelinfo, GridPT3, MatchedPts_list_anchor, MatchedPts_list_blunder, &MatchedPts_list_mps);
+                                                MatchedPts_list_anchor.clear();
+                                                vector<D3DPOINT>().swap(MatchedPts_list_anchor);
+                                                MatchedPts_list_blunder.clear();
+                                                vector<D3DPOINT>().swap(MatchedPts_list_blunder);
+                                            }
+                                            printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                            count_MPs = MatchedPts_list_mps.size();
+                                            
+                                            
+                                            
+                                            long i;
+                                            
+                                            ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                            
+                                            for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
+                                            {
+                                                ptslists[i] = MatchedPts_list_mps[i];
+                                                //if(level >= 3)
+                                                //    ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
+                                            }
+                                            
+                                            //MatchedPts_list_mps.clear();
+                                            
+                                            //vector<D3DPOINT>().swap(MatchedPts_list_mps);
+                                            
+                                            FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                            delete origTri;
+                                            
+                                            count_tri = t_trilists.size();
+                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            
+                                            for(i = 0 ; i < t_trilists.size() ; i++)
+                                                trilists[i] = t_trilists[i];
+                                            
+                                            t_trilists.clear();
+                                            vector<UI3DPOINT>().swap(t_trilists);
+                                            
+                                            fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
+                                            
+                                            printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
+                                            
+                                            count_results[0] = Ortho_blunder(proinfo, levelinfo, MPP_simgle_image, ptslists, count_MPs, trilists,count_tri, GridPT3);
+                                            free(trilists);
+                                            
+                                            printf("end ortho_blunder %d\n",count_results[0]);
+                                            
+                                            if(level >= 3)
+                                            {
+                                                int matched_pts = 0;
+                                                vector<D3DPOINT> ortho_list;
+                                                for(i=0;i<count_MPs;i++)
+                                                {
+                                                    if(ptslists[i].flag != 1)
+                                                    {
+                                                        ortho_list.push_back(ptslists[i]);
+                                                        matched_pts++;
+                                                    }
+                                                }
+                                                
+                                                free(ptslists);
+                                                count_MPs = matched_pts;
+                                                ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                                
+                                                MatchedPts_list_mps.clear();
+                                                for( i = 0 ; i < ortho_list.size() ; i++)
+                                                {
+                                                    ptslists[i] = ortho_list[i];
+                                                    MatchedPts_list_mps.push_back(ptslists[i]);
+                                                }
+                                                ortho_list.clear();
+                                                vector<D3DPOINT>().swap(ortho_list);
+                                            }
+                                            
+                                            printf("load ortho_blunder pts %d\n",count_MPs);
+                                            
+                                            //Save triangulation and delete it since we will not use it
+                                            FullTriangulation *origTri_2 = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                            delete origTri_2;
+                                            
+                                            count_tri = t_trilists.size();
+                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            
+                                            for(i = 0 ; i < t_trilists.size() ; i++)
+                                                trilists[i] = t_trilists[i];
+                                            
+                                            t_trilists.clear();
+                                            vector<UI3DPOINT>().swap(t_trilists);
+                                            
+                                            DecisionMPs_setheight(proinfo, levelinfo, count_MPs,GridPT3, iteration, Hinterval, minmaxHeight, ptslists,trilists,count_tri);
+                                            
+                                            free(ptslists);
+                                            free(trilists);
+                                            
+                                            printf("end decision_setheight\n");
+                                            
+                                            if(pre_matched_pts == 0)
+                                                matching_change_rate = 0;
+                                            else
+                                                matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
+                                            
+                                            matching_rate = count_MPs/(double)(Accessable_grid);
+                                            
+                                            printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
+                                            pre_matched_pts = count_MPs;
+                                            
+                                            //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
+                                            //    level_check_matching_rate = true;
+                                            
+                                            //if(max_count_MPs < count_MPs)
+                                            //    max_count_MPs = count_MPs;
+                                            
+                                            printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
+                                            
+                                            final_iteration = iteration;
+                                            
+                                        }
+                                        else
+                                        {
+                                            printf("blunder detection for all points\n");
+                                            
+                                            if(temp_asc_fprint)
+                                                pMT_all = fopen(filename_mps_all,"w");
+                                            
+                                            ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*MatchedPts_list.size());
+                                            for(long count_pt = 0 ; count_pt < MatchedPts_list.size() ; count_pt ++)
+                                            {
+                                                ptslists[count_pt] = MatchedPts_list[count_pt];
+                                                if(temp_asc_fprint)
+                                                    fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[count_pt].m_X,ptslists[count_pt].m_Y,ptslists[count_pt].m_Z);
+                                            }
+                                            if(temp_asc_fprint)
+                                                fclose(pMT_all);
+                                            
+                                            MatchedPts_list.clear();
+                                            vector<D3DPOINT>().swap(MatchedPts_list);
+                                            
+                                            DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, ptslists);
+                                            
+                                            if(temp_asc_fprint)
+                                                pMT_all = fopen(filename_mps_blunder,"w");
+                                            
+                                            count_results[0] = 0;
+                                            for(int tcnt=0;tcnt<count_MPs;tcnt++)
+                                            {
+                                                if(ptslists[tcnt].flag != 1 && ptslists[tcnt].m_X >= subBoundary[0] && ptslists[tcnt].m_X <= subBoundary[2] && ptslists[tcnt].m_Y >= subBoundary[1] && ptslists[tcnt].m_Y <= subBoundary[3])
+                                                {
+                                                    MatchedPts_list_mps.push_back(ptslists[tcnt]);
+                                                    count_results[0]++;
+                                                    
+                                                    if(temp_asc_fprint)
+                                                        fprintf(pMT_all,"%f\t%f\t%f\n",ptslists[tcnt].m_X,ptslists[tcnt].m_Y,ptslists[tcnt].m_Z);
+                                                    
+                                                    if(minH_mps > ptslists[tcnt].m_Z)
+                                                        minH_mps        = ptslists[tcnt].m_Z;
+                                                    if(maxH_mps < ptslists[tcnt].m_Z)
+                                                        maxH_mps       = ptslists[tcnt].m_Z;
+                                                }
+                                            }
+                                            if(temp_asc_fprint)
+                                                fclose(pMT_all);
+                                            
+                                            count_MPs       = count_results[0];
+                                            
+                                            free(ptslists);
+                                            printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
+                                            
+                                            printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                            count_MPs = MatchedPts_list_mps.size();
+                                            
+                                            /*
+                                            long i;
+                                            
+                                            ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
+                                            
+                                            for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
+                                                ptslists[i] = MatchedPts_list_mps[i];
+                                            
+                                            //MatchedPts_list_mps.clear();
+                                            
+                                            //vector<D3DPOINT>().swap(MatchedPts_list_mps);
+                                            /*
+                                            //Save triangulation and delete it since we will not use it
+                                            FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                            delete origTri;
+                                            
+                                            count_tri = t_trilists.size();
+                                            trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
+                                            
+                                            for(i = 0 ; i < t_trilists.size() ; i++)
+                                                trilists[i] = t_trilists[i];
+                                            
+                                            t_trilists.clear();
+                                            vector<UI3DPOINT>().swap(t_trilists);
+                                            */
+                                            if(pre_matched_pts == 0)
+                                                matching_change_rate = 0;
+                                            else
+                                                matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
+                                            
+                                            printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
+                                            pre_matched_pts = count_results[0];
+                                            
+                                            matching_rate = count_MPs/(double)(Accessable_grid);
+                                            printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
+                                            
+                                            //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
+                                            //    level_check_matching_rate = true;
+                                            //if(max_count_MPs < count_MPs)
+                                            //    max_count_MPs = count_MPs;
+                                            
+                                            bool check_level_end = false;
+                                            
+                                            if(level != 0)
+                                            {
+                                                if(Th_roh_update < Th_roh_min && matching_change_rate < rate_th)
+                                                    check_level_end = true;
+                                            }
+                                        }
+                                        /*
+                                        for(long tcnt=0;tcnt<count_MPs;tcnt++)
+                                        {
+                                            long t_col         = (long)((ptslists[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
+                                            long t_row         = (long)((ptslists[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
+                                            const long ref_index((long)Size_Grid2D.width*t_row + t_col);
+                                            
+                                            if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
+                                            {
+                                                multimps[ref_index][pair_number].peak_roh = ptslists[tcnt].m_roh;
+                                                multimps[ref_index][pair_number].peak_height = ptslists[tcnt].m_Z;
+                                                multimps[ref_index][pair_number].check_matched = true;
+                                                
+                                                //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps[ref_index][pair_number].peak_roh,multimps[ref_index][pair_number].peak_height);
+                                            }
+                                        }
+                                         */
+                                        //exit(1);
+                                        
+                                        //free(ptslists);
+                                        //free(trilists);
+                                        
+                                        lower_level_match = true;
+                                    }
+                                    //else
+                                    //    lower_level_match = false;
+                                    
+                                    //MatchedPts_list.clear();
+                                    //vector<D3DPOINT>().swap(MatchedPts_list);
+                                    
+                                    fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
+                                    
+                                    printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
+                                           count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
+                                        
+                                    //exit(1);
                                     
                                     if(lower_level_match)
                                     {
+                                        /*
                                         MatchedPts_list_mps.clear();
                                         printf("start AWNCC_MPs %d\n",MatchedPts_list_mps.size());
                                         AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list_mps);
@@ -5487,6 +5609,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                             free(multimps[count]);
                                         free(multimps);
                                         printf("free multimps\n");
+                                         */
                                         //exit(1);
                                         count_MPs = MatchedPts_list_mps.size();
                                         ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
@@ -7116,8 +7239,8 @@ void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &pleve
         int selected_images;
         if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7,selected_images))
         {
-            if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7,selected_images))
-                GridPT3[t_i].total_images = selected_images;
+            //if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7,selected_images))
+            //    GridPT3[t_i].total_images = selected_images;
             
             int change_step_min = 0;
             int change_step_max = 0;
@@ -7538,6 +7661,8 @@ double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_
     }
     else
         gncc_weight = 1.0;
+    //gncc_weight = 1.0;
+    
     return gncc_weight;
 }
 
@@ -7797,7 +7922,17 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                 {
                                     const int reference_id = plevelinfo.pairinfo->pairs[pair_number].m_X;
                                     const int ti = plevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                    //if(proinfo->check_selected_image[ti])
+                                    
+                                    bool check_compute = false;
+                                    /*if(GridPT3[pt_index].Matched_flag == 1 || GridPT3[pt_index].Matched_flag == 2)
+                                    {
+                                        if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,reference_id) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,ti))
+                                            check_compute = true;
+                                    }
+                                    else*/ if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,reference_id) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,ti))
+                                        check_compute = true;
+                                    
+                                    if(check_compute)
                                     {
                                         if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
                                         {
@@ -7873,8 +8008,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                 Tar_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
                                             }
                                             
-                                            D2DPOINT center_Ref(plevelinfo.Imagesize_ori[reference_id].width/2.0,plevelinfo.Imagesize_ori[reference_id].height/2.0);
-                                            D2DPOINT center_Tar(plevelinfo.Imagesize_ori[ti].width/2.0,plevelinfo.Imagesize_ori[ti].height/2.0);
+                                            //D2DPOINT center_Ref(plevelinfo.Imagesize_ori[reference_id].width/2.0,plevelinfo.Imagesize_ori[reference_id].height/2.0);
+                                            //D2DPOINT center_Tar(plevelinfo.Imagesize_ori[ti].width/2.0,plevelinfo.Imagesize_ori[ti].height/2.0);
                                             
                                             Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],plevelinfo.py_Startpos[reference_id],Pyramid_step);
                                             Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],plevelinfo.py_Startpos[ti],Pyramid_step);
@@ -7974,7 +8109,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                     if(count_INCC > 0)
                                                     {
                                                         db_INCC = sum_INCC_multi/count_INCC;
-                                                        if(db_INCC > 0 && plevelinfo.pairinfo->NumberOfPairs > 2)
+                                                        /*if(db_INCC > 0 && plevelinfo.pairinfo->NumberOfPairs > 2)
                                                         {
                                                             double DistToCenter_Ref = SQRT(Ref_Imagecoord[0],center_Ref);
                                                             double DistToCenter_Tar = SQRT(Tar_Imagecoord[0],center_Tar);
@@ -7982,7 +8117,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                             double WeightDist = 1.0 + (20 - (DistToCenter_avg/SQRT(center_Ref))*20.0)/100.0;
                                                             
                                                             db_INCC *= WeightDist;
-                                                        }
+                                                        }*/
                                                         
                                                         double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, *plevelinfo.height_step);
                                                         
@@ -8479,8 +8614,8 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
             for(int count = 0 ; count < rlevelinfo.pairinfo->NumberOfPairs ; count++)
             {
                 double bhratio = 1.0;
-                if(count > 1)
-                    bhratio = 1.0+rlevelinfo.pairinfo->BHratio[count];
+                //if(count > 1)
+                //    bhratio = 1.0+rlevelinfo.pairinfo->BHratio[count];
                 
                 int reference_id = rlevelinfo.pairinfo->pairs[count].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[count].m_Y;
@@ -8498,8 +8633,6 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                         
                         if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >= 0 && t_row < Size_Grid2D.height)
                         {
-                            pair_count++;
-                            
                             const int t_index_h_index   = (int)((iter_height - nccresult[t_index].minHeight)/step_height);
                             const int t_index_h_index_1 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) - P_HS_step;
                             const int t_index_h_index_2 = (int)((iter_height - nccresult[t_index].minHeight)/step_height) + P_HS_step;
@@ -8783,6 +8916,9 @@ void AWNCC_single(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSi
     const double ncc_beta = 1.0 - ncc_alpha;
     const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
     
+    int height_buffer = 2;
+    if(Pyramid_step <= 1)
+        height_buffer = 0;
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < (long)Size_Grid2D.height*(long)Size_Grid2D.width ; iter_count++)
     {
@@ -8810,7 +8946,7 @@ void AWNCC_single(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSi
     
         double db_GNCC, db_INCC;
         
-        for(long height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
+        for(long height_step = 0 + height_buffer ; height_step < nccresult[pt_index].NumOfHeight - height_buffer ; height_step++)
         {
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
             
@@ -8855,7 +8991,183 @@ void AWNCC_single(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSi
         
         GridPT3[pt_index].total_images = 1;
         
-        GridPT3[pt_index].ncc_seleceted_pair = pair_number;
+        //GridPT3[pt_index].ncc_seleceted_pair = pair_number;
+        
+        /*if(temp_nccresult > 1.0)
+        {
+            temp_nccresult = 1.0;
+            temp_nccresult_sec = -1.0;
+        }
+        */
+        nccresult[pt_index].result0 = DoubleToSignedChar_result(temp_nccresult);
+        nccresult[pt_index].result1 = DoubleToSignedChar_result(temp_nccresult_sec);
+    }
+}
+
+void AWNCC_AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight)
+{
+    double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
+    
+    printf("AWNCC single find peak pairs %d\t%d\t%f\n",rlevelinfo.pairinfo->NumberOfPairs,rlevelinfo.pairinfo->NumberOfPairs,im_resolution);
+    
+    bool pre_DEMtif = proinfo->pre_DEMtif;
+    bool check_ortho = false;
+    
+    if(Pyramid_step == 4 && iteration == 1)
+        check_ortho = false;
+    else
+        check_ortho = true;
+    
+    if(pre_DEMtif && !(Pyramid_step == 4 && iteration == 1))
+        check_ortho = true;
+    
+    const double ncc_alpha = SetNCC_alpha(Pyramid_step,iteration, proinfo->IsRA);
+    const double ncc_beta = 1.0 - ncc_alpha;
+    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+    
+    int AWNCC_id = rlevelinfo.pairinfo->NumberOfPairs;
+    
+    int height_buffer = 2;
+    if(Pyramid_step <= 1)
+        height_buffer = 0;
+#pragma omp parallel for schedule(guided)
+    for(long iter_count = 0 ; iter_count < (long)Size_Grid2D.height*(long)Size_Grid2D.width ; iter_count++)
+    {
+        long pts_row = (int)(floor(iter_count/Size_Grid2D.width));
+        long pts_col = iter_count % Size_Grid2D.width;
+        long pt_index = iter_count;
+        
+        double pre_rho  = -1.0;
+        double pre_rho_WNCC = -1.0;
+        float pre_height= 0.0;
+        int pre_height_step = 0;
+        int direction   = 0;
+        bool check_rho  = false;
+        
+        double max_roh = 0;
+        
+        double temp_nccresult = -100.0;
+        double temp_nccresult_sec = -100.0;
+        
+        nccresult[pt_index].result0 = DoubleToSignedChar_result(-1.0);
+        nccresult[pt_index].result2 = Nodata;
+        nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
+        nccresult[pt_index].result3 = Nodata;
+        nccresult[pt_index].result4 = 0;
+    
+        double db_GNCC, db_INCC;
+        
+        for(long height_step = 0 + height_buffer ; height_step < nccresult[pt_index].NumOfHeight - height_buffer ; height_step++)
+        {
+            float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
+            
+            if(iter_height >= GridPT3[pt_index].minHeight && iter_height <= GridPT3[pt_index].maxHeight)
+            {
+                double sum_INCC = 0;
+                double sum_WNCC = 0;
+                double sum_GNCC = 0;
+                int INCC_count = 0;
+                
+                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
+                {
+                    int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
+                    int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
+                    if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                    {
+                        db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
+                        db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index][height_step].INCC[pair_number]);
+                        
+                        double temp_rho = 0;
+                        
+                        if(grid_voxel[pt_index][height_step].flag_cal[pair_number] && db_INCC > -1)
+                        {
+                            double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
+                            
+                            if((Pyramid_step == 4 && iteration == 1))
+                                gncc_weight = 1.0;
+                            
+                            if(check_ortho) // GNCC check
+                            {
+                                if(db_GNCC > ortho_th)
+                                    temp_rho = db_INCC*ncc_alpha + db_GNCC*ncc_beta;
+                                else
+                                    temp_rho = db_INCC*gncc_weight;
+                            }
+                            else
+                            {
+                                temp_rho = db_INCC*gncc_weight;
+                            }
+                            
+                            sum_WNCC += temp_rho;
+                            sum_INCC += db_INCC;
+                            sum_GNCC += db_GNCC;
+                            INCC_count++;
+                        }
+                    }
+                }
+                
+                double temp_rho = -1;
+                double WNCC_temp_rho = -1;
+                if(INCC_count > 0)
+                    WNCC_temp_rho = sum_INCC / (double)INCC_count;
+                else
+                    WNCC_temp_rho = -1;
+                
+                if(INCC_count > 0)
+                {
+                    double Multiweight = 1.0;
+                    //if(INCC_count > 1)
+                    //    Multiweight = SetMultiWeight(INCC_count, save_roh_positive);
+                    
+                    double avg_WNCC = sum_WNCC /(double)INCC_count;
+                    double avg_INCC = sum_INCC /(double)INCC_count;
+                    double avg_GNCC = sum_GNCC /(double)INCC_count;
+                    if(avg_WNCC >= 0)
+                        temp_rho = avg_WNCC*Multiweight;
+                    else
+                        temp_rho = avg_WNCC;
+                    
+                    /*
+                     if(save_roh_positive.size() > 1)
+                     {
+                     double sum_save_po = 0;
+                     double sum_variance = 0;
+                     double variance = 0;
+                     
+                     for(int i = 0 ; i < save_roh_positive.size() ; i++)
+                     sum_save_po += save_roh_positive[i];
+                     double avg_save_po = sum_save_po/save_roh_positive.size();
+                     
+                     for(int i = 0 ; i < save_roh_positive.size() ; i++)
+                     sum_variance += (avg_save_po - save_roh_positive[i])*(avg_save_po - save_roh_positive[i]);
+                     
+                     variance = sqrt(sum_variance/save_roh_positive.size());
+                     
+                     double var_weight = 0.1/(1.0+variance);
+                     
+                     var_weight = 0.0;
+                     
+                     temp_rho = temp_rho*(1.0 + var_weight);
+                     }
+                     */
+                    //temp_rho = avg_INCC;
+                    
+                    /*
+                     if(temp_nccresult_multi[AWNCC_id] < temp_rho)
+                     {
+                     temp_nccresult_multi[AWNCC_id] = temp_rho;
+                     temp_nccresult_sec_multi[AWNCC_id] = -1.0;
+                     nccresult_pairs[AWNCC_id].result2 = iter_height;
+                     }*/
+                    FindPeakNcc2(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
+                }
+                
+            }
+        }
+        
+        GridPT3[pt_index].total_images = 1;
+        
+        GridPT3[pt_index].ncc_seleceted_pair = AWNCC_id;
         
         /*if(temp_nccresult > 1.0)
         {
@@ -8891,6 +9203,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     double bhratio_norm = 1.0;
     double ncc_norm = 0.5;
     
+    int AWNCC_id = rlevelinfo.pairinfo->NumberOfPairs;
+    
     D3DPOINT* temp_points = (D3DPOINT*)calloc(sizeof(D3DPOINT),(long)Size_Grid2D.height*(long)Size_Grid2D.width);
     
 #pragma omp parallel for schedule(guided)
@@ -8904,10 +9218,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         I_point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
         I_point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
         I_point.m_Z = Nodata;
-        I_point.flag = false;
+        I_point.flag = true;
         temp_points[pt_index] = I_point;
         
-        GridPT3[pt_index].height_counts = 0;
+//        GridPT3[pt_index].height_counts = 0;
         GridPT3[pt_index].total_images = 0;
         
         double height_interval = (*rlevelinfo.grid_resolution)*10;
@@ -8920,416 +9234,507 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         double height_diff;
         double final_height;
         
-        //select max_ncc pair and selected_pair
+        /*
+        //count peaks
+        int count_peaks = 0;
+        int peak_pair = -1;
         for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
         {
             int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
             int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
             if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
             {
-                double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
-                if(pair_peak_roh > -1 && multimps[pt_index][pair_number].check_matched)
+                if(multimps[pt_index][pair_number].check_matched)
                 {
-                    //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps[pt_index][pair_number].peak_height);
-                    GridPT3[pt_index].total_images++;
-                    
-                    if(Pyramid_step == 4 && iteration == 1)
-                    {
-                        if(pair_peak_roh > 0.0)
-                        {
-                            if(max_wncc < pair_peak_roh)
-                            {
-                                max_wncc = pair_peak_roh;
-                                selected_pair = pair_number;
-                            }
-                            
-                            if(min_wncc > pair_peak_roh)
-                            {
-                                min_wncc = pair_peak_roh;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if(pair_peak_roh > 0.0)
-                        {
-                            if(max_wncc < pair_peak_roh)
-                            {
-                                max_wncc = pair_peak_roh;
-                                selected_pair = pair_number;
-                            }
-                            
-                            if(min_wncc > pair_peak_roh)
-                            {
-                                min_wncc = pair_peak_roh;
-                            }
-                        }
-                    }
+                    count_peaks++;
+                    peak_pair = pair_number;
                 }
-                //if(GridPT3[pt_index].selected_pair == 1 || GridPT3[pt_index].selected_pair == 4)
-                //    printf("pair_number %d\t%d\t%d\n",pair_number,reference_id,ti);
             }
         }
-        //exit(1);
-        //if(GridPT3[pt_index].selected_pair == 1 || GridPT3[pt_index].selected_pair == 4)
-        //    exit(1);
-        double wncc_interval = max_wncc - min_wncc;
         
-        //select matched height from average WNCC and single WNCC, set minmax height with weighted method
-        //printf("interval %f\t%f\tminmax %f\t%f\t%f\t%f\n",bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc);
-        if(selected_pair > -1)
+        if(count_peaks == 0)
         {
-            final_height = multimps[pt_index][selected_pair].peak_height;
+            selected_pair = -1;
+        }
+        else if(count_peaks == 1)
+        {
+            selected_pair = peak_pair;
             
-            vector<unsigned char>* save_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),(rlevelinfo.pairinfo->NumberOfPairs+1));
-            vector<double>* save_height = (vector<double>*)calloc(sizeof(vector<double>),(rlevelinfo.pairinfo->NumberOfPairs+1));
-            double* mid_H = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->NumberOfPairs+1));
-            double* weight_height = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->NumberOfPairs+1));
-            double mean_bhratio;
+            D3DPOINT point;
+            point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
+            point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
+            point.m_Z = multimps[pt_index][selected_pair].peak_height;
+            point.m_roh = multimps[pt_index][selected_pair].peak_roh;
+            point.flag = false;
             
-            //printf("mem allocate\n");
-            double sum_weight_height = 0;
-            double sum_weight = 0;
-            int max_weight = 0.0;
-            int final_selected_pair = selected_pair;
+            temp_points[pt_index] = point;
             
-            for(int query_pair = 0 ; query_pair < rlevelinfo.pairinfo->NumberOfPairs ; query_pair++)
+            GridPT3[pt_index].Mean_ortho_ncc = GridPT3[pt_index].ortho_ncc[selected_pair];
+            GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
+            
+            printf("sole peak %d\t%d\t%f\n",selected_pair,multimps[pt_index][selected_pair].peak_roh,multimps[pt_index][selected_pair].peak_height);
+        }
+        else*/
+        {
+            //select max_ncc pair and selected_pair
+            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
             {
-                //int query_pair = selected_pair;
-                weight_height[query_pair] = Nodata;
-                
-                save_pair[query_pair].clear();
-                save_height[query_pair].clear();
-                
-                if(multimps[pt_index][query_pair].check_matched && multimps[pt_index][selected_pair].check_matched)
+                int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
+                int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
+                if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
                 {
-                    double query_peak_roh = SignedCharToDouble_result(multimps[pt_index][query_pair].peak_roh);
-                    
-                    height_diff = fabs(multimps[pt_index][selected_pair].peak_height - multimps[pt_index][query_pair].peak_height);
-                    if(height_diff < height_interval*2 && query_peak_roh > 0.0)
+                    double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
+                    if(pair_peak_roh > -1 && multimps[pt_index][pair_number].check_matched)
                     {
-                        double sum_bhratio = 0;
-                        int count = 0;
-                        bool check_single_pair = false;
-                        bool check_multi_pair = false;
+                        //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps[pt_index][pair_number].peak_height);
+                        GridPT3[pt_index].total_images++;
                         
-                        //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)
+                        if(Pyramid_step == 4 && iteration == 1)
                         {
-                            int reference_id_q = rlevelinfo.pairinfo->pairs[query_pair].m_X;
-                            int ti_q = rlevelinfo.pairinfo->pairs[query_pair].m_Y;
-                            if((reference_id_q == GridPT3[pt_index].selected_pair || ti_q == GridPT3[pt_index].selected_pair))
+                            if(pair_peak_roh > 0.0)
+                            {
+                                if(max_wncc < pair_peak_roh)
+                                {
+                                    max_wncc = pair_peak_roh;
+                                    selected_pair = pair_number;
+                                }
+                                
+                                if(min_wncc > pair_peak_roh)
+                                {
+                                    min_wncc = pair_peak_roh;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if(pair_peak_roh > 0.0)
+                            {
+                                if(max_wncc < pair_peak_roh)
+                                {
+                                    max_wncc = pair_peak_roh;
+                                    selected_pair = pair_number;
+                                }
+                                
+                                if(min_wncc > pair_peak_roh)
+                                {
+                                    min_wncc = pair_peak_roh;
+                                }
+                            }
+                        }
+                        //printf("pair_number %d\tpair_peak_roh %f\n",pair_number,pair_peak_roh);
+                    }
+                }
+            }
+        
+            double wncc_interval = max_wncc - min_wncc;
+            //select matched height from average WNCC and single WNCC, set minmax height with weighted method
+            
+            
+            if(selected_pair > -1)
+            {
+                double min_Height = 9999;
+                double max_Height = -9999;
+                //printf("interval %f\t%f\tminmax %f\t%f\t%f\t%f\n",bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc);
+                if(wncc_interval < 0)
+                    exit(1);
+                
+                final_height = multimps[pt_index][selected_pair].peak_height;
+                
+                vector<unsigned char>* save_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),(rlevelinfo.pairinfo->NumberOfPairs+1));
+                vector<double>* save_height = (vector<double>*)calloc(sizeof(vector<double>),(rlevelinfo.pairinfo->NumberOfPairs+1));
+                double* mid_H = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->NumberOfPairs+1));
+                double* weight_height = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->NumberOfPairs+1));
+                double mean_bhratio;
+                
+                //printf("mem allocate\n");
+                double sum_weight_height = 0;
+                double sum_weight = 0;
+                int max_weight = 0.0;
+                int final_selected_pair = selected_pair;
+                
+                for(int query_pair = 0 ; query_pair < rlevelinfo.pairinfo->NumberOfPairs + 1 ; query_pair++)
+                {
+                    //int query_pair = selected_pair;
+                    weight_height[query_pair] = Nodata;
+                    
+                    save_pair[query_pair].clear();
+                    save_height[query_pair].clear();
+                    
+                    if(multimps[pt_index][query_pair].check_matched && multimps[pt_index][selected_pair].check_matched)
+                    {
+                        double query_peak_roh = SignedCharToDouble_result(multimps[pt_index][query_pair].peak_roh);
+                        
+                        height_diff = fabs(multimps[pt_index][selected_pair].peak_height - multimps[pt_index][query_pair].peak_height);
+                        if(height_diff < height_interval && query_peak_roh > 0.0)
+                        {
+                            double mean_bhratio = min_bhratio;
+                            int count = 0;
+                            bool check_query_pair = false;
+                            
+                            if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)
+                            {
+                                int reference_id_q = rlevelinfo.pairinfo->pairs[query_pair].m_X;
+                                int ti_q = rlevelinfo.pairinfo->pairs[query_pair].m_Y;
+                                check_query_pair = (reference_id_q == GridPT3[pt_index].selected_pair || ti_q == GridPT3[pt_index].selected_pair);
+                            }
+                            else
+                                check_query_pair = true;
+                                
+                            if(check_query_pair)
                             {
                                 for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
                                 {
                                     int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                                     int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                    if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) && (query_pair != pair_number))
+                                    bool check_select_pair = (reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/;
+                                    
+                                    if(check_select_pair)
                                     {
-                                        //printf("query_pair pair_number %d\t%d\tselected_pair %d\n",query_pair,pair_number,selected_pair);
-                                        double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
-                                        if(multimps[pt_index][query_pair].check_matched && multimps[pt_index][pair_number].check_matched)//Single peak
+                                        if(multimps[pt_index][pair_number].check_matched)//Single peak
                                         {
-                                            //printf("hd before\n");
+                                            double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
                                             height_diff = fabs(multimps[pt_index][query_pair].peak_height - multimps[pt_index][pair_number].peak_height);
-                                            //printf("hd after %f\t%f\t%f\n",nccresult_pairs[query_pair].result2,nccresult_pairs[pair_number].result2,height_diff);
                                             if(height_diff < height_interval && pair_peak_roh > 0.0)
                                             {
-                                                //printf("add before\n");
                                                 save_pair[query_pair].push_back(pair_number);
                                                 save_height[query_pair].push_back(multimps[pt_index][pair_number].peak_height);
-                                                //printf("after before %f\t%f\n",nccresult_pairs[query_pair].result2,nccresult_pairs[pair_number].result2);
-                                                
-                                                check_single_pair = true;
-                                                
-                                                //printf("pair number %d\tsave pair %d\tsave_height %f\n",pair_number,save_pair[query_pair][count],save_height[query_pair][count]);
-                                                count++;
                                             }
                                         }
                                     }
                                 }
-                            }
-                        }/*
-                        else
-                        {
-                            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
-                            {
-                                int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
-                                int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) )
+                                
+                                //AWNCC add check
+                                if(multimps[pt_index][AWNCC_id].check_matched)
                                 {
-                                    if(nccresult_pairs[AWNCC_id].result2 > Nodata && nccresult_pairs[pair_number].result2 > Nodata)//AWNCC peak
+                                    height_diff = fabs(multimps[pt_index][query_pair].peak_height - multimps[pt_index][AWNCC_id].peak_height);
+                                    double awncc_peak_roh = SignedCharToDouble_result(multimps[pt_index][AWNCC_id].peak_roh);
+                                    if(height_diff < height_interval && awncc_peak_roh > 0.0)
                                     {
-                                        height_diff = fabs(nccresult_pairs[AWNCC_id].result2 - nccresult_pairs[pair_number].result2);
-                                        if(height_diff < height_interval && temp_nccresult_multi[pair_number] > 0.0)
+                                        //AWNCC bhratio setting
+                                        double sum_bhratio = 0;
+                                        int count_pair = 0;
+                                        for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
                                         {
-                                            save_pair[query_pair].push_back(pair_number);
-                                            save_height[query_pair].push_back(nccresult_pairs[pair_number].result2);
-                                            sum_bhratio += rlevelinfo.pairinfo->BHratio[pair_number];
+                                            int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
+                                            int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
+                                            bool check_select_pair = (reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/;
                                             
-                                            check_multi_pair = true;
-                                            //printf("pair number %d\tsave pair %d\tsave_height %f\n",pair_number,save_pair[query_pair][count],save_height[query_pair][count]);
-                                            count++;
+                                            if(check_select_pair)
+                                            {
+                                                if(multimps[pt_index][pair_number].check_matched)//Single peak
+                                                {
+                                                    double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
+                                                    height_diff = fabs(multimps[pt_index][AWNCC_id].peak_height - multimps[pt_index][pair_number].peak_height);
+                                                    if(height_diff < height_interval && pair_peak_roh > 0.0)
+                                                    {
+                                                        sum_bhratio += rlevelinfo.pairinfo->BHratio[pair_number];
+                                                        count_pair++;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        if(count_pair > 0)
+                                        {
+                                            save_pair[query_pair].push_back(AWNCC_id);
+                                            save_height[query_pair].push_back(multimps[pt_index][AWNCC_id].peak_height);
+                                            mean_bhratio = sum_bhratio/(double)count_pair;
                                         }
                                     }
-                                    
                                 }
                             }
-                        }*/
-                        
-                        if(save_pair[query_pair].size() > 0)
-                        {
-                            /*
-                             if(query_pair == rlevelinfo.pairinfo->NumberOfPairs)
-                             {
-                             printf("save_height[query_pair].size() %d\t%d\tmean_bhratio %f\n",count,save_height[query_pair].size(),mean_bhratio);
-                             exit(1);
-                             }
-                             */
-                            /*
-                            if(save_height[query_pair].size() > 1)
+                            
+                            if(save_pair[query_pair].size() > 0)
                             {
                                 
-                                mid_H[query_pair] = quickselect(save_height[query_pair],save_height[query_pair].size(),(int)(save_height[query_pair].size()/2.0));
-                            }
-                            else
-                                mid_H[query_pair] = save_height[query_pair][0];
-                            */
-                            mid_H[query_pair] = multimps[pt_index][query_pair].peak_height;
-                            
-                            
-                            
-                            double wheight_idw = 0;
-                            double weight_idw = 0;
-                            double wheight_bh = 0;
-                            double weight_bh = 0;
-                            double wheight_wncc = 0;
-                            double weight_wncc = 0;
-                            
-                            double minH = 9999;
-                            double maxH = -9999;
-                            double total_weight = 0.0;
-                            double sum_of_HD = 0;
-                            double sum_of_ND = 0;
-                            double sum_of_BH = 0;
-                            
-                            vector<double> save_height_diff, save_ncc_diff;
-                            for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
-                            {
-                                double IDW_w;
-                                int pair_number = save_pair[query_pair][count];
-                                double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
                                 
-                                height_diff = fabs(save_height[query_pair][count] - mid_H[query_pair]);
-                                sum_of_HD += height_diff;
-                                save_height_diff.push_back(height_diff);
-                                
-                                
-                                if(height_diff < 1.0)
-                                    IDW_w = 1.0;
-                                else
-                                    IDW_w = 1.0/pow(height_diff,1.5);
-                                
-                                
-                                double w_idw,w_bhratio,w_ncc;
-                                
-                                if(bhratio_interval > 0)
-                                {
-                                    //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
-                                    w_bhratio = (rlevelinfo.pairinfo->BHratio[pair_number]-min_bhratio)/bhratio_interval*bhratio_norm;
-                                    /*else//AWNCC peak
-                                     {
-                                     mean_bhratio = sum_bhratio/save_pair[query_pair].size();
-                                     w_bhratio = (mean_bhratio-min_bhratio)/bhratio_interval*bhratio_norm;
-                                     }*/
-                                }
-                                else
-                                    w_bhratio = 1.0;
-                                
-                                //w_bhratio = rlevelinfo.pairinfo->BHratio[pair_number];
-                                sum_of_BH += w_bhratio;
-                                
-                                double ncc_diff = (fabs(pair_peak_roh - query_peak_roh))*10.0;
-                                sum_of_ND += ncc_diff;
-                                save_ncc_diff.push_back(ncc_diff);
-                                
-                                if(ncc_diff > 1)
-                                    w_ncc = 1.0/pow(ncc_diff,0.2);
-                                else
-                                    w_ncc = 1.0;
-                                
-                                //printf("pt_index %d\tquery_pair %d\tpair_number %d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,query_pair,pair_number,w_bhratio,save_height[query_pair][count],mid_H[query_pair],save_height_diff[count],pair_peak_roh,query_peak_roh,save_ncc_diff[count],IDW_w,w_bhratio,w_ncc);
                                 /*
-                                 if(wncc_interval > 0)
-                                 w_ncc = 1.0 + (temp_nccresult_multi[pair_number]-min_wncc)/wncc_interval*ncc_norm;
-                                 else
-                                 w_ncc = 1.0;
-                                 */
-                                //total_weight += IDW_w*w_bhratio*w_ncc;
-                                //total_weight += (0.5*IDW_w + 0.2*w_bhratio + 0.3*w_ncc);
-                                //if(save_pair.size() > 2)
-                                //    printf("single pt_index %d\tpairindex %d\t%f\tBHratio %f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,pair_number,sum_bhratio,rlevelinfo.pairinfo->BHratio[pair_number],mid_H,IDW_w,nccresult_pairs[pair_number].result2,w_bhratio,w_ncc,total_weight);
-                                /*if(w_bhratio < 1 || w_ncc < 1)
+                                 if(query_pair == rlevelinfo.pairinfo->NumberOfPairs)
                                  {
-                                 printf("%d\tIDW_w %f\t%f\t%f\t%f\n",pt_index,total_weight,IDW_w,w_bhratio,w_ncc);
+                                 printf("save_height[query_pair].size() %d\t%d\tmean_bhratio %f\n",count,save_height[query_pair].size(),mean_bhratio);
                                  exit(1);
-                                 }*/
+                                 }
+                                 */
+                                /*
+                                if(save_height[query_pair].size() > 1)
+                                {
+                                    
+                                    mid_H[query_pair] = quickselect(save_height[query_pair],save_height[query_pair].size(),(int)(save_height[query_pair].size()/2.0));
+                                }
+                                else
+                                    mid_H[query_pair] = save_height[query_pair][0];
+                                */
+                                mid_H[query_pair] = multimps[pt_index][query_pair].peak_height;
+                                
+                                
+                                
+                                double wheight_idw = 0;
+                                double weight_idw = 0;
+                                double wheight_bh = 0;
+                                double weight_bh = 0;
+                                double wheight_wncc = 0;
+                                double weight_wncc = 0;
+                                double wheight_awncc = 0;
+                                double weight_awncc = 0;
+                                
+                                double total_weight = 0.0;
+                                double sum_of_HD = 0;
+                                double sum_of_ND = 0;
+                                double sum_of_BH = 0;
+                                
+                                vector<double> save_height_diff, save_ncc_diff;
+                                double pair_weight = 1.0;//1.0/(double)save_pair[query_pair].size();
+                                for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                {
+                                    double IDW_w;
+                                    int pair_number = save_pair[query_pair][count];
+                                    double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
+                                    
+                                    if(min_Height > save_height[query_pair][count])
+                                        min_Height = save_height[query_pair][count];
+                                    
+                                    if(max_Height < save_height[query_pair][count])
+                                        max_Height = save_height[query_pair][count];
+                                    
+                                    
+                                    height_diff = fabs(save_height[query_pair][count] - mid_H[query_pair]);
+                                    sum_of_HD += height_diff;
+                                    save_height_diff.push_back(height_diff);
+                                    
+                                    
+                                    if(height_diff < 1.0)
+                                        IDW_w = 1.0;
+                                    else
+                                        IDW_w = 1.0/pow(height_diff,1.0);
+                                    
+                                    
+                                    double w_idw,w_bhratio,w_ncc, weightAWNCC(1.0);
+                                    
+                                    
+                                    if(bhratio_interval > 0)
+                                    {
+                                        if(pair_number < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
+                                            w_bhratio = (rlevelinfo.pairinfo->BHratio[pair_number]-min_bhratio)/bhratio_interval*bhratio_norm;
+                                        else//AWNCC peak
+                                        {
+                                            w_bhratio = (mean_bhratio-min_bhratio)/bhratio_interval*bhratio_norm;
+                                        }
+                                    }
+                                    else
+                                        w_bhratio = 1.0;
+                                    
+                                    //w_bhratio = rlevelinfo.pairinfo->BHratio[pair_number];
+                                    sum_of_BH += w_bhratio;
+                                    
+                                    double ncc_diff = (fabs(pair_peak_roh - query_peak_roh))*10.0;
+                                    sum_of_ND += ncc_diff;
+                                    save_ncc_diff.push_back(ncc_diff);
+                                    
+                                    if(ncc_diff < 1)
+                                        w_ncc = 1.0;
+                                    else
+                                        w_ncc = 1.0/pow(ncc_diff,1.0);
+                                    
+                                    //printf("pt_index %d\tquery_pair %d\tpair_number %d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,query_pair,pair_number,w_bhratio,save_height[query_pair][count],mid_H[query_pair],save_height_diff[count],pair_peak_roh,query_peak_roh,save_ncc_diff[count],IDW_w,w_bhratio,w_ncc);
+                                    /*
+                                    if(wncc_interval > 0)
+                                        w_ncc = (pair_peak_roh - min_wncc)/wncc_interval*ncc_norm;
+                                    else
+                                        w_ncc = 1.0;
+                                    */
+                                    //total_weight += IDW_w*w_bhratio*w_ncc;
+                                    //total_weight += (0.5*IDW_w + 0.2*w_bhratio + 0.3*w_ncc);
+                                    //if(save_pair.size() > 2)
+                                    //    printf("single pt_index %d\tpairindex %d\t%f\tBHratio %f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,pair_number,sum_bhratio,rlevelinfo.pairinfo->BHratio[pair_number],mid_H,IDW_w,nccresult_pairs[pair_number].result2,w_bhratio,w_ncc,total_weight);
+                                    /*if(w_bhratio < 1 || w_ncc < 1)
+                                     {
+                                     printf("%d\tIDW_w %f\t%f\t%f\t%f\n",pt_index,total_weight,IDW_w,w_bhratio,w_ncc);
+                                     exit(1);
+                                     }*/
+                                    
+                                    if(pair_number == AWNCC_id)
+                                    {
+                                        weightAWNCC = 1.0 + 0.2*save_pair[AWNCC_id].size();
+                                        //if(weightAWNCC > 1.5)
+                                        //    weightAWNCC = 1.5;
+                                        //printf("weightAWNCC\n");
+                                        //exit(1);
+                                    }
+                                    else
+                                        weightAWNCC = 1.0;
+                                    
+                                    //if(query_pair == AWNCC_id)
+                                    //    weightAWNCC = weightAWNCC*1.5;
+                                    
+                                    wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w*weightAWNCC*pair_weight;
+                                    weight_idw += IDW_w*weightAWNCC*pair_weight;
+                                    
+                                    wheight_bh += multimps[pt_index][pair_number].peak_height*w_bhratio*weightAWNCC*pair_weight;
+                                    weight_bh += w_bhratio*weightAWNCC*pair_weight;
+                                    
+                                    wheight_wncc += multimps[pt_index][pair_number].peak_height*w_ncc*weightAWNCC*pair_weight;
+                                    weight_wncc += w_ncc*weightAWNCC*pair_weight;
+                                    
+                                    wheight_awncc += multimps[pt_index][pair_number].peak_height*weightAWNCC*pair_weight;
+                                    weight_awncc += weightAWNCC*pair_weight;
+                                    
+                                    if(IDW_w > 1.0 || IDW_w < 0 || w_bhratio > 1.0 || w_bhratio < 0.0 || w_ncc > 1.0 || w_ncc < 0.0)
+                                    {
+                                        printf("weight %d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",query_pair,pair_number,IDW_w,w_bhratio,w_ncc,weightAWNCC,min_bhratio,max_bhratio,rlevelinfo.pairinfo->BHratio[pair_number],mean_bhratio);
+                                        exit(1);
+                                    }
+                                }
+                                /*
+                                double av_HD = sum_of_HD/save_pair[query_pair].size();
+                                double av_ND = sum_of_ND/save_pair[query_pair].size();
+                                //printf("average %f\t%f\n",av_HD,av_ND);
+                                
+                                sum_of_HD = 0;
+                                sum_of_ND = 0;
+                                for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                {
+                                    int pair_number = save_pair[query_pair][count];
+                                    //printf("pair_number %d\t%f\t%f\t%f\t%f\n",pair_number,save_height_diff[count],save_ncc_diff[count],sum_of_HD,sum_of_ND);
+                                    sum_of_HD += ( save_height_diff[count] - av_HD)*( save_height_diff[count] - av_HD);
+                                    sum_of_ND += ( save_ncc_diff[count] - av_ND)*( save_ncc_diff[count] - av_ND);
+                                }
+                                
+                                wheight_bh = sum_of_BH/save_pair[query_pair].size();
+                                double var = sqrt(sum_of_HD/save_pair[query_pair].size());
+                                if(var > 1)
+                                    weight_idw = 1.0/pow(var,0.2);
+                                else
+                                    weight_idw = 1.0;
+                                
+                                var = sqrt(sum_of_ND/save_pair[query_pair].size());
+                                if(var > 1)
+                                    weight_wncc = 1.0/var;
+                                else
+                                    weight_wncc = 1.0;
+                                */
+                                total_weight = wheight_bh+weight_idw+weight_wncc;//*save_pair[query_pair].size();
+                                //if(query_pair == AWNCC_id)
+                                //    total_weight = total_weight*2;//save_pair[query_pair].size();
+                                
+                                //if(query_pair == AWNCC_id)
+                                //    total_weight = total_weight*2.0;
+                                //printf("total_weight %f\t%f\t%f\t%f\t%d\n",total_weight,wheight_bh,weight_idw,weight_wncc,save_pair[query_pair].size());
+                                //if(save_pair[query_pair].size() > 3)
+                                //    exit(1);
+                                weight_height[query_pair] = 0.30*wheight_idw/weight_idw + 0.40*wheight_bh/weight_bh + 0.30*wheight_wncc/weight_wncc;// + 0.3*wheight_awncc/weight_awncc;
+                                /*
+                                if(weight_height[query_pair] < 0 || weight_height[query_pair] > 200)
+                                {
+                                    printf("pt_index %d\tinterval %f\t%f\tminmax %f\t%f\t%f\t%f\t%d\t%d\t%f\t%f\t%f\t%f\n",pt_index,bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc,save_pair[query_pair].size(),query_pair,weight_idw,weight_bh,weight_wncc,mid_H);
+                                    exit(1);
+                                }*/
+                                //weight_height[query_pair] = multimps[pt_index][query_pair].peak_height;
                                 
                                 /*
-                                wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w;
-                                weight_idw += IDW_w;
+                                 if(weight_height >= minH -1 && weight_height <= maxH +1)
+                                 nccresult_pairs[selected_pair].result2 = weight_height;
+                                 else
+                                 {
+                                 
+                                 for(int count = 0 ; count < save_pair.size() ; count++)
+                                 {
+                                 int pair_number = save_pair[count];
+                                 printf("pt_index %d\tinterval %f\t%f\tminmax %f\t%f\t%f\t%f\t%d\t%d\t%f\t%f\t%f\t%f\t%f\n",pt_index,bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc,count,pair_number,nccresult_pairs[pair_number].result2,minH,maxH,weight_height,mid_H);
+                                 }
+                                 //nccresult_pairs[selected_pair].result2 = mid_H;
+                                 exit(1);
+                                 }
+                                 */
+                                //GridPT3[pt_index].height_counts = save_pair.size();
                                 
-                                wheight_bh += multimps[pt_index][pair_number].peak_height*w_bhratio;
-                                weight_bh += w_bhratio;
+                                //if(save_pair.size() > 2)
+                                //    exit(1);
+                                /*
+                                 if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
+                                 {
+                                 sum_weight_height += weight_height[query_pair]*pow(save_pair[query_pair].size(),2.0)*temp_nccresult_multi[query_pair];
+                                 sum_weight += pow(save_pair[query_pair].size(),2.0)*temp_nccresult_multi[query_pair];
+                                 }
+                                 else
+                                 {
+                                 sum_weight_height += weight_height[query_pair]*pow(save_pair[query_pair].size(),4.0)*temp_nccresult_multi[AWNCC_id];
+                                 sum_weight += pow(save_pair[query_pair].size(),4.0)*temp_nccresult_multi[AWNCC_id];
+                                 }
+                                 */
+                                double final_weight = 1.0;//query_peak_roh*total_weight;//*save_pair[query_pair].size();
+                                if(max_weight < total_weight && query_pair < AWNCC_id)
+                                {
+                                    max_weight = total_weight;
+                                    selected_pair = query_pair;
+                                }
+                                //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
+                                {
+                                    sum_weight_height += weight_height[query_pair]*final_weight;
+                                    sum_weight += final_weight;
+                                }
+                                /*else
+                                 {
+                                 sum_weight_height += weight_height[query_pair]*final_weight;
+                                 sum_weight += final_weight;
+                                 }
+                                 */
+                                //if(save_pair[query_pair].size() > 1)
+                                //    printf("pt_index %d\tquery_pair %d\t%f\t%f\t%f\t%d\n",pt_index,query_pair,sum_weight_height,sum_weight,weight_height[query_pair],save_pair[query_pair].size());
+                                save_pair[query_pair].clear();
+                                save_height[query_pair].clear();
                                 
-                                wheight_wncc += multimps[pt_index][pair_number].peak_height*w_ncc;
-                                weight_wncc += w_ncc;
-                                */
-                                
-                                //wheight_awncc += nccresult_pairs[pair_number].result2*weightAWNCC;
-                                //weight_awncc += weightAWNCC;
+                                //exit(1);
                             }
-                            
-                            double av_HD = sum_of_HD/save_pair[query_pair].size();
-                            double av_ND = sum_of_ND/save_pair[query_pair].size();
-                            //printf("average %f\t%f\n",av_HD,av_ND);
-                            
-                            sum_of_HD = 0;
-                            sum_of_ND = 0;
-                            for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
-                            {
-                                int pair_number = save_pair[query_pair][count];
-                                //printf("pair_number %d\t%f\t%f\t%f\t%f\n",pair_number,save_height_diff[count],save_ncc_diff[count],sum_of_HD,sum_of_ND);
-                                sum_of_HD += ( save_height_diff[count] - av_HD)*( save_height_diff[count] - av_HD);
-                                sum_of_ND += ( save_ncc_diff[count] - av_ND)*( save_ncc_diff[count] - av_ND);
-                            }
-                            
-                            wheight_bh = sum_of_BH/save_pair[query_pair].size();
-                            double var = sqrt(sum_of_HD/save_pair[query_pair].size());
-                            if(var > 1)
-                                weight_idw = 1.0/pow(var,0.2);
-                            else
-                                weight_idw = 1.0;
-                            
-                            var = sqrt(sum_of_ND/save_pair[query_pair].size());
-                            if(var > 1)
-                                weight_wncc = 1.0/var;
-                            else
-                                weight_wncc = 1.0;
-                            
-                            total_weight = wheight_bh + weight_idw + weight_wncc;//*save_pair[query_pair].size();
-                            
-                            
-                            //if(query_pair == AWNCC_id)
-                            //    total_weight = total_weight*2.0;
-                            //printf("total_weight %f\t%f\t%f\t%f\t%d\n",total_weight,wheight_bh,weight_idw,weight_wncc,save_pair[query_pair].size());
-                            //if(save_pair[query_pair].size() > 3)
-                            //    exit(1);
-                            //weight_height[query_pair] = 0.3*wheight_idw/weight_idw + 0.3*wheight_bh/weight_bh + 0.4*wheight_wncc/weight_wncc;// + 0.4*wheight_awncc/weight_awncc;
-                            
-                            weight_height[query_pair] = multimps[pt_index][query_pair].peak_height;
-                            
-                            /*
-                             if(weight_height >= minH -1 && weight_height <= maxH +1)
-                             nccresult_pairs[selected_pair].result2 = weight_height;
-                             else
-                             {
-                             
-                             for(int count = 0 ; count < save_pair.size() ; count++)
-                             {
-                             int pair_number = save_pair[count];
-                             printf("pt_index %d\tinterval %f\t%f\tminmax %f\t%f\t%f\t%f\t%d\t%d\t%f\t%f\t%f\t%f\t%f\n",pt_index,bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc,count,pair_number,nccresult_pairs[pair_number].result2,minH,maxH,weight_height,mid_H);
-                             }
-                             //nccresult_pairs[selected_pair].result2 = mid_H;
-                             exit(1);
-                             }
-                             */
-                            //GridPT3[pt_index].height_counts = save_pair.size();
-                            
-                            //if(save_pair.size() > 2)
-                            //    exit(1);
-                            /*
-                             if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
-                             {
-                             sum_weight_height += weight_height[query_pair]*pow(save_pair[query_pair].size(),2.0)*temp_nccresult_multi[query_pair];
-                             sum_weight += pow(save_pair[query_pair].size(),2.0)*temp_nccresult_multi[query_pair];
-                             }
-                             else
-                             {
-                             sum_weight_height += weight_height[query_pair]*pow(save_pair[query_pair].size(),4.0)*temp_nccresult_multi[AWNCC_id];
-                             sum_weight += pow(save_pair[query_pair].size(),4.0)*temp_nccresult_multi[AWNCC_id];
-                             }
-                             */
-                            double final_weight = query_peak_roh*total_weight;//*save_pair[query_pair].size();
-                            if(max_weight < final_weight)
-                            {
-                                max_weight = final_weight;
-                                final_selected_pair = query_pair;
-                            }
-                            //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
-                            {
-                                sum_weight_height += weight_height[query_pair]*final_weight;
-                                sum_weight += final_weight;
-                            }
-                            /*else
-                             {
-                             sum_weight_height += weight_height[query_pair]*final_weight;
-                             sum_weight += final_weight;
-                             }
-                             */
-                            //if(save_pair[query_pair].size() > 1)
-                            //    printf("pt_index %d\tquery_pair %d\t%f\t%f\t%f\t%d\n",pt_index,query_pair,sum_weight_height,sum_weight,weight_height[query_pair],save_pair[query_pair].size());
-                            save_pair[query_pair].clear();
-                            save_height[query_pair].clear();
-                            
-                            //exit(1);
                         }
                     }
                 }
-            }
-            
-            free(save_height);
-            free(save_pair);
-            free(mid_H);
-            free(weight_height);
-            
-            //selected_pair = final_selected_pair;
-       
-            if(sum_weight > 0)
-            {
-                final_height = sum_weight_height/sum_weight;
-            }
-            
-            D3DPOINT point;
-            point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
-            point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-            point.m_Z = final_height;
-            point.m_roh = multimps[pt_index][selected_pair].peak_roh;
-            point.flag = true;
-            
-            temp_points[pt_index] = point;
-            
-            GridPT3[pt_index].Mean_ortho_ncc = GridPT3[pt_index].ortho_ncc[final_selected_pair];
-            //GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
-                //printf("point %f\t%f\t%f\n",point.m_X,point.m_Y,point.m_Z);
-       
-            //else
-            //    printf("sum_weight %f\t%f\n",sum_weight_height,sum_weight);
-            //printf("pt_index %d\t%f\n",pt_index,nccresult_pairs[selected_pair].result2);
-            //exit(1);
-            /*
-            if(weight_height_awncc > -100 && weight_height_single > -100)
-            {
-                //printf("pt_index %d\tweightH %f\t%f\n",pt_index,weight_height_awncc,weight_height_single);
-                nccresult_pairs[selected_pair].result2 = weight_height_awncc*0.5 + weight_height_single*0.5;
+                
+                free(save_height);
+                free(save_pair);
+                free(mid_H);
+                free(weight_height);
+                
+                //selected_pair = final_selected_pair;
+           
+                if(sum_weight > 0)
+                {
+                    final_height = sum_weight_height/sum_weight;
+                }
+                
+                //if( final_height >= min_Height && final_height <= max_Height)
+                {
+                    D3DPOINT point;
+                    point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
+                    point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
+                    point.m_Z = final_height;
+                    point.m_roh = multimps[pt_index][selected_pair].peak_roh;
+                    point.flag = false;
+                    
+                    temp_points[pt_index] = point;
+                    
+                    GridPT3[pt_index].Mean_ortho_ncc = GridPT3[pt_index].ortho_ncc[selected_pair];
+                    GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
+                }
+                    //printf("point %f\t%f\t%f\n",point.m_X,point.m_Y,point.m_Z);
+           
+                //else
+                //    printf("sum_weight %f\t%f\n",sum_weight_height,sum_weight);
+                //printf("pt_index %d\t%f\n",pt_index,nccresult_pairs[selected_pair].result2);
                 //exit(1);
+                /*
+                if(weight_height_awncc > -100 && weight_height_single > -100)
+                {
+                    //printf("pt_index %d\tweightH %f\t%f\n",pt_index,weight_height_awncc,weight_height_single);
+                    nccresult_pairs[selected_pair].result2 = weight_height_awncc*0.5 + weight_height_single*0.5;
+                    //exit(1);
+                }
+                else if(weight_height_awncc > -100)
+                    nccresult_pairs[selected_pair].result2 = weight_height_awncc;
+                else if(weight_height_single > -100)
+                    nccresult_pairs[selected_pair].result2 = weight_height_single;
+                 */
             }
-            else if(weight_height_awncc > -100)
-                nccresult_pairs[selected_pair].result2 = weight_height_awncc;
-            else if(weight_height_single > -100)
-                nccresult_pairs[selected_pair].result2 = weight_height_single;
-             */
         }
-        
         //exit(1);
         
         /*
@@ -9375,7 +9780,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pts_row = (int)(floor(iter_count/Size_Grid2D.width));
         long pts_col = iter_count % Size_Grid2D.width;
         long pt_index = iter_count;
-        if(temp_points[pt_index].flag && temp_points[pt_index].m_Z > Nodata)
+        if(!temp_points[pt_index].flag && temp_points[pt_index].m_Z > Nodata)
             MatchedPts_list_mps.push_back(temp_points[pt_index]);
     }
     
@@ -9431,7 +9836,7 @@ void AWNCC_multi(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSiz
         nccresult[pt_index].result3 = Nodata;
         nccresult[pt_index].result4 = 0;
     
-        GridPT3[pt_index].height_counts = 0;
+//        GridPT3[pt_index].height_counts = 0;
         GridPT3[pt_index].total_images = 0;
         
         double db_GNCC, db_INCC;
@@ -13724,8 +14129,8 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* r
     sprintf(t_str,"%s/txt/total_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
     outfile_tp = fopen(t_str,"w");
     
-    sprintf(t_str,"%s/txt/bin_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
-    outfile_ttp = fopen(t_str,"w");
+//    sprintf(t_str,"%s/txt/bin_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
+//    outfile_ttp = fopen(t_str,"w");
     for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
     {
         sprintf(t_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration,ti);
@@ -13743,7 +14148,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* r
 
             fprintf(outfile_sp,"%d\t",GridPT3[matlab_index].ncc_seleceted_pair);
             fprintf(outfile_tp,"%d\t",GridPT3[matlab_index].total_images);
-            fprintf(outfile_ttp,"%3.2f\t",GridPT3[matlab_index].height_counts);
+ //           fprintf(outfile_ttp,"%3.2f\t",GridPT3[matlab_index].height_counts);
             
             for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
             {
@@ -13752,14 +14157,14 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, NCCresult* r
         }
         fprintf(outfile_sp,"\n");
         fprintf(outfile_tp,"\n");
-        fprintf(outfile_ttp,"\n");
+ //       fprintf(outfile_ttp,"\n");
         for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
             fprintf(outfile_roh[ti],"\n");
     }
 
     fclose(outfile_sp);
     fclose(outfile_tp);
-    fclose(outfile_ttp);
+//    fclose(outfile_ttp);
     for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs; ti++)
         fclose(outfile_roh[ti]);
     
@@ -14304,15 +14709,15 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
 
 }
 
-bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, int &selected_images)
+bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int pair_number)
 {
-    bool check = true;
-    selected_images = 0;
+    bool check = false;
     const int buff_pixel = 1;
     
     //while(!stop_check && pairs < plevelinfo.pairinfo->NumberOfPairs)
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    //for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
+        int ti = pair_number;
         bool bleft_s, bright_s, bleft_e, bright_e;
         D3DPOINT temp_gp;
         D2DPOINT temp;
@@ -14365,7 +14770,47 @@ bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, con
             bleft_e     = false;
         
         if( bleft_s && bleft_e)
-            selected_images++;
+            check = true;
+        else
+            check = false;
+    }
+    
+    return check;
+}
+
+bool check_image_boundary_height(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double Height, const int H_template_size, const int pair_number)
+{
+    bool check = true;
+    const int buff_pixel = 1;
+    
+    //for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    {
+        int ti = pair_number;
+        D3DPOINT temp_gp;
+        D2DPOINT temp;
+        D2DPOINT photo;
+        
+        temp_gp.m_Z = Height;
+        if(proinfo->sensor_type == SB)
+        {
+            temp_gp.m_X = pos_xy.m_X;
+            temp_gp.m_Y = pos_xy.m_Y;
+            temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
+        }
+        else
+        {
+            temp_gp.m_X = pos_xy_m.m_X;
+            temp_gp.m_Y = pos_xy_m.m_Y;
+
+            photo  = GetPhotoCoordinate_single(temp_gp,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+            temp            = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+        }
+        temp        = OriginalToPyramid_single(temp,plevelinfo.py_Startpos[ti],*plevelinfo.Pyramid_step);
+
+        if(temp.m_X > H_template_size +buff_pixel && temp.m_X < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].width - H_template_size -buff_pixel && temp.m_Y > H_template_size +buff_pixel && temp.m_Y < plevelinfo.py_Sizes[ti][*plevelinfo.Pyramid_step].height- H_template_size -buff_pixel)
+            check     = true;
+        else
+            check     = false;
     }
     
     return check;

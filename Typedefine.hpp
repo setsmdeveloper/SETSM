@@ -290,15 +290,15 @@ typedef struct UpdateGrid{
 	
 	short roh;
 	short *ortho_ncc;
-    short Mean_ortho_ncc;
+    short Mean_ortho_ncc; // selected peak pair ortho ncc
 
     unsigned char Matched_flag;
 	unsigned char anchor_flag;
     
-    unsigned char selected_pair;
+    unsigned char selected_pair; //reference image
     unsigned char total_images;
-    signed char ncc_seleceted_pair;
-    float height_counts;
+    signed char ncc_seleceted_pair; //selected peak pair
+//    float height_counts;
 }UGRID;
 
 typedef struct tagVoxelinfo
