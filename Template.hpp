@@ -402,9 +402,9 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                        
                     }
 #pragma omp parallel for private(i,j) schedule(guided)
-                    for (i=0;i<end_tile_col;i++)
+                    for (i=0;i<end_tile_row;i++)
                     {
-                        for (j=0;j<end_tile_row;j++)
+                        for (j=0;j<end_tile_col;j++)
                         {
                             size_t t_row = (row*tileL) + i;
                             size_t t_col = (col*tileL) + j;
