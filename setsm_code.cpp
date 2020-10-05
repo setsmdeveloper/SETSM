@@ -1579,8 +1579,6 @@ int main(int argc,char *argv[])
 
 void DownSample(ARGINFO &args)
 {
-    long cols[2];
-    long rows[2];
     CSize data_size;
     double minX, maxY, grid_size;
     
@@ -1596,19 +1594,12 @@ void DownSample(ARGINFO &args)
         TransParam param;
         SetTranParam_fromGeoTiff(&param,args.seedDEMfilename);
         
-        
-        CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
-        Imagesize->width = seeddem_size.width;
-        Imagesize->height = seeddem_size.height;
-        
-        cols[0] = 0;
-        cols[1] = seeddem_size.width;
-        
-        rows[0] = 0;
-        rows[1] = seeddem_size.height;
+        CSize Imagesize = seeddem_size;
+        long cols[2] = {0, seeddem_size.width};
+        long rows[2] = {0, seeddem_size.height};
         
         float type(0);
-        float *seeddem = Readtiff_T(args.seedDEMfilename,Imagesize,cols,rows,&data_size,type);
+        float *seeddem = Readtiff_T(args.seedDEMfilename,&Imagesize,cols,rows,&data_size,type);
         
         CSize out_size = seeddem_size;
         float *pyimage = seeddem;
