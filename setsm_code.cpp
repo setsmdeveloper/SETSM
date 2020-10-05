@@ -1610,25 +1610,16 @@ void DownSample(ARGINFO &args)
         float type(0);
         float *seeddem = Readtiff_T(args.seedDEMfilename,Imagesize,cols,rows,&data_size,type);
         
-        float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
-        
-        CSize out_size;
+        CSize out_size = seeddem_size;
+        float *pyimage = seeddem;
         
         for(int level = 0 ; level < downsample_step ; level ++)
         {
-            if(level == 0)
-            {
-                pyimg[0] = CreateImagePyramid(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
-                free(seeddem);
-                out_size.width = seeddem_size.width/2;
-                out_size.height = seeddem_size.height/2;
-            }
-            else
-            {
-                pyimg[level] = CreateImagePyramid(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
-                out_size.width = out_size.width/2;
-                out_size.height = out_size.height/2;
-            }
+            float *next = CreateImagePyramid(pyimage, out_size, args.DS_kernel, args.DS_sigma);
+            free(pyimage);
+            out_size.width = out_size.width/2;
+            out_size.height = out_size.height/2;
+            pyimage = next;
         }
 
         printf("Done Gaussian processing\n");
@@ -1658,11 +1649,11 @@ void DownSample(ARGINFO &args)
             long int pt_index = pts_row*(long int)out_size.width + pts_col;
             
             D2DPOINT query_pt(pts_col + Dgrid.m_X,pts_row + Dgrid.m_Y);
-            outimg[iter_count] = BilinearResampling(pyimg[downsample_step-1],out_size,query_pt);
+            outimg[iter_count] = BilinearResampling(pyimage,out_size,query_pt);
         }
         printf("Done resampling\n");
-        free(pyimg[downsample_step-1]);
-        free(pyimg);
+
+        free(pyimage);
         
         WriteGeotiff(args.Outputpath_name, outimg, out_size.width, out_size.height, args.DEM_space, target.m_X, target.m_Y, param.projection, param.utm_zone, param.bHemisphere, 4);
 
