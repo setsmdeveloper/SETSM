@@ -338,69 +338,26 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             {
                 for (col = 0; col < count_W; col ++)
                 {
-                    int end_tile_row, end_tile_col;
                     int ret = TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
                     if(ret < 0) {
                         printf("ERROR: TIFFReadTile returned %d for row %d col %d\n", ret, row, col);
                         exit(1);
                     }
                     t_data = (T*)buf;
-                    
-                    if(f_row_end > 0 && f_col_end > 0)
+
+                    // better not have more tiles than maxint
+                    int end_tile_row = tileL;
+                    int end_tile_col = tileW;
+
+                    if(f_row_end > 0 && row == count_L - 1)
                     {
-                        if(row == count_L-1 && col == count_W -1)
-                        {
-                            end_tile_row = f_row_end;
-                            end_tile_col = f_col_end;
-                        }
-                        else if(row == count_L-1)
-                        {
-                            end_tile_row = f_row_end;
-                            end_tile_col = tileW;
-                        }
-                        else if(col == count_W -1)
-                        {
-                            end_tile_row = tileL;
-                            end_tile_col = f_col_end;
-                        }
-                        else
-                        {
-                            end_tile_row = tileL;
-                            end_tile_col = tileW;
-                        }
+                        end_tile_row = f_row_end;
                     }
-                    else if(f_row_end > 0)
+                    if(f_col_end > 0 && col == count_W - 1)
                     {
-                        if(row == count_L-1)
-                        {
-                            end_tile_row = f_row_end;
-                            end_tile_col = tileW;
-                        }
-                        else
-                        {
-                            end_tile_row = tileL;
-                            end_tile_col = tileW;
-                        }
+                        end_tile_col = f_col_end;
                     }
-                    else if(f_col_end > 0)
-                    {
-                        if(col == count_W -1)
-                        {
-                            end_tile_row = tileL;
-                            end_tile_col = f_col_end;
-                        }
-                        else
-                        {
-                            end_tile_row = tileL;
-                            end_tile_col = tileW;
-                        }
-                    }
-                    else
-                    {
-                        end_tile_row = tileL;
-                        end_tile_col = tileW;
-                       
-                    }
+
 #pragma omp parallel for private(i,j) schedule(guided)
                     for (i=0;i<end_tile_row;i++)
                     {
