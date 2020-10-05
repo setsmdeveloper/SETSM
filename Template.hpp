@@ -409,7 +409,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             size_t t_row = (row*tileL) + i;
                             size_t t_col = (col*tileW) + j;
                             if(t_row < data_size->height && t_col < data_size->width)
-                                out[((row*tileL) + i)*data_size->width + ((col*tileW) + j)] = t_data[i*tileW + j];
+                                out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                         }
                     }
                 }
