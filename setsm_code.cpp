@@ -1630,15 +1630,7 @@ void DownSample(ARGINFO &args)
                 out_size.height = out_size.height/2;
             }
         }
-        /*
-        for(int i=0 ; i< downsample_step-1 ; i++)
-            free(pyimg[i]);
-        
-        WriteGeotiff(args.Outputpath_name, pyimg[downsample_step-1], out_size.width, out_size.height, args.DEM_space, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
-        
-        free(pyimg[downsample_step-1]);
-        free(pyimg);
-        */
+
         printf("Done Gaussian processing\n");
         
         D2DPOINT target;
