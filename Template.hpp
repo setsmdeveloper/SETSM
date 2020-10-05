@@ -358,6 +358,13 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                         end_tile_col = f_col_end;
                     }
 
+                    size_t max_row_index = (row*tileL) + (end_tile_row - 1);
+                    size_t max_col_index = (col*tileW) + (end_tile_col - 1);
+                    if(max_row_index >= data_size->height || max_col_index >= data_size->width) {
+                        printf("ERROR: bounds problem while reading %s, quitting...\n", filename);
+                        exit(1);
+                    }
+
 #pragma omp parallel for private(i,j) schedule(guided)
                     for (i=0;i<end_tile_row;i++)
                     {
@@ -365,8 +372,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                         {
                             size_t t_row = (row*tileL) + i;
                             size_t t_col = (col*tileW) + j;
-                            if(t_row < data_size->height && t_col < data_size->width)
-                                out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
+                            out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                         }
                     }
                 }
