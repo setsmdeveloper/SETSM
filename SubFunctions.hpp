@@ -23,6 +23,8 @@
 #include "Template.hpp"
 #include "setsmgeo.hpp"
 #include "grid_triangulation.hpp"
+#include <sys/resource.h>
+#include <sys/time.h>
 
 #define min(a, b)  (((a) < (b)) ? (a) : (b))
 #define max(a, b)  (((a) > (b)) ? (a) : (b))
