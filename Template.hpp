@@ -282,7 +282,8 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         else
         {
             printf("tile\n");
-            unsigned int count_W,count_L,starttileL,starttileW;
+            int count_W, count_L;
+            uint32_t starttileL,starttileW;
             unsigned long start_row,start_col,end_row,end_col;
             tdata_t buf;
             T* t_data;
@@ -291,14 +292,14 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
             TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
             
-            starttileL      = (int)(rows[0]/tileL);
+            starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
             printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
-            starttileW      = (int)(cols[0]/tileW);
+            starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
             printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
