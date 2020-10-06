@@ -127,6 +127,17 @@ int Maketmpfolders(ProInfo *info)
     return check_folder;
 }
 
+double getSystemMemory()
+{
+    struct rlimit lim;
+    if( getrlimit(RLIMIT_RSS, &lim) == 0) {
+        return (double)lim.rlim_cur/pwrtwo(30);
+    }
+    else {
+        return -1.0;
+    }
+}
+
 
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams)
 {
