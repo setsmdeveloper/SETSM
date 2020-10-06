@@ -188,6 +188,23 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
     return (T)value;
 }
 
+/** Read and return pointer to TIFF
+ *
+ * Arguments:
+ *      filename - name of TIFF file to read
+ *      Imagesize - Size of the image to read
+ *      cols - (IN/OUT) array of length 2. First element is the column of
+ *          the starting pixel. Second element is the column of the end
+ *          pixel. These are updated if the start/end pixels shift based
+ *          on TIFF tile boundaries. End is exlusive, start is inclusive.
+ *      rows - (IN/OUT) same as cols, but for start/end pixel rows in images
+ *      data_size - (OUT) size of the returned image. Length of returned
+ *          image is width*height
+ *      type - Return type for function. Variable value unused. I.e. to
+ *          return data as floats, pass a float here
+ *
+ *  Returns a buffer holding image data in row-major order.
+ */
 template <typename T>
 T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type)
 {
@@ -210,11 +227,19 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
     
     if(check_ftype == 1 && tif)
     {
-        int i,j,row, col, tileW;
+        // these are ultimately used to index an array,
+        // so enure they are long enough if the array is
+        // more than 2^32 elems long
+        size_t i, j;
+
+        // These need to be 32 bit unsigned per libtiff
+        uint32_t tileW, tileL;
+
+        // used to iterate through the scanlines or TIFF tiles
+        uint32_t row, col;
         
-        tileW = -1;
-        TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
-        if(tileW < 0)
+        int ret = TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
+        if(ret != 1) // TIFFGetField returns 1 on success
         {
             printf("NO TILE\n");
             tsize_t scanline;
@@ -257,22 +282,24 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         else
         {
             printf("tile\n");
-            int tileL,count_W,count_L,starttileL,starttileW;
-            long start_row,start_col,end_row,end_col;
+            int count_W, count_L;
+            uint32_t starttileL,starttileW;
+            unsigned long start_row,start_col,end_row,end_col;
             tdata_t buf;
             T* t_data;
             
+            // TILEWIDTH and TILELENGTH take pointers to uint32
             TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
             TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
             
-            starttileL      = (int)(rows[0]/tileL);
+            starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
             printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
-            starttileW      = (int)(cols[0]/tileW);
+            starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
             printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
@@ -312,145 +339,41 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             {
                 for (col = 0; col < count_W; col ++)
                 {
-                    TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
+                    int ret = TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
+                    if(ret < 0) {
+                        printf("ERROR: TIFFReadTile returned %d for row %d col %d\n", ret, row, col);
+                        exit(1);
+                    }
                     t_data = (T*)buf;
-                    
-                    if(f_row_end > 0 && f_col_end > 0)
+
+                    // better not have more tiles than maxint
+                    int end_tile_row = tileL;
+                    int end_tile_col = tileW;
+
+                    if(f_row_end > 0 && row == count_L - 1)
                     {
-                        if(row == count_L-1 && col == count_W -1)
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<f_row_end;i++)
-                            {
-                                for (j=0;j<f_col_end;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
-                        else if(row == count_L-1)
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<f_row_end;i++)
-                            {
-                                for (j=0;j<tileW;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                            
-                        }
-                        else if(col == count_W -1)
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<tileL;i++)
-                            {
-                                for (j=0;j<f_col_end;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
-                        else
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<tileL;i++)
-                            {
-                                for (j=0;j<tileW;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
+                        end_tile_row = f_row_end;
                     }
-                    else if(f_row_end > 0)
+                    if(f_col_end > 0 && col == count_W - 1)
                     {
-                        if(row == count_L-1)
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<f_row_end;i++)
-                            {
-                                for (j=0;j<tileW;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                            
-                        }
-                        else
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<tileL;i++)
-                            {
-                                for (j=0;j<tileW;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
+                        end_tile_col = f_col_end;
                     }
-                    else if(f_col_end > 0)
-                    {
-                        if(col == count_W -1)
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<tileL;i++)
-                            {
-                                for (j=0;j<f_col_end;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
-                        else
-                        {
-#pragma omp parallel for private(i,j) schedule(guided)
-                            for (i=0;i<tileL;i++)
-                            {
-                                for (j=0;j<tileW;j++)
-                                {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                                }
-                            }
-                        }
+
+                    size_t max_row_index = (row*tileL) + (end_tile_row - 1);
+                    size_t max_col_index = (col*tileW) + (end_tile_col - 1);
+                    if(max_row_index >= data_size->height || max_col_index >= data_size->width) {
+                        printf("ERROR: bounds problem while reading %s, quitting...\n", filename);
+                        exit(1);
                     }
-                    else
-                    {
-                       
+
 #pragma omp parallel for private(i,j) schedule(guided)
-                        for (i=0;i<tileL;i++)
+                    for (i=0;i<end_tile_row;i++)
+                    {
+                        for (j=0;j<end_tile_col;j++)
                         {
-                            for (j=0;j<tileW;j++)
-                            {
-                                int t_row = (row*tileL) + i;
-                                int t_col = (col*tileL) + j;
-                                if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
-                            }
+                            size_t t_row = (row*tileL) + i;
+                            size_t t_col = (col*tileW) + j;
+                            out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                         }
                     }
                 }
