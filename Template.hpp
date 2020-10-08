@@ -42,40 +42,27 @@ inline float SignedCharToFloat(signed char val);
 
 inline void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6]);
 
-//definition
-template <typename T>
-T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
-{
-    //_filter_size = 7, sigma = 1.6
-    double sigma = _sigma;
-    double temp,scale;
+static Matrix CreateGaussianFilter(int filter_size, double sigma) {
+
+    int half_filter_size = (int)(filter_size/2);
     double sum = 0;
-    double** GaussianFilter;
-    CSize result_size;
-    T* result_img;
-
-    GaussianFilter = (double**)malloc(sizeof(double*)*_filter_size);
-    for(int i=0;i<_filter_size;i++)
-        GaussianFilter[i] = (double*)malloc(sizeof(double)*_filter_size);
-
-    
-    result_size.width = _img_size.width/2;
-    result_size.height = _img_size.height/2;
-    scale=1/(sqrt(2*PI)*sigma);
-    
-    int half_filter_size = (int)(_filter_size/2);
-    
-    result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
     double tmp = -1/(2*sigma*sigma);
+    double scale=1/(sqrt(2*PI)*sigma);
 
-#pragma omp parallel for schedule(guided) private(temp) collapse(2) reduction(+:sum)
+    Matrix GaussianFilter(filter_size, filter_size);
+
+// This parallel section introduces nondeterminism, so disable
+// it for now. Consider re-enabling it if performance in this
+// code becomes an issue.
+//#pragma omp parallel for schedule(guided) collapse(2) reduction(+:sum)
     for(int i=-half_filter_size;i<=half_filter_size;i++)
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            temp = (i*i+j*j)*tmp; //-1.0*(i*i+j*j)/(2*sigma*sigma);
-            GaussianFilter[i+half_filter_size][j+half_filter_size]=exp(temp)*scale;
-            sum += exp(temp)*scale;
+            double temp = (i*i+j*j)*tmp;
+            double val = exp(temp)*scale;
+            GaussianFilter(i+half_filter_size, j+half_filter_size)=val;
+            sum += val;
         }
     }
 
@@ -84,9 +71,28 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
     {
         for(int j=-half_filter_size;j<=half_filter_size;j++)
         {
-            GaussianFilter[i+half_filter_size][j+half_filter_size]/=sum;
+            GaussianFilter(i+half_filter_size, j+half_filter_size)/=sum;
         }
     }
+    return GaussianFilter;
+}
+
+//definition
+template <typename T>
+T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigma)
+{
+
+    int half_filter_size = (int)(_filter_size/2);
+
+    Matrix GaussianFilter = CreateGaussianFilter(_filter_size, _sigma);
+
+    CSize result_size;
+    result_size.width = _img_size.width/2;
+    result_size.height = _img_size.height/2;
+    
+    
+    T *result_img = (T*)malloc(sizeof(T)*result_size.height*result_size.width);
+
 
 #pragma omp parallel for schedule(guided) collapse(2)
     for(long int r=0;r<result_size.height;r++)
@@ -105,13 +111,14 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     {
                         if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
                         {
-                            temp_v += GaussianFilter[l + half_filter_size][k + half_filter_size]*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
                             count ++;
                         }
                     }
                 }
             }
 
+            // only use filter value if entire filter was applied
             if(count == _filter_size*_filter_size)
                 result_img[r*result_size.width + c] = (T)temp_v;
             else
@@ -119,14 +126,6 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
         }
     }
     
-    for(int i=0;i<_filter_size;i++)
-        if(GaussianFilter[i])
-            free(GaussianFilter[i]);
-
-    if(GaussianFilter)
-        free(GaussianFilter);
-    
-
     return result_img;
 }
 
@@ -189,6 +188,23 @@ T BilinearResampling(T* input, const CSize img_size, D2DPOINT query_pt)
     return (T)value;
 }
 
+/** Read and return pointer to TIFF
+ *
+ * Arguments:
+ *      filename - name of TIFF file to read
+ *      Imagesize - Size of the image to read
+ *      cols - (IN/OUT) array of length 2. First element is the column of
+ *          the starting pixel. Second element is the column of the end
+ *          pixel. These are updated if the start/end pixels shift based
+ *          on TIFF tile boundaries. End is exlusive, start is inclusive.
+ *      rows - (IN/OUT) same as cols, but for start/end pixel rows in images
+ *      data_size - (OUT) size of the returned image. Length of returned
+ *          image is width*height
+ *      type - Return type for function. Variable value unused. I.e. to
+ *          return data as floats, pass a float here
+ *
+ *  Returns a buffer holding image data in row-major order.
+ */
 template <typename T>
 T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type)
 {
@@ -211,11 +227,19 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
     
     if(check_ftype == 1 && tif)
     {
-        int i,j,row, col, tileW;
+        // these are ultimately used to index an array,
+        // so enure they are long enough if the array is
+        // more than 2^32 elems long
+        size_t i, j;
+
+        // These need to be 32 bit unsigned per libtiff
+        uint32_t tileW, tileL;
+
+        // used to iterate through the scanlines or TIFF tiles
+        uint32_t row, col;
         
-        tileW = -1;
-        TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
-        if(tileW < 0)
+        int ret = TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
+        if(ret != 1) // TIFFGetField returns 1 on success
         {
             printf("NO TILE\n");
             tsize_t scanline;
@@ -258,22 +282,24 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         else
         {
             printf("tile\n");
-            int tileL,count_W,count_L,starttileL,starttileW;
-            long start_row,start_col,end_row,end_col;
+            int count_W, count_L;
+            uint32_t starttileL,starttileW;
+            unsigned long start_row,start_col,end_row,end_col;
             tdata_t buf;
             T* t_data;
             
+            // TILEWIDTH and TILELENGTH take pointers to uint32
             TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
             TIFFGetField(tif, TIFFTAG_TILELENGTH, &tileL);
             
-            starttileL      = (int)(rows[0]/tileL);
+            starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
             printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
-            starttileW      = (int)(cols[0]/tileW);
+            starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
             printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
@@ -313,9 +339,13 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             {
                 for (col = 0; col < count_W; col ++)
                 {
-                    TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
+                    int ret = TIFFReadTile(tif, buf, (col+starttileW)*tileW, (row+starttileL)*tileL, 0,0);
+                    if(ret < 0) {
+                        printf("ERROR: TIFFReadTile returned %d for row %d col %d\n", ret, row, col);
+                        exit(1);
+                    }
                     t_data = (T*)buf;
-                    
+
                     if(f_row_end > 0 && f_col_end > 0)
                     {
                         if(row == count_L-1 && col == count_W -1)
@@ -325,10 +355,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -339,10 +369,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -354,10 +384,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -368,10 +398,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -385,10 +415,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                             
@@ -400,10 +430,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -417,10 +447,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<f_col_end;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -431,10 +461,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                             {
                                 for (j=0;j<tileW;j++)
                                 {
-                                    int t_row = (row*tileL) + i;
-                                    int t_col = (col*tileL) + j;
-                                    if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                        out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                    size_t t_row = (row*tileL) + i;
+                                    size_t t_col = (col*tileW) + j;
+                                    if(t_row < data_size->height && t_col < data_size->width)
+                                        out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                                 }
                             }
                         }
@@ -447,10 +477,10 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
                         {
                             for (j=0;j<tileW;j++)
                             {
-                                int t_row = (row*tileL) + i;
-                                int t_col = (col*tileL) + j;
-                                if(t_row >= 0 && t_row < data_size->height && t_col >= 0 && t_col < data_size->width)
-                                    out[((row*tileL) + i)*data_size->width + ((col*tileL) + j)] = t_data[i*tileW + j];
+                                size_t t_row = (row*tileL) + i;
+                                size_t t_col = (col*tileW) + j;
+                                if(t_row < data_size->height && t_col < data_size->width)
+                                    out[t_row*data_size->width + t_col] = t_data[i*tileW + j];
                             }
                         }
                     }
