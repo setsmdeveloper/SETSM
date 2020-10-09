@@ -16,7 +16,7 @@
 #include "log.hpp"
 #include "setsm_code.hpp"
 
-static bool need_custom_async_progress() {
+static bool requested_custom_async_progress() {
     static const std::array<std::string, 6> enable_strs = {
         "1", "y", "on", "yes", "enable" };
 
@@ -198,3 +198,93 @@ public:
     }
 };
 
+// check to see if there's async progress with current
+// configuration. Do this by creating a counter, and have
+// other ranks try to increment it. If they are able to
+// without any actions by rank0 (which is where the counter
+// memory lives), then we have async progress spport.
+// Otherwise, if they're not able to increment the counter
+// until rank0 gets to it, then async progress support is
+// not there or not good enough.
+static bool has_async_support() {
+    int rank, ret, size;
+
+    ret = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(ret != MPI_SUCCESS) {
+        throw MPIException("MPI_Comm_rank", ret, "Could not get comm rank");
+    }
+    ret = MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if(ret != MPI_SUCCESS) {
+        throw MPIException("MPI_Comm_size", ret, "Could not get comm size");
+    }
+    if(size <= 1) {
+        // async communications don't really happen if
+        // there's only 1 rank
+        return true;
+    }
+
+    MPICounter counter;
+
+    bool supports_async = true;
+
+    // each process other than rank 0 will be incrementing the counter
+    // That's (size - 1) processes. If rank zero waits for n seconds
+    // before reading from the counter, let's require that the other
+    // processes each be able to read from the counter n/2 times
+    const int sleep_delay = 10;
+    const int min_expected_count = (size - 1) * (sleep_delay / 2);
+    // let's set a max here to keep things sane
+    const int max_count = (size - 1) * sleep_delay;
+
+    if(rank > 0) {
+        for(;;) {
+            int val = counter.next();
+            if(val > max_count)
+                break;
+        }
+    } else {
+        sleep(10);
+        int val = counter.next();
+        supports_async = (val >= min_expected_count);
+    }
+
+    ret = MPI_Bcast(&supports_async, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+    if(ret != MPI_SUCCESS) {
+        throw MPIException("MPI_Comm_size", ret, "Could not get comm size");
+    }
+
+    return supports_async;
+}
+
+static void init_mpi(int&argc, char* argv[]) {
+    int provided = 1;
+    bool wants_custom_async = requested_custom_async_progress();
+    int requested = wants_custom_async ? MPI_THREAD_MULTIPLE : MPI_THREAD_FUNNELED;
+    MPI_Init_thread(&argc, &argv, requested, &provided);
+    if(provided < requested) {
+        fprintf(stderr, "ERROR: mpi requested threading support level %d but got %d\n",
+                requested, provided);
+        MPI_Finalize();
+        exit(1);
+    }
+
+    if(!wants_custom_async && !has_async_support()) {
+        fprintf(stderr, "ERROR: "
+                "Async support not detected for current MPI configuration. "
+                "Please enable async progress support for your MPI library "
+                "or enable setsm's custom async progress feature by setting "
+                "SETSM_CUSTOM_ASYNC=1 in the environment. See the REAMDE "
+                "for more information\n");
+        MPI_Finalize();
+        exit(1);
+    }
+    
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0)
+    {
+      int size;
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      printf("MPI: Number of processes: %d\n", size);
+    }
+}

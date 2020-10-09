@@ -31,22 +31,7 @@ int main(int argc,char *argv[])
 {
 
 #ifdef BUILDMPI
-    int provided = 1;
-    int requested = need_custom_async_progress() ? MPI_THREAD_MULTIPLE : MPI_THREAD_FUNNELED;
-    MPI_Init_thread(&argc, &argv, requested, &provided);
-    if(provided < requested) {
-        printf("ERROR: mpi requested threading support level %d but got %d\n", requested, provided);
-        MPI_Finalize();
-        exit(1);
-    }
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0)
-    {
-      int size;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
-      printf("MPI: Number of processes: %d\n", size);
-    }
+    init_mpi(argc, argv);
 #endif
 
     init_logging();
@@ -1597,6 +1582,16 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
+
+#ifdef BUILDMPI
+    // Make sure to finalize
+    int finalized;
+    MPI_Finalized(&finalized);
+    if (!finalized)
+    {
+        MPI_Finalize();
+    }
+#endif
     
     return 0;
 }
@@ -2928,16 +2923,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     else if(args.check_ortho)
         exit(1);
     
-#ifdef BUILDMPI
-    // Make sure to finalize
-    int finalized;
-    MPI_Finalized(&finalized);
-    if (!finalized)
-    {
-        MPI_Finalize();
-    }
-#endif
-    
     return DEM_divide;
 }
 
@@ -2997,7 +2982,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
         tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
 
         // only enable custom async progress if it was requested
-        if(rank == 0 && need_custom_async_progress()) {
+        if(rank == 0 && requested_custom_async_progress()) {
             async_progressor = std::unique_ptr<MPIProgressor>(new MPIProgressor(
                 std::chrono::milliseconds(750)));
         }
