@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "log.hpp"
+#include <atomic>
+#include <memory>
+
 #include "setsm_code.hpp"
+#include "log.hpp"
 
 #ifdef BUILDMPI
 #include "mpi.h"
 #include "mpi_helpers.hpp"
 #endif
-
-#include <atomic>
-#include <memory>
 
 const char setsm_version[] = "4.3.2";
 
