@@ -77,8 +77,8 @@ To build SETSM for parallel computing with MPI, follow the above steps then use:
 make setsm_mpi
 ```
 
-MPI-parallel SETSM (setsm_mpi) has been tested with MVAPICH2 and 
-OpenMPI.  It should work with other MPI implementations with minor changes 
+MPI-parallel SETSM (setsm_mpi) has been tested with MVAPICH2, CrayMPI, and 
+IntelMPI.  It should work with other MPI implementations with minor changes 
 to the Makefile.
 
 If SETSM is built with both MPI and OpenMP it is usually best to run one 
@@ -87,7 +87,7 @@ MPI process per compute node and allow multithreading within the node.
 MPI in SETSM **requires** async progress support. Most MPI implementations
 provide this, though it may be disabled by default. Usually it can be enabled
 using environment variables. To enable async progress for intelmpi, set
-`I_MPI_ASYNC_PROGRESS=1`/ Similarly, for mavpich2, set `MV2_ASYNC_PROGRESS=1`.
+`I_MPI_ASYNC_PROGRESS=1`/ Similarly, for mvapich, set `MV2_ASYNC_PROGRESS=1`.
 
 Some MPI implementations do not support async progress. Notably, the MPI
 implementation provided by cray has some issues on this front. For these
