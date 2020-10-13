@@ -23,7 +23,7 @@
 #include "mpi.h"
 #endif
 
-const char setsm_version[] = "4.3.2";
+const char setsm_version[] = "4.3.3";
 
 int main(int argc,char *argv[])
 {
