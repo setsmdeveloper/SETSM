@@ -32,10 +32,7 @@
 #define MaxImages 100
 #define MaxNCC 2
 #define Nodata -9999
-#ifndef bool
-//#define bool unsigned char
-#define true 0x1
-#define false 0x0
+
 #define SQ(x)         (x) * (x)
 #define SWAP(a,b) temp=a;a=b;b=temp;
 #define MAXRAND     0x7fffffff
@@ -45,7 +42,6 @@
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
 
-#endif
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
