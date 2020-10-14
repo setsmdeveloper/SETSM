@@ -32,6 +32,8 @@ int main(int argc,char *argv[])
 
 #ifdef BUILDMPI
     init_mpi(argc, argv);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
 
     init_logging();
@@ -144,6 +146,9 @@ int main(int argc,char *argv[])
         
         DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
         
+#ifdef BUILDMPI
+        if(rank == 0) {
+#endif
         char DEMFilename[500];
         char Outputpath[500];
         sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
@@ -156,6 +161,9 @@ int main(int argc,char *argv[])
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
         else
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+#ifdef BUILDMPI
+        }
+#endif
     }
     else if(argc == 2)
     {
@@ -251,6 +259,9 @@ int main(int argc,char *argv[])
             
             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
             
+#ifdef BUILDMPI
+            if(rank == 0) {
+#endif
             char DEMFilename[500];
             char Outputpath[500];
             
@@ -268,6 +279,9 @@ int main(int argc,char *argv[])
                     orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,iter,Imageparams);
                 }
             }
+#ifdef BUILDMPI
+            }
+#endif
         }
         else
             printf("Please check input 1 and input 2. Both is same\n");
@@ -1499,6 +1513,9 @@ int main(int argc,char *argv[])
                         {
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
 
+#ifdef BUILDMPI
+                            if(rank == 0) {
+#endif
                             char DEMFilename[500];
                             char Outputpath[500];
                             
@@ -1545,6 +1562,9 @@ int main(int argc,char *argv[])
                                         remove(DEMFilename);
                                 }
                             }
+#ifdef BUILDMPI
+                        }
+#endif
                         }
                         else
                             printf("Please check input 1 and input 2. Both is same\n");
@@ -1572,6 +1592,9 @@ int main(int argc,char *argv[])
         }
     }
     
+#ifdef BUILDMPI
+    if(rank == 0) {
+#endif
     printf("# of allocated threads = %d\n",omp_get_max_threads());
             
     if(Imageparams)
@@ -1584,13 +1607,9 @@ int main(int argc,char *argv[])
     free(Imageparams);
 
 #ifdef BUILDMPI
-    // Make sure to finalize
-    int finalized;
-    MPI_Finalized(&finalized);
-    if (!finalized)
-    {
-        MPI_Finalize();
     }
+    // Make sure to finalize
+    MPI_Finalize();
 #endif
     
     return 0;
@@ -2509,9 +2528,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
-                            MPI_Finalize();
-                            if(rank != 0)
-                                exit(0);
+                            if(rank == 0) {
 #endif
                             if(!args.check_ortho)
                             {
@@ -2869,14 +2886,23 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",convergence_angle);
                             fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                             fclose(pMetafile);
+#ifdef BUILDMPI
+                        }
+#endif
                         } // if (!RA_only)
                     }
                     else
                         printf("out of boundary!! please check boundary infomation!!\n");
                     
+#ifdef BUILDMPI
+                    if(rank == 0)
+#endif
                     sprintf(temp_filepath,"%s/tmp",proinfo->save_filepath);
                 }
 
+#ifdef BUILDMPI
+                if(rank == 0) {
+#endif
                 for(int i = 0; i < proinfo->number_of_images; i++)
                     RPCsFree(RPCs[i]);
                 free(RPCs);
@@ -2886,12 +2912,18 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 free(Image_gsd);
                 free(Limagesize);
                 free(image_info);
+#ifdef BUILDMPI
+                }
+#endif
             }
             else
                 printf("Check output directory path!!\n");
         }
     }
     
+#ifdef BUILDMPI
+    if(rank == 0) {
+#endif
     if(!cal_check && args.check_sdm_ortho == 2)
     {
     
@@ -2922,6 +2954,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         exit(1);
     else if(args.check_ortho)
         exit(1);
+#ifdef BUILDMPI
+    }
+#endif
     
     return DEM_divide;
 }
