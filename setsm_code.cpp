@@ -1593,10 +1593,10 @@ int main(int argc,char *argv[])
     }
     
 #ifdef BUILDMPI
-    if(rank == 0) {
+    if(rank == 0)
 #endif
     printf("# of allocated threads = %d\n",omp_get_max_threads());
-            
+
     if(Imageparams)
     {
         for(int ti = 0 ; ti < args.number_of_images ; ti++)
@@ -1607,7 +1607,6 @@ int main(int argc,char *argv[])
     free(Imageparams);
 
 #ifdef BUILDMPI
-    }
     // Make sure to finalize
     MPI_Finalize();
 #endif
@@ -2940,6 +2939,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         
         fclose(time_fid);
     }
+#ifdef BUILDMPI
+    }
+#endif
     
     delete proinfo;
 
@@ -2954,9 +2956,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         exit(1);
     else if(args.check_ortho)
         exit(1);
-#ifdef BUILDMPI
-    }
-#endif
     
     return DEM_divide;
 }
