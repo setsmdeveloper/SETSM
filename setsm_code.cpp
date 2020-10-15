@@ -16,7 +16,6 @@
 
 #include <atomic>
 #include <memory>
-#include <cstdarg>
 
 #include "setsm_code.hpp"
 #include "log.hpp"
@@ -12090,57 +12089,23 @@ double FindNebPts_F_M_IDW(const float *input, const unsigned char *matching_flag
     return result;
 }
 
+
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
 
-SINGLE_FILE *single_fopen(const char *path, const char *mode) {
-#ifdef BUILDMPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank != 0)
-        return nullptr;
-#endif
-    FILE *fp = fopen(path, mode);
-    return new SINGLE_FILE{fp};
-}
 
-int fclose(SINGLE_FILE *stream) {
-#ifdef BUILDMPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank != 0)
-        return 0;
-#endif
-    int ret = fclose(stream->fp);
-    delete stream;
-    return ret;
-}
 
-int fprintf(SINGLE_FILE *stream, const char *format, ...) {
-#ifdef BUILDMPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank != 0)
-        return 0;
-#endif
-    va_list ap;
-    va_start(ap, format);
-    int ret = vfprintf(stream->fp, format, ap);
-    va_end(ap);
-    return ret;
-}
 
-int single_printf(const char *fmt, ...) {
-#ifdef BUILDMPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank != 0)
-        return 0;
-#endif
-    va_list ap;
-    va_start(ap, fmt);
-    int ret = printf(fmt, ap);
-    va_end(ap);
-    return ret;
-}
+
+
+
+
+
+
+
+
+
+
+
+
 

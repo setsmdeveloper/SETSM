@@ -41,3 +41,11 @@ private:
 int init_logging();
 void LOG(const char *fmt, ...);
 #endif
+
+struct SINGLE_FILE;
+SINGLE_FILE *single_fopen(const char *path, const char *mode);
+int fclose(SINGLE_FILE *stream);
+int fprintf(SINGLE_FILE *stream, const char *format, ...);
+int single_printf(const char *fmt, ...);
+
+

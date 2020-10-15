@@ -8,6 +8,10 @@
 
 #include <cstdarg>
 
+struct SINGLE_FILE {
+    FILE *fp;
+};
+
 static bool started = 0;
 static long start_time;
 static int rank;
@@ -64,3 +68,53 @@ void LOG(const char *fmt, ...) {
     printf("%s", buf);
 }
 
+SINGLE_FILE *single_fopen(const char *path, const char *mode) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return nullptr;
+#endif
+    FILE *fp = fopen(path, mode);
+    return new SINGLE_FILE{fp};
+}
+
+int fclose(SINGLE_FILE *stream) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    int ret = fclose(stream->fp);
+    delete stream;
+    return ret;
+}
+
+int fprintf(SINGLE_FILE *stream, const char *format, ...) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    va_list ap;
+    va_start(ap, format);
+    int ret = vfprintf(stream->fp, format, ap);
+    va_end(ap);
+    return ret;
+}
+
+int single_printf(const char *fmt, ...) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = printf(fmt, ap);
+    va_end(ap);
+    return ret;
+}
