@@ -2891,15 +2891,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     else
                         printf("out of boundary!! please check boundary infomation!!\n");
                     
-#ifdef BUILDMPI
-                    if(rank == 0)
-#endif
                     sprintf(temp_filepath,"%s/tmp",proinfo->save_filepath);
                 }
 
-#ifdef BUILDMPI
-                if(rank == 0) {
-#endif
                 for(int i = 0; i < proinfo->number_of_images; i++)
                     RPCsFree(RPCs[i]);
                 free(RPCs);
@@ -2909,9 +2903,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 free(Image_gsd);
                 free(Limagesize);
                 free(image_info);
-#ifdef BUILDMPI
-                }
-#endif
             }
             else
                 printf("Check output directory path!!\n");
