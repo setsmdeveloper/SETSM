@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#include <algorithm>
 #include <iostream>
 
 #include "Typedefine.hpp"
@@ -26,14 +27,9 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
-// Don't use macros here, they break things in the c++ stdlibrary
-// see here for rationale:
-// https://en.cppreference.com/w/cpp/language/template_argument_deduction
-template<typename T> struct identity { typedef T type; };
-template <typename T>
-constexpr  const T& min(const T& a, const typename identity<T>::type& b) { return a < b ? a : b; }
-template <typename T>
-constexpr  const T& max(const T& a, const typename identity<T>::type& b) { return a > b ? a : b; }
+using std::min;
+using std::max;
+
 #define SUB_RATIO 4.6
 
 char* remove_ext(const char* mystr);

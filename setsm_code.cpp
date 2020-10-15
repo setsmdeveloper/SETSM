@@ -9818,7 +9818,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                             
                             //min, max height setting
                             double t1, t2;
-                            t1       = min(temp_MinZ, Z);
+                            t1       = min<double>(temp_MinZ, Z);
                             if(GridPT3[Index].Matched_flag == 4) //extension minHeight
                             {
                                 if(t1 - BF <= GridPT3[Index].minHeight)
@@ -9827,7 +9827,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                             else
                                 GridPT3[Index].minHeight   = floor(t1 - BF);
                             
-                            t2       = max(temp_MaxZ, Z);
+                            t2       = max<double>(temp_MaxZ, Z);
                             if(GridPT3[Index].Matched_flag == 4)
                             {
                                 if(t2 + BF >= GridPT3[Index].maxHeight)
