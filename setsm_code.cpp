@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <memory>
+#include <cstdarg>
 
 #include "setsm_code.hpp"
 #include "log.hpp"
@@ -1592,10 +1593,7 @@ int main(int argc,char *argv[])
         }
     }
     
-#ifdef BUILDMPI
-    if(rank == 0)
-#endif
-    printf("# of allocated threads = %d\n",omp_get_max_threads());
+    single_printf("# of allocated threads = %d\n",omp_get_max_threads());
 
     if(Imageparams)
     {
@@ -1701,7 +1699,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     char computation_file[500];
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    FILE *time_fid;
+    SINGLE_FILE *time_fid;
     
     total_ST = time(0);
     
@@ -1824,14 +1822,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 char metafilename[500];
                 
-                FILE *pMetafile = NULL;
+                SINGLE_FILE *pMetafile = NULL;
                 sprintf(metafilename, "%s/%s_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 if(args.check_Matchtag)
                     sprintf(metafilename, "%s/%s_new_matchtag_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 
                 if(!proinfo->check_checktiff && !args.check_ortho)
                 {
-                    pMetafile   = fopen(metafilename,"w");
+                    pMetafile   = single_fopen(metafilename,"w");
                     
                     fprintf(pMetafile,"SETSM Version=%s\n", setsm_version);
                 }
@@ -2920,9 +2918,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         }
     }
     
-#ifdef BUILDMPI
-    if(rank == 0) {
-#endif
     if(!cal_check && args.check_sdm_ortho == 2)
     {
     
@@ -2933,15 +2928,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         total_gap = difftime(total_ET,total_ST);
         
         sprintf(computation_file,"%s/txt/computation_time.txt",proinfo->save_filepath);
-        time_fid            = fopen(computation_file,"w");
+        time_fid            = single_fopen(computation_file,"w");
         fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
-        printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
+        single_printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
         
         fclose(time_fid);
     }
-#ifdef BUILDMPI
-    }
-#endif
     
     delete proinfo;
 
@@ -12107,23 +12099,57 @@ double FindNebPts_F_M_IDW(const float *input, const unsigned char *matching_flag
     return result;
 }
 
-
 // Find the interpolated value of a patch given the nominal position and the X and Y offsets 
 // along with the image itself
 
+SINGLE_FILE *single_fopen(const char *path, const char *mode) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return nullptr;
+#endif
+    FILE *fp = fopen(path, mode);
+    return new SINGLE_FILE{fp};
+}
 
+int fclose(SINGLE_FILE *stream) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    int ret = fclose(stream->fp);
+    delete stream;
+    return ret;
+}
 
+int fprintf(SINGLE_FILE *stream, const char *format, ...) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    va_list ap;
+    va_start(ap, format);
+    int ret = vfprintf(stream->fp, format, ap);
+    va_end(ap);
+    return ret;
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
+int single_printf(const char *fmt, ...) {
+#ifdef BUILDMPI
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank != 0)
+        return 0;
+#endif
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = printf(fmt, ap);
+    va_end(ap);
+    return ret;
+}
 

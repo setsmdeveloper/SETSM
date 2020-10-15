@@ -155,5 +155,14 @@ class TileIndexer {
     virtual ~TileIndexer() {};
 };
 
+struct SINGLE_FILE {
+    FILE *fp;
+};
+
+SINGLE_FILE *single_fopen(const char *path, const char *mode);
+int fclose(SINGLE_FILE *stream);
+int fprintf(SINGLE_FILE *stream, const char *format, ...);
+int single_printf(const char *fmt, ...);
+
 
 #endif // SETSM_CODE_H
