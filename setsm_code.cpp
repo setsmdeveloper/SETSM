@@ -8975,6 +8975,31 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
 
 }
 
+void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders) {
+    // Only update the detectedBlunders value
+    // if we know that this is a new blunder.
+    // if it was previously zero, we know it is
+    // a new blunder. If it was not previously zero,
+    // there are two possible cases. First, it
+    // was already a blunder. In that case, we don't
+    // want to set detectedBlunders. Alternatively,
+    // it could be a new blunder but another thread
+    // changed it from zero to 1 or 3. In that case,
+    // the other thread/iteration would have
+    // updated detectedBlunders, so we don't need to.
+    uint8_t prev;
+#pragma omp atomic capture
+    {
+        prev = pts[index].flag;
+        pts[index].flag = val;
+    }
+    if(prev == 0)
+    {
+#pragma omp atomic write
+        detectedBlunders[index] = true;
+    }
+}
+
 bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp)
 {
     int IsRA(proinfo->IsRA);
@@ -9239,11 +9264,25 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         
         free(hdiffbin);
 
-        // Iterates through points, updating the flag value
-        // for each point. But, also grabs the triangle for
-        // each point, and may update flag for points
-        // corresponding to those vertices. So, not safe to
-        // parallelize
+        // be very careful modifying this code. The thread safety
+        // here is a bit complicated. This loop touches three
+        // shared arrays: pts, detectedBlunders, and GridPts.
+        // GridPts and detecetedBlunders are write-only, while
+        // pts is read/write. GridPts is the least problematic.
+        // It is written is a "safe" way, with one-to-one mapping
+        // between iterations and the index.
+        //
+        // That's not the case for pts and detectedBlunders.
+        // pts is only read from the iteration index. But, it is
+        // written from other indices. detectedBlunders tracks
+        // whether a given pts index was updated from zero to
+        // one or three. It is also written from other threads.
+        //
+        // openmp atomics are used to coordinate this. Take
+        // care when modifying anything in here.
+        //
+        // detectedBlunders is updated when for an index when
+        // the pts value is changed from 0 to 1 or from 0 to 3.
 #ifndef DETERMINISTIC
 #pragma omp parallel for schedule(guided)
 #endif
@@ -9251,6 +9290,9 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         {
             if(pts[index].flag != 1)
             {
+                // use this flag instead of setting the point directly
+                bool pt_is_blunder = false;
+
                 int count_th_positive   = 0;
                 int count_th_negative   = 0;
                 int count = 0;
@@ -9268,17 +9310,21 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 long t_row         = (long)((ref_index_pt.m_Y - boundary[1])/gridspace + 0.5);
                 const long ref_index((long)gridsize.width*t_row + t_col);
                 
+                // assume that the mapping between index
+                // and ref_index is one-to-one, so this
+                // is okay.
                 Gridpts[ref_index].anchor_flag = 0;
                 
                 if(!IsRA)
                 {
                     if(ortho_ncc[ref_index] < th_ref_ncc && pyramid_step >= 2)
-                        pts[index].flag = 1;
+                        pt_is_blunder = true;
                 }
                 if(pyramid_step >= 3 && iteration >= 4)
                 {
                     if(ortho_ncc[ref_index] >= 0.95 && flag_blunder)
                     {
+                        // Assume this is okay
                         Gridpts[ref_index].anchor_flag = 1;
                     }
                 }
@@ -9425,22 +9471,24 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                                     h1        = height[t_o_mid] - height[t_o_min];
                                     h2        = height[t_o_max] - height[t_o_mid];
                                     dh        = h1 - h2;
+
+                                    long int blunder_neighbor_index = -1;
                                     if((dh > 0 && dh > height_th))
                                     {
                                         if(IsRA == 1)
                                         {
-                                            pts[order[t_o_min]].flag = 3;
+                                            blunder_neighbor_index = order[t_o_min];
                                         }
                                         else
                                         {
                                             if(flag_blunder)
                                             {
                                                 if(ortho_ncc[Index[t_o_min]] < ortho_ncc_th)
-                                                    pts[order[t_o_min]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_min];
                                             }
                                             else
                                                 if(ortho_ncc[Index[t_o_min]] < ortho_ancc_th)
-                                                    pts[order[t_o_min]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_min];
                                             
                                         }
                                     }
@@ -9448,20 +9496,23 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                                     {
                                         if(IsRA == 1)
                                         {
-                                            pts[order[t_o_max]].flag = 3;
+                                            blunder_neighbor_index = order[t_o_max];
                                         }
                                         else
                                         {
                                             if(flag_blunder)
                                             {
                                                 if(ortho_ncc[Index[t_o_max]] < ortho_ncc_th)
-                                                    pts[order[t_o_max]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_max];
                                             }
                                             else
                                                 if(ortho_ncc[Index[t_o_max]] < ortho_ancc_th)
-                                                    pts[order[t_o_max]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_max];
                                         }
                                     }
+
+                                    if(blunder_neighbor_index >= 0)
+                                        set_blunder(blunder_neighbor_index, 3, pts, detectedBlunders);
                                 }
                             }
                             count++;
@@ -9474,11 +9525,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                     if(check_neigh == true)
                     {
                         if(!flag_blunder)
-                            pts[index].flag = 1;
+                            pt_is_blunder = true;
                     }
       
                     if((count_th_positive >= (int)(count*0.7 + 0.5) || count_th_negative >= (int)(count*0.7 + 0.5)) && count > 1)
-                        pts[index].flag = 1;
+                        pt_is_blunder = true;
                 }
                 else
                 {
@@ -9489,11 +9540,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                             if(pyramid_step >= 3 && iteration == 4)
                             {
                                 if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                             }
                             else
                                 if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                         }
                     }
                     
@@ -9517,32 +9568,37 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                             if(pyramid_step >= 1)
                             {
                                 if(ortho_ncc[ref_index] < tmp_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                             }
                             else if(pyramid_step == 0)
                             {
                                 if(iteration <= 1)
                                 {
                                     if(ortho_ncc[ref_index] < 0.9)
-                                        pts[index].flag = 1;
+                                        pt_is_blunder = true;
                                 }
                                 else if(iteration == 2 )
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                                 else {
                                     if(ortho_ncc[ref_index] < ortho_ncc_th)
-                                        pts[index].flag = 1;
+                                        pt_is_blunder = true;
                                 }
                             }
                         }
                         else
                         {
                             if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                pts[index].flag = 1;
+                                pt_is_blunder = true;
                         }
                     }
                 }
-                //If a point was found to be a blunder in the current blunder detection, mark detectedBlunders index as true
-                detectedBlunders[index] = (pts[index].flag==1 || pts[index].flag==3);
+                // only set detectedBlunders[index] to true for the index associated
+                // with this loop iteration. The neighbor points set detectedBlunders
+                // above as appropriate. We have to use the private variable instead
+                // of just reading the array value because other threads may set
+                // the value to 3 as we're processing.
+                if(pt_is_blunder)
+                    set_blunder(index, 1, pts, detectedBlunders);
             }
         }
         
