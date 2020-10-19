@@ -9283,9 +9283,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         //
         // detectedBlunders is updated when for an index when
         // the pts value is changed from 0 to 1 or from 0 to 3.
-#ifndef DETERMINISTIC
 #pragma omp parallel for schedule(guided)
-#endif
         for(long index=0;index<num_points;index++)
         {
             if(pts[index].flag != 1)
@@ -10541,19 +10539,12 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                // sum reduction on doubles makes this nondeterminisitc
-                // count_pts is an integer, sum_weight_X and sum_weight_Y are doubles, sum_max_roh is double
-#ifndef DETERMINISTIC
 #pragma omp parallel reduction(+:count_pts)
-#endif
                 {
                     Matrix left_patch_vecs(3, patch_size);
                     Matrix right_patch_vecs(3, patch_size);
                     
-                    
-#ifndef DETERMINISTIC
 #pragma omp for schedule(guided)
-#endif
                     for(long i = 0; i<NumofPts ; i++)
                     {
                         double t_sum_weight_X, t_sum_weight_Y, t_sum_max_roh;
