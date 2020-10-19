@@ -10532,51 +10532,31 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
             {
                 bool flag_boundary = false;
                 int count_pts = 0;
-                double sum_weight_X     = 0;
-                double sum_weight_Y     = 0;
-                double sum_max_roh      = 0;
-                double t_sum_weight_X       = 0;
-                double t_sum_weight_Y       = 0;
-                double t_sum_max_roh        = 0;
-                
-                 const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
+
+                std::vector<double> weights_X(NumofPts, 0.0);
+                std::vector<double> weights_Y(NumofPts, 0.0);
+                std::vector<double> max_rohs(NumofPts, 0.0);
+
+                const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                std::array<double*, 3>* left_patch_vecs_array;
-                std::array<double*, 3>* right_patch_vecs_array;
-
                 // sum reduction on doubles makes this nondeterminisitc
+                // count_pts is an integer, sum_weight_X and sum_weight_Y are doubles, sum_max_roh is double
 #ifndef DETERMINISTIC
-#pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel reduction(+:count_pts)
 #endif
                 {
+                    Matrix left_patch_vecs(3, patch_size);
+                    Matrix right_patch_vecs(3, patch_size);
                     
-#ifndef DETERMINISTIC
-#pragma omp single
-#endif
-                    {
-                        // Make patch vectors thread private rather than private to each loop iteration
-                        // These are used by postNCC but allocated here for efficiency
-                        left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                                right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                            }
-                        }
-                    }
                     
 #ifndef DETERMINISTIC
 #pragma omp for schedule(guided)
 #endif
                     for(long i = 0; i<NumofPts ; i++)
                     {
-                        double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
-                        double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
-                        
+                        double t_sum_weight_X, t_sum_weight_Y, t_sum_max_roh;
                         //calculation image coord from object coord by RFM in left and right image
                         D2DPOINT Left_Imagecoord_p   = GetObjectToImageRPC_single(rlevelinfo.RPCs[reference_id],2,left_IA,Coord[i]);
                         D2DPOINT Left_Imagecoord     = OriginalToPyramid_single(Left_Imagecoord_p,rlevelinfo.py_Startpos[reference_id],Pyramid_step);
@@ -10596,32 +10576,25 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                                 
                                 if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
                                 {
-                                    sum_weight_X += t_sum_weight_X;
-                                    sum_weight_Y += t_sum_weight_Y;
-                                    sum_max_roh  += t_sum_max_roh;
+                                    weights_X[i] = t_sum_weight_X;
+                                    weights_Y[i] = t_sum_weight_X;
+                                    max_rohs[i] = t_sum_max_roh;
                                     count_pts++;
                                 }
                             }
                         }
                     } // end omp for
-                    
-#ifndef DETERMINISTIC
-#pragma omp single
-#endif
-                    {
-                        // free thread-private vectors
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                free(left_patch_vecs_array[th][k]);
-                                free(right_patch_vecs_array[th][k]);
-                            }
-                        }
-                        delete[] left_patch_vecs_array;
-                        delete[] right_patch_vecs_array;
-                    }
-                    
                 } // end omp parallel
+
+                double sum_weight_X = 0;
+                double sum_weight_Y = 0;
+                double sum_max_roh = 0;
+                for(const auto& v : weights_X)
+                    sum_weight_X += v;
+                for(const auto& v : weights_Y)
+                    sum_weight_Y += v;
+                for(const auto& v: max_rohs)
+                    sum_max_roh += v;
 
                 printf("in AdjustParam, count_pts is %d\n", count_pts);
                 if(count_pts > 10)
@@ -10655,7 +10628,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
 }
 
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix &left_patch_vecs, Matrix &right_patch_vecs)
 {
     bool check_pt = false;
  
@@ -10701,7 +10674,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             long position = (long int) (pos_col_left) + (long int) (pos_row_left) * (long)leftsize.width;
                             
                             double left_patch = InterpolatePatch(rlevelinfo.py_Images[reference_ID], position, leftsize, dx, dy);
-                            left_patch_vecs[0][Count_N[0]] = left_patch;
+                            left_patch_vecs(0, Count_N[0]) = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -10709,7 +10682,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             position = (long int) (pos_col_right) + (long int) (pos_row_right) * (long)rightsize.width;
                             
                             double right_patch = InterpolatePatch(rlevelinfo.py_Images[target_ID], position, rightsize, dx, dy);
-                            right_patch_vecs[0][Count_N[0]] = right_patch;
+                            right_patch_vecs(0, Count_N[0]) = right_patch;
                             
                             //end
                             Count_N[0]++;
@@ -10719,8 +10692,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                 {
-                                    left_patch_vecs[1][Count_N[1]] = left_patch;
-                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                    left_patch_vecs(1, Count_N[1]) = left_patch;
+                                    right_patch_vecs(1, Count_N[1]) = right_patch;
                                     Count_N[1]++;
                                 }
                             }
@@ -10730,8 +10703,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                 {
-                                    left_patch_vecs[2][Count_N[2]] = left_patch;
-                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                    left_patch_vecs(2, Count_N[2]) = left_patch;
+                                    right_patch_vecs(2, Count_N[2]) = right_patch;
                                     Count_N[2]++;
                                 }
                             }
@@ -10748,7 +10721,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                 {
                     if (Count_N[k] > 0)
                     {
-                        double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
+                        double ncc = Correlate(left_patch_vecs.row(k),right_patch_vecs.row(k),Count_N[k]);
                         if (ncc != -99)
                         {
                             count_rho++;
