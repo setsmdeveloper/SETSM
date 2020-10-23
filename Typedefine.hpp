@@ -394,6 +394,7 @@ typedef struct ProjectInfo{
 	int threads_num;
     int number_of_images;
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
+    enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
     uint8 pyramid_level;
     uint8 end_level;
     uint8 SDM_SS;
