@@ -9326,7 +9326,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
 //        GridPT3[pt_index].height_counts = 0;
         GridPT3[pt_index].total_images = 0;
         
-        double height_interval = (*rlevelinfo.grid_resolution)*20;
+        double height_interval = (*rlevelinfo.grid_resolution)*10;
         
         int selected_pair = -1;
         //GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
@@ -9467,7 +9467,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         double query_peak_roh = SignedCharToDouble_result(multimps[pt_index][query_pair].peak_roh);
                         
                         height_diff = fabs(multimps[pt_index][selected_pair].peak_height - multimps[pt_index][query_pair].peak_height);
-                        if(height_diff < height_interval/2.0 && query_peak_roh > 0.0)
+                        if(height_diff < height_interval && query_peak_roh > 0.0)
                         {
                             double mean_bhratio = min_bhratio;
                             int count = 0;
@@ -9607,7 +9607,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(height_diff < 1.0)
                                         IDW_w = 1.0;
                                     else
-                                        IDW_w = 1.0/pow(height_diff,1.5);
+                                        IDW_w = 1.0/pow(height_diff,0.5);
                                     
                                     
                                     double w_idw,w_bhratio,w_ncc, weightAWNCC(1.0);
@@ -9636,7 +9636,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(ncc_diff < 1)
                                         w_ncc = 1.0;
                                     else
-                                        w_ncc = 1.0/pow(ncc_diff,3.0);
+                                        w_ncc = 1.0/pow(ncc_diff,0.5);
                                     
                                     //printf("pt_index %d\tquery_pair %d\tpair_number %d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",pt_index,query_pair,pair_number,w_bhratio,save_height[query_pair][count],mid_H[query_pair],save_height_diff[count],pair_peak_roh,query_peak_roh,save_ncc_diff[count],IDW_w,w_bhratio,w_ncc);
                                     /*
@@ -9657,7 +9657,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                     if(pair_number == AWNCC_id)
                                     {
-                                        weightAWNCC = 1.0 + 0.4*save_pair[AWNCC_id].size();
+                                        weightAWNCC = 1.0 + 0.1*save_pair[AWNCC_id].size();
                                         //if(weightAWNCC > 1.5)
                                         //    weightAWNCC = 1.5;
                                         //printf("weightAWNCC\n");
@@ -15139,6 +15139,8 @@ CSize DEM_final_Size(const char *save_path, const int row_start, const int col_s
                         int t_row,t_col,t_level;
                         fscanf(p_hfile,"%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",
                         &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
+                        
+                        printf("header file %s\t%d\t%d\t%d\t%lf\t%lf\t%lf\t%d\t%d\n",t_str,t_row,t_col,t_level,t_boundary[0],t_boundary[1],t_grid_size,col_size,row_size);
                     }
                     
                     t_boundary[2] = t_boundary[0] + col_size*t_grid_size;
@@ -15147,7 +15149,9 @@ CSize DEM_final_Size(const char *save_path, const int row_start, const int col_s
                     count_matched_files++;
                     fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
              
-                    if(minmaxBR[0] >= t_boundary[0] && minmaxBR[2] <= t_boundary[2] && minmaxBR[1] >= t_boundary[1] && minmaxBR[3] <= t_boundary[3])
+                    printf("BR file %s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",t_str,minmaxBR[0],minmaxBR[1],minmaxBR[2],minmaxBR[3],minmaxBR[4],minmaxBR[5]);
+                    printf("t_bounary %f\t%f\t%f\t%f\n",minmaxBR[0] - t_boundary[0],t_boundary[2] - minmaxBR[2],minmaxBR[1] - t_boundary[1],t_boundary[3] - minmaxBR[3]);
+                    if(minmaxBR[0] >= t_boundary[0] - t_grid_size  && minmaxBR[2] <= t_boundary[2] + t_grid_size && minmaxBR[1] >= t_boundary[1] - t_grid_size && minmaxBR[3] <= t_boundary[3] + t_grid_size)
                     {
                         if(minX > minmaxBR[0])
                             minX     = minmaxBR[0];
@@ -15163,6 +15167,8 @@ CSize DEM_final_Size(const char *save_path, const int row_start, const int col_s
                             minHeight = minmaxBR[4];
                         if(maxHeight < minmaxBR[5])
                             maxHeight = minmaxBR[5];
+                        
+                        printf("minmax %f\t%f\t%f\t%f\n",minX,maxX,minY,maxY);
                     }
                     fclose(p_hfile);
                 }
