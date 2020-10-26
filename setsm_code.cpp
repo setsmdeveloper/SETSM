@@ -10568,7 +10568,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                                 if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
                                 {
                                     weights_X[i] = t_sum_weight_X;
-                                    weights_Y[i] = t_sum_weight_X;
+                                    weights_Y[i] = t_sum_weight_Y;
                                     max_rohs[i] = t_sum_max_roh;
                                     count_pts++;
                                 }
