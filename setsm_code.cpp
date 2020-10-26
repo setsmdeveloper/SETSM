@@ -18,15 +18,26 @@
 #include <memory>
 
 #include "setsm_code.hpp"
+#include "log.hpp"
 
 #ifdef BUILDMPI
 #include "mpi.h"
+#include "mpi_helpers.hpp"
 #endif
 
 const char setsm_version[] = "4.3.3";
 
 int main(int argc,char *argv[])
 {
+
+#ifdef BUILDMPI
+    init_mpi(argc, argv);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+
+    init_logging();
+
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
@@ -135,6 +146,9 @@ int main(int argc,char *argv[])
         
         DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
         
+#ifdef BUILDMPI
+        if(rank == 0) {
+#endif
         char DEMFilename[500];
         char Outputpath[500];
         sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
@@ -147,6 +161,9 @@ int main(int argc,char *argv[])
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
         else
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+#ifdef BUILDMPI
+        }
+#endif
     }
     else if(argc == 2)
     {
@@ -242,6 +259,9 @@ int main(int argc,char *argv[])
             
             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
             
+#ifdef BUILDMPI
+            if(rank == 0) {
+#endif
             char DEMFilename[500];
             char Outputpath[500];
             
@@ -259,6 +279,9 @@ int main(int argc,char *argv[])
                     orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,iter,Imageparams);
                 }
             }
+#ifdef BUILDMPI
+            }
+#endif
         }
         else
             printf("Please check input 1 and input 2. Both is same\n");
@@ -1490,6 +1513,9 @@ int main(int argc,char *argv[])
                         {
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
 
+#ifdef BUILDMPI
+                            if(rank == 0) {
+#endif
                             char DEMFilename[500];
                             char Outputpath[500];
                             
@@ -1536,6 +1562,9 @@ int main(int argc,char *argv[])
                                         remove(DEMFilename);
                                 }
                             }
+#ifdef BUILDMPI
+                        }
+#endif
                         }
                         else
                             printf("Please check input 1 and input 2. Both is same\n");
@@ -1563,8 +1592,8 @@ int main(int argc,char *argv[])
         }
     }
     
-    printf("# of allocated threads = %d\n",omp_get_max_threads());
-            
+    single_printf("# of allocated threads = %d\n",omp_get_max_threads());
+
     if(Imageparams)
     {
         for(int ti = 0 ; ti < args.number_of_images ; ti++)
@@ -1573,6 +1602,11 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
+
+#ifdef BUILDMPI
+    // Make sure to finalize
+    MPI_Finalize();
+#endif
     
     return 0;
 }
@@ -1656,27 +1690,15 @@ void DownSample(ARGINFO &args)
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
 {
 #ifdef BUILDMPI
-    char a;
-    char *pa = &a;
-    char **ppa = &pa;
-    int argc = 0;
-    int provided = 1;
-    MPI_Init_thread(&argc, &ppa, MPI_THREAD_FUNNELED, &provided);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0)
-    {
-      int size;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
-      printf("MPI: Number of processes: %d\n", size);
-    }
 #endif
 
     int DEM_divide = 0;
     char computation_file[500];
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    FILE *time_fid;
+    SINGLE_FILE *time_fid;
     
     total_ST = time(0);
     
@@ -1799,14 +1821,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 char metafilename[500];
                 
-                FILE *pMetafile = NULL;
+                SINGLE_FILE *pMetafile = NULL;
                 sprintf(metafilename, "%s/%s_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 if(args.check_Matchtag)
                     sprintf(metafilename, "%s/%s_new_matchtag_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 
                 if(!proinfo->check_checktiff && !args.check_ortho)
                 {
-                    pMetafile   = fopen(metafilename,"w");
+                    pMetafile   = single_fopen(metafilename,"w");
                     
                     fprintf(pMetafile,"SETSM Version=%s\n", setsm_version);
                 }
@@ -2502,9 +2524,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
-                            MPI_Finalize();
-                            if(rank != 0)
-                                exit(0);
+                            if(rank == 0) {
 #endif
                             if(!args.check_ortho)
                             {
@@ -2733,7 +2753,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         
                                         Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
                                         MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
-                                        
+
                                         NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
                                         
                                         ET = time(0);
@@ -2862,6 +2882,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",convergence_angle);
                             fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                             fclose(pMetafile);
+#ifdef BUILDMPI
+                        }
+#endif
                         } // if (!RA_only)
                     }
                     else
@@ -2895,9 +2918,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         total_gap = difftime(total_ET,total_ST);
         
         sprintf(computation_file,"%s/txt/computation_time.txt",proinfo->save_filepath);
-        time_fid            = fopen(computation_file,"w");
+        time_fid            = single_fopen(computation_file,"w");
         fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
-        printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
+        single_printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
         
         fclose(time_fid);
     }
@@ -2916,56 +2939,26 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     else if(args.check_ortho)
         exit(1);
     
-#ifdef BUILDMPI
-    // Make sure to finalize
-    int finalized;
-    MPI_Finalized(&finalized);
-    if (!finalized)
-    {
-        MPI_Finalize();
-    }
-#endif
-    
     return DEM_divide;
 }
 
-#ifdef BUILDMPI
-// Reorder tiles for static load balancing with MPI
-int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
-{
-    int i,j;
-
-    int *temp = (int*)malloc(col_length*row_length*2*sizeof(int));
-    int midrow = ceil(row_length / 2.0);
-    int midcol = ceil(col_length / 2.0);
-
-    for (i = 0; i < length*2; i += 2)
-    {
-        int closest = 0;
-        int closest_dist = midrow + midcol;
-        for (j = 0; j < length*2; j += 2)
-        {
-            int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
-            if (new_dist <= closest_dist)
-            {
-                closest_dist = new_dist;
-                closest = j;
-            }
+class SerialTileIndexer : public TileIndexer {
+private:
+    int i;
+    int length;
+public:
+    SerialTileIndexer(int length) : i(0), length(length) {}
+    int next() {
+        if(i >= length)
+            return -1;
+        int ret = -1;
+        if(i < length) {
+            ret = i;
+            i++;
         }
-        temp[i] = iterations[closest];
-        temp[i+1] = iterations[closest+1];
-        iterations[closest] = -1;
-        iterations[closest+1] = -1;
+        return ret;
     }
-
-    for (i = 0; i < length*2; i++)
-    {
-        iterations[i] = temp[i];
-    }
-    free(temp);
-    return length;
-}
-#endif
+};
 
 int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
 {
@@ -2973,6 +2966,9 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // async_progressor should come before TileIndexer, needs to to be destroyed second
+    std::unique_ptr<MPIProgressor> async_progressor = nullptr;
 #endif
 
     int final_iteration = -1;
@@ -2994,24 +2990,32 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
             length+=1;
         }
     }
-    
+
+    std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
-    //Reorder list of tiles for static load balancing
-    if (length > 1) {
-        reorder_list_of_tiles(iterations, length, col_length, row_length);
+    if (length > 1 && !proinfo->IsRA) {
+        // Setup MPI work queue for tiles for non-RA case
+        tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
+
+        // only enable custom async progress if it was requested
+        if(rank == 0 && requested_custom_async_progress()) {
+            async_progressor = std::unique_ptr<MPIProgressor>(new MPIProgressor(
+                std::chrono::milliseconds(750)));
+        }
+    } else if(rank != 0) {
+        // only rank 0 will be doing RA, so all other ranks get no tiles
+        tile_indices = std::move(std::unique_ptr<SerialTileIndexer>(new SerialTileIndexer(0)));
+
     }
 #endif
-    
+
     int tile_iter, i;
-    for(tile_iter = 0; tile_iter < length; tile_iter += 1)
+    while((tile_iter = tile_indices->next()) != -1)
     {
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
-        
+
 #ifdef BUILDMPI
-        // Skip this tile if it belongs to a different MPI rank
-        if (tile_iter % size != rank)
-            continue;
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
         bool check_cal = false;
@@ -9820,7 +9824,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                             
                             //min, max height setting
                             double t1, t2;
-                            t1       = min(temp_MinZ, Z);
+                            t1       = min<double>(temp_MinZ, Z);
                             if(GridPT3[Index].Matched_flag == 4) //extension minHeight
                             {
                                 if(t1 - BF <= GridPT3[Index].minHeight)
@@ -9829,7 +9833,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, NCCresult *nccres
                             else
                                 GridPT3[Index].minHeight   = floor(t1 - BF);
                             
-                            t2       = max(temp_MaxZ, Z);
+                            t2       = max<double>(temp_MaxZ, Z);
                             if(GridPT3[Index].Matched_flag == 4)
                             {
                                 if(t2 + BF >= GridPT3[Index].maxHeight)

@@ -149,4 +149,10 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
 
 double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *GridPT3, double *minimum_memory, const uint8 iteration, const double *minmaxHeight);
 
+class TileIndexer {
+    public:
+    virtual int next() = 0;
+    virtual ~TileIndexer() {};
+};
+
 #endif // SETSM_CODE_H
