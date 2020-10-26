@@ -11124,8 +11124,9 @@ CSize DEM_final_Size(const char *save_path, const int row_start, const int col_s
                     
                     count_matched_files++;
                     fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&minmaxBR[0],&minmaxBR[1],&minmaxBR[2],&minmaxBR[3],&minmaxBR[4],&minmaxBR[5]);
-             
-                    if(minmaxBR[0] >= t_boundary[0] && minmaxBR[2] <= t_boundary[2] && minmaxBR[1] >= t_boundary[1] && minmaxBR[3] <= t_boundary[3])
+                    printf("t_bounary %f\t%f\t%f\t%f\n",minmaxBR[0] - t_boundary[0],t_boundary[2] - minmaxBR[2],minmaxBR[1] - t_boundary[1],t_boundary[3] - minmaxBR[3]);
+
+                    if(minmaxBR[0] >= t_boundary[0] - t_grid_size  && minmaxBR[2] <= t_boundary[2] + t_grid_size && minmaxBR[1] >= t_boundary[1] - t_grid_size && minmaxBR[3] <= t_boundary[3] + t_grid_size)
                     {
                         if(minX > minmaxBR[0])
                             minX     = minmaxBR[0];
