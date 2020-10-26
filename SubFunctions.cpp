@@ -131,7 +131,14 @@ double getSystemMemory()
 {
     struct rlimit lim;
     if( getrlimit(RLIMIT_RSS, &lim) == 0) {
+      if(lim.rlim_cur == RLIM_INFINITY) {
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        return (pages * page_size) / (double)pwrtwo(30) ;
+      }
+      else {
         return (double)lim.rlim_cur/pwrtwo(30);
+      }
     }
     else {
         return -1.0;
