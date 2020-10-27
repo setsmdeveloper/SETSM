@@ -53,6 +53,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     if(!fid_xml)
     {
         sprintf(RPCFilename,"%s.XML",tmp_chr);
+        sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
         FILE *fid_XML = fopen(RPCFilename,"r");
         if(!fid_XML)
         {

@@ -144,59 +144,86 @@ double getSystemMemory()
 
 }
 
-bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams)
+bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairInfo &pairinfo)
 {
     bool check_load_RA = false;
+    bool check_load_RA_each = false;
     
     FILE *pFile_echo  = fopen(RAfile,"r");
     if(pFile_echo)
     {
-        for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+        int ti=0;
+        while(!feof(pFile_echo))
         {
-            fscanf(pFile_echo,"%lf %lf",&Imageparams[ti][0],&Imageparams[ti][1]);
-            if(ti == 0)
-                proinfo->check_selected_image[ti] = true;
-            else
+            int temp_ref,temp_tar;
+            double bh_ratio;
+            //for(int ti = 0; ti < proinfo->number_of_images ; ti++)
             {
-                if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
-                    check_load_RA = true;
-                else
-                    proinfo->check_selected_image[ti] = false;
-            }
-        }
-        fclose(pFile_echo);
-    }
-     
-    return check_load_RA;
-}
-
-bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams)
-{
-    bool check_load_RA = false;
-    
-    FILE* pFile_echo  = fopen(echofile,"r");
-    if(pFile_echo)
-    {
-        for(int ti = 0; ti < proinfo->number_of_images ; ti++)
-        {
-            char bufstr[500];
-            fgets(bufstr,500,pFile_echo);
-            if (strstr(bufstr,"RA param X")!=NULL)
-            {
-                sscanf(bufstr,"RA param X = %lf Y = %lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
-                if(ti == 0)
+                fscanf(pFile_echo,"%d\t%d\t%lf\t%lf\t%lf\n",&temp_ref,&temp_tar,&Imageparams[ti][0],&Imageparams[ti][1],&bh_ratio);
+                /*if(ti == 0)
                     proinfo->check_selected_image[ti] = true;
-                else
+                else*/
                 {
-                    if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
-                        check_load_RA = true;
-                    else
-                        proinfo->check_selected_image[ti] = false;
+                    if(Imageparams[ti][0] == 0 || Imageparams[ti][1] == 0)
+                        check_load_RA_each = true;
                 }
+                printf("RAinfo %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
+                pairinfo.pairs[ti].m_X = temp_ref;
+                pairinfo.pairs[ti].m_Y = temp_tar;
+                pairinfo.BHratio[ti] = bh_ratio;
             }
+            ti++;
+            pairinfo.NumberOfPairs = ti;
         }
         fclose(pFile_echo);
         
+        if(!check_load_RA_each)
+            check_load_RA = true;
+    }
+    
+    return check_load_RA;
+}
+
+bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, PairInfo &pairinfo)
+{
+    bool check_load_RA = false;
+    bool check_load_RA_each = false;
+    FILE* pFile_echo  = fopen(echofile,"r");
+    if(pFile_echo)
+    {
+        int ti=0;
+        while(!feof(pFile_echo))
+        {
+            int temp_ref,temp_tar;
+            double bh_ratio;
+            //for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+            {
+                char bufstr[500];
+                fgets(bufstr,500,pFile_echo);
+                if (strstr(bufstr,"RA param X")!=NULL)
+                {
+                    sscanf(bufstr,"RA param X = %lf\tY = %lf\t%d\t%d\t%lf\n",&Imageparams[ti][0],&Imageparams[ti][1],&temp_ref,&temp_tar,&bh_ratio);
+                    /*if(ti == 0)
+                        proinfo->check_selected_image[ti] = true;
+                    else*/
+                    {
+                        if(Imageparams[ti][0] == 0 || Imageparams[ti][1] == 0)
+                            check_load_RA_each = true;
+                    }
+                    printf("echo %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
+                    pairinfo.pairs[ti].m_X = temp_ref;
+                    pairinfo.pairs[ti].m_Y = temp_tar;
+                    pairinfo.BHratio[ti] = bh_ratio;
+                    ti++;
+                }
+            }
+            
+            pairinfo.NumberOfPairs = ti;
+        }
+        fclose(pFile_echo);
+        
+        if(!check_load_RA_each)
+            check_load_RA = true;
     }
     
     return check_load_RA;

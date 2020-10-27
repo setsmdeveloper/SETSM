@@ -122,8 +122,8 @@ int main(int argc,char *argv[])
         
         args.check_arg = 0;
         
-        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
-        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+        Imageparams = (double**)calloc(MaxNCC, sizeof(double*));
+        for(int ti = 0 ; ti < MaxNCC ; ti++)
         {
             Imageparams[ti] = (double*)calloc(sizeof(double),2);
             Imageparams[ti][0] = 0.0;
@@ -195,8 +195,8 @@ int main(int argc,char *argv[])
 
             free(Outputpath_name);
             
-            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
-            for(int ti = 0 ; ti < args.number_of_images ; ti++)
+            Imageparams = (double**)calloc(MaxNCC, sizeof(double*));
+            for(int ti = 0 ; ti < MaxNCC ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
                 Imageparams[ti][0] = 0.0;
@@ -229,8 +229,9 @@ int main(int argc,char *argv[])
         
         if( strcmp(args.Image[0],args.Image[1]) != 0)
         {
-            Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
-            for(int ti = 0 ; ti < args.number_of_images ; ti++)
+            
+            Imageparams = (double**)calloc(MaxNCC, sizeof(double*));
+            for(int ti = 0 ; ti < MaxNCC ; ti++)
             {
                 Imageparams[ti] = (double*)calloc(sizeof(double),2);
                 Imageparams[ti][0] = 0.0;
@@ -1471,8 +1472,9 @@ int main(int argc,char *argv[])
 
                         free(Outputpath_name);
 
-                        Imageparams = (double**)calloc(args.number_of_images, sizeof(double*));
-                        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+                        
+                        Imageparams = (double**)calloc(MaxNCC, sizeof(double*));
+                        for(int ti = 0 ; ti < MaxNCC ; ti++)
                         {
                             Imageparams[ti] = (double*)calloc(sizeof(double),2);
                             Imageparams[ti][0] = 0.0;
@@ -1563,9 +1565,10 @@ int main(int argc,char *argv[])
     
     printf("# of allocated threads = %d\n",omp_get_max_threads());
             
+    
     if(Imageparams)
     {
-        for(int ti = 0 ; ti < args.number_of_images ; ti++)
+        for(int ti = 0 ; ti < MaxNCC ; ti++)
         {
             free(Imageparams[ti]);
         }
@@ -2212,6 +2215,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     printf("minmaxH = %f\t%f\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
                     printf("seed fff %d\n",proinfo->pre_DEMtif);
                     
+                    PairInfo pairinfo;
+                    pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*MaxNCC);
+                    pairinfo.BHratio = (float*)malloc(sizeof(float)*MaxNCC);
+                    
                     if(SetupParam(proinfo,&proinfo->pre_DEMtif))
                     {
                         const double bin_angle = 360.0/18.0;
@@ -2288,22 +2295,29 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     {
                                         fgets(bufstr,500,pFile_meta);
                                         
+                                        bool check_load_RA_each = false;
                                         if (strstr(bufstr,"RA Params=")!=NULL)
                                         {
                                             printf("%s\n",bufstr);
-                                            sscanf(bufstr,"RA Params=%lf\t%lf\n",&Imageparams[ti][0],&Imageparams[ti][1]);
-                                            if(ti == 0)
+                                            int temp_ref,temp_tar;
+                                            double bh_ratio;
+                                            sscanf(bufstr,"RA Params=%d\t%d\t%lf\t%lf\t%lf\n",&temp_ref,&temp_tar,&Imageparams[ti][0],&Imageparams[ti][1],&bh_ratio);
+                                            pairinfo.pairs[ti].m_X = temp_ref;
+                                            pairinfo.pairs[ti].m_Y = temp_tar;
+                                            pairinfo.BHratio[ti] = bh_ratio;
+                                            /*if(ti == 0)
                                                 proinfo->check_selected_image[ti] = true;
-                                            else
+                                            else*/
                                             {
-                                                if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
-                                                    check_load_RA = true;
-                                                else
-                                                    proinfo->check_selected_image[ti] = false;
+                                                if(Imageparams[ti][0] == 0 || Imageparams[ti][1] == 0)
+                                                    check_load_RA_each = true;
+                                                //else
+                                                    
+                                                    //proinfo->check_selected_image[ti] = false;
                                             }
                                             
-                                            printf("meta RA %d %f %f\n",ti,Imageparams[ti][0],Imageparams[ti][1]);
-                                            
+                                            printf("meta RA %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
+                                            /*
                                             if(proinfo->number_of_images == 2 && ti == 0 && Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0)
                                             {
                                                 check_load_RA = true;
@@ -2314,8 +2328,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                                 Imageparams[0][1] = 0;
                                                 proinfo->check_selected_image[1] = true;
                                             }
-                                            
+                                            */
                                             ti++;
+                                            
+                                            pairinfo.NumberOfPairs = ti;
                                         }
                                         else if(strstr(bufstr,"SETSM Version=")!=NULL)
                                         {
@@ -2345,6 +2361,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                             sscanf(bufstr,"Output Resolution=%lf\n",&seedDEM_gridsize);
                                             printf("seed DEM gridsize %f\n",seedDEM_gridsize);
                                         }
+                                        
+                                        if(!check_load_RA_each)
+                                            check_load_RA = true;
                                     }
                                     fclose(pFile_meta);
                                 }
@@ -2364,7 +2383,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     sprintf(str_rafile_2, "%s/txt/RAinfo.txt", RAfile_raw);
                                     printf("RA file %s\n", str_rafile_2);
                                     
-                                    check_load_RA = GetRAinfo(proinfo, str_rafile_2, Imageparams);
+                                    check_load_RA = GetRAinfo(proinfo, str_rafile_2, Imageparams,pairinfo);
                                 }
                                 
                                 //echo_result file check in seeddem folder
@@ -2385,7 +2404,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     char str_echofile[500];
                                     sprintf(str_echofile,"%s/txt/echo_result_row_1_col_1.txt",fullseeddir);
                                     
-                                    check_load_RA = GetRAinfoFromEcho(proinfo, str_echofile, Imageparams);
+                                    check_load_RA = GetRAinfoFromEcho(proinfo, str_echofile, Imageparams,pairinfo);
                                 }
                             }
                             else
@@ -2396,7 +2415,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 printf("echo %s\n",str_echofile);
                                 
-                                check_load_RA = GetRAinfoFromEcho(proinfo, str_echofile, Imageparams);
+                                check_load_RA = GetRAinfoFromEcho(proinfo, str_echofile, Imageparams,pairinfo);
                                 
                                 //RAinfo file check in current working folder
                                 if(!check_load_RA)
@@ -2406,12 +2425,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     sprintf(str_rafile,"%s/txt/RAinfo.txt",proinfo->save_filepath);
                                     printf("RAinfo %s\n",str_rafile);
                                     
-                                    check_load_RA = GetRAinfo(proinfo, str_rafile, Imageparams);
+                                    check_load_RA = GetRAinfo(proinfo, str_rafile, Imageparams,pairinfo);
                                 }
                             }
-                            
-                            for(int ti = 0; ti < proinfo->number_of_images ; ti++)
-                                printf("check load RA %d %f %f %d\n",check_load_RA,Imageparams[ti][0],Imageparams[ti][1], proinfo->check_selected_image[ti]);
+                            if(check_load_RA)
+                            {
+                                for(int ti = 0; ti < pairinfo.NumberOfPairs ; ti++)
+                                    printf("check load RA %d\t%f\t%f\t%d\t%d\t%f\n",check_load_RA,Imageparams[ti][0],Imageparams[ti][1], pairinfo.pairs[ti].m_X,pairinfo.pairs[ti].m_Y,pairinfo.BHratio[ti]);
+                            }
                             
                             if(!check_load_RA)
                             {
@@ -2424,7 +2445,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 buffer_area  = 400;
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
+                                
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2440,8 +2462,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         if(!proinfo->check_checktiff)
                         {
-                            for(int ti = 0; ti < proinfo->number_of_images ; ti++)
-                                fprintf(pMetafile,"RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
+                            for(int ti = 0; ti < pairinfo.NumberOfPairs ; ti++)
+                                fprintf(pMetafile,"RA Params=%d\t%d\t%f\t%f\t%f\n",pairinfo.pairs[ti].m_X,pairinfo.pairs[ti].m_Y,Imageparams[ti][0],Imageparams[ti][1],pairinfo.BHratio[ti]);
                    
                             fprintf(pMetafile,"RA tilesize=%d\n",tile_size);
                         }
@@ -2515,14 +2537,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if (proinfo->check_tiles_EC)
                                 t_col_end         = proinfo->end_col;
                             
-                            for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+                            for(int ti = 0; ti < pairinfo.NumberOfPairs ; ti++)
                                 printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                             
                             if(!args.check_gridonly)
                             {
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle);
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
@@ -3057,7 +3079,7 @@ void SetPairs(ProInfo *proinfo, PairInfo &pairinfo, const ImageInfo *image_info)
      */
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char> &save_pair)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char> &save_pair, PairInfo &pairinfo)
 {
     save_pair.clear();
     
@@ -3116,6 +3138,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     plevelinfo.pairinfo->NumberOfPairs = actual_pair_save.size();
     
+    pairinfo.NumberOfPairs = actual_pair_save.size();
+    pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*pairinfo.NumberOfPairs);
+    pairinfo.BHratio = (float*)malloc(sizeof(float)*(pairinfo.NumberOfPairs));
     
     UI2DPOINT *temp_pairs = (UI2DPOINT*)calloc(sizeof(UI2DPOINT),plevelinfo.pairinfo->NumberOfPairs);
     float *temp_BHratio = (float*)calloc(sizeof(float),plevelinfo.pairinfo->NumberOfPairs);
@@ -3134,6 +3159,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         plevelinfo.pairinfo->pairs[count].m_Y = temp_pairs[count].m_Y;
         plevelinfo.pairinfo->BHratio[count] = temp_BHratio[count];
         
+        pairinfo.pairs[count].m_X = temp_pairs[count].m_X;
+        pairinfo.pairs[count].m_Y = temp_pairs[count].m_Y;
+        pairinfo.BHratio[count] = temp_BHratio[count];
         //printf("count %d\t%d\t%d\t%f\n",count, plevelinfo.pairinfo->pairs[count].m_X,plevelinfo.pairinfo->pairs[count].m_Y,plevelinfo.pairinfo->BHratio[count]);
     }
     
@@ -3198,7 +3226,7 @@ void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double
 }
 
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
+int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, PairInfo &pairinfo_return)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -3281,8 +3309,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             D2DPOINT *Startpos_ori = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
             CSize *Subsetsize = (CSize*)calloc(sizeof(CSize),proinfo->number_of_images);
             
-            double **t_Imageparams = (double**)calloc(sizeof(double*),proinfo->number_of_images);
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            double **t_Imageparams = (double**)calloc(sizeof(double*),MaxNCC);
+            for(int ti = 0 ; ti < MaxNCC ; ti++)
                 t_Imageparams[ti] = (double*)calloc(sizeof(double),2);
             
             char save_file[500];
@@ -3292,13 +3320,13 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 {
                     sprintf(save_file,"%s/txt/RA_echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                        fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                    for(int ti = 0 ; ti < MaxNCC ; ti++)
+                        fprintf(fid,"RA param X = %f\tY = %f\t0\t0\t0.0\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
                     
                     sprintf(save_file,"%s/txt/RA_headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
                     
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    for(int ti = 0 ; ti < MaxNCC ; ti++)
                     {
                         Imageparams[ti][0] = 0;
                         Imageparams[ti][1] = 0;
@@ -3307,7 +3335,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             }
             else
             {
-                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                for(int ti = 0 ; ti < pairinfo_return.NumberOfPairs ; ti++)
                 {
                     t_Imageparams[ti][0]    = Imageparams[ti][0];
                     t_Imageparams[ti][1]    = Imageparams[ti][1];
@@ -3317,8 +3345,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 {
                     sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                        fprintf(fid,"RA param X = %f\tY = %f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                    for(int ti = 0 ; ti < pairinfo_return.NumberOfPairs ; ti++)
+                        fprintf(fid,"RA param X = %f\tY = %f\t%d\t%d\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1],pairinfo_return.pairs[ti].m_X,pairinfo_return.pairs[ti].m_Y,pairinfo_return.BHratio[ti]);
                     
                     sprintf(save_file,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid_header  = fopen(save_file,"w");
@@ -3334,29 +3362,36 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             
             printf("subsetimage\n");
             
-            double RA_memory = 0;
-            for(int ti = 0; ti < proinfo->number_of_images ; ti++)
-            {
-                printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
-                
-                CSize t_Imagesize((subBoundary[2] - subBoundary[0])/0.7, (subBoundary[3] - subBoundary[1])/0.7);
-                long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
-                RA_memory += (sizeof(uint16)*data_length)*2;
-                RA_memory += (sizeof(int16)*data_length);
-                RA_memory += (sizeof(uint8)*data_length);
-                
-                proinfo->check_selected_image[ti] = true;
-            }
-            
-            RA_memory = RA_memory/1024.0/1024.0/1024.0;
-            
             if(proinfo->IsRA)
             {
+                double RA_memory = 0;
+                for(int ti = 0; ti < MaxNCC ; ti++)
+                {
+                    printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
+                    
+                    CSize t_Imagesize((subBoundary[2] - subBoundary[0])/0.7, (subBoundary[3] - subBoundary[1])/0.7);
+                    long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
+                    RA_memory += (sizeof(uint16)*data_length)*2;
+                    RA_memory += (sizeof(int16)*data_length);
+                    RA_memory += (sizeof(uint8)*data_length);
+                    
+                    proinfo->check_selected_image[ti] = true;
+                }
+                
+                RA_memory = RA_memory/1024.0/1024.0/1024.0;
+            
                 printf("RPC bias calculation required Memory : System %f\t SETSM required %f\n",proinfo->System_memory,RA_memory);
                 if(RA_memory > proinfo->System_memory - 2)
                 {
                     printf("System memory is not enough to run a relative RPC bias computation module of SETSM. Please reduce RA tilesize or assign more physical memory!!\n");
                     exit(1);
+                }
+            }
+            else
+            {
+                for(int ti = 0; ti < pairinfo_return.NumberOfPairs ; ti++)
+                {
+                    printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
                 }
             }
             
@@ -3543,6 +3578,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                     while(lower_level_match && level >= 0)
                     {
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
+                        
+                        for(int ti = 0; ti < pairinfo_return.NumberOfPairs ; ti++)
+                        {
+                            printf("RA Params=%f\t%f\t%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1],levelinfo.ImageAdjust[ti][0],levelinfo.ImageAdjust[ti][1]);
+                        }
                         
                         if(proinfo->IsRA && check_new_subBoundary_RA)
                         {
@@ -3781,8 +3821,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.height_step = &height_step;
                         
                         
-                        //if(!flag_start)
-                            actual_pair(proinfo, levelinfo, minmaxHeight, compute_pair);
+                        if(!flag_start)
+                            actual_pair(proinfo, levelinfo, minmaxHeight, compute_pair, pairinfo_return);
                     
                         
                         printf("done\n");
@@ -3871,11 +3911,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         bool level_check_matching_rate = false;
                         
-                        if(levelinfo.pairinfo->NumberOfPairs < 2)
+                        if(levelinfo.pairinfo->NumberOfPairs < 2 || proinfo->IsRA)
                         {
                             while((Th_roh >= Th_roh_min || (matching_change_rate > rate_th)) )
                             {
                                 levelinfo.ImageAdjust = t_Imageparams;
+                                
                                 levelinfo.iteration = &iteration;
                                 
                                 if(level == 0 &&  iteration == 3)
@@ -4574,9 +4615,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             {
                                                 int RA_iter_counts = 0;
                                                 RA_iter_counts = AdjustParam(proinfo, levelinfo, count_MPs, t_Imageparams, pyramid_step, ptslists);
-                                                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                                for(int ti = 0 ; ti < levelinfo.pairinfo->NumberOfPairs ; ti++)
                                                 {
-                                                    if(proinfo->check_selected_image[ti])
+                                                    //if(proinfo->check_selected_image[ti])
                                                     {
                                                         fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
                                                         printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
@@ -4588,8 +4629,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                     char save_file[500];
                                                     sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath);
                                                     FILE *fid_RAinfo  = fopen(save_file,"w");
-                                                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                                                        fprintf(fid_RAinfo,"%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                    for(int ti = 0 ; ti < levelinfo.pairinfo->NumberOfPairs ; ti++)
+                                                        fprintf(fid_RAinfo,"%d\t%d\t%f\t%f\t%f\n",levelinfo.pairinfo->pairs[ti].m_X,levelinfo.pairinfo->pairs[ti].m_Y,t_Imageparams[ti][0],t_Imageparams[ti][1],levelinfo.pairinfo->BHratio[ti]);
                                                     fclose(fid_RAinfo);
                                                 }
                                             }
@@ -5845,16 +5886,16 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         }
                                         
                                         
-                                  
+                                        /*
                                         if(proinfo->IsRA)
                                         {
                                             if(level <= 3)
                                             {
                                                 int RA_iter_counts = 0;
                                                 RA_iter_counts = AdjustParam(proinfo, levelinfo, count_MPs, t_Imageparams, pyramid_step, ptslists);
-                                                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                                for(int ti = 0 ; ti < levelinfo.pairinfo->NumberOfPairs ; ti++)
                                                 {
-                                                    if(proinfo->check_selected_image[ti])
+                                                    //if(proinfo->check_selected_image[ti])
                                                     {
                                                         fprintf(fid,"RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
                                                         printf("RA iter = %d\tRA Line = %f\tSamp = %f\n",RA_iter_counts,t_Imageparams[ti][0],t_Imageparams[ti][1]);
@@ -5866,8 +5907,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                     char save_file[500];
                                                     sprintf(save_file,"%s/txt/RAinfo.txt",proinfo->save_filepath);
                                                     FILE *fid_RAinfo  = fopen(save_file,"w");
-                                                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
-                                                        fprintf(fid_RAinfo,"%f\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1]);
+                                                    for(int ti = 0 ; ti < levelinfo.pairinfo->NumberOfPairs ; ti++)
+                                                        fprintf(fid_RAinfo,"%d\t%d\t%f\t%f\t%f\n",levelinfo.pairinfo->pairs[ti].m_X,levelinfo.pairinfo->pairs[ti].m_Y,t_Imageparams[ti][0],t_Imageparams[ti][1],levelinfo.pairinfo->BHratio[ti]);
                                                     fclose(fid_RAinfo);
                                                 }
                                             }
@@ -5918,7 +5959,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 }
                                             }
                                         }
-                                        
+                                        */
                                     }
                                     
                                     MatchedPts_list_mps.clear();
@@ -6129,6 +6170,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                     
                     
                     free(pairinfo.pairs);
+                    free(pairinfo.BHratio);
                     
                     printf("release GridTP3\n");
                     PreET = time(0);
@@ -6144,9 +6186,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             
             if(proinfo->IsRA)
             {
-                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                for(int ti = 0 ; ti < MaxNCC ; ti++)
                 {
-                    if(t_Imageparams[ti][0] != 0 && t_Imageparams[ti][1] != 0 && ti > 0)
+                    if(t_Imageparams[ti][0] != 0 && t_Imageparams[ti][1] != 0)
                     {
                         RA_count[ti]++;
                         Imageparams[ti][0] += t_Imageparams[ti][0];
@@ -6155,12 +6197,13 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 }
             }
             
-            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            for(int ti = 0 ; ti < MaxNCC ; ti++)
             {
-                if(proinfo->check_selected_image[ti])
+                //if(proinfo->check_selected_image[ti])
                     free(t_Imageparams[ti]);
             }
             free(t_Imageparams);
+             
             free(Startpos_ori);
             free(Subsetsize);
         }
@@ -6169,20 +6212,22 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
     free(iterations);
     if(proinfo->IsRA)
     {
-        for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
+        for(int ti = 0 ; ti < pairinfo_return.NumberOfPairs ; ti++)
         {
             if(Imageparams[ti][0] != 0 && Imageparams[ti][1] != 0 && RA_count[ti] > 0)
             {
                 Imageparams[ti][0] /= RA_count[ti];
                 Imageparams[ti][1] /= RA_count[ti];
+                
+                printf("RPC bias %d\t%f\t%f\t%d\t%d\t%f\n",ti,Imageparams[ti][0],Imageparams[ti][1],pairinfo_return.pairs[ti].m_X,pairinfo_return.pairs[ti].m_Y,pairinfo_return.BHratio[ti]);
             }
         }
     }
 #ifdef BUILDMPI
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    for(int ti = 0 ; ti < pairinfo_return.NumberOfPairs ; ti++)
         MPI_Bcast(Imageparams[ti], 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
-    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+    for(int ti = 0 ; ti < pairinfo_return.NumberOfPairs ; ti++)
         printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count[ti],Imageparams[ti][0],Imageparams[ti][1]);
     free(RA_count);
     
@@ -7103,7 +7148,7 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
     _boundary[3] =  ceil(maxY);
 }
 
-uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const *ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
+uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_image, const TransParam transparam, const uint8 NumofIAparam, const double * const * const *RPCs, const double * const * ImageParams, const double *subBoundary, const double *minmaxHeight, D2DPOINT *Startpos, CSize *Subsetsize)
 {
     bool ret = false;
 
@@ -7872,6 +7917,8 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
     
     printf("check_combined_WNCC %d\tcheck_combined_WNCC_INCC %d\tnumber of pairs %d\n",check_combined_WNCC,check_combined_WNCC_INCC,plevelinfo.pairinfo->NumberOfPairs);
     
+    printf("*plevelinfo.check_matching_rate %d\n",*plevelinfo.check_matching_rate);
+    
     double im_resolution_next = proinfo->resolution;
     double im_resolution = proinfo->resolution;
     if(check_combined_WNCC)
@@ -8217,7 +8264,7 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                                                         
                                                         double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, *plevelinfo.height_step);
                                                         
-                                                        if((Pyramid_step == 4 && iteration == 1))
+                                                        if((Pyramid_step == 4 && iteration == 1) || IsRA)
                                                             gncc_weight = 1.0;
                                                         
                                                         if(check_ortho) // GNCC check
@@ -8340,7 +8387,10 @@ int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccr
                     if(*plevelinfo.check_matching_rate)
                     {
                         for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
+                        {
                             WNCC_save[grid_voxel_hindex].clear();
+                            vector<double>().swap(WNCC_save[grid_voxel_hindex]);
+                        }
                         
                         //for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                         //    WNCC_save_count[grid_voxel_hindex].clear();
@@ -14362,11 +14412,9 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, D3DPOINT* ptslists)
 {
-    const int reference_id = rlevelinfo.reference_id;
+    
     const int Pyramid_step = *rlevelinfo.Pyramid_step;
-    CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
-    const double left_IA[2] = {ImageAdjust[reference_id][0], ImageAdjust[reference_id][1]};
-   
+    
     double subA[9][6] = {0};
     double TsubA[6][9] = {0};
     double InverseSubA[6][6] = {0};
@@ -14376,9 +14424,15 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
     D3DPOINT *Coord           = ps2wgs_3D(*rlevelinfo.param,NumofPts,ptslists);
 
     int iter_count = 0;
-    for(int ti = 1 ; ti < proinfo->number_of_images ; ti++)
+    for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
     {
-        if(proinfo->check_selected_image[ti])
+        const int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
+        const int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
+        
+        CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
+        const double left_IA[2] = {0.0, 0.0};
+        
+        //if(proinfo->check_selected_image[ti])
         {
             bool check_stop = false;
             iter_count = 1;
@@ -14393,7 +14447,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                 double t_sum_weight_Y       = 0;
                 double t_sum_max_roh        = 0;
                 
-                 const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
+                const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
@@ -14430,7 +14484,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                         
                         CSize RImagesize(rlevelinfo.py_Sizes[ti][Pyramid_step].width, rlevelinfo.py_Sizes[ti][Pyramid_step].height);
                         
-                        D2DPOINT Right_Imagecoord_p  = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],2,ImageAdjust[ti],Coord[i]);
+                        D2DPOINT Right_Imagecoord_p  = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],2,ImageAdjust[pair_number],Coord[i]);
                         D2DPOINT Right_Imagecoord    = OriginalToPyramid_single(Right_Imagecoord_p,rlevelinfo.py_Startpos[ti],Pyramid_step);
                         
                         if(Left_Imagecoord.m_Y  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_X  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_Y  < LImagesize.height - Half_template_size*b_factor - 10 && Left_Imagecoord.m_X  < LImagesize.width - Half_template_size*b_factor - 10 && Right_Imagecoord.m_Y > Half_template_size*b_factor + 10 && Right_Imagecoord.m_X > Half_template_size*b_factor + 10 && Right_Imagecoord.m_Y < RImagesize.height - Half_template_size*b_factor - 10 && Right_Imagecoord.m_X < RImagesize.width - Half_template_size*b_factor - 10)
@@ -14475,13 +14529,13 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                     if(fabs(shift_Y) < 0.1 && fabs(shift_X) < 0.1)
                         check_stop = true;
          
-                    printf("ti %d\t%d\t%f\t%f\t%f\t%f\n",ti, iter_count,shift_X,shift_Y,ImageAdjust[ti][1],ImageAdjust[ti][0]);
+                    printf("pair_number %d\t%d\t%f\t%f\t%f\t%f\n",pair_number, iter_count,shift_X,shift_Y,ImageAdjust[pair_number][1],ImageAdjust[pair_number][0]);
                     
-                    shift_X             += ImageAdjust[ti][1];
-                    shift_Y             += ImageAdjust[ti][0];
+                    shift_X             += ImageAdjust[pair_number][1];
+                    shift_Y             += ImageAdjust[pair_number][0];
 
-                    ImageAdjust[ti][1]      = shift_X;
-                    ImageAdjust[ti][0]      = shift_Y;
+                    ImageAdjust[pair_number][1]      = shift_X;
+                    ImageAdjust[pair_number][0]      = shift_Y;
                 }
                 else
                     check_stop = true;

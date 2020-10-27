@@ -377,7 +377,7 @@ typedef struct ProjectInfo{
 	double DEM_resolution;
 	double preDEM_space;
 	double cal_boundary[4];
-	double RA_param[MaxImages][2];
+	double RA_param[MaxNCC][2];
 	double seedDEMsigma;
     double LBoundary[4];
     double RBoundary[4];
@@ -447,8 +447,8 @@ typedef struct ArgumentInfo{
 	double seedDEMsigma;
 	double minHeight;
 	double maxHeight;
-	double ra_line[MaxImages];
-	double ra_sample[MaxImages];
+	double ra_line[MaxNCC];
+	double ra_sample[MaxNCC];
 	double Min_X, Max_X, Min_Y, Max_Y;
 	double image_resolution;
 	double overlap_length;
