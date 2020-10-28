@@ -8976,6 +8976,19 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
 }
 
 void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders) {
+    // if the flag is already 1 and it's an "old blunder",
+    // then we don't want to update it to 3. This can cause
+    // nondeterminism in the loop. However, the race here is
+    // okay. If it's an "old blunder", we'll always see 1 here.
+    // If it's a new blunder, we may see any of 0, 1 or 3 here.
+    // If it's a new blunder and 1, then detectedBlunders was
+    // already set, so we can exit early. Same with 3. If it's
+    // a new blunder and zero, but there's a race, that's fine
+    // too.
+    uint8_t prev = pts[index].flag;
+    if(prev != 0)
+        return;
+
     // Only update the detectedBlunders value
     // if we know that this is a new blunder.
     // if it was previously zero, we know it is
@@ -8987,23 +9000,6 @@ void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlund
     // changed it from zero to 1 or 3. In that case,
     // the other thread/iteration would have
     // updated detectedBlunders, so we don't need to.
-    uint8_t prev;
-
-#pragma omp atomic read
-    prev = pts[index].flag;
-    
-    // if the flag is already 1 and it's an "old blunder",
-    // then we don't want to update it to 3. This can cause
-    // nondeterminism in the loop. However, the race here is
-    // okay. If it's an "old blunder", we'll always see 1 here.
-    // If it's a new blunder, we may see any of 0, 1 or 3 here.
-    // If it's a new blunder and 1, then detectedBlunders was
-    // already set, so we can exit early. Same with 3. If it's
-    // a new blunder and zero, but there's a race, that's fine
-    // too.
-    if(prev != 0)
-        return;
-
 #pragma omp atomic capture
     {
         prev = pts[index].flag;
