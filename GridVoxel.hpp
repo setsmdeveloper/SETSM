@@ -107,13 +107,17 @@ private:
 
 class GridVoxel {
 public:
+    typedef std::vector<VoxelTower>::size_type size_type;
+
     GridVoxel(size_t length, int max_ncc) : towers(length, VoxelTower(max_ncc)) {}
-    VoxelTower & operator[](size_t n) {
+
+    VoxelTower & operator[](size_type n) {
         return towers[n];
     }
-    const VoxelTower & operator[](size_t n) const {
+    const VoxelTower & operator[](size_type n) const {
         return towers[n];
     }
+
     void clearall() {
         std::vector<VoxelTower>().swap(towers);
     }
