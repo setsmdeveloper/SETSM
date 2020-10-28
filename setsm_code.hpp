@@ -30,6 +30,7 @@
 #include "Orthogeneration.hpp"
 #include "Coregistration.hpp"
 #include "SDM.hpp"
+#include "GridVoxel.hpp"
 
 
 void DownSample(ARGINFO &args);
@@ -68,7 +69,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
 
 void CalMPP_8(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight, const double CA,const double mean_product_res, double *MPP_simgle_image, double *MPP_stereo_angle);
 
-void InitializeVoxel(const ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight);
+void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight);
 
 double GetHeightStep(int Pyramid_step, double im_resolution);
 
@@ -80,7 +81,7 @@ double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_
 
 int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo &plevelinfo, double start_H, double end_H);
 
-int VerticalLineLocus(VOXEL **grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
 
 void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
 
@@ -88,19 +89,19 @@ void FindPeakNcc(const int Pyramid_step, const int iteration, const long int gri
 
 void FindPeakNcc2(const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec);
 
-void SGM_start_pos(NCCresult *nccresult, VOXEL** grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, float* LHcost_pre,float **SumCost, double height_step_interval);
+void SGM_start_pos(NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, float* LHcost_pre,float **SumCost, double height_step_interval);
 
-void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, VOXEL** grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost);
+void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost);
 
-void AWNCC_single(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, int pair_number);
+void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, int pair_number);
 
-void AWNCC_AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
+void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
 
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, MultiMPs **multimps, vector<D3DPOINT> &MatchedPts_list_mps);
 
-void AWNCC_multi(ProInfo *proinfo, VOXEL **grid_voxel, LevelInfo &rlevelinfo, CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
+void AWNCC_multi(ProInfo *proinfo, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
 
-void AWNCC_SGM(ProInfo *proinfo, VOXEL **grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
+void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight);
 
 void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGRID *GridPT3, const double* minmaxHeight);
 

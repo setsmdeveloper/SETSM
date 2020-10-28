@@ -949,17 +949,6 @@ inline double SignedCharToDouble_grid(short val)
     return (double)(val)/1000.0;
 }
 
-inline short DoubleToSignedChar_voxel(double val)
-{
-    return (short)(val*1000.0);
-}
-
-inline double SignedCharToDouble_voxel(short val)
-{
-    return (double)(val)/1000.0;
-}
-
-
 inline signed char FloatToSignedChar(float val)
 {
     return (signed char)(val*100.0);

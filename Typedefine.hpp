@@ -19,6 +19,7 @@
 //uint definition
 #include "tiff.h"
 #include "tiffio.h"
+#include "GridVoxel.hpp"
 #include <vector>
 #include <cstdlib>
 #include <cstring>
