@@ -8986,6 +8986,43 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
 
 }
 
+void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders) {
+    // if the flag is already 1 and it's an "old blunder",
+    // then we don't want to update it to 3. This can cause
+    // nondeterminism in the loop. However, the race here is
+    // okay. If it's an "old blunder", we'll always see 1 here.
+    // If it's a new blunder, we may see any of 0, 1 or 3 here.
+    // If it's a new blunder and 1, then detectedBlunders was
+    // already set, so we can exit early. Same with 3. If it's
+    // a new blunder and zero, but there's a race, that's fine
+    // too.
+    uint8_t prev = pts[index].flag;
+    if(prev != 0)
+        return;
+
+    // Only update the detectedBlunders value
+    // if we know that this is a new blunder.
+    // if it was previously zero, we know it is
+    // a new blunder. If it was not previously zero,
+    // there are two possible cases. First, it
+    // was already a blunder. In that case, we don't
+    // want to set detectedBlunders. Alternatively,
+    // it could be a new blunder but another thread
+    // changed it from zero to 1 or 3. In that case,
+    // the other thread/iteration would have
+    // updated detectedBlunders, so we don't need to.
+#pragma omp atomic capture
+    {
+        prev = pts[index].flag;
+        pts[index].flag = val;
+    }
+    if(prev == 0)
+    {
+#pragma omp atomic write
+        detectedBlunders[index] = true;
+    }
+}
+
 bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp)
 {
     int IsRA(proinfo->IsRA);
@@ -9250,18 +9287,33 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         
         free(hdiffbin);
 
-        // Iterates through points, updating the flag value
-        // for each point. But, also grabs the triangle for
-        // each point, and may update flag for points
-        // corresponding to those vertices. So, not safe to
-        // parallelize
-#ifndef DETERMINISTIC
+        // be very careful modifying this code. The thread safety
+        // here is a bit complicated. This loop touches three
+        // shared arrays: pts, detectedBlunders, and GridPts.
+        // GridPts and detecetedBlunders are write-only, while
+        // pts is read/write. GridPts is the least problematic.
+        // It is written is a "safe" way, with one-to-one mapping
+        // between iterations and the index.
+        //
+        // That's not the case for pts and detectedBlunders.
+        // pts is only read from the iteration index. But, it is
+        // written from other indices. detectedBlunders tracks
+        // whether a given pts index was updated from zero to
+        // one or three. It is also written from other threads.
+        //
+        // openmp atomics are used to coordinate this. Take
+        // care when modifying anything in here.
+        //
+        // detectedBlunders is updated when for an index when
+        // the pts value is changed from 0 to 1 or from 0 to 3.
 #pragma omp parallel for schedule(guided)
-#endif
         for(long index=0;index<num_points;index++)
         {
             if(pts[index].flag != 1)
             {
+                // use this flag instead of setting the point directly
+                bool pt_is_blunder = false;
+
                 int count_th_positive   = 0;
                 int count_th_negative   = 0;
                 int count = 0;
@@ -9279,17 +9331,21 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 long t_row         = (long)((ref_index_pt.m_Y - boundary[1])/gridspace + 0.5);
                 const long ref_index((long)gridsize.width*t_row + t_col);
                 
+                // assume that the mapping between index
+                // and ref_index is one-to-one, so this
+                // is okay.
                 Gridpts[ref_index].anchor_flag = 0;
                 
                 if(!IsRA)
                 {
                     if(ortho_ncc[ref_index] < th_ref_ncc && pyramid_step >= 2)
-                        pts[index].flag = 1;
+                        pt_is_blunder = true;
                 }
                 if(pyramid_step >= 3 && iteration >= 4)
                 {
                     if(ortho_ncc[ref_index] >= 0.95 && flag_blunder)
                     {
+                        // Assume this is okay
                         Gridpts[ref_index].anchor_flag = 1;
                     }
                 }
@@ -9436,22 +9492,24 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                                     h1        = height[t_o_mid] - height[t_o_min];
                                     h2        = height[t_o_max] - height[t_o_mid];
                                     dh        = h1 - h2;
+
+                                    long int blunder_neighbor_index = -1;
                                     if((dh > 0 && dh > height_th))
                                     {
                                         if(IsRA == 1)
                                         {
-                                            pts[order[t_o_min]].flag = 3;
+                                            blunder_neighbor_index = order[t_o_min];
                                         }
                                         else
                                         {
                                             if(flag_blunder)
                                             {
                                                 if(ortho_ncc[Index[t_o_min]] < ortho_ncc_th)
-                                                    pts[order[t_o_min]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_min];
                                             }
                                             else
                                                 if(ortho_ncc[Index[t_o_min]] < ortho_ancc_th)
-                                                    pts[order[t_o_min]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_min];
                                             
                                         }
                                     }
@@ -9459,20 +9517,23 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                                     {
                                         if(IsRA == 1)
                                         {
-                                            pts[order[t_o_max]].flag = 3;
+                                            blunder_neighbor_index = order[t_o_max];
                                         }
                                         else
                                         {
                                             if(flag_blunder)
                                             {
                                                 if(ortho_ncc[Index[t_o_max]] < ortho_ncc_th)
-                                                    pts[order[t_o_max]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_max];
                                             }
                                             else
                                                 if(ortho_ncc[Index[t_o_max]] < ortho_ancc_th)
-                                                    pts[order[t_o_max]].flag = 3;
+                                                    blunder_neighbor_index = order[t_o_max];
                                         }
                                     }
+
+                                    if(blunder_neighbor_index >= 0)
+                                        set_blunder(blunder_neighbor_index, 3, pts, detectedBlunders);
                                 }
                             }
                             count++;
@@ -9485,11 +9546,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                     if(check_neigh == true)
                     {
                         if(!flag_blunder)
-                            pts[index].flag = 1;
+                            pt_is_blunder = true;
                     }
       
                     if((count_th_positive >= (int)(count*0.7 + 0.5) || count_th_negative >= (int)(count*0.7 + 0.5)) && count > 1)
-                        pts[index].flag = 1;
+                        pt_is_blunder = true;
                 }
                 else
                 {
@@ -9500,11 +9561,11 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                             if(pyramid_step >= 3 && iteration == 4)
                             {
                                 if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                             }
                             else
                                 if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                         }
                     }
                     
@@ -9528,32 +9589,37 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                             if(pyramid_step >= 1)
                             {
                                 if(ortho_ncc[ref_index] < tmp_th)
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                             }
                             else if(pyramid_step == 0)
                             {
                                 if(iteration <= 1)
                                 {
                                     if(ortho_ncc[ref_index] < 0.9)
-                                        pts[index].flag = 1;
+                                        pt_is_blunder = true;
                                 }
                                 else if(iteration == 2 )
-                                    pts[index].flag = 1;
+                                    pt_is_blunder = true;
                                 else {
                                     if(ortho_ncc[ref_index] < ortho_ncc_th)
-                                        pts[index].flag = 1;
+                                        pt_is_blunder = true;
                                 }
                             }
                         }
                         else
                         {
                             if(ortho_ncc[ref_index] < ortho_ancc_th)
-                                pts[index].flag = 1;
+                                pt_is_blunder = true;
                         }
                     }
                 }
-                //If a point was found to be a blunder in the current blunder detection, mark detectedBlunders index as true
-                detectedBlunders[index] = (pts[index].flag==1 || pts[index].flag==3);
+                // only set detectedBlunders[index] to true for the index associated
+                // with this loop iteration. The neighbor points set detectedBlunders
+                // above as appropriate. We have to use the private variable instead
+                // of just reading the array value because other threads may set
+                // the value to 3 as we're processing.
+                if(pt_is_blunder)
+                    set_blunder(index, 1, pts, detectedBlunders);
             }
         }
         
@@ -10487,51 +10553,24 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
             {
                 bool flag_boundary = false;
                 int count_pts = 0;
-                double sum_weight_X     = 0;
-                double sum_weight_Y     = 0;
-                double sum_max_roh      = 0;
-                double t_sum_weight_X       = 0;
-                double t_sum_weight_Y       = 0;
-                double t_sum_max_roh        = 0;
-                
-                 const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
+
+                std::vector<double> weights_X(NumofPts, 0.0);
+                std::vector<double> weights_Y(NumofPts, 0.0);
+                std::vector<double> max_rohs(NumofPts, 0.0);
+
+                const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                std::array<double*, 3>* left_patch_vecs_array;
-                std::array<double*, 3>* right_patch_vecs_array;
-
-                // sum reduction on doubles makes this nondeterminisitc
-#ifndef DETERMINISTIC
-#pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
-#endif
+#pragma omp parallel reduction(+:count_pts)
                 {
+                    Matrix left_patch_vecs(3, patch_size);
+                    Matrix right_patch_vecs(3, patch_size);
                     
-#ifndef DETERMINISTIC
-#pragma omp single
-#endif
-                    {
-                        // Make patch vectors thread private rather than private to each loop iteration
-                        // These are used by postNCC but allocated here for efficiency
-                        left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                                right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                            }
-                        }
-                    }
-                    
-#ifndef DETERMINISTIC
 #pragma omp for schedule(guided)
-#endif
                     for(long i = 0; i<NumofPts ; i++)
                     {
-                        double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
-                        double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
-                        
+                        double t_sum_weight_X, t_sum_weight_Y, t_sum_max_roh;
                         //calculation image coord from object coord by RFM in left and right image
                         D2DPOINT Left_Imagecoord_p   = GetObjectToImageRPC_single(rlevelinfo.RPCs[reference_id],2,left_IA,Coord[i]);
                         D2DPOINT Left_Imagecoord     = OriginalToPyramid_single(Left_Imagecoord_p,rlevelinfo.py_Startpos[reference_id],Pyramid_step);
@@ -10551,32 +10590,25 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                                 
                                 if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
                                 {
-                                    sum_weight_X += t_sum_weight_X;
-                                    sum_weight_Y += t_sum_weight_Y;
-                                    sum_max_roh  += t_sum_max_roh;
+                                    weights_X[i] = t_sum_weight_X;
+                                    weights_Y[i] = t_sum_weight_Y;
+                                    max_rohs[i] = t_sum_max_roh;
                                     count_pts++;
                                 }
                             }
                         }
                     } // end omp for
-                    
-#ifndef DETERMINISTIC
-#pragma omp single
-#endif
-                    {
-                        // free thread-private vectors
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                free(left_patch_vecs_array[th][k]);
-                                free(right_patch_vecs_array[th][k]);
-                            }
-                        }
-                        delete[] left_patch_vecs_array;
-                        delete[] right_patch_vecs_array;
-                    }
-                    
                 } // end omp parallel
+
+                double sum_weight_X = 0;
+                double sum_weight_Y = 0;
+                double sum_max_roh = 0;
+                for(const auto& v : weights_X)
+                    sum_weight_X += v;
+                for(const auto& v : weights_Y)
+                    sum_weight_Y += v;
+                for(const auto& v: max_rohs)
+                    sum_max_roh += v;
 
                 printf("in AdjustParam, count_pts is %d\n", count_pts);
                 if(count_pts > 10)
@@ -10610,7 +10642,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
 }
 
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix &left_patch_vecs, Matrix &right_patch_vecs)
 {
     bool check_pt = false;
  
@@ -10656,7 +10688,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             long position = (long int) (pos_col_left) + (long int) (pos_row_left) * (long)leftsize.width;
                             
                             double left_patch = InterpolatePatch(rlevelinfo.py_Images[reference_ID], position, leftsize, dx, dy);
-                            left_patch_vecs[0][Count_N[0]] = left_patch;
+                            left_patch_vecs(0, Count_N[0]) = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -10664,7 +10696,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             position = (long int) (pos_col_right) + (long int) (pos_row_right) * (long)rightsize.width;
                             
                             double right_patch = InterpolatePatch(rlevelinfo.py_Images[target_ID], position, rightsize, dx, dy);
-                            right_patch_vecs[0][Count_N[0]] = right_patch;
+                            right_patch_vecs(0, Count_N[0]) = right_patch;
                             
                             //end
                             Count_N[0]++;
@@ -10674,8 +10706,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                 {
-                                    left_patch_vecs[1][Count_N[1]] = left_patch;
-                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                    left_patch_vecs(1, Count_N[1]) = left_patch;
+                                    right_patch_vecs(1, Count_N[1]) = right_patch;
                                     Count_N[1]++;
                                 }
                             }
@@ -10685,8 +10717,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                 {
-                                    left_patch_vecs[2][Count_N[2]] = left_patch;
-                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                    left_patch_vecs(2, Count_N[2]) = left_patch;
+                                    right_patch_vecs(2, Count_N[2]) = right_patch;
                                     Count_N[2]++;
                                 }
                             }
@@ -10703,7 +10735,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                 {
                     if (Count_N[k] > 0)
                     {
-                        double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
+                        double ncc = Correlate(left_patch_vecs.row(k),right_patch_vecs.row(k),Count_N[k]);
                         if (ncc != -99)
                         {
                             count_rho++;
