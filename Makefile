@@ -20,8 +20,10 @@ MPIFLAGS = -DBUILDMPI
 INCS = $(TIFFINC) $(GEOTIFFINC)
 LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) $(PROJLIB)
 
-OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o
-HDRS = Typedefine.hpp CoordConversion.hpp SubFunctions.hpp Template.hpp LSF.hpp Orthogeneration.hpp Coregistration.hpp SDM.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp git_description.h
+COMMON_OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o
+MPI_OBJS = $(COMMON_OBJS) log_mpi.o
+OBJS = $(COMMON_OBJS) log.o
+HDRS = Typedefine.hpp CoordConversion.hpp SubFunctions.hpp Template.hpp LSF.hpp Orthogeneration.hpp Coregistration.hpp SDM.hpp setsm_code.hpp setsmgeo.hpp grid_triangulation.hpp grid_types.hpp grid_iterators.hpp basic_topology_types.hpp git_description.h mpi_helpers.hpp log.hpp
 
 ifeq ($(COMPILER), intel)
   CC=icc
@@ -40,8 +42,8 @@ else ifeq ($(COMPILER), pgi)
 else ifeq ($(COMPILER), cray)
   CC=cc
   CXX=CC
-  MPICC=mpicc
-  MPICXX=mpicxx
+  MPICC=cc
+  MPICXX=CC
   CFLAGS=
   CXXFLAGS=-hstd=c++11 -h aggress
 else
@@ -60,8 +62,8 @@ export GIT_DESCRIPTION
 setsm : setsm_code.o $(OBJS)
 	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff -lz -ljpeg -lproj
 
-setsm_mpi : setsm_code_mpi.o $(OBJS)
-	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o setsm_mpi setsm_code_mpi.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff
+setsm_mpi : setsm_code_mpi.o $(MPI_OBJS)
+	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o setsm_mpi setsm_code_mpi.o $(MPI_OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff
 
 setsm_code.o : setsm_code.cpp $(HDRS)
 	$(CXX) -c $(CXXFLAGS) $(INCS) setsm_code.cpp -o setsm_code.o
@@ -70,12 +72,16 @@ setsm_code_mpi.o : setsm_code.cpp $(HDRS)
 	$(MPICXX) -c $(CXXFLAGS) $(MPIFLAGS) $(INCS) setsm_code.cpp -o setsm_code_mpi.o
 
 $(OBJS) : $(HDRS)
+$(MPI_OBJS) : $(HDRS)
 
 %.o : %.c
 	$(CC) -c $(CFLAGS) $(INCS) $< -o $@
 
 %.o : %.cpp
 	$(CXX) -c $(CXXFLAGS) $(INCS) $< -o $@
+
+%_mpi.o : %.cpp
+	$(MPICXX) -c $(CXXFLAGS) $(MPIFLAGS) $(INCS) $< -o $@
 
 .PHONY: clean
 

@@ -131,7 +131,14 @@ double getSystemMemory()
 {
     struct rlimit lim;
     if( getrlimit(RLIMIT_RSS, &lim) == 0) {
+      if(lim.rlim_cur == RLIM_INFINITY) {
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        return (pages * page_size) / (double)pwrtwo(30) ;
+      }
+      else {
         return (double)lim.rlim_cur/pwrtwo(30);
+      }
     }
     else {
         return -1.0;
@@ -2469,10 +2476,10 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             double sub_bin[4] = {0.0};
 
             //calulation of major direction, refering to SIFT descriptor based on gradient
-            for (int row = max(-mask_row, -Half_template_size + 1); row <= min(main_row-mask_row-1, Half_template_size - 1); row++)
+            for (int row = max<long>(-mask_row, -Half_template_size + 1); row <= min<long>(main_row-mask_row-1, Half_template_size - 1); row++)
             {
                 int dcol = numcols[abs(row)];
-                for (int col = max(-mask_row, -dcol); col <= min(dcol, main_col-mask_col-1); col++)
+                for (int col = max<long>(-mask_row, -dcol); col <= min<long>(dcol, main_col-mask_col-1); col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
                     //long int radius2 = (row * row + col * col);
