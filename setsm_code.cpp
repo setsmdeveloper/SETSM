@@ -3878,8 +3878,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         //if(level == 0 && proinfo->DEM_resolution < 2)
                         //    check_matching_rate = true;
                         
+                        printf("Creating GridVoxel with num pairs: %d\n", pairinfo_return.NumberOfPairs);
                         auto grid_voxel_size = check_matching_rate ? 0 : Size_Grid2D.width*Size_Grid2D.height;
-                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size, MaxNCC);
+                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size, pairinfo_return.NumberOfPairs);
                         
                         if(proinfo->sensor_type == SB)
                         {
