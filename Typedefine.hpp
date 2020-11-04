@@ -31,7 +31,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
-#define MaxNCC 15
+#define MaxNCC 16
 #define Nodata -9999
 #ifndef bool
 //#define bool unsigned char
@@ -320,6 +320,7 @@ typedef struct tagPairInfo{
     int NumberOfPairs;
     UI2DPOINT *pairs;
     float *BHratio;
+    float *ConvergenceAngle;
 }PairInfo;
 
 typedef struct BlunderIP{
@@ -482,6 +483,8 @@ typedef struct ArgumentInfo{
     uint8 pyramid_level;
     uint8 SDM_SS;
     int DS_kernel;
+    int RA_line_count;
+    int RA_sample_count;
     
     char Image[MaxImages][500];
 	char Outputpath[500];
@@ -665,7 +668,7 @@ typedef struct taglevelinfo
     bool *check_matching_rate;
     PairInfo *pairinfo;
     const CSize *Imagesize_ori;
-    float pair_select_gncc;
+    bool check_SGM;
 } LevelInfo;
 
 class Matrix {

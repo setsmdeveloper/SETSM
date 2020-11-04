@@ -177,7 +177,7 @@ bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairI
         }
         fclose(pFile_echo);
         
-        if(!check_load_RA_each)
+        if(!check_load_RA_each && ti > 0)
             check_load_RA = true;
     }
     
@@ -222,7 +222,7 @@ bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imagepar
         }
         fclose(pFile_echo);
         
-        if(!check_load_RA_each)
+        if(!check_load_RA_each && ti > 0)
             check_load_RA = true;
     }
     
