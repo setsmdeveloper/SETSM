@@ -1864,6 +1864,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     {
                         RPCs[ti]       = OpenXMLFile(proinfo,ti,&Image_gsd_r[ti],&Image_gsd_c[ti],&Image_gsd[ti],&leftright_band[ti]);
                         
+                        image_info[ti].GSD.row_GSD = Image_gsd_r[ti];
+                        image_info[ti].GSD.col_GSD = Image_gsd_c[ti];
+                        image_info[ti].GSD.pro_GSD = Image_gsd[ti];
+                        
                         GSD_image1.row_GSD += Image_gsd_r[ti];
                         GSD_image1.col_GSD += Image_gsd_c[ti];
                         GSD_image1.pro_GSD += Image_gsd[ti];
@@ -1890,6 +1894,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(args.sensor_provider == DG)
                         {
                             RPCs[ti]       = OpenXMLFile(proinfo,ti,&Image_gsd_r[ti],&Image_gsd_c[ti],&Image_gsd[ti],&leftright_band[ti]);
+                            
+                            image_info[ti].GSD.row_GSD = Image_gsd_r[ti];
+                            image_info[ti].GSD.col_GSD = Image_gsd_c[ti];
+                            image_info[ti].GSD.pro_GSD = Image_gsd[ti];
                             
                             GSD_image1.row_GSD += Image_gsd_r[ti];
                             GSD_image1.col_GSD += Image_gsd_c[ti];
@@ -3431,6 +3439,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             levelinfo.param = &param;
             levelinfo.NumOfIAparam = &NumOfIAparam;
             levelinfo.Imagesize_ori = Imagesizes;
+            levelinfo.imageinfo = image_info;
+            
             uint16 **SourceImages = (uint16**)malloc(sizeof(uint16*)*proinfo->number_of_images);
             int count_available_images = 0;
             for(int index_image = 0 ; index_image < proinfo->number_of_images ; index_image++)
@@ -4023,7 +4033,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 if(!check_matching_rate)
                                     InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight);
                       
-                                const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
+                                const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                                 
                                 printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                                 
@@ -4897,7 +4907,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 if(!check_matching_rate)
                                     InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight);
                                 
-                                const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
+                                const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                                 
                                 printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                                 
@@ -7472,13 +7482,15 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
     int selected_ref = 0;
     double diff_min = 1000000;
     
+    double min_off_nadir = 90;
+    
     for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs ; pair_number++)
     {
         const int reference_id = plevelinfo.pairinfo->pairs[pair_number].m_X;
         const int ti = plevelinfo.pairinfo->pairs[pair_number].m_Y;
         
          // Image point setting
-        const double temp_LIA[2] = {plevelinfo.ImageAdjust[reference_id][0], plevelinfo.ImageAdjust[reference_id][1]};
+        const double temp_LIA[2] = {0.0, 0.0};
         
         D2DPOINT Ref_Imagecoord[1];
         D2DPOINT Tar_Imagecoord[1];
@@ -7487,11 +7499,23 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
         temp_GP[0].m_Z = (double)(end_H - start_H)/2.0;
         if(proinfo->sensor_type == SB)
         {
+            if(min_off_nadir > plevelinfo.imageinfo[reference_id].Offnadir_angle)
+            {
+                min_off_nadir = plevelinfo.imageinfo[reference_id].Offnadir_angle;
+                selected_ref = reference_id;
+            }
+            if(min_off_nadir > plevelinfo.imageinfo[ti].Offnadir_angle)
+            {
+                min_off_nadir > plevelinfo.imageinfo[ti].Offnadir_angle;
+                selected_ref = ti;
+            }
+            /*
             temp_GP[0] = plevelinfo.Grid_wgs[pt_index];
             
             Ref_Imagecoord[0]      = GetObjectToImageRPC_single(plevelinfo.RPCs[reference_id],*plevelinfo.NumOfIAparam,temp_LIA,temp_GP[0]);
             
-            Tar_Imagecoord[0]     = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP[0]);
+            Tar_Imagecoord[0]     = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pair_number],temp_GP[0]);
+             */
         }
         else
         {
@@ -7502,31 +7526,31 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
             
             photo = GetPhotoCoordinate_single(temp_GP[0],proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
             Tar_Imagecoord[0] = PhotoToImage_single(photo,proinfo->frameinfo.m_Camera.m_CCDSize,proinfo->frameinfo.m_Camera.m_ImageSize);
-        }
         
-        D2DPOINT diff;
-        diff.m_X = Ref_Imagecoord[0].m_X - plevelinfo.Imagesize_ori[reference_id].width/2.0;
-        diff.m_Y = Ref_Imagecoord[0].m_Y - plevelinfo.Imagesize_ori[reference_id].height/2.0;
-        
-        double diff_x = sqrt(diff.m_X*diff.m_X + diff.m_Y*diff.m_Y);
-        diff.m_X = Tar_Imagecoord[0].m_X - plevelinfo.Imagesize_ori[ti].width/2.0;
-        diff.m_Y = Tar_Imagecoord[0].m_Y - plevelinfo.Imagesize_ori[ti].height/2.0;
-        double diff_y = sqrt(diff.m_X*diff.m_X + diff.m_Y*diff.m_Y);
-        
-        if(diff_x < diff_y)
-        {
-            if(diff_x < diff_min)
+            D2DPOINT diff;
+            diff.m_X = Ref_Imagecoord[0].m_X - plevelinfo.Imagesize_ori[reference_id].width/2.0;
+            diff.m_Y = Ref_Imagecoord[0].m_Y - plevelinfo.Imagesize_ori[reference_id].height/2.0;
+            
+            double diff_x = sqrt(diff.m_X*diff.m_X + diff.m_Y*diff.m_Y);
+            diff.m_X = Tar_Imagecoord[0].m_X - plevelinfo.Imagesize_ori[ti].width/2.0;
+            diff.m_Y = Tar_Imagecoord[0].m_Y - plevelinfo.Imagesize_ori[ti].height/2.0;
+            double diff_y = sqrt(diff.m_X*diff.m_X + diff.m_Y*diff.m_Y);
+            
+            if(diff_x < diff_y)
             {
-                diff_min = diff_x;
-                selected_ref = reference_id;
+                if(diff_x < diff_min)
+                {
+                    diff_min = diff_x;
+                    selected_ref = reference_id;
+                }
             }
-        }
-        else
-        {
-            if(diff_y < diff_min)
+            else
             {
-                diff_min = diff_y;
-                selected_ref = ti;
+                if(diff_y < diff_min)
+                {
+                    diff_min = diff_y;
+                    selected_ref = ti;
+                }
             }
         }
     }
@@ -7534,7 +7558,7 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
     return selected_ref;
 }
 
-int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
     const char* save_filepath = proinfo->save_filepath;
@@ -7726,13 +7750,17 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* n
                                     const int reference_id = plevelinfo.pairinfo->pairs[pair_number].m_X;
                                     const int ti = plevelinfo.pairinfo->pairs[pair_number].m_Y;
                                     
+                                    double ref_gsd = plevelinfo.imageinfo[reference_id].GSD.pro_GSD;
+                                    double ti_gsd = plevelinfo.imageinfo[ti].GSD.pro_GSD;
+                                    double gsd_ratio = ref_gsd/ti_gsd;
+                                    
                                     bool check_compute = false;
                                     /*if(GridPT3[pt_index].Matched_flag == 1 || GridPT3[pt_index].Matched_flag == 2)
                                     {
                                         if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,reference_id) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,ti))
                                             check_compute = true;
                                     }
-                                    else*/ if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,reference_id) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,ti))
+                                    else*/ if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,reference_id,pair_number, true) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,ti,pair_number, false))
                                         check_compute = true;
                                     
                                     if(check_compute)
@@ -7785,7 +7813,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* n
                                             const CSize RImagesize(plevelinfo.py_Sizes[ti][Pyramid_step]);
                                             
                                             // Image point setting
-                                            const double temp_LIA[2] = {plevelinfo.ImageAdjust[reference_id][0], plevelinfo.ImageAdjust[reference_id][1]};
+                                            const double temp_LIA[2] = {0.0, 0.0};
                                             
                                             D2DPOINT Ref_Imagecoord[1], Ref_Imagecoord_py[1];
                                             D2DPOINT Tar_Imagecoord[1], Tar_Imagecoord_py[1];
@@ -7798,7 +7826,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* n
                                                 
                                                 Ref_Imagecoord[0]      = GetObjectToImageRPC_single(plevelinfo.RPCs[reference_id],*plevelinfo.NumOfIAparam,temp_LIA,temp_GP[0]);
                                                 
-                                                Tar_Imagecoord[0]     = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP[0]);
+                                                Tar_Imagecoord[0]     = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pair_number],temp_GP[0]);
                                             }
                                             else
                                             {
@@ -7881,10 +7909,12 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* n
                                                         for(int col = -Half_template_size; col <= Half_template_size ; col++)
                                                         {
                                                             int radius2  =  row*row + col*col;
+                                                            double right_col = col*gsd_ratio;
+                                                            double right_row = row*gsd_ratio;
                                                             if(radius2 <= (Half_template_size + 1)*(Half_template_size + 1))
                                                             {
                                                                 D2DPOINT pos_left(Ref_Imagecoord_py[0].m_X + col,Ref_Imagecoord_py[0].m_Y + row);
-                                                                D2DPOINT temp_pos(cos0*col - sin0*row, sin0*col + cos0*row);
+                                                                D2DPOINT temp_pos(cos0*right_col - sin0*right_row, sin0*right_col + cos0*right_row);
                                                                 D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
                                                                 
                                                                 SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
@@ -7892,7 +7922,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* n
                                                                 if(check_combined_WNCC_INCC)
                                                                 {
                                                                     D2DPOINT pos_left_next(Ref_Imagecoord_py_next[0].m_X + col,Ref_Imagecoord_py_next[0].m_Y + row);
-                                                                    D2DPOINT temp_pos_next(cos0*col - sin0*row, sin0*col + cos0*row);
+                                                                    D2DPOINT temp_pos_next(cos0*right_col - sin0*right_row, sin0*right_col + cos0*right_row);
                                                                     D2DPOINT pos_right_next(Tar_Imagecoord_py_next[0].m_X + temp_pos_next.m_X,Tar_Imagecoord_py_next[0].m_Y + temp_pos_next.m_Y);
                                                                     
                                                                     SetVecKernelValue(patch_next, row, col, pos_left_next,pos_right_next, radius2, Count_N_next);
@@ -8185,7 +8215,7 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
                         D2DPOINT Imagecoord;
                         D2DPOINT Imagecoord_py;
                         if(proinfo->sensor_type == SB)
-                            Imagecoord      = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_GP);
+                            Imagecoord      = GetObjectToImageRPC_single_noBias(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,temp_GP);
                         else
                         {
                             D2DPOINT photo  = GetPhotoCoordinate_single(temp_GP,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,proinfo->frameinfo.Photoinfo[ti].m_Rm);
@@ -9126,7 +9156,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     vector<double> weight_bhratio;
     for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
     {
-        double temp_ratio = 1.0/rlevelinfo.pairinfo->BHratio[pair_number];
+        double temp_ratio = pow(1.0/rlevelinfo.pairinfo->BHratio[pair_number],1.0);
         if(min_bhratio > temp_ratio)
             min_bhratio = temp_ratio;
         
@@ -9172,7 +9202,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         double height_interval = (*rlevelinfo.grid_resolution)*10;
         
         int selected_pair = -1;
-        //GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
+        
+        if(GridPT3[pt_index].ncc_seleceted_pair == AWNCC_id)
+            GridPT3[pt_index].ncc_seleceted_pair = selected_pair;
         
         double max_wncc = -10;
         double min_wncc = 10;
@@ -9228,7 +9260,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
                 if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
                 {
-                    double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh);
+                    double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh)*weight_bhratio[pair_number];
                     if(pair_peak_roh > -1 && multimps[pt_index][pair_number].check_matched)
                     {
                         //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps[pt_index][pair_number].peak_height);
@@ -9377,7 +9409,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         height_diff = fabs(multimps[pt_index][AWNCC_id].peak_height - multimps[pt_index][pair_number].peak_height);
                                                         if(height_diff < height_interval && pair_peak_roh > 0.0)
                                                         {
-                                                            sum_bhratio += (1.0/rlevelinfo.pairinfo->BHratio[pair_number]);
+                                                            sum_bhratio += pow(1.0/rlevelinfo.pairinfo->BHratio[pair_number],1.0);
                                                             count_pair++;
                                                         }
                                                     }
@@ -9440,7 +9472,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(height_diff < 1.0)
                                         IDW_w = bhratio_norm;
                                     else
-                                        IDW_w = bhratio_norm/pow(height_diff,1.5);
+                                        IDW_w = bhratio_norm/pow(height_diff,0.5);
                                     
                                     double w_bhratio,w_ncc, weightAWNCC(1.0);
                                     
@@ -9474,7 +9506,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             w_ncc = 1.0/pow(ncc_diff,0.5);
                                         */
                                         if(pair_number == AWNCC_id)
-                                            weightAWNCC = 1.0 + 0.4*save_pair[AWNCC_id].size();
+                                            weightAWNCC = 1.0 + 0.1*save_pair[AWNCC_id].size();
                                         else
                                             weightAWNCC = 1.0;
                                     }
@@ -9482,7 +9514,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(ncc_diff < 1)
                                         w_ncc = bhratio_norm;
                                     else
-                                        w_ncc = bhratio_norm/pow(ncc_diff,1.5);
+                                        w_ncc = bhratio_norm/pow(ncc_diff,0.5);
                                     
                                     
                                     wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w*weightAWNCC;
@@ -11152,7 +11184,13 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                                         {
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
+                                            D2DPOINT pos_right_before(pos_right);
                                             
+                                            pos_right.m_X = pos_right.m_X + rlevelinfo.ImageAdjust[pair_number][1]/pwrtwo(*rlevelinfo.blunder_selected_level);
+                                            pos_right.m_Y = pos_right.m_Y + rlevelinfo.ImageAdjust[pair_number][0]/pwrtwo(*rlevelinfo.blunder_selected_level);
+                                            
+                                            //printf("rpc bias %f\t%f\t before %f\t%f\t after %f\t%f\n",rlevelinfo.ImageAdjust[pair_number][0],rlevelinfo.ImageAdjust[pair_number][1],pos_right_before.m_X,pos_right_before.m_Y,pos_right.m_X,pos_right.m_Y);
+                                            //exit(1);
                                             SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
                                         }
                                     }
@@ -11598,7 +11636,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                                 D2DPOINT Ref_Imagecoord, temp_GP_p;
                                 D3DPOINT temp_GP;
                                 
-                                const double temp_LIA[2] = {rlevelinfo.ImageAdjust[reference_id][0], rlevelinfo.ImageAdjust[reference_id][1]};
+                                const double temp_LIA[2] = {0.0, 0.0};
                                 
                                 temp_GP.m_Z = Z;
                                 if(proinfo->sensor_type == SB)
@@ -11634,7 +11672,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                                     
                                     temp_GP     = ps2wgs_single(*rlevelinfo.param,temp_GP_p);
                                     
-                                    Tar_Imagecoord     = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],*rlevelinfo.NumOfIAparam,temp_LIA,temp_GP);
+                                    Tar_Imagecoord     = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],*rlevelinfo.NumOfIAparam,rlevelinfo.ImageAdjust[pair_number],temp_GP);
                                 }
                                 else
                                 {
@@ -15103,7 +15141,13 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
             {
                 temp_gp.m_X = pos_xy.m_X;
                 temp_gp.m_Y = pos_xy.m_Y;
-                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
+                if(count == 0)
+                {
+                    double temp_LIA[2] = {0.0, 0.0};
+                    temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,temp_LIA,temp_gp);
+                }
+                else
+                    temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pairs],temp_gp);
             }
             else
             {
@@ -15126,7 +15170,13 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
             {
                 temp_gp.m_X = pos_xy.m_X;
                 temp_gp.m_Y = pos_xy.m_Y;
-                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
+                if(count == 0)
+                {
+                    double temp_LIA[2] = {0.0, 0.0};
+                    temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,temp_LIA,temp_gp);
+                }
+                else
+                    temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pairs],temp_gp);
             }
             else
             {
@@ -15172,7 +15222,7 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
 
 }
 
-bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int pair_number)
+bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref)
 {
     bool check = false;
     const int buff_pixel = 1;
@@ -15180,7 +15230,7 @@ bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, con
     //while(!stop_check && pairs < plevelinfo.pairinfo->NumberOfPairs)
     //for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
-        int ti = pair_number;
+        int ti = image_number;
         bool bleft_s, bright_s, bleft_e, bright_e;
         D3DPOINT temp_gp;
         D2DPOINT temp;
@@ -15192,7 +15242,13 @@ bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, con
         {
             temp_gp.m_X = pos_xy.m_X;
             temp_gp.m_Y = pos_xy.m_Y;
-            temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
+            if(check_ref)
+            {
+                double temp_LIA[2] = {0.0, 0.0};
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,temp_LIA,temp_gp);
+            }
+            else
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pair_number],temp_gp);
         }
         else
         {
@@ -15215,7 +15271,14 @@ bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, con
         {
             temp_gp.m_X = pos_xy.m_X;
             temp_gp.m_Y = pos_xy.m_Y;
-            temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[ti],temp_gp);
+            
+            if(check_ref)
+            {
+                double temp_LIA[2] = {0.0, 0.0};
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,temp_LIA,temp_gp);
+            }
+            else
+                temp        = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pair_number],temp_gp);
         }
         else
         {

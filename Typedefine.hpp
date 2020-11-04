@@ -543,6 +543,20 @@ typedef struct ArgumentInfo{
     
 } ARGINFO;
 
+typedef struct tagImageGSD
+{
+    float row_GSD;
+    float col_GSD;
+    float pro_GSD;
+} ImageGSD;
+
+typedef struct tagBandInfo
+{
+    float abscalfactor;
+    float effbw;
+    float tdi;
+} BandInfo;
+
 typedef struct tagImageInfo
 {
     float Mean_sun_azimuth_angle;
@@ -559,6 +573,8 @@ typedef struct tagImageInfo
     float UL[3], UR[3],LR[3],LL[3];
     float convergence_angle;
 	
+    ImageGSD GSD;
+    
 	int month;
     int date;
     int year;
@@ -569,20 +585,6 @@ typedef struct tagImageInfo
     char imagetime[500];
     char SatID[500];
 } ImageInfo;
-
-typedef struct tagImageGSD
-{
-    float row_GSD;
-    float col_GSD;
-    float pro_GSD;
-} ImageGSD;
-
-typedef struct tagBandInfo
-{
-    float abscalfactor;
-    float effbw;
-    float tdi;
-} BandInfo;
 
 typedef struct
 {
@@ -643,6 +645,8 @@ typedef struct taglevelinfo
     const D2DPOINT *py_Startpos;
     const D2DPOINT *py_BStartpos;
     const D2DPOINT *py_Startpos_next;
+    
+    const ImageInfo *imageinfo;
     
     const double * const * const *RPCs;
     const double *Boundary;

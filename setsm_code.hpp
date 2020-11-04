@@ -81,7 +81,7 @@ double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_
 
 int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo &plevelinfo, double start_H, double end_H);
 
-int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration,const double *minmaxHeight);
 
 void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID *GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
 
@@ -159,7 +159,7 @@ bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize,const int Templ
 
 bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, int &selected_images);
 
-bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int pair_number);
+bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
 
 bool check_image_boundary_height(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double Height, const int H_template_size, const int pair_number);
 
