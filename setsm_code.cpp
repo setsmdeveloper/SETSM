@@ -9472,7 +9472,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(height_diff < 1.0)
                                         IDW_w = bhratio_norm;
                                     else
-                                        IDW_w = bhratio_norm/pow(height_diff,0.5);
+                                        IDW_w = bhratio_norm/pow(height_diff,1.0);
                                     
                                     double w_bhratio,w_ncc, weightAWNCC(1.0);
                                     
@@ -9514,7 +9514,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(ncc_diff < 1)
                                         w_ncc = bhratio_norm;
                                     else
-                                        w_ncc = bhratio_norm/pow(ncc_diff,0.5);
+                                        w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                     
                                     
                                     wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w*weightAWNCC;
