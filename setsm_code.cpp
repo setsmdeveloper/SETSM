@@ -3401,7 +3401,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 for(int ti = 0; ti < MaxNCC ; ti++)
                 {
                     printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
-                    
+                }
+                
+                for(int ti = 0; ti < proinfo->number_of_images ; ti++)
+                {
                     CSize t_Imagesize((subBoundary[2] - subBoundary[0])/0.7, (subBoundary[3] - subBoundary[1])/0.7);
                     long int data_length =(long int)t_Imagesize.width*(long int)t_Imagesize.height;
                     RA_memory += (sizeof(uint16)*data_length)*2;
@@ -4956,7 +4959,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 long total_count_MPs = 0 ;
                                 float min_pair_H = 9999;
                                 float max_pair_H = -9999;
-                                if(!levelinfo.check_SGM) //no SGM
+                                //if(!levelinfo.check_SGM) //no SGM
                                 {
                                     AWNCC_AWNCC(proinfo,grid_voxel,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight);
                                     
@@ -6310,41 +6313,41 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
         {
             if(level >= 4)
             {
-                *Th_roh          = (double)(0.80);
-                *Th_roh_min      = (double)(0.39);
+                *Th_roh          = (double)0.60;//(0.80);
+                *Th_roh_min      = (double)0.19;//(0.39);
             }
             else if(level >= 3)
             {
-                *Th_roh          = (double)(0.70);
-                *Th_roh_min      = (double)(0.39);
+                *Th_roh          = (double)0.50;//(0.70);
+                *Th_roh_min      = (double)0.19;//(0.39);
             }
             else if(level == 2)
             {
-                *Th_roh          = (double)(0.50);
-                *Th_roh_min      = (double)(0.19);
+                *Th_roh          = (double)(0.40);
+                *Th_roh_min      = (double)(0.09);
             }
             else if(level == 1)
             {
-                *Th_roh          = (double)(0.40);
-                *Th_roh_min      = (double)(0.19);
+                *Th_roh          = (double)(0.30);
+                *Th_roh_min      = (double)(0.09);
             }
             else if(level == 0)
             {
-                *Th_roh          = (double)(0.40 - 0.10*(final_level_iteration-1));
-                *Th_roh_min      = (double)(0.19);
+                *Th_roh          = (double)(0.30 - 0.10*(final_level_iteration-1));
+                *Th_roh_min      = (double)(0.09);
             }
             
             
             if(level == 5)
-                *Th_roh_next        = (double)(0.80);
+                *Th_roh_next        = (double)0.60;//(0.80);
             else if(level == 4)
-                *Th_roh_next        = (double)(0.70);
+                *Th_roh_next        = (double)0.50;//(0.70);
             else if(level == 3)
-                *Th_roh_next        = (double)(0.50);
+                *Th_roh_next        = (double)(0.40);
             else if(level == 2)
-                *Th_roh_next        = (double)(0.40);
+                *Th_roh_next        = (double)(0.30);
             else if(level == 1)
-                *Th_roh_next        = (double)(0.40);
+                *Th_roh_next        = (double)(0.30);
             else
                 *Th_roh_next        = (double)(0.20);
             
@@ -11846,7 +11849,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     double minimum_Th = 0.2;
     double minGrid_th = 0.2;
     
-    //int SGM_th_py = proinfo->SGM_py;
+    int SGM_th_py = proinfo->SGM_py;
     const int Pyramid_step = *rlevelinfo.Pyramid_step;
     if(proinfo->IsRA)
     {
@@ -11854,6 +11857,82 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     }
     else
     {
+        /*
+        if(Pyramid_step > 0)
+        {
+            const int rohconvert = 100;
+            long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
+            long int total_roh = 0;
+            
+            for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
+            {
+                long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
+                long col     = iter_index % rlevelinfo.Size_Grid2D->width;
+                long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
+                
+                if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
+                {
+                    int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
+                    //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
+                    if(roh_int > rohconvert - 1)
+                        roh_int = rohconvert - 1;
+                    if(roh_int >= 0)
+                        hist[roh_int]++;
+                    
+                    total_roh++;
+                }
+            }
+            
+            if(total_roh > 0)
+            {
+                double min_roh_th;
+                
+                if(Pyramid_step == 4)
+                    min_roh_th = 0.20 + (iteration-1)*0.02;
+                else if(Pyramid_step == 3)
+                    min_roh_th = 0.25 + (iteration-1)*0.03;
+                else if(Pyramid_step == 2)
+                    min_roh_th = 0.60;
+                else if(Pyramid_step == 1)
+                    min_roh_th = 0.80;
+                
+                if(Pyramid_step <= SGM_th_py )
+                {
+                    min_roh_th = 0.95 - Pyramid_step*0.1;
+                    if(min_roh_th < 0.5)
+                        min_roh_th = 0.5;
+                }
+                
+                int roh_iter = rohconvert - 1;
+                bool check_stop = false;
+                minimum_Th = 0.2;
+                int sum_roh_count = 0;
+                double sum_roh_rate = 0;
+                while(!check_stop && roh_iter > 0)
+                {
+                    sum_roh_count += hist[roh_iter];
+                    sum_roh_rate = sum_roh_count/(double)total_roh;
+                    //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
+                    if(sum_roh_rate > min_roh_th)
+                    {
+                        check_stop = true;
+                        minimum_Th = (double)roh_iter/(double)rohconvert;
+                    }
+                    roh_iter--;
+                }
+                if(minimum_Th > 0.95)
+                    minimum_Th = 0.95;
+            }
+            else
+                minimum_Th = 0.2;
+            
+            free(hist);
+        }
+        else
+            minimum_Th = 0.2;
+        */
+        
+        
         if(Pyramid_step > 0)
         {
             const int rohconvert = 1000;
@@ -11885,25 +11964,18 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 double min_Gridroh_th;
                 
                 if(Pyramid_step == 4)
-                    min_roh_th = 0.20 + (iteration-1)*0.02; //0.3 //0.05
+                    min_roh_th = 0.15 + (iteration-1)*0.01; //0.3 //0.05
                 else if(Pyramid_step == 3)
-                    min_roh_th = 0.25 + (iteration-1)*0.03; //0.5 //0.15
+                    min_roh_th = 0.30 + (iteration-1)*0.01; //0.5 //0.15
                 else if(Pyramid_step == 2)
-                    min_roh_th = 0.60;//0.7;//0.60;
+                    min_roh_th = 0.70;//0.60;
                 else if(Pyramid_step == 1)
-                    min_roh_th = 0.80;//0.9;//0.80;
+                    min_roh_th = 0.90;//0.80;
                 
                 min_Gridroh_th = min_roh_th - 0.2;
                 //if(min_Gridroh_th > 0.9)
                 //    min_Gridroh_th = 0.9;
-                /*
-                if(Pyramid_step <= SGM_th_py )
-                {
-                    min_roh_th = 0.95 - Pyramid_step*0.1;
-                    if(min_roh_th < 0.5)
-                        min_roh_th = 0.5;
-                }
-                */
+                
                 int roh_iter = rohconvert - 1;
                 bool check_stop = false;
                 
@@ -12272,7 +12344,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
     else //blunder points
     {
         if(*rlevelinfo.Pyramid_step >= 4)
-            max_count  = 30;
+            max_count  = 40;
         else if(*rlevelinfo.Pyramid_step >= 3)
             max_count  = 20;
         else
@@ -12657,7 +12729,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         //set ortho_ncc
         const double oncc_mean    =  sum_oncc/total_oncc_count;
         const double oncc_std =   sqrt(fabs(sum2_oncc - (sum_oncc)*(sum_oncc)/total_oncc_count)/total_oncc_count);
-        /*
+        
         double ortho_ncc_th;// = 0.7 + (iteration-1)*0.02;
         
         if(pyramid_step == 4 )
@@ -12689,8 +12761,16 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
         }
         if(ortho_ncc_th < 0.2)
             ortho_ncc_th = 0.2;
-        */
          
+         double ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
+         if(ortho_ancc_th > 0.95)
+             ortho_ancc_th = 0.95;
+         
+         double th_ref_ncc = 0.1;// + (iteration-1)*0.05;
+         if(th_ref_ncc > ortho_ncc_th)
+             th_ref_ncc = ortho_ncc_th;
+        
+        /*
         double ortho_ncc_th = 0.5 + (iteration-1)*0.02;
         double temp_oncc_th = oncc_mean - oncc_std;
         if(temp_oncc_th < ortho_ncc_th)
@@ -12712,22 +12792,14 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
             ortho_ncc_th = 0.3 ;
         else
             ortho_ncc_th = 0.2 ;
-        
-        
-        double ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
-        if(ortho_ancc_th > 0.95)
-            ortho_ancc_th = 0.95;
-        
-        double th_ref_ncc = 0.1;// + (iteration-1)*0.05;
-        if(th_ref_ncc > ortho_ncc_th)
-            th_ref_ncc = ortho_ncc_th;
-        
-        /*
+ 
         const double ortho_ancc_th = 100.;
         double th_ref_ncc = 0.1 + (iteration-1)*0.05;
         if(th_ref_ncc > ortho_ncc_th)
             th_ref_ncc = ortho_ncc_th;
         */
+        
+        
         
         
         //set height_th
