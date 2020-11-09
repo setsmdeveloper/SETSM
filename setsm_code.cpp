@@ -11964,7 +11964,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 double min_Gridroh_th;
                 
                 if(Pyramid_step == 4)
-                    min_roh_th = 0.15 + (iteration-1)*0.01; //0.3 //0.05
+                    min_roh_th = 0.20 + (iteration-1)*0.01; //0.3 //0.05
                 else if(Pyramid_step == 3)
                     min_roh_th = 0.30 + (iteration-1)*0.01; //0.5 //0.15
                 else if(Pyramid_step == 2)
