@@ -64,6 +64,7 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
 double** OpenXMLFile_Pleiades(char* _filename);
 double** OpenXMLFile_Planet(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
+void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo);
 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);

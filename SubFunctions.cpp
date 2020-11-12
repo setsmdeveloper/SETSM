@@ -522,6 +522,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     
     if(args.sensor_type == AB)
         info->IsRA = 0;
+    if(args.sensor_provider == PT)
+        info->IsRA = false;
     
     if (args.check_arg == 0) // project file open
     {
@@ -707,6 +709,20 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 tmp_chr = remove_ext(args.Image[ti]);
                 sprintf(info->RPCfilename[ti],"%s.xml",tmp_chr);
                 
+                if(args.sensor_provider == PT)
+                {
+                    sprintf(info->RPCfilename[ti],"%s_RPC.TXT",tmp_chr);
+                    
+                    int chr_size = strlen(tmp_chr);
+                    char metadata_file[500];
+                    for(int i= 0 ; i < chr_size - 4 ; i++)
+                        metadata_file[i] = tmp_chr[i];
+                    metadata_file[chr_size - 4] = '\0';
+                    
+                    sprintf(info->Imagemetafile[ti],"%s_metadata.xml",metadata_file);
+                    printf("imagemetafile %s\n",info->Imagemetafile[ti]);
+                }
+                                                                              
                 FILE *temp_pFile;
                 temp_pFile           = fopen(info->RPCfilename[ti],"r");
                 printf("xml file %s\n",info->RPCfilename[ti]);
@@ -841,7 +857,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
         }
         
     }
-    
+    //exit(1);
     return bopened;
 }
 
@@ -1822,55 +1838,55 @@ double** OpenXMLFile_Planet(char* _filename)
             
             fgets(linestr,sizeof(linestr),pFile);
             sscanf(linestr,"%s %lf\n",temp_str,&out[1][4]);
-            
+            /*
             for(i=0;i<2;i++)
             {
                 for(int j=0;j<5;j++)
                     printf("%lf\n",out[i][j]);
             }
-            
+            */
             //exit(1);
             
             //fscanf(pFile,"%s",temp_str);
             //if(strcmp(temp_str,"<Inverse_Model>") == 0)
             {
-                printf("line num\n");
+                //printf("line num\n");
                 out[2] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[2][i]);
-                    printf("%lf\n",out[2][i]);
+                    //printf("%lf\n",out[2][i]);
                 }
                 
-                printf("line den\n");
+                //printf("line den\n");
                 out[3] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[3][i]);
                     
-                    printf("%lf\n",out[3][i]);
+                    //printf("%lf\n",out[3][i]);
                 }
                 
-                printf("sample num\n");
+                //printf("sample num\n");
                 out[4] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[4][i]);
                     
-                    printf("%lf\n",out[4][i]);
+                    //printf("%lf\n",out[4][i]);
                 }
                 
-                printf("sample den\n");
+                //printf("sample den\n");
                 out[5] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[5][i]);
                     
-                    printf("%lf\n",out[5][i]);
+                    //printf("%lf\n",out[5][i]);
                 }
                 
                 
@@ -1879,7 +1895,7 @@ double** OpenXMLFile_Planet(char* _filename)
                 //exit(1);
             }
             
-            printf("end read\n");
+            //printf("end read\n");
             
             aa                      = out[0][2];
             out[0][2]               = out[0][3];
@@ -2080,7 +2096,248 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     }
 }
 
-
+void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
+{
+    
+    FILE *pFile;
+    char temp_str[1000];
+    char linestr[1000];
+    char linestr1[1000];
+    char imagetime[1000];
+    char SatID[1000];
+    
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    char* token1 = NULL;
+    char direction[100];
+    
+    double dx, dy;
+    double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
+    double UL[3], UR[3], LR[3], LL[3];
+    double angle;
+    
+    //printf("%s\n",_filename);
+    
+    pFile           = fopen(_filename,"r");
+    if(pFile)
+    {
+        bool check_br = false;
+        bool check_d = false;
+        bool check_i = false;
+        bool check_cen = false;
+        
+        while(!feof(pFile) && (!check_br || !check_d || !check_i || !check_cen))
+        {
+            fscanf(pFile,"%s",temp_str);
+            
+            if(strcmp(temp_str,"<gml:centerOf>") == 0 && !check_cen)
+            {
+                check_cen = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                pos1 = strstr(linestr,">")+1;
+                pos2 = strtok(pos1,"<");
+                //printf("pos2 %s\n",pos2);
+                
+                sscanf(pos2,"%lf %lf",&Iinfo->Center[0],&Iinfo->Center[1]);
+                
+                
+                printf("Center X Y %lf %lf \n",Iinfo->Center[0],Iinfo->Center[1]);
+                //exit(1);
+            }
+            
+            if(strcmp(temp_str,"<ps:geographicLocation>") == 0 && !check_br)
+            {
+                check_br = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                for(i=0;i<2;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    UL[i]           = atof(pos2);
+                    Iinfo->UL[i]    = UL[i];
+                    
+                }
+                printf("UL %f %f \n",UL[0],UL[1]);
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                for(i=0;i<2;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    UR[i]           = atof(pos2);
+                    Iinfo->UR[i]    = UR[i];
+                }
+                printf("UR %f %f \n",UR[0],UR[1]);
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                for(i=0;i<2;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    LR[i]           = atof(pos2);
+                    Iinfo->LR[i]    = LR[i];
+                }
+                printf("LR %f %f \n",LR[0],LR[1]);
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                for(i=0;i<2;i++)
+                {
+                    fgets(linestr,sizeof(linestr),pFile);
+                    pos1 = strstr(linestr,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    LL[i]           = atof(pos2);
+                    Iinfo->LL[i]    = LL[i];
+                }
+                printf("LL %f %f \n",LL[0],LL[1]);
+            }
+            
+            if(strcmp(temp_str,"<eop:acquisitionParameters>") == 0 && !check_d)
+            {
+                check_d = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                bool check_end = false;
+                int t_count = 0;
+                while(!check_end && t_count < 10)
+                {
+                    t_count++;
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,"=");
+                    
+                    if(strcmp(token,"<opt:illuminationAzimuthAngle uom") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSUNAz          = atof(pos2);
+                    }
+                    if(strcmp(token,"<opt:illuminationElevationAngle uom") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSUNEl          = atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<ps:azimuthAngle uom") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSATAz          = atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANSATEL") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MSATEl          = atof(pos2);
+                    }
+                    if(strcmp(token,"<MEANINTRACKVIEWANGLE") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MIntrackangle           = atof(pos2);
+                    }
+                    
+                    if(strcmp(token,"<MEANCROSSTRACKVIEWANGLE") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MCrosstrackangle            = atof(pos2);
+                    }
+                    if(strcmp(token,"<ps:spaceCraftViewAngle uom") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        MOffnadirangle          = atof(pos2);
+                    }
+                    if(strcmp(token,"<CLOUDCOVER") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        Cloud           = atof(pos2);
+                        
+                        check_end = true;
+                    }
+                }
+            }
+            
+            if(strcmp(temp_str,"<eop:product>") == 0 && !check_i)
+            {
+                check_i = true;
+                
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                bool check_end = false;
+                int t_count = 0;
+                while(!check_end && t_count < 30)
+                {
+                    t_count++;
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    
+                    if(strcmp(token,"<ps:rowGsd") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        Iinfo->GSD.row_GSD    = atof(pos2);
+                    }
+                    if(strcmp(token,"<ps:columnGsd") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        Iinfo->GSD.col_GSD    = atof(pos2);
+                        
+                        check_end = true;
+                    }
+                }
+            }
+        }
+        
+        fclose(pFile);
+        
+        Iinfo->Mean_sun_azimuth_angle   = MSUNAz;
+        Iinfo->Mean_sun_elevation       = MSUNEl;
+        Iinfo->Mean_sat_azimuth_angle   = MSATAz;
+        Iinfo->Mean_sat_elevation       = MSATEl;
+        Iinfo->Intrack_angle            = MIntrackangle;
+        Iinfo->Crosstrack_angle         = MCrosstrackangle;
+        Iinfo->Offnadir_angle           = MOffnadirangle;
+        Iinfo->cloud                    = Cloud;
+        sprintf(Iinfo->imagetime,"%s",imagetime);
+        sprintf(Iinfo->SatID,"%s",SatID);
+        
+        printf("MSUNAz MSUNEl MSATAz MSATEl MOffnadirangle %f\t%f\t%f\t%f\t%f\t%f\t%f\n",MSUNAz,MSUNEl,MSATAz,MSATEl,MOffnadirangle,Iinfo->GSD.row_GSD,Iinfo->GSD.col_GSD);
+        
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+        if(token)
+            token = NULL;
+    }
+}
 
 float median(int n, float* x,float min, float max)
 {

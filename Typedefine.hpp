@@ -321,6 +321,7 @@ typedef struct tagPairInfo{
     UI2DPOINT *pairs;
     float *BHratio;
     float *ConvergenceAngle;
+    float *CenterDist;
 }PairInfo;
 
 typedef struct BlunderIP{
@@ -406,6 +407,8 @@ typedef struct ProjectInfo{
     
 	char Imagefilename[MaxImages][500];
 	char RPCfilename[MaxImages][500];
+    char Imagemetafile[MaxImages][500];
+    
 	char save_filepath[500];
 	char Outputpath_name[500];
 	char tmpdir[500];
@@ -571,6 +574,7 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
+    double Center[2];
     float convergence_angle;
 	
     ImageGSD GSD;
