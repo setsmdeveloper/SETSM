@@ -318,10 +318,13 @@ typedef struct LSFinfo{
 
 typedef struct tagPairInfo{
     int NumberOfPairs;
+    int MinOffImage;
     UI2DPOINT *pairs;
     float *BHratio;
     float *ConvergenceAngle;
     float *CenterDist;
+    float *SigmaZ;
+    float HeightStep;
 }PairInfo;
 
 typedef struct BlunderIP{

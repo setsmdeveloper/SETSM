@@ -3079,6 +3079,16 @@ void SetPairs(ProInfo *proinfo, PairInfo &pairinfo, const ImageInfo *image_info)
     pairinfo.CenterDist = (float*)malloc(sizeof(float)*pair_number);
     pairinfo.ConvergenceAngle = (float*)malloc(sizeof(float)*pair_number);
     
+    double minoffnadir = 1000;
+    for(int image_number = 0 ; image_number < proinfo->number_of_images ; image_number++)
+    {
+        if(fabs(image_info[image_number].Offnadir_angle) < minoffnadir)
+        {
+            minoffnadir = fabs(image_info[image_number].Offnadir_angle);
+            pairinfo.MinOffImage = image_number;
+        }
+    }
+    printf("pairinfo.MinOffImage %d\n", pairinfo.MinOffImage);
     pair_number = 0;
     for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
     {
@@ -3108,9 +3118,15 @@ void SetPairs(ProInfo *proinfo, PairInfo &pairinfo, const ImageInfo *image_info)
                 else if(proinfo->sensor_provider = PT)
                 {
                     double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                    double offnadir_weight = 1.0;
+                    if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
+                    {
+                        offnadir_weight = 0.7; //30% weight
+                        printf("ref_ti ti %d\t%d\t%f\n",ref_ti,ti,offnadir_weight);
+                    }
                     
                     pairinfo.ConvergenceAngle[pair_number] = convergence_angle;
-                    pairinfo.BHratio[pair_number] = 2.0*tan(convergence_angle*DegToRad*0.5);
+                    pairinfo.BHratio[pair_number] = 2.0*tan(convergence_angle*DegToRad*0.5)*offnadir_weight;
                     
                     D2DPOINT center_dist;
                     center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
@@ -3178,6 +3194,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
     }
     
+    //for(int i = 0 ; i < save_pair.size() ; i++)
+    //    printf("ref id %d\n",save_pair[i]);
+    //exit(1);
     vector<unsigned char> actual_pair_save;
     for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs ; pair_number++)
     {
@@ -3220,6 +3239,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     //exit(1);
     plevelinfo.pairinfo->NumberOfPairs = actual_pair_save.size();
     
+    pairinfo.MinOffImage = plevelinfo.pairinfo->MinOffImage;
     pairinfo.NumberOfPairs = actual_pair_save.size();
     pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*pairinfo.NumberOfPairs);
     pairinfo.BHratio = (float*)malloc(sizeof(float)*(pairinfo.NumberOfPairs));
@@ -3934,7 +3954,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         for(int count = 0 ; count < levelinfo.pairinfo->NumberOfPairs ; count++)
                         {
-                            printf("count %d\t%d\t%d\t%f\t%f\n",count, levelinfo.pairinfo->pairs[count].m_X,levelinfo.pairinfo->pairs[count].m_Y,levelinfo.pairinfo->BHratio[count],levelinfo.pairinfo->CenterDist[count]);
+                            printf("count %d\t%d\t%d\t%f\t%f\t%d\n",count, levelinfo.pairinfo->pairs[count].m_X,levelinfo.pairinfo->pairs[count].m_Y,levelinfo.pairinfo->BHratio[count],levelinfo.pairinfo->CenterDist[count],levelinfo.pairinfo->MinOffImage);
                             
                             if(proinfo->sensor_provider == PT)
                             {
@@ -7886,7 +7906,10 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                     
                                     if(check_compute)
                                     {
-                                        if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                                        bool check_select_pair = true;
+                                        if(proinfo->sensor_type == AB)
+                                            check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                                        if(check_select_pair)
                                         {
                                             if(grid_voxel_hindex == floor(nccresult[pt_index].NumOfHeight/2.0))
                                                 GridPT3[pt_index].total_images = 1;
@@ -8648,7 +8671,7 @@ void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double t
 }
 
 
-void SGM_start_pos(NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, float* LHcost_pre,float **SumCost, double height_step_interval, const int pairnumber)
+void SGM_start_pos(const ProInfo *proinfo, NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, float* LHcost_pre,float **SumCost, double height_step_interval, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -8667,7 +8690,12 @@ void SGM_start_pos(NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rleve
                 
                 int reference_id = rlevelinfo.pairinfo->pairs[count].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[count].m_Y;
-                if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
+                
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                
+                if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
                     if(grid_voxel[pt_index].flag_cal(height_step, count))
                     {
@@ -8685,7 +8713,7 @@ void SGM_start_pos(NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rleve
     }
 }
 
-void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber)
+void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -8705,7 +8733,12 @@ void SGM_con_pos(int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter
                 
                 int reference_id = rlevelinfo.pairinfo->pairs[count].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[count].m_Y;
-                if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
+                
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                
+                if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
                     if(grid_voxel[pt_index].flag_cal(height_step, count))
                     {
@@ -9041,7 +9074,12 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                 //int pair_number = 0 ;
                 int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                
+                if(check_select_pair)
                 {
                     db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
                     db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
@@ -9161,7 +9199,12 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                 {
                     int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                     int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                    if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                    
+                    bool check_select_pair = true;
+                    if(proinfo->sensor_type == AB)
+                        check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                    
+                    if(check_select_pair)
                     {
                         db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
                         db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
@@ -9386,7 +9429,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             {
                 int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                
+                if(check_select_pair)
                 {
                     double pair_peak_roh = SignedCharToDouble_result(multimps[pt_index][pair_number].peak_roh)*weight_bhratio[pair_number];
                     if(pair_peak_roh > -1 && multimps[pt_index][pair_number].check_matched)
@@ -9481,9 +9529,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             
                             if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)
                             {
-                                int reference_id_q = rlevelinfo.pairinfo->pairs[query_pair].m_X;
-                                int ti_q = rlevelinfo.pairinfo->pairs[query_pair].m_Y;
-                                check_query_pair = (reference_id_q == GridPT3[pt_index].selected_pair || ti_q == GridPT3[pt_index].selected_pair);
+                                int reference_id = rlevelinfo.pairinfo->pairs[query_pair].m_X;
+                                int ti = rlevelinfo.pairinfo->pairs[query_pair].m_Y;
+                                
+                                bool check_select_pair = true;
+                                if(proinfo->sensor_type == AB)
+                                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                                
+                                check_query_pair = check_select_pair;
                             }
                             else
                                 check_query_pair = true;
@@ -9494,7 +9547,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                 {
                                     int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                                     int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                    bool check_select_pair = (reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/;
+                                    
+                                    bool check_select_pair = true;
+                                    if(proinfo->sensor_type == AB)
+                                        check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                                    
+                                    //bool check_select_pair = (reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/;
                                     
                                     if(check_select_pair)
                                     {
@@ -9527,7 +9585,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             {
                                                 int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                                                 int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                                bool check_select_pair = (reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/;
+                                                
+                                                bool check_select_pair = true;
+                                                if(proinfo->sensor_type == AB)
+                                                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
                                                 
                                                 if(check_select_pair)
                                                 {
@@ -9620,6 +9681,11 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                     double ncc_diff = (fabs(pair_peak_roh - query_peak_roh))*10.0;
                                     
+                                    
+                                    bool weight_MinOff = 1.0;
+                                    if(pair_number == rlevelinfo.pairinfo->MinOffImage)
+                                        weight_MinOff = 1.3;
+                                    
                                     /*if(rlevelinfo.check_SGM)
                                     {
                                         weightAWNCC = 1.0;
@@ -9645,14 +9711,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                     
                                     
-                                    wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w*weightAWNCC;
-                                    weight_idw += IDW_w*weightAWNCC;
+                                    wheight_idw += multimps[pt_index][pair_number].peak_height*IDW_w*weightAWNCC*weight_MinOff;
+                                    weight_idw += IDW_w*weightAWNCC*weight_MinOff;
                                     
-                                    wheight_bh += multimps[pt_index][pair_number].peak_height*w_bhratio*weightAWNCC;
-                                    weight_bh += w_bhratio*weightAWNCC;
+                                    wheight_bh += multimps[pt_index][pair_number].peak_height*w_bhratio*weightAWNCC*weight_MinOff;
+                                    weight_bh += w_bhratio*weightAWNCC*weight_MinOff;
                                     
-                                    wheight_wncc += multimps[pt_index][pair_number].peak_height*w_ncc*weightAWNCC;
-                                    weight_wncc += w_ncc*weightAWNCC;
+                                    wheight_wncc += multimps[pt_index][pair_number].peak_height*w_ncc*weightAWNCC*weight_MinOff;
+                                    weight_wncc += w_ncc*weightAWNCC*weight_MinOff;
                                     
                                     //wheight_awncc += multimps[pt_index][pair_number].peak_height*weightAWNCC;
                                     //weight_awncc += weightAWNCC;
@@ -9845,7 +9911,12 @@ void AWNCC_multi(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                 {
                     int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                     int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                    if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                    
+                    bool check_select_pair = true;
+                    if(proinfo->sensor_type == AB)
+                        check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                    
+                    if(check_select_pair)
                     {
                         db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
                         db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
@@ -9964,7 +10035,7 @@ void AWNCC_multi(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
         {
             int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
             int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-            if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+            //if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
             {
                 if(temp_nccresult_multi[pair_number] > -1)
                 {
@@ -10057,14 +10128,14 @@ void AWNCC_multi(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                     {
                         int reference_id_q = rlevelinfo.pairinfo->pairs[query_pair].m_X;
                         int ti_q = rlevelinfo.pairinfo->pairs[query_pair].m_Y;
-                        if((reference_id_q == GridPT3[pt_index].selected_pair || ti_q == GridPT3[pt_index].selected_pair))
+                        //if((reference_id_q == GridPT3[pt_index].selected_pair || ti_q == GridPT3[pt_index].selected_pair))
                         {
                             
                             for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->NumberOfPairs ; pair_number++)
                             {
                                 int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                                 int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                                if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) && (query_pair != pair_number))
+                                if(/*(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) &&*/ (query_pair != pair_number))
                                 {
                                     //printf("query_pair pair_number %d\t%d\tselected_pair %d\n",query_pair,pair_number,selected_pair);
                                     
@@ -10096,7 +10167,7 @@ void AWNCC_multi(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                         {
                             int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                             int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
-                            if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/)
+                            //if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& (query_pair != pair_number)*/)
                             {
                                 if(nccresult_pairs[AWNCC_id].result2 > Nodata && nccresult_pairs[pair_number].result2 > Nodata)//AWNCC peak
                                 {
@@ -10475,12 +10546,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(pts_col == start_col[direction_iter])
                 {
                     memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_start_pos(nccresult, grid_voxel,rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                    SGM_start_pos(proinfo, nccresult, grid_voxel,rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
                     memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                    SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                     SWAP(LHcost_pre, LHcost_curr);
                     
                 }
@@ -10499,12 +10570,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(pts_col == start_col[direction_iter])
                 {
                     memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                    SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
                     memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                    SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                     SWAP(LHcost_pre, LHcost_curr);
                     
                 }
@@ -10524,12 +10595,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(pts_row == start_row[direction_iter])
                 {
                     memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                    SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
                     memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                    SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                     SWAP(LHcost_pre, LHcost_curr);
                 }
             }
@@ -10547,12 +10618,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(pts_row == start_row[direction_iter])
                 {
                     memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                    SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
                     memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                    SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                     SWAP(LHcost_pre, LHcost_curr);
                 }
             }
@@ -10590,7 +10661,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10601,7 +10672,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10627,7 +10698,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10638,7 +10709,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10668,7 +10739,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10679,7 +10750,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10705,7 +10776,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10716,7 +10787,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10742,7 +10813,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10753,7 +10824,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10777,7 +10848,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10788,7 +10859,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10814,7 +10885,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10825,7 +10896,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10849,7 +10920,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                         memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                        SGM_start_pos(nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
+                        SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
                     {
@@ -10860,7 +10931,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
                             memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                            SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
+                            SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
                             SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
@@ -10928,7 +10999,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 int reference_id = rlevelinfo.pairinfo->pairs[pairnumber].m_X;
                 int ti = rlevelinfo.pairinfo->pairs[pairnumber].m_Y;
-                if(reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair)
+                
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                
+                if(check_select_pair)
                 {
                     db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pairnumber]);
                     db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pairnumber));
@@ -11271,7 +11347,11 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                     const int reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                     const int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
                     
-                    if((reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair) /*&& GridPT3[pt_index].ncc_seleceted_pair == pair_number*/)
+                    bool check_select_pair = true;
+                    if(proinfo->sensor_type == AB)
+                        check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
+                    
+                    if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == pair_number*/)
                     {
                         rsetkernel.reference_id = reference_id;
                         rsetkernel.ti = ti;
@@ -11703,7 +11783,11 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP,
                 reference_id = rlevelinfo.pairinfo->pairs[pair_number].m_X;
                 const int ti = rlevelinfo.pairinfo->pairs[pair_number].m_Y;
                 
-                if((reference_id == GridPT3[target_index].selected_pair || ti == GridPT3[target_index].selected_pair) && GridPT3[target_index].ncc_seleceted_pair == pair_number)
+                bool check_select_pair = true;
+                if(proinfo->sensor_type == AB)
+                    check_select_pair = reference_id == GridPT3[target_index].selected_pair || ti == GridPT3[target_index].selected_pair;
+                
+                if(check_select_pair && GridPT3[target_index].ncc_seleceted_pair == pair_number)
                 {
                     int Count_N = 0;
 
