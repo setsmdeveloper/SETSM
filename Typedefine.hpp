@@ -676,6 +676,7 @@ typedef struct taglevelinfo
     //double *minmaxHeight; //iteratively changed
     const int *Py_combined_level;
     const unsigned char *iteration;
+    bool check_ortho;
     bool *check_matching_rate;
     PairInfo *pairinfo;
     const CSize *Imagesize_ori;
