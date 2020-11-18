@@ -37,8 +37,8 @@ char* SetOutpathName(char *_path);
 int Maketmpfolders(ProInfo *info);
 double getSystemMemory();
 
-bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairInfo &pairinfo);
-bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, PairInfo &pairinfo);
+bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo);
+bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, CPairInfo &pairinfo);
 
 bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const int ti, const TransParam transparam, const double *ImageParam, const double * const *RPCs, char *ImageFilename, CSize Imagesize, const double *subBoundary, const double *minmaxHeight, long *cols, long *rows);
 bool GetImageSize(char *filename, CSize *Imagesize);

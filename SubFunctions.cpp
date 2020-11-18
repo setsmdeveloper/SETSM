@@ -144,7 +144,7 @@ double getSystemMemory()
 
 }
 
-bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairInfo &pairinfo)
+bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo)
 {
     bool check_load_RA = false;
     bool check_load_RA_each = false;
@@ -168,12 +168,11 @@ bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairI
                         check_load_RA_each = true;
                 }
                 printf("RAinfo %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
-                pairinfo.pairs[ti].m_X = temp_ref;
-                pairinfo.pairs[ti].m_Y = temp_tar;
-                pairinfo.BHratio[ti] = bh_ratio;
+                pairinfo.SetPairs(ti, temp_ref, temp_tar);
+                pairinfo.SetBHratio(ti, bh_ratio);
             }
             ti++;
-            pairinfo.NumberOfPairs = ti;
+            pairinfo.SetSelectNumberOfPairs(ti);
         }
         fclose(pFile_echo);
         
@@ -184,7 +183,7 @@ bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, PairI
     return check_load_RA;
 }
 
-bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, PairInfo &pairinfo)
+bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, CPairInfo &pairinfo)
 {
     bool check_load_RA = false;
     bool check_load_RA_each = false;
@@ -211,14 +210,13 @@ bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imagepar
                             check_load_RA_each = true;
                     }
                     printf("echo %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
-                    pairinfo.pairs[ti].m_X = temp_ref;
-                    pairinfo.pairs[ti].m_Y = temp_tar;
-                    pairinfo.BHratio[ti] = bh_ratio;
+                    pairinfo.SetPairs(ti, temp_ref, temp_tar);
+                    pairinfo.SetBHratio(ti, bh_ratio);
                     ti++;
                 }
             }
             
-            pairinfo.NumberOfPairs = ti;
+            pairinfo.SetSelectNumberOfPairs(ti);
         }
         fclose(pFile_echo);
         
