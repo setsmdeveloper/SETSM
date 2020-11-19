@@ -875,6 +875,7 @@ typedef struct taglevelinfo
     CPairInfo *pairinfo;
     const CSize *Imagesize_ori;
     bool check_SGM;
+    double MPP;
 } LevelInfo;
 
 class Matrix {

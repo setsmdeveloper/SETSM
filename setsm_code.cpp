@@ -3153,99 +3153,101 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     //exit(1);
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char> &save_pair, CPairInfo &pairinfo)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char>* grid_pair, CPairInfo &pairinfo)
 {
-    save_pair.clear();
-    
+    vector<unsigned char> actual_pair_save;
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
         long int pt_index = iter_count;
+        grid_pair[iter_count].clear();
         const int start_H     = minmaxHeight[0];
         const int end_H       = minmaxHeight[1];
         int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, start_H, end_H);
 
-        if(save_pair.size() > 0)
+        for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
         {
+            const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+            const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+            
             bool check_stop = false;
-            int count = 0;
-            while(count < save_pair.size() && !check_stop)
+            if(proinfo->sensor_provider != PT)
             {
-                if(save_pair[count] == select_pair)
+                if(reference_id == select_pair || ti == select_pair)
                     check_stop = true;
-                count++;
             }
-            if(!check_stop)
+            else
+                check_stop = true;
+            
+            bool check_CA = false;
+            if(proinfo->sensor_provider == PT)
             {
-                save_pair.push_back(select_pair);
-                //for(int i = 0 ; i < save_pair.size() ; i++)
-                //    printf("save_pair.push_back(select_pair) %d\t%d\t%d\n",save_pair.size(),save_pair[i],select_pair);
+                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= 5)
+                    check_CA = true;
             }
-        }
-        else
-        {
-            save_pair.push_back(select_pair);
-            //printf("save_pair.push_back(select_pair) %d\n",select_pair);
+            else
+                check_CA = true;
+            
+            if(check_stop && check_CA)
+            {
+                if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
+                    grid_pair[iter_count].push_back(pair_number);
+                
+                if(actual_pair_save.size() > 0)
+                {
+                    bool check_stop = false;
+                    int count = 0;
+                    while(count < actual_pair_save.size() && !check_stop)
+                    {
+                        if(actual_pair_save[count] == pair_number)
+                            check_stop = true;
+                        count++;
+                    }
+                    if(!check_stop)
+                    {
+                        actual_pair_save.push_back(pair_number);
+                    }
+                }
+                else
+                {
+                    actual_pair_save.push_back(pair_number);
+                }
+            }
         }
     }
     
-    //for(int i = 0 ; i < save_pair.size() ; i++)
-    //    printf("ref id %d\n",save_pair[i]);
-    //exit(1);
-    vector<unsigned char> actual_pair_save;
-    for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
+    for(int count = 0 ; count < actual_pair_save.size() ; count++)
     {
+        int pair_number = actual_pair_save[count];
         const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
         const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-        
-        bool check_stop = false;
-        if(proinfo->sensor_provider != PT)
+        printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
+    }
+    
+    //reallocate pair_number by actual_pair_save
+    for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+    {
+        for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
         {
-            int count = 0;
-            while(count < save_pair.size() && !check_stop)
+            bool check = false;
+            int array_count = 0;
+            while(array_count < actual_pair_save.size() && !check)
             {
-                if(reference_id == save_pair[count] || ti == save_pair[count])
-                    check_stop = true;
-                count++;
+                int b_grid_pair = grid_pair[iter_count][count];
+                if(grid_pair[iter_count][count] == actual_pair_save[array_count])
+                {
+                    check = true;
+                    grid_pair[iter_count][count] = array_count;
+                }
+                array_count++;
             }
         }
-        else
-            check_stop = true;
-        
-        bool check_CA = false;
-        if(proinfo->sensor_provider == PT)
-        {
-            if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= 5)
-                check_CA = true;
-        }
-        else
-            check_CA = true;
-        
-        //printf("check_stop %d\t%d\n",check_stop,check_CA);
-        //printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle[pair_number],plevelinfo.pairinfo->CenterDist[pair_number]);
-        
-        if(check_stop && check_CA)
-        {
-            actual_pair_save.push_back(pair_number);
-            
-            printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
-        }
     }
-    //exit(1);
     plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
     
     pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
     pairinfo.SetNumberOfPairs(actual_pair_save.size());
-    //pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*pairinfo.NumberOfPairs);
-    //pairinfo.BHratio = (float*)malloc(sizeof(float)*(pairinfo.NumberOfPairs));
-    //pairinfo.CenterDist = (float*)malloc(sizeof(float)*(pairinfo.NumberOfPairs));
-    //pairinfo.ConvergenceAngle = (float*)malloc(sizeof(float)*(pairinfo.NumberOfPairs));
     
     CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
-    
-    //UI2DPOINT *temp_pairs = (UI2DPOINT*)calloc(sizeof(UI2DPOINT),plevelinfo.pairinfo->SetSelectNumberOfPairs());
-    //float *temp_BHratio = (float*)calloc(sizeof(float),plevelinfo.pairinfo->SetSelectNumberOfPairs());
-    //float *temp_CenterDist = (float*)calloc(sizeof(float),plevelinfo.pairinfo->SetSelectNumberOfPairs());
-    //float *temp_CA = (float*)calloc(sizeof(float),plevelinfo.pairinfo->SetSelectNumberOfPairs());
     
     for(int count = 0 ; count < actual_pair_save.size() ; count++)
     {
@@ -3277,11 +3279,6 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         
         printf("count %d\t%d\t%d\t%f\t%f\n",count, plevelinfo.pairinfo->pairs(count).m_X,plevelinfo.pairinfo->pairs(count).m_Y,plevelinfo.pairinfo->BHratio(count),plevelinfo.pairinfo->SigmaZ(count));
     }
-    /*
-    free(temp_pairs);
-    free(temp_BHratio);
-    free(temp_CA);
-    free(temp_CenterDist);*/
 }
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
@@ -3939,23 +3936,33 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.Grid_wgs = Grid_wgs;
                         levelinfo.reference_id = 0;
                         
-                        double height_step = GetHeightStep(level,Image_res[0]);
-                        
-                        if(proinfo->sensor_provider == PT)
-                            height_step = GetHeightStep_Planet(level,Image_res[0]);
-                        
-                        levelinfo.height_step = &height_step;
-                        
-                        
+                        vector<unsigned char>* Grid_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),Grid_length);
                         if(!flag_start)
-                            actual_pair(proinfo, levelinfo, minmaxHeight, compute_pair, pairinfo_return);
+                            actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
+                        char fname_grid[500];
+                        sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d.txt",proinfo->save_filepath,row,col);
+                        FILE* fid_grid         = fopen(fname_grid,"w");
+                        for(int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                        {
+                            for(int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                            {
+                                long int pt_index = trow*Size_Grid2D.width + tcol;
+                                fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
+                                Grid_pair[pt_index].clear();
+                                vector<unsigned char>().swap(Grid_pair[pt_index]);
+                            }
+                            fprintf(fid_grid,"\n");
+                        }
+                        free(Grid_pair);
+                        fclose(fid_grid);
+                        
                         
                         printf("done\n");
                         
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
-                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->CenterDist(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count));
+                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count));
                             
                             if(proinfo->sensor_provider == PT)
                             {
@@ -3968,9 +3975,63 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                         }
                         
-                        printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
+                        if(proinfo->sensor_type == SB)
+                        {
+                            double sum_MPP_simgle_image = 0;
+                            double sum_MPP_stereo_angle = 0;
+                            for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                            {
+                                if(proinfo->IsRA)
+                                    CalMPP(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
+                                else
+                                {
+                                    if(proinfo->DEM_resolution <= 4)
+                                        CalMPP(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
+                                    else
+                                        CalMPP(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
+                                }
+                                /*
+                                if(sum_MPP_simgle_image < MPP_simgle_image)
+                                    sum_MPP_simgle_image = MPP_simgle_image;
+                                if(sum_MPP_stereo_angle < MPP_stereo_angle)
+                                    sum_MPP_stereo_angle = MPP_stereo_angle;
+                                */
+                                sum_MPP_simgle_image += MPP_simgle_image;
+                                sum_MPP_stereo_angle += MPP_stereo_angle;
+                            }
+                            MPP_simgle_image = sum_MPP_simgle_image/sqrt(levelinfo.pairinfo->SelectNumberOfPairs());
+                            MPP_stereo_angle = sum_MPP_stereo_angle/sqrt(levelinfo.pairinfo->SelectNumberOfPairs());
+                            
+                            //MPP_simgle_image = sum_MPP_simgle_image/levelinfo.pairinfo->NumberOfPairs;
+                            //MPP_stereo_angle = sum_MPP_stereo_angle/levelinfo.pairinfo->NumberOfPairs;
+                        }
+                        else
+                        {
+                            MPP_simgle_image = proinfo->resolution*1.5;
+                            MPP_stereo_angle = MPP_simgle_image;
+                        }
                         
-                        //exit(1);
+                        if(level >= 5)
+                            MPP = MPP_simgle_image;
+                        else if(MPP_stereo_angle > 5)
+                            MPP = MPP_stereo_angle;
+                        else
+                            MPP = MPP_simgle_image;
+                        
+                        levelinfo.MPP = MPP;
+                        
+                        double height_step = GetHeightStep(level,Image_res[0], levelinfo);
+                        
+                        if(proinfo->sensor_provider == PT)
+                            height_step = GetHeightStep_Planet(level,Image_res[0],levelinfo);
+                        
+                        levelinfo.height_step = &height_step;
+                        
+                        *stereo_angle_accuracy = MPP_stereo_angle/4.0;
+                        
+                        printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
+                        
+                        printf("Height step %f\t%f\t%f\n",minmaxHeight[1],minmaxHeight[0],height_step);
                         
                         if(proinfo->pre_DEMtif && !flag_start)
                             VerticalLineLocus_seeddem(proinfo,levelinfo, GridPT3, minmaxHeight);
@@ -4018,45 +4079,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         auto grid_voxel_size = check_matching_rate ? 0 : Size_Grid2D.width*Size_Grid2D.height;
                         GridVoxel grid_voxel = GridVoxel(grid_voxel_size, pairinfo_return.SelectNumberOfPairs());
                         
-                        if(proinfo->sensor_type == SB)
-                        {
-                            double sum_MPP_simgle_image = 0;
-                            double sum_MPP_stereo_angle = 0;
-                            for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
-                            {
-                                if(proinfo->IsRA)
-                                    CalMPP_8(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
-                                else
-                                {
-                                    if(proinfo->DEM_resolution <= 4)
-                                        CalMPP(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
-                                    else
-                                        CalMPP_8(proinfo, levelinfo, minmaxHeight, CA, mean_product_res, &MPP_simgle_image, &MPP_stereo_angle, pair_number);
-                                }
-                                
-                                if(sum_MPP_simgle_image < MPP_simgle_image)
-                                    sum_MPP_simgle_image = MPP_simgle_image;
-                                if(sum_MPP_stereo_angle < MPP_stereo_angle)
-                                    sum_MPP_stereo_angle = MPP_stereo_angle;
-                                
-                                //sum_MPP_simgle_image += MPP_simgle_image;
-                                //sum_MPP_stereo_angle += MPP_stereo_angle;
-                            }
-                            MPP_simgle_image = sum_MPP_simgle_image;
-                            MPP_stereo_angle = sum_MPP_stereo_angle;
-                            
-                            //MPP_simgle_image = sum_MPP_simgle_image/levelinfo.pairinfo->NumberOfPairs;
-                            //MPP_stereo_angle = sum_MPP_stereo_angle/levelinfo.pairinfo->NumberOfPairs;
-                        }
-                        else
-                        {
-                            MPP_simgle_image = proinfo->resolution*1.5;
-                            MPP_stereo_angle = MPP_simgle_image;
-                        }
                         
-                        *stereo_angle_accuracy = MPP_stereo_angle;
-                        
-                        printf("final MPP %f\t%f\n",MPP_simgle_image,MPP_stereo_angle);
                         
                         NCCresult *nccresult = (NCCresult*)calloc(sizeof(NCCresult),Grid_length);
                         
@@ -4131,12 +4154,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             minH_mps = 1000000;
                             maxH_mps = -1000000;
                             
-                            if(level >= 5)
-                                MPP = MPP_simgle_image;
-                            else if(MPP_stereo_angle > 5)
-                                MPP = MPP_stereo_angle;
-                            else
-                                MPP = MPP_simgle_image;
+                            
                             
                             vector<D3DPOINT> MatchedPts_list;
                             
@@ -5564,46 +5582,92 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
         }
         else
         {
-            if(level >= 4)
-            {
-                *Th_roh          = (double)0.60;//(0.80);
-                *Th_roh_min      = (double)0.19;//(0.39);
-            }
-            else if(level >= 3)
-            {
-                *Th_roh          = (double)0.50;//(0.70);
-                *Th_roh_min      = (double)0.19;//(0.39);
-            }
-            else if(level == 2)
-            {
-                *Th_roh          = (double)(0.40);
-                *Th_roh_min      = (double)(0.09);
-            }
-            else if(level == 1)
-            {
-                *Th_roh          = (double)(0.30);
-                *Th_roh_min      = (double)(0.09);
-            }
-            else if(level == 0)
-            {
-                *Th_roh          = (double)(0.30 - 0.10*(final_level_iteration-1));
-                *Th_roh_min      = (double)(0.09);
-            }
             
-            
-            if(level == 5)
-                *Th_roh_next        = (double)0.60;//(0.80);
-            else if(level == 4)
-                *Th_roh_next        = (double)0.50;//(0.70);
-            else if(level == 3)
-                *Th_roh_next        = (double)(0.40);
-            else if(level == 2)
-                *Th_roh_next        = (double)(0.30);
-            else if(level == 1)
-                *Th_roh_next        = (double)(0.30);
-            else
-                *Th_roh_next        = (double)(0.20);
-            
+            //if(proinfo->sensor_type == AB)
+            {
+                if(level >= 4)
+                {
+                    *Th_roh          = (double)0.60;//(0.80);
+                    *Th_roh_min      = (double)0.19;//(0.39);
+                }
+                else if(level >= 3)
+                {
+                    *Th_roh          = (double)0.50;//(0.70);
+                    *Th_roh_min      = (double)0.19;//(0.39);
+                }
+                else if(level == 2)
+                {
+                    *Th_roh          = (double)(0.40);
+                    *Th_roh_min      = (double)(0.09);
+                }
+                else if(level == 1)
+                {
+                    *Th_roh          = (double)(0.30);
+                    *Th_roh_min      = (double)(0.09);
+                }
+                else if(level == 0)
+                {
+                    *Th_roh          = (double)(0.30 - 0.10*(final_level_iteration-1));
+                    *Th_roh_min      = (double)(0.09);
+                }
+                
+                
+                if(level == 5)
+                    *Th_roh_next        = (double)0.60;//(0.80);
+                else if(level == 4)
+                    *Th_roh_next        = (double)0.50;//(0.70);
+                else if(level == 3)
+                    *Th_roh_next        = (double)(0.40);
+                else if(level == 2)
+                    *Th_roh_next        = (double)(0.30);
+                else if(level == 1)
+                    *Th_roh_next        = (double)(0.30);
+                else
+                    *Th_roh_next        = (double)(0.20);
+            }
+            /*else
+            {
+                if(level >= 4)
+                {
+                    *Th_roh          = (double)(0.80);
+                    *Th_roh_min      = (double)(0.39);
+                }
+                else if(level >= 3)
+                {
+                    *Th_roh          = (double)(0.70);
+                    *Th_roh_min      = (double)(0.39);
+                }
+                else if(level == 2)
+                {
+                    *Th_roh          = (double)(0.50);
+                    *Th_roh_min      = (double)(0.19);
+                }
+                else if(level == 1)
+                {
+                    *Th_roh          = (double)(0.40);
+                    *Th_roh_min      = (double)(0.19);
+                }
+                else if(level == 0)
+                {
+                    *Th_roh          = (double)(0.40 - 0.10*(final_level_iteration-1));
+                    *Th_roh_min      = (double)(0.19);
+                }
+                
+                
+                if(level == 5)
+                    *Th_roh_next        = (double)(0.80);
+                else if(level == 4)
+                    *Th_roh_next        = (double)(0.70);
+                else if(level == 3)
+                    *Th_roh_next        = (double)(0.50);
+                else if(level == 2)
+                    *Th_roh_next        = (double)(0.40);
+                else if(level == 1)
+                    *Th_roh_next        = (double)(0.40);
+                else
+                    *Th_roh_next        = (double)(0.20);
+            }
+            */
             *Th_roh_start       = (double)(*Th_roh);
         }
         
@@ -6235,36 +6299,56 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
     }
     
     CA = rlevelinfo.pairinfo->ConvergenceAngle(pair_number);
-    if(proinfo->sensor_provider == DG)
+    
+    double GSD = (rlevelinfo.imageinfo[reference_id].GSD.pro_GSD + rlevelinfo.imageinfo[ti].GSD.pro_GSD)/2.0;
+    
+    if(proinfo->sensor_provider == PT)
     {
-        const double ccdsize = 0.00001;
-        const double scale = ccdsize/mean_product_res;
-        const double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
-        const double BH_ratio = rlevelinfo.pairinfo->BHratio(pair_number);// mean_product_res*2/convergence_mpp;
-        const double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
-        
-        printf("scale = %f\tConvergence_Angle = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,CA,convergence_mpp,BH_ratio,sigmaZ);
+        *MPP_stereo_angle = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        *MPP_simgle_image = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        /*
         if(*rlevelinfo.Pyramid_step > 2)
-            *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
-        else
         {
-            *MPP_stereo_angle = sigmaZ;
-            *MPP_simgle_image = sigmaZ;
-        }
-    }
-    else if(proinfo->sensor_provider == PT)
-    {
-        if(*rlevelinfo.Pyramid_step > 2)
             *MPP_stereo_angle = (*MPP_simgle_image)*proinfo->resolution*1.5;
+        }
         else
         {
             *MPP_stereo_angle = proinfo->resolution*1.5;
             *MPP_simgle_image = proinfo->resolution*1.5;
         }
+         */
     }
+    else
+    {
+        //const double ccdsize = 0.00001;
+        //const double scale = ccdsize/mean_product_res;
+        //const double convergence_mpp = 1.0/tan(CA*DegToRad*0.5)*mean_product_res;
+        //const double BH_ratio = rlevelinfo.pairinfo->BHratio(pair_number);// mean_product_res*2/convergence_mpp;
+        //const double sigmaZ = rlevelinfo.pairinfo->SigmaZ(pair_number);//1.414*ccdsize/BH_ratio/scale;
         
-    if(*MPP_stereo_angle < proinfo->resolution*1.5)
-        *MPP_stereo_angle = proinfo->resolution*1.5;
+        printf("Convergence_Angle = %f\tBH_ratio = %f\t sigmaZ = %f\n",CA,rlevelinfo.pairinfo->BHratio(pair_number),rlevelinfo.pairinfo->SigmaZ(pair_number));
+        
+        *MPP_stereo_angle = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        if(*MPP_stereo_angle > GSD*4)
+            *MPP_stereo_angle = GSD*4;
+            
+        if(*MPP_stereo_angle < GSD)
+            *MPP_stereo_angle = GSD;
+        
+        *MPP_simgle_image = *MPP_stereo_angle;
+        /*
+        if(*rlevelinfo.Pyramid_step > 2)
+            *MPP_stereo_angle = (*MPP_simgle_image)*rlevelinfo.pairinfo->SigmaZ(pair_number);
+        else
+        {
+            *MPP_stereo_angle = rlevelinfo.pairinfo->SigmaZ(pair_number);
+            *MPP_simgle_image = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        }
+        
+        if(*MPP_stereo_angle < proinfo->resolution*1.5)
+            *MPP_stereo_angle = proinfo->resolution*1.5;
+         */
+    }
     
     printf("pair_number = %d\tmpp = %f\t mpr = %f\n",pair_number,*MPP_simgle_image,*MPP_stereo_angle);
 }
@@ -6310,7 +6394,21 @@ void CalMPP_8(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeigh
     }
     
     CA = rlevelinfo.pairinfo->ConvergenceAngle(pair_number);
-    if(proinfo->sensor_provider == DG)
+    
+    if(proinfo->sensor_provider == PT)
+    {
+        *MPP_stereo_angle = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        /*
+        if(*rlevelinfo.Pyramid_step > 2)
+            *MPP_stereo_angle = (*MPP_simgle_image)*proinfo->resolution*2.0;
+        else
+        {
+            *MPP_stereo_angle = proinfo->resolution*2.0;
+            *MPP_simgle_image = proinfo->resolution*2.0;
+        }
+         */
+    }
+    else
     {
         const double ccdsize = 0.00001;
         const double scale = ccdsize/mean_product_res;
@@ -6318,31 +6416,23 @@ void CalMPP_8(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeigh
         const double BH_ratio = rlevelinfo.pairinfo->BHratio(pair_number);//mean_product_res*2.0/convergence_mpp;
         const double sigmaZ = 1.414*ccdsize/BH_ratio/scale;
         
-        printf("scale = %f\tConvergence_Angle = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,CA,convergence_mpp,BH_ratio,sigmaZ);
+        printf("scale = %f\tConvergence_Angle = %f\tconvergnece_mpp = %f\tBH_ratio = %f\t sigmaZ = %f\n",scale,CA,convergence_mpp,BH_ratio,rlevelinfo.pairinfo->SigmaZ(pair_number));
         if(sigmaZ > 1)
-            *MPP_stereo_angle = (*MPP_simgle_image)*sigmaZ;
-    }
-    else if(proinfo->sensor_provider == PT)
-    {
-        /*if(*rlevelinfo.Pyramid_step > 2)
-            *MPP_stereo_angle = (*MPP_simgle_image)*proinfo->resolution*2.0;
-        else*/
-        {
+            *MPP_stereo_angle = (*MPP_simgle_image)*rlevelinfo.pairinfo->SigmaZ(pair_number);
+        else
+            *MPP_stereo_angle = rlevelinfo.pairinfo->SigmaZ(pair_number);
+        
+        if(*MPP_stereo_angle < proinfo->resolution*2.0)
             *MPP_stereo_angle = proinfo->resolution*2.0;
-            *MPP_simgle_image = proinfo->resolution*2.0;
-        }
     }
-    
-    if(*MPP_stereo_angle < proinfo->resolution*2.0)
-        *MPP_stereo_angle = proinfo->resolution*2.0;
     
     printf("pair_number = %d\tmpp = %f\t mpr = %f\n",pair_number,*MPP_simgle_image,*MPP_stereo_angle);
 }
 
-double GetHeightStep(int Pyramid_step, double im_resolution)
+double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelinfo)
 {
-    const double h_divide = 2;
-    
+    const double h_divide = 4;
+    /*
     im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     double HS = (double)(im_resolution/h_divide);
@@ -6353,14 +6443,21 @@ double GetHeightStep(int Pyramid_step, double im_resolution)
     
     if(HS > 3)
         HS = 3;
+    */
+    double HS = rlevelinfo.MPP/h_divide*pwrtwo(Pyramid_step);
     
+    double tt1 = HS*100.0;
+    double tt2 = floor(tt1 + 0.1);
+    HS = tt2/100.0;
+    printf("MPP tt1 tt2 %f\t%f\t%f\t%f\n",rlevelinfo.MPP,tt1,tt2,HS);
+    //exit(1);
     return HS;
 }
 
-double GetHeightStep_Planet(int Pyramid_step, double im_resolution)
+double GetHeightStep_Planet(int Pyramid_step, double im_resolution, LevelInfo &rlevelinfo)
 {
     const double h_divide = 4;
-    
+    /*
     im_resolution = im_resolution*pwrtwo(Pyramid_step);
     
     double HS = (double)(im_resolution/h_divide);
@@ -6371,6 +6468,12 @@ double GetHeightStep_Planet(int Pyramid_step, double im_resolution)
     
     if(HS > 3)
         HS = 3;
+    */
+    double HS = rlevelinfo.MPP/h_divide*pwrtwo(Pyramid_step);
+    
+    double &&tt1 = HS*100.0;
+    double &&tt2 = floor(tt1 + 0.1);
+    HS = tt2/100.0;
     
     return HS;
 }
@@ -7191,7 +7294,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                                 {
                                                     if(Pyramid_step >= 3 && ((diff_theta*(*plevelinfo.bin_angle) < 90 && diff_theta*(*plevelinfo.bin_angle) > - 90) || db_GNCC > ortho_th))
                                                         check_orientation = true;
-                                                    else// if(Pyramid_step <= 2)
+                                                    else if(Pyramid_step <= 2)
                                                         check_orientation = true;
                                                 }
                                                 else
@@ -10560,109 +10663,188 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     }
     else
     {
-        if(Pyramid_step > 0)
+        //if(proinfo->sensor_type == AB)
         {
-            const int rohconvert = 1000;
-            long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
-            long int total_roh = 0;
-            
-            for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
+            if(Pyramid_step > 0)
             {
-                long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
-                long col     = iter_index % rlevelinfo.Size_Grid2D->width;
-                long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
+                const int rohconvert = 1000;
+                long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
+                long int total_roh = 0;
                 
-                if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
+                for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
                 {
-                    int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
-                    //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
-                    if(roh_int > rohconvert - 1)
-                        roh_int = rohconvert - 1;
-                    if(roh_int >= 0)
-                        hist[roh_int]++;
+                    long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
+                    long col     = iter_index % rlevelinfo.Size_Grid2D->width;
+                    long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
                     
-                    total_roh++;
+                    if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
+                    {
+                        int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
+                        //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
+                        if(roh_int > rohconvert - 1)
+                            roh_int = rohconvert - 1;
+                        if(roh_int >= 0)
+                            hist[roh_int]++;
+                        
+                        total_roh++;
+                    }
                 }
-            }
-            
-            if(total_roh > 0)
-            {
-                double min_roh_th;
-                double min_Gridroh_th;
                 
-                if(proinfo->sensor_provider == PT)// Planet
+                if(total_roh > 0)
                 {
-                    if(Pyramid_step == proinfo->pyramid_level)
-                        min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
-                    else if(Pyramid_step == 1)
-                        min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
+                    double min_roh_th;
+                    double min_Gridroh_th;
+                    
+                    if(proinfo->sensor_provider == PT)// Planet
+                    {
+                        if(Pyramid_step == proinfo->pyramid_level)
+                            min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
+                    }
+                    else
+                    {
+                        if(Pyramid_step == proinfo->pyramid_level)
+                            min_roh_th = 0.20 + (iteration-1)*0.01; //0.3 //0.05
+                        else if(Pyramid_step == 3)
+                            min_roh_th = 0.30 + (iteration-1)*0.01; //0.5 //0.15
+                        else if(Pyramid_step == 2)
+                            min_roh_th = 0.70;//0.60;
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.90;//0.80;
+                    }
+                    
+                    min_Gridroh_th = min_roh_th - 0.2;
+                    //if(min_Gridroh_th > 0.9)
+                    //    min_Gridroh_th = 0.9;
+                    
+                    int roh_iter = rohconvert - 1;
+                    bool check_stop = false;
+                    
+                    minimum_Th = 0.2;
+                    minGrid_th = 0.2;
+                    
+                    int sum_roh_count = 0;
+                    double sum_roh_rate = 0;
+                    while(!check_stop && roh_iter > 0)
+                    {
+                        sum_roh_count += hist[roh_iter];
+                        sum_roh_rate = sum_roh_count/(double)total_roh;
+                        //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
+                        if(sum_roh_rate > min_roh_th)
+                        {
+                            check_stop = true;
+                            minimum_Th = (double)roh_iter/(double)rohconvert;
+                        }
+                        roh_iter--;
+                    }
+                    if(minimum_Th > 0.80)
+                        minimum_Th = 0.80;
+                    
+                    roh_iter = rohconvert - 1;
+                    check_stop = false;
+                    sum_roh_count = 0;
+                    sum_roh_rate = 0;
+                    while(!check_stop && roh_iter > 0)
+                    {
+                        sum_roh_count += hist[roh_iter];
+                        sum_roh_rate = sum_roh_count/(double)total_roh;
+                        //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
+                        if(sum_roh_rate > min_Gridroh_th)
+                        {
+                            check_stop = true;
+                            minGrid_th = (double)roh_iter/(double)rohconvert;
+                        }
+                        roh_iter--;
+                    }
+                    
+                    if(minGrid_th > 0.90)
+                        minGrid_th = 0.90;
                 }
                 else
-                {
-                    if(Pyramid_step == proinfo->pyramid_level)
-                        min_roh_th = 0.20 + (iteration-1)*0.01; //0.3 //0.05
-                    else if(Pyramid_step == 3)
-                        min_roh_th = 0.30 + (iteration-1)*0.01; //0.5 //0.15
-                    else if(Pyramid_step == 2)
-                        min_roh_th = 0.70;//0.60;
-                    else if(Pyramid_step == 1)
-                        min_roh_th = 0.90;//0.80;
-                }
+                    minimum_Th = 0.2;
                 
-                min_Gridroh_th = min_roh_th - 0.2;
-                //if(min_Gridroh_th > 0.9)
-                //    min_Gridroh_th = 0.9;
-                
-                int roh_iter = rohconvert - 1;
-                bool check_stop = false;
-                
-                minimum_Th = 0.2;
-                minGrid_th = 0.2;
-                
-                int sum_roh_count = 0;
-                double sum_roh_rate = 0;
-                while(!check_stop && roh_iter > 0)
-                {
-                    sum_roh_count += hist[roh_iter];
-                    sum_roh_rate = sum_roh_count/(double)total_roh;
-                    //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
-                    if(sum_roh_rate > min_roh_th)
-                    {
-                        check_stop = true;
-                        minimum_Th = (double)roh_iter/(double)rohconvert;
-                    }
-                    roh_iter--;
-                }
-                if(minimum_Th > 0.80)
-                    minimum_Th = 0.80;
-                
-                roh_iter = rohconvert - 1;
-                check_stop = false;
-                sum_roh_count = 0;
-                sum_roh_rate = 0;
-                while(!check_stop && roh_iter > 0)
-                {
-                    sum_roh_count += hist[roh_iter];
-                    sum_roh_rate = sum_roh_count/(double)total_roh;
-                    //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
-                    if(sum_roh_rate > min_Gridroh_th)
-                    {
-                        check_stop = true;
-                        minGrid_th = (double)roh_iter/(double)rohconvert;
-                    }
-                    roh_iter--;
-                }
-                
-                if(minGrid_th > 0.90)
-                    minGrid_th = 0.90;
+                free(hist);
             }
             else
                 minimum_Th = 0.2;
-            
-            free(hist);
         }
-        else
-            minimum_Th = 0.2;
+        /*else
+        {
+            if(Pyramid_step > 0)
+            {
+                const int rohconvert = 100;
+                long int* hist = (long int*)calloc(sizeof(long int),rohconvert);
+                long int total_roh = 0;
+                
+                for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
+                {
+                    long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
+                    long col     = iter_index % rlevelinfo.Size_Grid2D->width;
+                    long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
+                    
+                    if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2)
+                    {
+                        int roh_int = ceil(SignedCharToDouble_result(roh_height[grid_index].result0)*rohconvert);
+                        //printf("roh_int %d\t%f\n", roh_int,SignedCharToDouble_result(roh_height[grid_index].result0));
+                        if(roh_int > rohconvert - 1)
+                            roh_int = rohconvert - 1;
+                        if(roh_int >= 0)
+                            hist[roh_int]++;
+                        
+                        total_roh++;
+                    }
+                }
+                
+                if(total_roh > 0)
+                {
+                    double min_roh_th;
+                    
+                    if(Pyramid_step == 4)
+                        min_roh_th = 0.05 + (iteration-1)*0.01;
+                    else if(Pyramid_step == 3)
+                        min_roh_th = 0.15 + (iteration-1)*0.01;
+                    else if(Pyramid_step == 2)
+                        min_roh_th = 0.60;
+                    else if(Pyramid_step == 1)
+                        min_roh_th = 0.80;
+                    
+                    if(Pyramid_step <= SGM_th_py )
+                    {
+                        min_roh_th = 0.95 - Pyramid_step*0.1;
+                        if(min_roh_th < 0.5)
+                            min_roh_th = 0.5;
+                    }
+                    
+                    int roh_iter = rohconvert - 1;
+                    bool check_stop = false;
+                    minimum_Th = 0.2;
+                    int sum_roh_count = 0;
+                    double sum_roh_rate = 0;
+                    while(!check_stop && roh_iter > 0)
+                    {
+                        sum_roh_count += hist[roh_iter];
+                        sum_roh_rate = sum_roh_count/(double)total_roh;
+                        //printf("roh_iter %d\t%d\t%d\t%f\n",roh_iter,hist[roh_iter],total_roh,sum_roh_rate);
+                        if(sum_roh_rate > min_roh_th)
+                        {
+                            check_stop = true;
+                            minimum_Th = (double)roh_iter/(double)rohconvert;
+                        }
+                        roh_iter--;
+                    }
+                    if(minimum_Th > 0.95)
+                        minimum_Th = 0.95;
+                }
+                else
+                    minimum_Th = 0.2;
+                
+                free(hist);
+            }
+            else
+                minimum_Th = 0.2;
+        }
+         */
     }
     
     //minGrid_th = 0.1;
@@ -10708,10 +10890,10 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
         }
     }
 
-    double height_step = GetHeightStep(Pyramid_step, proinfo->resolution);
+    double height_step = GetHeightStep(Pyramid_step, proinfo->resolution, rlevelinfo);
     
     if(proinfo->sensor_provider == PT)
-        height_step = GetHeightStep_Planet(Pyramid_step, proinfo->resolution);
+        height_step = GetHeightStep_Planet(Pyramid_step, proinfo->resolution, rlevelinfo);
     
     for(long int iter_index = 0 ; iter_index < *rlevelinfo.Grid_length ; iter_index++)
     {
@@ -10733,8 +10915,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
             index_3         = false;
             roh_index       = false;
      
-            if(SignedCharToDouble_grid(GridPT3[grid_index].roh) > minGrid_th)
-                GridPT3[grid_index].roh = DoubleToSignedChar_grid(minGrid_th);
+            if(proinfo->sensor_type == AB)
+            {
+                if(SignedCharToDouble_grid(GridPT3[grid_index].roh) > minGrid_th)
+                    GridPT3[grid_index].roh = DoubleToSignedChar_grid(minGrid_th);
+            }
             
             //ratio of 1st peak roh / 2nd peak roh
             //double peak_step_diff = fabs(roh_height[grid_index].result2 - roh_height[grid_index].result3)/height_step;
@@ -10980,16 +11165,7 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
         max_count = 10;
     else //blunder points
     {
-        if(proinfo->sensor_provider == PT)
-        {
-            if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
-                max_count  = 30;
-            else if(*rlevelinfo.Pyramid_step >= 1)
-                max_count  = 20;
-            else
-                max_count = 10;
-        }
-        else
+        if(proinfo->sensor_type == AB)
         {
             if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
                 max_count  = 40;
@@ -10998,7 +11174,27 @@ void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_
             else
                 max_count = 10;
         }
-        
+        else
+        {
+            if(proinfo->sensor_provider == PT)
+            {
+                if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
+                    max_count  = 30;
+                else if(*rlevelinfo.Pyramid_step >= 1)
+                    max_count  = 20;
+                else
+                    max_count = 10;
+            }
+            else
+            {
+                if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
+                    max_count  = 30;
+                else if(*rlevelinfo.Pyramid_step >= 3)
+                    max_count  = 20;
+                else
+                    max_count = 10;
+            }
+        }
     }
     
     long count = 0;
@@ -11376,23 +11572,15 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
             }
         }
         
-        //set ortho_ncc
         const double oncc_mean    =  sum_oncc/total_oncc_count;
         const double oncc_std =   sqrt(fabs(sum2_oncc - (sum_oncc)*(sum_oncc)/total_oncc_count)/total_oncc_count);
         
         double ortho_ncc_th;// = 0.7 + (iteration-1)*0.02;
-        
-        if(proinfo->sensor_provider == PT)
+        double ortho_ancc_th;
+        double th_ref_ncc;
+        if(proinfo->sensor_type == AB)
         {
-            if(pyramid_step >= proinfo->pyramid_level )
-                ortho_ncc_th = 0.6 - (iteration - 1)*0.02;
-            else if(pyramid_step >= 1)
-                ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
-            else
-                ortho_ncc_th = 0.2 ;
-        }
-        else
-        {
+            //set ortho_ncc
             if(pyramid_step >= proinfo->pyramid_level )
                 ortho_ncc_th = 0.6;// - (iteration - 1)*0.01;
             else if(pyramid_step >= 3)
@@ -11403,34 +11591,76 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 ortho_ncc_th = 0.3 ;
             else
                 ortho_ncc_th = 0.2 ;
+            
+            double temp_oncc_th = oncc_mean - 1.5*oncc_std;
+            if(temp_oncc_th < 0)
+                temp_oncc_th = oncc_mean;
+            if(temp_oncc_th > 0)
+            {
+                if(temp_oncc_th < ortho_ncc_th)
+                    ortho_ncc_th = temp_oncc_th;
+                else
+                {
+                    temp_oncc_th = oncc_mean - 3*oncc_std;
+                    if(temp_oncc_th < 0)
+                        temp_oncc_th = oncc_mean;
+                    if(temp_oncc_th < ortho_ncc_th)
+                        ortho_ncc_th = temp_oncc_th;
+                }
+            }
+            if(ortho_ncc_th < 0.2)
+                ortho_ncc_th = 0.2;
+             
+             ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
+             if(ortho_ancc_th > 0.95)
+                 ortho_ancc_th = 0.95;
+             
+             th_ref_ncc = 0.1;// + (iteration-1)*0.05;
+             if(th_ref_ncc > ortho_ncc_th)
+                 th_ref_ncc = ortho_ncc_th;
         }
-        
-        double temp_oncc_th = oncc_mean - 1.5*oncc_std;
-        if(temp_oncc_th < 0)
-            temp_oncc_th = oncc_mean;
-        if(temp_oncc_th > 0)
+        else
         {
+            //set ortho_ncc
+            ortho_ncc_th = 0.5 + (iteration-1)*0.02;
+            double temp_oncc_th = oncc_mean - oncc_std;
             if(temp_oncc_th < ortho_ncc_th)
                 ortho_ncc_th = temp_oncc_th;
             else
             {
-                temp_oncc_th = oncc_mean - 3*oncc_std;
-                if(temp_oncc_th < 0)
-                    temp_oncc_th = oncc_mean;
+                temp_oncc_th = oncc_mean - 2*oncc_std;
                 if(temp_oncc_th < ortho_ncc_th)
                     ortho_ncc_th = temp_oncc_th;
             }
+            
+            if(proinfo->sensor_provider == PT)
+            {
+                if(pyramid_step >= proinfo->pyramid_level )
+                    ortho_ncc_th = 0.6 - (iteration - 1)*0.02;
+                else if(pyramid_step >= 1)
+                    ortho_ncc_th = 0.4 - (iteration - 1)*0.02;
+                else
+                    ortho_ncc_th = 0.2 ;
+            }
+            else
+            {
+                if(pyramid_step == proinfo->pyramid_level )
+                    ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
+                else if(pyramid_step >= 3)
+                    ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
+                else if(pyramid_step == 2)
+                    ortho_ncc_th = 0.4 - (iteration - 1)*0.01;
+                else if(pyramid_step == 1)
+                    ortho_ncc_th = 0.3 ;
+                else
+                    ortho_ncc_th = 0.2 ;
+            }
+     
+            ortho_ancc_th = 100.;
+            th_ref_ncc = 0.1 + (iteration-1)*0.05;
+            if(th_ref_ncc > ortho_ncc_th)
+                th_ref_ncc = ortho_ncc_th;
         }
-        if(ortho_ncc_th < 0.2)
-            ortho_ncc_th = 0.2;
-         
-         double ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
-         if(ortho_ancc_th > 0.95)
-             ortho_ancc_th = 0.95;
-         
-         double th_ref_ncc = 0.1;// + (iteration-1)*0.05;
-         if(th_ref_ncc > ortho_ncc_th)
-             th_ref_ncc = ortho_ncc_th;
         
         //set height_th
         int blunder_pyramid_step = 3;
@@ -11995,67 +12225,88 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPt
     const double *boundary      = rlevelinfo.Boundary;
     
     double BufferOfHeight   = MPP*4.0*pwrtwo(pyramid_step);
-    if (pyramid_step == 1)
-    {
-        if(iteration >= 2)
-            BufferOfHeight = MPP*2;
-        else
-            BufferOfHeight = MPP*3;
-    }
-    else if(pyramid_step == 0)
-    {
-        if(iteration == 1)
-            BufferOfHeight = MPP*2;
-        else
-            BufferOfHeight = MPP;
-        
-        if (BufferOfHeight < 0.5)
-            BufferOfHeight = 0.5;
-    }
-    
-    if(proinfo->pre_DEMtif)
-    {
-        if(BufferOfHeight > proinfo->seedDEMsigma)
-            BufferOfHeight = proinfo->seedDEMsigma;
-        
-        printf("buff %f seed %f \n",BufferOfHeight,proinfo->seedDEMsigma);
-    }
-    
-    BufferOfHeight = ceil(BufferOfHeight);
-    
-    if(BufferOfHeight > 100)
-        BufferOfHeight = 100;
-    
-    printf("BufferOfHeight = %f\n",BufferOfHeight);
-    
     double th_HG = 100000;
     
-    if(proinfo->DEM_resolution >= 4)
+    if(proinfo->sensor_provider == PT)
     {
-        if(pyramid_step <= 1)
-            th_HG = 1000;
+        BufferOfHeight   = MPP*2.0*pwrtwo(pyramid_step);
+        
+        if (pyramid_step == 1)
+        {
+            BufferOfHeight = MPP*2;
+        }
+        else if(pyramid_step == 0)
+        {
+            BufferOfHeight = MPP;
+            
+            if (BufferOfHeight < 0.5)
+                BufferOfHeight = 0.5;
+        }
+        
+        if(BufferOfHeight > 200)
+            BufferOfHeight = 200;
     }
     else
     {
-        if(!level_check_matching_rate)
+        if (pyramid_step == 1)
         {
-            if(pyramid_step == 2 && iteration >= 5)
+            if(iteration >= 2)
+                BufferOfHeight = MPP*2;
+            else
+                BufferOfHeight = MPP*3;
+        }
+        else if(pyramid_step == 0)
+        {
+            if(iteration == 1)
+                BufferOfHeight = MPP*2;
+            else
+                BufferOfHeight = MPP;
+            
+            if (BufferOfHeight < 0.5)
+                BufferOfHeight = 0.5;
+        }
+        
+        if(proinfo->pre_DEMtif)
+        {
+            if(BufferOfHeight > proinfo->seedDEMsigma)
+                BufferOfHeight = proinfo->seedDEMsigma;
+            
+            printf("buff %f seed %f \n",BufferOfHeight,proinfo->seedDEMsigma);
+        }
+        
+        BufferOfHeight = ceil(BufferOfHeight);
+        
+        if(BufferOfHeight > 100)
+            BufferOfHeight = 100;
+        
+        printf("BufferOfHeight = %f\n",BufferOfHeight);
+        
+        if(proinfo->DEM_resolution >= 4)
+        {
+            if(pyramid_step <= 1)
                 th_HG = 1000;
-            else if(pyramid_step == 1)
-                th_HG = 500;
-            else if(pyramid_step == 0)
-                th_HG = 100;
         }
         else
         {
-            if(pyramid_step <= 2)
-                th_HG = 100;
+            if(!level_check_matching_rate)
+            {
+                if(pyramid_step == 2 && iteration >= 5)
+                    th_HG = 1000;
+                else if(pyramid_step == 1)
+                    th_HG = 500;
+                else if(pyramid_step == 0)
+                    th_HG = 100;
+            }
+            else
+            {
+                if(pyramid_step <= 2)
+                    th_HG = 100;
+            }
+            
+            if(pyramid_step == 0 && proinfo->DEM_resolution < 2 && iteration > 1)
+                th_HG = 50;
         }
-        
-        if(pyramid_step == 0 && proinfo->DEM_resolution < 2 && iteration > 1)
-            th_HG = 50;
     }
-    
     printf("BufferOfHeight = %f\tth_HG = %f\n",BufferOfHeight,th_HG);
     
     uint8 *m_bHeight       = (uint8*)calloc(*rlevelinfo.Grid_length,sizeof(uint8));
