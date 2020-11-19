@@ -14,16 +14,30 @@
  * limitations under the License.
  */
 
+#include <atomic>
+#include <memory>
+
 #include "setsm_code.hpp"
+#include "log.hpp"
 
 #ifdef BUILDMPI
 #include "mpi.h"
+#include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.0";
+const char setsm_version[] = "4.3.6";
 
 int main(int argc,char *argv[])
 {
+
+#ifdef BUILDMPI
+    init_mpi(argc, argv);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+
+    init_logging();
+
     setlogmask (LOG_UPTO (LOG_NOTICE));
 
     openlog ("setsm", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_NOTICE);
@@ -132,6 +146,9 @@ int main(int argc,char *argv[])
         
         DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
         
+#ifdef BUILDMPI
+        if(rank == 0) {
+#endif
         char DEMFilename[500];
         char Outputpath[500];
         sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
@@ -144,6 +161,9 @@ int main(int argc,char *argv[])
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
         else
             orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+#ifdef BUILDMPI
+        }
+#endif
     }
     else if(argc == 2)
     {
@@ -240,6 +260,9 @@ int main(int argc,char *argv[])
             
             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
             
+#ifdef BUILDMPI
+            if(rank == 0) {
+#endif
             char DEMFilename[500];
             char Outputpath[500];
             
@@ -257,6 +280,9 @@ int main(int argc,char *argv[])
                     orthogeneration(param,args,LeftImagefilename, DEMFilename, Outputpath,1,iter,Imageparams);
                 }
             }
+#ifdef BUILDMPI
+            }
+#endif
         }
         else
             printf("Please check input 1 and input 2. Both is same\n");
@@ -1489,6 +1515,9 @@ int main(int argc,char *argv[])
                         {
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
 
+#ifdef BUILDMPI
+                            if(rank == 0) {
+#endif
                             char DEMFilename[500];
                             char Outputpath[500];
                             
@@ -1535,7 +1564,9 @@ int main(int argc,char *argv[])
                                         remove(DEMFilename);
                                 }
                             }
-                             
+#ifdef BUILDMPI
+                        }
+#endif
                         }
                         else
                             printf("Please check input 1 and input 2. Both is same\n");
@@ -1563,9 +1594,8 @@ int main(int argc,char *argv[])
         }
     }
     
-    printf("# of allocated threads = %d\n",omp_get_max_threads());
-            
-    
+    single_printf("# of allocated threads = %d\n",omp_get_max_threads());
+
     if(Imageparams)
     {
         for(int ti = 0 ; ti < MaxNCC ; ti++)
@@ -1574,14 +1604,17 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
+
+#ifdef BUILDMPI
+    // Make sure to finalize
+    MPI_Finalize();
+#endif
     
     return 0;
 }
 
 void DownSample(ARGINFO &args)
 {
-    long cols[2];
-    long rows[2];
     CSize data_size;
     double minX, maxY, grid_size;
     
@@ -1597,49 +1630,25 @@ void DownSample(ARGINFO &args)
         TransParam param;
         SetTranParam_fromGeoTiff(&param,args.seedDEMfilename);
         
-        
-        CSize *Imagesize = (CSize*)malloc(sizeof(CSize));
-        Imagesize->width = seeddem_size.width;
-        Imagesize->height = seeddem_size.height;
-        
-        cols[0] = 0;
-        cols[1] = seeddem_size.width;
-        
-        rows[0] = 0;
-        rows[1] = seeddem_size.height;
+        CSize Imagesize = seeddem_size;
+        long cols[2] = {0, seeddem_size.width};
+        long rows[2] = {0, seeddem_size.height};
         
         float type(0);
-        float *seeddem = Readtiff_T(args.seedDEMfilename,Imagesize,cols,rows,&data_size,type);
+        float *seeddem = Readtiff_T(args.seedDEMfilename,&Imagesize,cols,rows,&data_size,type);
         
-        float **pyimg = (float**)malloc(sizeof(float*)*downsample_step);
-        
-        CSize out_size;
+        CSize out_size = seeddem_size;
+        float *pyimage = seeddem;
         
         for(int level = 0 ; level < downsample_step ; level ++)
         {
-            if(level == 0)
-            {
-                pyimg[0] = CreateImagePyramid(seeddem,seeddem_size,args.DS_kernel,args.DS_sigma);
-                free(seeddem);
-                out_size.width = seeddem_size.width/2;
-                out_size.height = seeddem_size.height/2;
-            }
-            else
-            {
-                pyimg[level] = CreateImagePyramid(pyimg[level-1],out_size,args.DS_kernel,args.DS_sigma);
-                out_size.width = out_size.width/2;
-                out_size.height = out_size.height/2;
-            }
+            float *next = CreateImagePyramid(pyimage, out_size, args.DS_kernel, args.DS_sigma);
+            free(pyimage);
+            out_size.width = out_size.width/2;
+            out_size.height = out_size.height/2;
+            pyimage = next;
         }
-        /*
-        for(int i=0 ; i< downsample_step-1 ; i++)
-            free(pyimg[i]);
-        
-        WriteGeotiff(args.Outputpath_name, pyimg[downsample_step-1], out_size.width, out_size.height, args.DEM_space, minX, maxY, param.projection, param.zone, param.bHemisphere, 4);
-        
-        free(pyimg[downsample_step-1]);
-        free(pyimg);
-        */
+
         printf("Done Gaussian processing\n");
         
         D2DPOINT target;
@@ -1667,11 +1676,11 @@ void DownSample(ARGINFO &args)
             long int pt_index = pts_row*(long int)out_size.width + pts_col;
             
             D2DPOINT query_pt(pts_col + Dgrid.m_X,pts_row + Dgrid.m_Y);
-            outimg[iter_count] = BilinearResampling(pyimg[downsample_step-1],out_size,query_pt);
+            outimg[iter_count] = BilinearResampling(pyimage,out_size,query_pt);
         }
         printf("Done resampling\n");
-        free(pyimg[downsample_step-1]);
-        free(pyimg);
+
+        free(pyimage);
         
         WriteGeotiff(args.Outputpath_name, outimg, out_size.width, out_size.height, args.DEM_space, target.m_X, target.m_Y, param.projection, param.utm_zone, param.bHemisphere, 4);
 
@@ -1683,32 +1692,24 @@ void DownSample(ARGINFO &args)
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **Imageparams)
 {
 #ifdef BUILDMPI
-    char a;
-    char *pa = &a;
-    char **ppa = &pa;
-    int argc = 0;
-    int provided = 1;
-    MPI_Init_thread(&argc, &ppa, MPI_THREAD_FUNNELED, &provided);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0)
-    {
-      int size;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
-      printf("MPI: Number of processes: %d\n", size);
-    }
 #endif
 
     int DEM_divide = 0;
     char computation_file[500];
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    FILE *time_fid;
+    SINGLE_FILE *time_fid;
     
     total_ST = time(0);
     
     bool cal_check;
     
+    if(args.System_memory <= 0) {
+        printf("ERROR: Cannot determine system memory. Specify system memory on the command line with the '-mem' option.\n");
+        exit(1);
+    }
     ProInfo *proinfo = new ProInfo;
     proinfo->number_of_images = args.number_of_images;
     proinfo->sensor_type = args.sensor_type;
@@ -1823,14 +1824,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 
                 char metafilename[500];
                 
-                FILE *pMetafile = NULL;
+                SINGLE_FILE *pMetafile = NULL;
                 sprintf(metafilename, "%s/%s_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 if(args.check_Matchtag)
                     sprintf(metafilename, "%s/%s_new_matchtag_meta.txt", proinfo->save_filepath, proinfo->Outputpath_name);
                 
                 if(!proinfo->check_checktiff && !args.check_ortho)
                 {
-                    pMetafile   = fopen(metafilename,"w");
+                    pMetafile   = single_fopen(metafilename,"w");
                     
                     fprintf(pMetafile,"SETSM Version=%s\n", setsm_version);
                 }
@@ -2594,9 +2595,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
-                            MPI_Finalize();
-                            if(rank != 0)
-                                exit(0);
+                            if(rank == 0) {
 #endif
                             if(!args.check_ortho)
                             {
@@ -2696,10 +2695,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             else
                                 Final_DEMsize = DEM_final_Size(proinfo->save_filepath, iter_row_start,t_col_start, iter_row_end,t_col_end,proinfo->DEM_resolution,FinalDEM_boundary);
                             
-                            double total_memory = CalMemorySize_Post(Final_DEMsize,Final_DEMsize);
-                            
+                            double total_memory;
                             if(args.check_LSF2 == 1 || args.check_LSF2 == 2)
                                 total_memory = CalMemorySize_Post_LSF(Final_DEMsize,Final_DEMsize);
+                            else
+                                total_memory = CalMemorySize_Post(Final_DEMsize,Final_DEMsize);
                             
                             printf("total tile memory %f\t%f\t%d\t%d\n",proinfo->System_memory,total_memory,Final_DEMsize.width,Final_DEMsize.height);
                             
@@ -2824,7 +2824,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         
                                         Ortho_values = (signed char*)malloc(sizeof(signed char)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
                                         MergeTiles_Ortho(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,Ortho_values,tile_Final_DEMsize,FinalDEM_boundary);
-                                        
+
                                         NNA_M_MT(proinfo, param, iter_row_start,t_col_start, iter_row_end, t_col_end, buffer_tile, final_iteration, tile_row, Ortho_values, H_value, MT_value, tile_Final_DEMsize, FinalDEM_boundary);
                                         
                                         ET = time(0);
@@ -2953,6 +2953,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",convergence_angle);
                             fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                             fclose(pMetafile);
+#ifdef BUILDMPI
+                        }
+#endif
                         } // if (!RA_only)
                     }
                     else
@@ -2990,9 +2993,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         total_gap = difftime(total_ET,total_ST);
         
         sprintf(computation_file,"%s/txt/computation_time.txt",proinfo->save_filepath);
-        time_fid            = fopen(computation_file,"w");
+        time_fid            = single_fopen(computation_file,"w");
         fprintf(time_fid,"Computation_time[m] = %5.2f\n",total_gap/60.0);
-        printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
+        single_printf("Computation_time[m] = %5.2f\n",total_gap/60.0);
         
         fclose(time_fid);
     }
@@ -3011,56 +3014,26 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     else if(args.check_ortho)
         exit(1);
     
-#ifdef BUILDMPI
-    // Make sure to finalize
-    int finalized;
-    MPI_Finalized(&finalized);
-    if (!finalized)
-    {
-        MPI_Finalize();
-    }
-#endif
-    
     return DEM_divide;
 }
 
-#ifdef BUILDMPI
-// Reorder tiles for static load balancing with MPI
-int reorder_list_of_tiles(int iterations[], int length, int col_length, int row_length)
-{
-    int i,j;
-
-    int *temp = (int*)malloc(col_length*row_length*2*sizeof(int));
-    int midrow = ceil(row_length / 2.0);
-    int midcol = ceil(col_length / 2.0);
-
-    for (i = 0; i < length*2; i += 2)
-    {
-        int closest = 0;
-        int closest_dist = midrow + midcol;
-        for (j = 0; j < length*2; j += 2)
-        {
-            int new_dist = abs(midrow - iterations[j]) + abs(midcol - iterations[j+1]);
-            if (new_dist <= closest_dist)
-            {
-                closest_dist = new_dist;
-                closest = j;
-            }
+class SerialTileIndexer : public TileIndexer {
+private:
+    int i;
+    int length;
+public:
+    SerialTileIndexer(int length) : i(0), length(length) {}
+    int next() {
+        if(i >= length)
+            return -1;
+        int ret = -1;
+        if(i < length) {
+            ret = i;
+            i++;
         }
-        temp[i] = iterations[closest];
-        temp[i+1] = iterations[closest+1];
-        iterations[closest] = -1;
-        iterations[closest+1] = -1;
+        return ret;
     }
-
-    for (i = 0; i < length*2; i++)
-    {
-        iterations[i] = temp[i];
-    }
-    free(temp);
-    return length;
-}
-#endif
+};
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info)
 {
@@ -3344,6 +3317,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // async_progressor should come before TileIndexer, needs to to be destroyed second
+    std::unique_ptr<MPIProgressor> async_progressor = nullptr;
 #endif
 
     int final_iteration = -1;
@@ -3365,24 +3341,32 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             length+=1;
         }
     }
-    
+
+    std::unique_ptr<TileIndexer> tile_indices(new SerialTileIndexer(length));
 #ifdef BUILDMPI
-    //Reorder list of tiles for static load balancing
-    if (length > 1) {
-        reorder_list_of_tiles(iterations, length, col_length, row_length);
+    if (length > 1 && !proinfo->IsRA) {
+        // Setup MPI work queue for tiles for non-RA case
+        tile_indices = std::move(std::unique_ptr<MPITileIndexer>(new MPITileIndexer(length, rank)));
+
+        // only enable custom async progress if it was requested
+        if(rank == 0 && requested_custom_async_progress()) {
+            async_progressor = std::unique_ptr<MPIProgressor>(new MPIProgressor(
+                std::chrono::milliseconds(750)));
+        }
+    } else if(rank != 0) {
+        // only rank 0 will be doing RA, so all other ranks get no tiles
+        tile_indices = std::move(std::unique_ptr<SerialTileIndexer>(new SerialTileIndexer(0)));
+
     }
 #endif
-    
+
     int tile_iter, i;
-    for(tile_iter = 0; tile_iter < length; tile_iter += 1)
+    while((tile_iter = tile_indices->next()) != -1)
     {
         row = iterations[2*tile_iter];
         col = iterations[2*tile_iter+1];
-        
+
 #ifdef BUILDMPI
-        // Skip this tile if it belongs to a different MPI rank
-        if (tile_iter % size != rank)
-            continue;
         printf("MPI: Rank %d is analyzing row %d, col %d\n", rank, row, col);
 #endif
         bool check_cal = false;
@@ -11400,6 +11384,19 @@ void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
 }
 
 void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders) {
+    // if the flag is already 1 and it's an "old blunder",
+    // then we don't want to update it to 3. This can cause
+    // nondeterminism in the loop. However, the race here is
+    // okay. If it's an "old blunder", we'll always see 1 here.
+    // If it's a new blunder, we may see any of 0, 1 or 3 here.
+    // If it's a new blunder and 1, then detectedBlunders was
+    // already set, so we can exit early. Same with 3. If it's
+    // a new blunder and zero, but there's a race, that's fine
+    // too.
+    uint8_t prev = pts[index].flag;
+    if(prev != 0)
+        return;
+
     // Only update the detectedBlunders value
     // if we know that this is a new blunder.
     // if it was previously zero, we know it is
@@ -11411,23 +11408,6 @@ void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlund
     // changed it from zero to 1 or 3. In that case,
     // the other thread/iteration would have
     // updated detectedBlunders, so we don't need to.
-    uint8_t prev;
-
-#pragma omp atomic read
-    prev = pts[index].flag;
-    
-    // if the flag is already 1 and it's an "old blunder",
-    // then we don't want to update it to 3. This can cause
-    // nondeterminism in the loop. However, the race here is
-    // okay. If it's an "old blunder", we'll always see 1 here.
-    // If it's a new blunder, we may see any of 0, 1 or 3 here.
-    // If it's a new blunder and 1, then detectedBlunders was
-    // already set, so we can exit early. Same with 3. If it's
-    // a new blunder and zero, but there's a race, that's fine
-    // too.
-    if(prev != 0)
-        return;
-
 #pragma omp atomic capture
     {
         prev = pts[index].flag;
@@ -12421,7 +12401,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPt
                             
                             //min, max height setting
                             double t1, t2;
-                            t1       = min(temp_MinZ, Z);
+                            t1       = min<double>(temp_MinZ, Z);
                             if(GridPT3[Index].Matched_flag == 4) //extension minHeight
                             {
                                 if(t1 - BF <= GridPT3[Index].minHeight)
@@ -12430,7 +12410,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPt
                             else
                                 GridPT3[Index].minHeight   = floor(t1 - BF);
                             
-                            t2       = max(temp_MaxZ, Z);
+                            t2       = max<double>(temp_MaxZ, Z);
                             if(GridPT3[Index].Matched_flag == 4)
                             {
                                 if(t2 + BF >= GridPT3[Index].maxHeight)
@@ -12827,26 +12807,61 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
     return resize_GridPT3;
 }
 
+static void update_max(std::atomic<float> *cur, float val) {
+    float prev = *cur;
+    // exit this loop if cur becomes larger (or is larger) than val,
+    // or if cur is updated to val. This update will only happen when
+    // val is larger than cur.
+    //
+    // See here for a similar construct: https://stackoverflow.com/a/16190791
+    while(val > prev) {
+        if(cur->compare_exchange_weak(prev, val)) {
+            break;
+        }
+    }
+}
+
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3)
 {
-    
+
+    int len = rlevelinfo.Size_Grid2D->width * rlevelinfo.Size_Grid2D->height;
+
+    constexpr double unset = -1000;
+    std::unique_ptr<std::atomic<float>[]> heights(new std::atomic<float>[len]);
+    for(int i = 0; i < len; i++) {
+        heights[i] = unset;
+    }
+
 #pragma omp parallel for schedule(guided)
     for(long tcnt=0;tcnt<num_triangles;tcnt++)
     {
+        //unused in this function, but SetTinBoundary requres them
         double Total_Min_Z      =  100000;
         double Total_Max_Z      = -100000;
 
+        // get triangle and it's indicies
         const UI3DPOINT &t_tri = (tris[tcnt]);
         const int pdex0 = t_tri.m_X;
         const int pdex1 = t_tri.m_Y;
         const int pdex2 = t_tri.m_Z;
         
+        // if triangle not entirely within grid, continue
+        // this is mostly a sanity check I think
         if(pdex0 < numPts && pdex1 < numPts && pdex2 < numPts)
         {
+            // Get the point corresponding to each triangle
+            // vertex
             const D3DPOINT &TriP1 = (pts[pdex0]);
             const D3DPOINT &TriP2 = (pts[pdex1]);
             const D3DPOINT &TriP3 = (pts[pdex2]);
+
+
+            // These will be pooulated with a bounding box
+            // around the triangle
             int PixelMinXY[2], PixelMaxXY[2];
+
+            // These are unused in this function, but
+            // SetTinBoundary requries them
             double temp_MinZ, temp_MaxZ;
             SetTinBoundary(
                 rlevelinfo,
@@ -12860,30 +12875,42 @@ bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const in
                 temp_MinZ,
                 temp_MaxZ);
             
+            // iterate through points in the triangle bounding box
             for (long Row=PixelMinXY[1]; Row <= PixelMaxXY[1]; Row++)
             {
                 for (long Col=PixelMinXY[0]; Col <= PixelMaxXY[0]; Col++)
                 {
+                    //Index of the point in GridPT3
                     const int Index= (long)rlevelinfo.Size_Grid2D->width*Row + Col;
 
                     float Z = -1000.0;
                     bool rtn = false;
                      
+                    // The point on object/world coordinates
+                    // x, y, z, flag
                     D3DPOINT CurGPXY(
                         (Col)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[0],
                         (Row)*(*rlevelinfo.grid_resolution) + rlevelinfo.Boundary[1],
                         0,
                         0);
 
+                    // checks to see if point is inside triangle
+                    // if it is, returns true
+                    // if inside, interpolates height value of point
+                    // and puts that value in Z
                     rtn = IsTinInside(CurGPXY, TriP1, TriP2, TriP3, Z);
                     
                     if (rtn)
                     {
-#pragma omp atomic write
-                        GridPT3[Index].Height = (float)Z;
+                        update_max(&heights[Index], (float)Z);
                     }
                 }
             }
+        }
+    }
+    for(int i = 0; i < len; i++) {
+        if(heights[i] != unset) {
+            GridPT3[i].Height = heights[i];
         }
     }
     return true;
@@ -13148,44 +13175,24 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
             {
                 bool flag_boundary = false;
                 int count_pts = 0;
-                double sum_weight_X     = 0;
-                double sum_weight_Y     = 0;
-                double sum_max_roh      = 0;
-                double t_sum_weight_X       = 0;
-                double t_sum_weight_Y       = 0;
-                double t_sum_max_roh        = 0;
-                
+
+                std::vector<double> weights_X(NumofPts, 0.0);
+                std::vector<double> weights_Y(NumofPts, 0.0);
+                std::vector<double> max_rohs(NumofPts, 0.0);
+
                 const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-                std::array<double*, 3>* left_patch_vecs_array;
-                std::array<double*, 3>* right_patch_vecs_array;
-
-#pragma omp parallel private(t_sum_weight_X,t_sum_weight_Y,t_sum_max_roh) reduction(+:count_pts,sum_weight_X,sum_weight_Y,sum_max_roh)
+#pragma omp parallel reduction(+:count_pts)
                 {
-                    
-#pragma omp single
-                    {
-                        // Make patch vectors thread private rather than private to each loop iteration
-                        // These are used by postNCC but allocated here for efficiency
-                        left_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        right_patch_vecs_array = new std::array<double*, 3>[omp_get_num_threads()];
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                left_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                                right_patch_vecs_array[th][k] = (double *)malloc(sizeof(double)*patch_size);
-                            }
-                        }
-                    }
+                    Matrix left_patch_vecs(3, patch_size);
+                    Matrix right_patch_vecs(3, patch_size);
                     
 #pragma omp for schedule(guided)
                     for(long i = 0; i<NumofPts ; i++)
                     {
-                        double** left_patch_vecs = left_patch_vecs_array[omp_get_thread_num()].data();
-                        double** right_patch_vecs = right_patch_vecs_array[omp_get_thread_num()].data();
-                        
+                        double t_sum_weight_X, t_sum_weight_Y, t_sum_max_roh;
                         //calculation image coord from object coord by RFM in left and right image
                         D2DPOINT Left_Imagecoord_p   = GetObjectToImageRPC_single(rlevelinfo.RPCs[reference_id],2,left_IA,Coord[i]);
                         D2DPOINT Left_Imagecoord     = OriginalToPyramid_single(Left_Imagecoord_p,rlevelinfo.py_Startpos[reference_id],Pyramid_step);
@@ -13205,31 +13212,27 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
                                 
                                 if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
                                 {
-                                    sum_weight_X += t_sum_weight_X;
-                                    sum_weight_Y += t_sum_weight_Y;
-                                    sum_max_roh  += t_sum_max_roh;
+                                    weights_X[i] = t_sum_weight_X;
+                                    weights_Y[i] = t_sum_weight_Y;
+                                    max_rohs[i] = t_sum_max_roh;
                                     count_pts++;
                                 }
                             }
                         }
                     } // end omp for
-                    
-#pragma omp single
-                    {
-                        // free thread-private vectors
-                        for (int th=0; th<omp_get_num_threads(); th++) {
-                            for (int k=0; k<3; k++)
-                            {
-                                free(left_patch_vecs_array[th][k]);
-                                free(right_patch_vecs_array[th][k]);
-                            }
-                        }
-                        delete[] left_patch_vecs_array;
-                        delete[] right_patch_vecs_array;
-                    }
-                    
                 } // end omp parallel
 
+                double sum_weight_X = 0;
+                double sum_weight_Y = 0;
+                double sum_max_roh = 0;
+                for(const auto& v : weights_X)
+                    sum_weight_X += v;
+                for(const auto& v : weights_Y)
+                    sum_weight_Y += v;
+                for(const auto& v: max_rohs)
+                    sum_max_roh += v;
+
+                printf("in AdjustParam, count_pts is %d\n", count_pts);
                 if(count_pts > 10)
                 {
                     double shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
@@ -13261,7 +13264,7 @@ int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **
 }
 
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, double **left_patch_vecs, double **right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix &left_patch_vecs, Matrix &right_patch_vecs)
 {
     bool check_pt = false;
  
@@ -13320,7 +13323,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             long position = (long int) (pos_col_left) + (long int) (pos_row_left) * (long)leftsize.width;
                             
                             double left_patch = InterpolatePatch(rlevelinfo.py_Images[reference_ID], position, leftsize, dx, dy);
-                            left_patch_vecs[0][Count_N[0]] = left_patch;
+                            left_patch_vecs(0, Count_N[0]) = left_patch;
 
                             //interpolate right_patch
                             dx = pos_col_right - (int) (pos_col_right);
@@ -13328,7 +13331,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             position = (long int) (pos_col_right) + (long int) (pos_row_right) * (long)rightsize.width;
                             
                             double right_patch = InterpolatePatch(rlevelinfo.py_Images[target_ID], position, rightsize, dx, dy);
-                            right_patch_vecs[0][Count_N[0]] = right_patch;
+                            right_patch_vecs(0, Count_N[0]) = right_patch;
                             
                             //end
                             Count_N[0]++;
@@ -13338,8 +13341,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_1 && col <= Half_template_size - size_1)
                                 {
-                                    left_patch_vecs[1][Count_N[1]] = left_patch;
-                                    right_patch_vecs[1][Count_N[1]] = right_patch;
+                                    left_patch_vecs(1, Count_N[1]) = left_patch;
+                                    right_patch_vecs(1, Count_N[1]) = right_patch;
                                     Count_N[1]++;
                                 }
                             }
@@ -13349,8 +13352,8 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                             {
                                 if( col >= -Half_template_size + size_2 && col <= Half_template_size - size_2)
                                 {
-                                    left_patch_vecs[2][Count_N[2]] = left_patch;
-                                    right_patch_vecs[2][Count_N[2]] = right_patch;
+                                    left_patch_vecs(2, Count_N[2]) = left_patch;
+                                    right_patch_vecs(2, Count_N[2]) = right_patch;
                                     Count_N[2]++;
                                 }
                             }
@@ -13367,7 +13370,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
                 {
                     if (Count_N[k] > 0)
                     {
-                        double ncc = Correlate(left_patch_vecs[k],right_patch_vecs[k],Count_N[k]);
+                        double ncc = Correlate(left_patch_vecs.row(k),right_patch_vecs.row(k),Count_N[k]);
                         if (ncc != -99)
                         {
                             count_rho++;
