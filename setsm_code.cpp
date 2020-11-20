@@ -3098,6 +3098,8 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                 double PC_distance = SQRT(image1_PL,image2_PL,3);
                 pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
                 pairinfo.SetCenterDist(pair_number, 0.0);
+                pairinfo.SetConvergenceAngle(pair_number, 0);
+                pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
             }
             else
             {
@@ -3937,11 +3939,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.reference_id = 0;
                         
                         vector<unsigned char>* Grid_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),Grid_length);
-                        if(!flag_start)
+                        //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
                         char fname_grid[500];
-                        sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d.txt",proinfo->save_filepath,row,col);
+                        sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
                         FILE* fid_grid         = fopen(fname_grid,"w");
                         for(int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                         {
@@ -3974,7 +3976,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             }
                             
                         }
-                        
+                         
                         if(proinfo->sensor_type == SB)
                         {
                             double sum_MPP_simgle_image = 0;
@@ -5820,7 +5822,7 @@ UGRID *SetGrid3PT(const ProInfo *proinfo, LevelInfo &rlevelinfo, const double Th
         GridPT3[i].Matched_flag     = 0;
         GridPT3[i].roh              = DoubleToSignedChar_grid(Th_roh);
         GridPT3[i].anchor_flag      = 0;
-        GridPT3[i].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+        GridPT3[i].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
         GridPT3[i].Mean_ortho_ncc   = 0;
 
         GridPT3[i].minHeight        = floor(minmaxHeight[0] - 0.5);
@@ -12610,7 +12612,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPt
         {
             long matlab_index    = k*(long)rlevelinfo.Size_Grid2D->width + j;
             
-            result[matlab_index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+            result[matlab_index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
             
             if(GridPT3[matlab_index].minHeight > GridPT3[matlab_index].maxHeight)
             {
@@ -12629,7 +12631,7 @@ UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPt
             
             result[matlab_index].anchor_flag                = 0;
             
-            for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs() ; ti++)
+            for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs() ; ti++)
                 result[matlab_index].ortho_ncc[ti]      = GridPT3[matlab_index].ortho_ncc[ti];
        
             result[matlab_index].Mean_ortho_ncc             = GridPT3[matlab_index].Mean_ortho_ncc;
@@ -12694,7 +12696,7 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
             long pre_index = pos_r*(long)preSize.width + pos_c;
             if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height && pre_index >= 0 && pre_index < (long)preSize.width*(long)preSize.height)
             {
-                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
                 
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
                 resize_GridPT3[index].maxHeight     = preGridPT3[pre_index].maxHeight;
@@ -12710,7 +12712,7 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
                 
                 resize_GridPT3[index].total_images  = preGridPT3[pre_index].total_images;
                 
-                for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs() ; ti++)
+                for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs() ; ti++)
                 {
                     //if(proinfo->check_selected_image[ti])
                         resize_GridPT3[index].ortho_ncc[ti]     = preGridPT3[pre_index].ortho_ncc[ti];
@@ -12718,7 +12720,7 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
             }
             else
             {
-                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
                 
                 resize_GridPT3[index].minHeight     = floor(minmaxheight[0] - 0.5);
                 resize_GridPT3[index].maxHeight     = ceil(minmaxheight[1] + 0.5);
@@ -12726,7 +12728,7 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
                 resize_GridPT3[index].Matched_flag  = 0;
                 resize_GridPT3[index].roh           = 0.0;
                 resize_GridPT3[index].anchor_flag   = 0;
-                for(int ti = 0 ; ti <= rlevelinfo.pairinfo->SelectNumberOfPairs() ; ti++)
+                for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs() ; ti++)
                 {
                     //if(proinfo->check_selected_image[ti])
                         resize_GridPT3[index].ortho_ncc[ti]     = 0;
@@ -12773,7 +12775,7 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
             long int pre_index = pos_r*(long int)preSize.width + pos_c;
             if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height && pre_index >= 0 && pre_index < (long)preSize.width*(long)preSize.height)
             {
-                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
                 
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
                 resize_GridPT3[index].maxHeight     = preGridPT3[pre_index].maxHeight;
@@ -12781,7 +12783,7 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
                 resize_GridPT3[index].Matched_flag  = preGridPT3[pre_index].Matched_flag;
                 resize_GridPT3[index].roh           = preGridPT3[pre_index].roh;
                 resize_GridPT3[index].anchor_flag   = preGridPT3[pre_index].anchor_flag;
-                for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs() ; ti++)
+                for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs() ; ti++)
                 {
                     //if(proinfo->check_selected_image[ti])
                         resize_GridPT3[index].ortho_ncc[ti]     = preGridPT3[pre_index].ortho_ncc[ti];
@@ -12791,7 +12793,7 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
             }
             else
             {
-                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->SelectNumberOfPairs());
+                resize_GridPT3[index].ortho_ncc = (short*)calloc(sizeof(short),rlevelinfo.pairinfo->NumberOfPairs());
                 
                 resize_GridPT3[index].minHeight     = floor(minmaxheight[0] - 0.5);
                 resize_GridPT3[index].maxHeight     = ceil(minmaxheight[1] + 0.5);
@@ -12799,7 +12801,7 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
                 resize_GridPT3[index].Matched_flag  = 0;
                 resize_GridPT3[index].roh           = 0.0;
                 resize_GridPT3[index].anchor_flag   = 0;
-                for(int ti = 0 ; ti <= rlevelinfo.pairinfo->SelectNumberOfPairs() ; ti++)
+                for(int ti = 0 ; ti < rlevelinfo.pairinfo->NumberOfPairs() ; ti++)
                 {
                     //if(proinfo->check_selected_image[ti])
                         resize_GridPT3[index].ortho_ncc[ti]     = 0;
