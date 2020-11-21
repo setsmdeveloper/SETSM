@@ -3540,16 +3540,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 
                 if( check_kernel_size(proinfo, Subsetsize, Template_size, proinfo->pyramid_level))
                 {
-                    CPairInfo pairinfo;
-                    SetPairs(proinfo,pairinfo,image_info);
-                    
-                    levelinfo.pairinfo = &pairinfo;
-                    
-                    for(int kk = 0 ; kk < levelinfo.pairinfo->SelectNumberOfPairs() ; kk++)
-                    {
-                        printf("ref\t%d\ttar\t%d\n",levelinfo.pairinfo->pairs(kk).m_X,levelinfo.pairinfo->pairs(kk).m_Y);
-                    }
-                    
                     double total_memory = 0.0;
                     double py_resolution = 0;
                     double grid_resolution = 0;
@@ -3695,6 +3685,16 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                     
                     while(lower_level_match && level >= 0)
                     {
+                        CPairInfo pairinfo;
+                        SetPairs(proinfo,pairinfo,image_info);
+                        
+                        levelinfo.pairinfo = &pairinfo;
+                        
+                        for(int kk = 0 ; kk < levelinfo.pairinfo->SelectNumberOfPairs() ; kk++)
+                        {
+                            printf("ref\t%d\ttar\t%d\n",levelinfo.pairinfo->pairs(kk).m_X,levelinfo.pairinfo->pairs(kk).m_Y);
+                        }
+                        
                         printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
                         
                         for(int ti = 0; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
