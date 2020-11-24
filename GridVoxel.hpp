@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <algorithm>
+#include "log.hpp"
 #include <cstdlib>
 
 inline short DoubleToSignedChar_voxel(double val)
@@ -58,6 +59,12 @@ private:
     int get_index(int pair_id) const {
         auto it = std::find(_pairs.begin(), _pairs.end(), pair_id);
         if(it == _pairs.end()) {
+            LOG("Failed to find pair id %d\n", pair_id);
+            LOG("number of pairs: %d\n", _pairs.size());
+            LOG("pairs:\n");
+            for(int i = 0; i < _pairs.size(); i++) {
+                LOG("    pair[%d] = %d\n", i, _pairs[i]);
+            }
             abort();
         }
         return std::distance(_pairs.begin(), it);
