@@ -3136,8 +3136,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     {
         long int pt_index = iter_count;
         grid_pair[iter_count].clear();
-        const int start_H     = minmaxHeight[0];
-        const int end_H       = minmaxHeight[1];
+        const int start_H     = minmaxHeight[0] - 1;
+        const int end_H       = minmaxHeight[1] + 1;
         int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, start_H, end_H);
 
         for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
