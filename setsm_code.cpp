@@ -4144,7 +4144,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             if(!check_matching_rate)
                                 InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight, Grid_pair);
                             
-                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
+                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight, Grid_pair);
                             
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                             
@@ -6948,7 +6948,8 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
     return selected_ref;
 }
 
-int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight,
+    const vector<vector<uint8_t>> &Grid_pair)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
     const char* save_filepath = proinfo->save_filepath;
@@ -7161,6 +7162,23 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
                                         if(check_select_pair)
                                         {
+                                            //DEBUG
+                                            auto &pairs = Grid_pair[pt_index];
+                                            int id = pair_number; //alias for my sanity
+                                            if(std::find(pairs.begin(), pairs.end(), id) == pairs.end()) {
+#pragma omp critical
+                                                {
+                                                LOG("Pair mismatch!\n");
+                                                LOG("pt_index: %d iter_height: %f pair_number: %d\n", pt_index, iter_height, pair_number);
+                                                LOG("pairs in list:\n");
+                                                for(int i = 0; i < pairs.size(); i++) {
+                                                    LOG("    pair[%d] = %d\n", i, pairs[i]);
+                                                }
+                                                LOG("quitting...\n");
+                                                exit(1);
+                                                }
+                                            }
+                                            //END DEBUG
                                             if(grid_voxel_hindex == floor(nccresult[pt_index].NumOfHeight/2.0))
                                                 GridPT3[pt_index].total_images = 1;
                                             
