@@ -7424,12 +7424,12 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             {
                                                 if(check_height_orientation && temp_rho > -1)
                                                 {
-                                                    grid_voxel[pt_index].flag_cal(grid_voxel_hindex, pair_number) = true;
+                                                    grid_voxel[pt_index].set_cal(grid_voxel_hindex, pair_number, true);
                                                     grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(db_INCC);
                                                 }
                                                 else
                                                 {
-                                                    grid_voxel[pt_index].flag_cal(grid_voxel_hindex, pair_number) = false;
+                                                    grid_voxel[pt_index].set_cal(grid_voxel_hindex, pair_number, false);
                                                     grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(-1);
                                                 }
                                             }
@@ -7985,7 +7985,7 @@ void SGM_start_pos(const ProInfo *proinfo, NCCresult *nccresult, GridVoxel &grid
                 
                 if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
-                    if(grid_voxel[pt_index].flag_cal(height_step, count))
+                    if(grid_voxel[pt_index].is_cal(height_step, count))
                     {
                         WNCC_sum += SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, count))*bhratio;
                         pair_count++;
@@ -8028,7 +8028,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                 
                 if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
-                    if(grid_voxel[pt_index].flag_cal(height_step, count))
+                    if(grid_voxel[pt_index].is_cal(height_step, count))
                     {
                         WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, count));
                         
@@ -8050,7 +8050,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                             
                             if(t_index_h_index == 0 && t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight)
                             {
-                                if(grid_voxel[t_index].flag_cal(t_index_h_index, count) && grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                if(grid_voxel[t_index].is_cal(t_index_h_index, count) && grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
@@ -8064,7 +8064,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index, count))
                                 {
                                     V3 = LHcost_pre[t_index_h_index];
                                     V4 = maxWNCC - P2;
@@ -8076,7 +8076,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V4 = maxWNCC - P2;
@@ -8102,7 +8102,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                             }
                             else if(t_index_h_index == nccresult[t_index].NumOfHeight - 1 && t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight)
                             {
-                                if(grid_voxel[t_index].flag_cal(t_index_h_index, count) && grid_voxel[t_index].flag_cal(t_index_h_index_1, count))
+                                if(grid_voxel[t_index].is_cal(t_index_h_index, count) && grid_voxel[t_index].is_cal(t_index_h_index_1, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
@@ -8116,7 +8116,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index, count))
                                 {
                                     V3 = LHcost_pre[t_index_h_index];
                                     V4 = maxWNCC - P2;
@@ -8128,7 +8128,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index_1, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index_1, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V4 = maxWNCC - P2;
@@ -8157,8 +8157,8 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight )
                             {
                                 
-                                if(grid_voxel[t_index].flag_cal(t_index_h_index, count) && grid_voxel[t_index].flag_cal(t_index_h_index_1, count)
-                                   && grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                if(grid_voxel[t_index].is_cal(t_index_h_index, count) && grid_voxel[t_index].is_cal(t_index_h_index_1, count)
+                                   && grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
@@ -8174,7 +8174,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index, count) && grid_voxel[t_index].flag_cal(t_index_h_index_1, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index, count) && grid_voxel[t_index].is_cal(t_index_h_index_1, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
@@ -8189,7 +8189,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index_1, count) && grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index_1, count) && grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
@@ -8204,7 +8204,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index, count) && grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index, count) && grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V3 = LHcost_pre[t_index_h_index];
@@ -8219,7 +8219,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index, count))
                                 {
                                     V3 = LHcost_pre[t_index_h_index];
                                     V4 = maxWNCC - P2;
@@ -8232,7 +8232,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index_1, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index_1, count))
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
                                     V4 = maxWNCC - P2;
@@ -8244,7 +8244,7 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                                     //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
                                     //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
-                                else if(grid_voxel[t_index].flag_cal(t_index_h_index_2, count))
+                                else if(grid_voxel[t_index].is_cal(t_index_h_index_2, count))
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
                                     V4 = maxWNCC - P2;
@@ -8369,15 +8369,16 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                 
                 if(check_select_pair)
                 {
-                    db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
-                    db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
                     
                     double temp_rho = 0;
                     double WNCC_temp_rho = 0;
                     WNCC_temp_rho = db_INCC;
                     
-                    if(grid_voxel[pt_index].flag_cal(height_step, pair_number) && db_INCC > -1)
+                    if(grid_voxel[pt_index].is_cal(height_step, pair_number))
                     {
+                        db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
+                        db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
+
                         double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
                         
                         if((Pyramid_step == 4 && iteration == 1))
@@ -8494,13 +8495,13 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                     
                     if(check_select_pair)
                     {
-                        db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
-                        db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
                         
                         double temp_rho = 0;
                         
-                        if(grid_voxel[pt_index].flag_cal(height_step, pair_number) && db_INCC > -1)
+                        if(grid_voxel[pt_index].is_cal(height_step, pair_number))
                         {
+                            db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
+                            db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
                             double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
                             
                             if((Pyramid_step == 4 && iteration == 1))
@@ -9622,11 +9623,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(check_select_pair)
                 {
-                    db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pairnumber]);
-                    db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pairnumber));
                     
-                    if(grid_voxel[pt_index].flag_cal(height_step, pairnumber) && db_INCC > -1)
+                    if(grid_voxel[pt_index].is_cal(height_step, pairnumber))
                     {
+                        db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pairnumber]);
+                        db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pairnumber));
+
                         //double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
                         
                         //if((Pyramid_step == 4 && iteration == 1))

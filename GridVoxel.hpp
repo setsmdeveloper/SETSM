@@ -21,19 +21,33 @@ class VoxelTower {
 public:
     VoxelTower() : _num_pairs(0) {}
 
-    bool& flag_cal(size_t h_index, int pair_id) {
-        return _flag_cal[h_index * _num_pairs + get_index(pair_id)].val;
-    }
     short& INCC(size_t h_index, int pair_id) {
-        return _INCC[h_index * _num_pairs + get_index(pair_id)];
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            dbg_crash(pair_id);
+        return _INCC[h_index * _num_pairs + pair_index];
     }
 
     // const versions of the above
-    const bool& flag_cal(size_t h_index, int pair_id) const {
-        return _flag_cal[h_index * _num_pairs + get_index(pair_id)].val;
-    }
     const short& INCC(size_t h_index, int pair_id) const {
-        return _INCC[h_index * _num_pairs + get_index(pair_id)];
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            dbg_crash(pair_id);
+        return _INCC[h_index * _num_pairs + pair_index];
+    }
+
+    bool is_cal(size_t h_index, int pair_id) {
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            return false;
+        return _flag_cal[h_index * _num_pairs + pair_index].val;
+    }
+
+    void set_cal(size_t h_index, int pair_id, bool val) {
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            dbg_crash(pair_id);
+        _flag_cal[h_index * _num_pairs + pair_index].val = val;
     }
 
     /** Set size to zero and clear memory */
@@ -59,15 +73,19 @@ private:
     int get_index(int pair_id) const {
         auto it = std::find(_pairs.begin(), _pairs.end(), pair_id);
         if(it == _pairs.end()) {
-            LOG("Failed to find pair id %d\n", pair_id);
-            LOG("number of pairs: %d\n", _pairs.size());
-            LOG("pairs:\n");
-            for(int i = 0; i < _pairs.size(); i++) {
-                LOG("    pair[%d] = %d\n", i, _pairs[i]);
-            }
-            abort();
+            return -1;
         }
         return std::distance(_pairs.begin(), it);
+    }
+
+    void dbg_crash(int pair_id) const {
+        LOG("Failed to find pair id %d\n", pair_id);
+        LOG("number of pairs: %d\n", _pairs.size());
+        LOG("pairs:\n");
+        for(int i = 0; i < _pairs.size(); i++) {
+            LOG("    pair[%d] = %d\n", i, _pairs[i]);
+        }
+        abort();
     }
 
     struct BoolWrapper {
