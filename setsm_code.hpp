@@ -69,7 +69,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
 
 void CalMPP_8(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight, double CA,const double mean_product_res, double *MPP_simgle_image, double *MPP_stereo_angle, const int pair_number);
 
-void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight);
+void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight, const std::vector<std::vector<uint8_t>> &Grid_pair);
 
 double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelinfo);
 
@@ -147,7 +147,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info);
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char> *save_pair, CPairInfo &pairinfo);
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<uint8_t>> &save_pair, CPairInfo &pairinfo);
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[]);
 

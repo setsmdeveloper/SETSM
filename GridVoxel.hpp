@@ -2,6 +2,9 @@
 #define GRID_VOXEL_H
 
 #include <vector>
+#include <cstdint>
+#include <algorithm>
+#include <cstdlib>
 
 inline short DoubleToSignedChar_voxel(double val)
 {
@@ -15,21 +18,21 @@ inline double SignedCharToDouble_voxel(short val)
 
 class VoxelTower {
 public:
-    VoxelTower(int max_ncc) : ncc_len(max_ncc) {}
+    VoxelTower() : _num_pairs(0) {}
 
-    bool& flag_cal(size_t h_index, size_t index) {
-        return _flag_cal[h_index * ncc_len + index].val;
+    bool& flag_cal(size_t h_index, int pair_id) {
+        return _flag_cal[h_index * _num_pairs + get_index(pair_id)].val;
     }
-    short& INCC(size_t h_index, size_t index) {
-        return _INCC[h_index * ncc_len + index];
+    short& INCC(size_t h_index, int pair_id) {
+        return _INCC[h_index * _num_pairs + get_index(pair_id)];
     }
 
     // const versions of the above
-    const bool& flag_cal(size_t h_index, size_t index) const {
-        return _flag_cal[h_index * ncc_len + index].val;
+    const bool& flag_cal(size_t h_index, int pair_id) const {
+        return _flag_cal[h_index * _num_pairs + get_index(pair_id)].val;
     }
-    const short& INCC(size_t h_index, size_t index) const {
-        return _INCC[h_index * ncc_len + index];
+    const short& INCC(size_t h_index, int pair_id) const {
+        return _INCC[h_index * _num_pairs + get_index(pair_id)];
     }
 
     /** Set size to zero and clear memory */
@@ -43,13 +46,23 @@ public:
      * Initialize flag_cal values to false.
      * Initialize INCC values to -1
      */
-    void allocate(size_t n) {
-        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(true));
-        _INCC = std::vector<short>(n * ncc_len, DoubleToSignedChar_voxel(-1));
+    void allocate(size_t n, const std::vector<uint8_t> &pairs) {
+        _pairs = pairs;
+        _num_pairs = _pairs.size();
+        _flag_cal = std::vector<BoolWrapper>(n * _num_pairs, BoolWrapper(true));
+        _INCC = std::vector<short>(n * _num_pairs, DoubleToSignedChar_voxel(-1));
     }
 
 
 private:
+    int get_index(int pair_id) const {
+        auto it = std::find(_pairs.begin(), _pairs.end(), pair_id);
+        if(it == _pairs.end()) {
+            abort();
+        }
+        return std::distance(_pairs.begin(), it);
+    }
+
     struct BoolWrapper {
         BoolWrapper(bool b) { val = b; }
         bool val;
@@ -58,7 +71,8 @@ private:
     // Cannot use bool here, it's not thread safe. Need to wrap it instead.
     std::vector<BoolWrapper> _flag_cal;
     std::vector<short> _INCC;
-    size_t ncc_len;
+    std::vector<uint8_t> _pairs;
+    size_t _num_pairs;
 
 };
 
@@ -67,7 +81,7 @@ class GridVoxel {
 public:
     typedef std::vector<VoxelTower>::size_type size_type;
 
-    GridVoxel(size_t length, int max_ncc) : towers(length, VoxelTower(max_ncc)) {}
+    GridVoxel(size_t length) : towers(length) {}
 
     VoxelTower & operator[](size_type n) {
         return towers[n];

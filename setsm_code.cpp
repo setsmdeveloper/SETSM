@@ -3128,7 +3128,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     //exit(1);
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char>* grid_pair, CPairInfo &pairinfo)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<uint8_t>> &grid_pair, CPairInfo &pairinfo)
 {
     vector<unsigned char> actual_pair_save;
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
@@ -3922,7 +3922,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.Grid_wgs = Grid_wgs;
                         levelinfo.reference_id = 0;
                         
-                        vector<unsigned char>* Grid_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),Grid_length);
+                        vector<vector<uint8_t>> Grid_pair = vector<vector<uint8_t>>(Grid_length);
                         //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
@@ -3935,12 +3935,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             {
                                 long int pt_index = trow*Size_Grid2D.width + tcol;
                                 fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
-                                Grid_pair[pt_index].clear();
-                                vector<unsigned char>().swap(Grid_pair[pt_index]);
                             }
                             fprintf(fid_grid,"\n");
                         }
-                        free(Grid_pair);
                         fclose(fid_grid);
                         
                         
@@ -4063,7 +4060,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         printf("Creating GridVoxel with num pairs: %d\n", pairinfo_return.SelectNumberOfPairs());
                         auto grid_voxel_size = check_matching_rate ? 0 : Size_Grid2D.width*Size_Grid2D.height;
-                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size, pairinfo_return.SelectNumberOfPairs());
+                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size);
                         
                         
                         
@@ -4145,7 +4142,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             vector<D3DPOINT> MatchedPts_list;
                             
                             if(!check_matching_rate)
-                                InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight);
+                                InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight, Grid_pair);
                             
                             const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                             
@@ -5113,7 +5110,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         if(level == 0 && final_level_iteration == 4)
                             level = -1;
-                        
+
                     }
                     printf("relese data size\n");
                     
@@ -6464,7 +6461,7 @@ double GetHeightStep_Planet(int Pyramid_step, double im_resolution, LevelInfo &r
     return HS;
 }
 
-void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight)
+void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, NCCresult* nccresult,const int iteration, const double *minmaxHeight, const vector<vector<uint8_t>> &Grid_pair)
 {
     const double height_step = *plevelinfo.height_step;
     const uint8 pyramid_step = *plevelinfo.Pyramid_step;
@@ -6649,7 +6646,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
                         
                         nccresult[t_i].NumOfHeight = NumberofHeightVoxel;
                         
-                        grid_voxel[t_i].allocate(NumberofHeightVoxel);
+                        grid_voxel[t_i].allocate(NumberofHeightVoxel, Grid_pair[t_i]);
                         
                     }
                     else
