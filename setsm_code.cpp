@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <memory>
+#include <map>
 
 #include "setsm_code.hpp"
 #include "log.hpp"
@@ -7169,11 +7170,30 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
 #pragma omp critical
                                                 {
                                                 LOG("Pair mismatch!\n");
+                                                LOG("SelectNumberOfPairs: %d\n", plevelinfo.pairinfo->SelectNumberOfPairs());
+                                                LOG("minHeight: %d\n", nccresult[pt_index].minHeight);
+                                                LOG("maxHeight: %d\n", nccresult[pt_index].maxHeight);
+                                                LOG("Half_template_size: %d\n", Half_template_size);
+                                                LOG("pair number is %d\n", pair_number);
+                                                LOG("id is %d\n", id);
                                                 LOG("pt_index: %d iter_height: %f pair_number: %d\n", pt_index, iter_height, pair_number);
                                                 LOG("pairs in list:\n");
                                                 for(int i = 0; i < pairs.size(); i++) {
                                                     LOG("    pair[%d] = %d\n", i, pairs[i]);
                                                 }
+                                                //enum SensorType {SB , AB};
+                                                //enum SensorProvider {DG, PL, PT};
+                                                std::map<SensorType, std::string> sensor_names = 
+                                                    { {AB, "AB"}, {SB,"SB"} };
+                                                std::map<SensorProvider, std::string> sensor_providers = 
+                                                    { {DG, "DG"}, {PL, "PL"}, {PT, "PT"}};
+                                                LOG("sensor type: %s - sensor provider:%s\n",
+                                                    sensor_names[proinfo->sensor_type].c_str(),
+                                                    sensor_providers[proinfo->sensor_provider].c_str()
+                                                    );
+                                                LOG("reference_id: %d - target_id: %d\n", reference_id, ti);
+                                                LOG("selected_pair: %d\n", GridPT3[pt_index].selected_pair);
+
                                                 LOG("quitting...\n");
                                                 exit(1);
                                                 }
