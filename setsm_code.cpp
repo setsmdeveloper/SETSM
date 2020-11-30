@@ -2509,6 +2509,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         if(!proinfo->check_checktiff)
                         {
+                            // Possibly OOB read here
                             for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
                                 fprintf(pMetafile,"RA Params=%d\t%d\t%f\t%f\t%f\n",pairinfo.pairs(ti).m_X,pairinfo.pairs(ti).m_Y,Imageparams[ti][0],Imageparams[ti][1],pairinfo.BHratio(ti));
                    
@@ -3443,6 +3444,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 {
                     sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
+                    // possible OOB read here
                     for(int ti = 0 ; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\t%d\t%d\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1],pairinfo_return.pairs(ti).m_X,pairinfo_return.pairs(ti).m_Y,pairinfo_return.BHratio(ti));
                     
@@ -5198,6 +5200,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 Imageparams[ti][0] /= RA_count[ti];
                 Imageparams[ti][1] /= RA_count[ti];
                 
+                // Posible OOB read somewhere in here (according to asan)
                 printf("RPC bias %d\t%f\t%f\t%d\t%d\t%f\n",ti,Imageparams[ti][0],Imageparams[ti][1],pairinfo_return.pairs(ti).m_X,pairinfo_return.pairs(ti).m_Y,pairinfo_return.BHratio(ti));
             }
         }
@@ -9985,6 +9988,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                     }
                 } // end ti loop
                 
+                // Posible OOB read in here
                 //if(!check_AWNCC && GridPT3[pt_index].ncc_seleceted_pair > -1)
                 {
                     if(Pyramid_step >= 0)
