@@ -8723,8 +8723,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 
                 final_height = multimps[pt_index][selected_pair].peak_height;
                 
-                vector<unsigned char>* save_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
-                vector<double>* save_height = (vector<double>*)calloc(sizeof(vector<double>),(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
+                vector<vector<uint8_t>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+
                 double* mid_H = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
                 double* weight_height = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
                 double mean_bhratio;
@@ -8993,8 +8994,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     }
                 }
                 
-                free(save_height);
-                free(save_pair);
                 free(mid_H);
                 
                 
@@ -9186,6 +9185,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
+        free(LHcost_pre);
+        free(LHcost_curr);
       }
     }
     
@@ -9499,6 +9500,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
+        free(LHcost_pre);
+        free(LHcost_curr);
       }
     }
    
