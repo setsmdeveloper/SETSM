@@ -7105,14 +7105,14 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                 
                 if(!check_blunder_cell && nccresult[pt_index].NumOfHeight > 0)
                 {
-                    vector<double> *WNCC_save = NULL;
-                    vector<unsigned char> *WNCC_save_pair_ID = NULL;
                     
+                    int wncc_len = 0;
                     if(*plevelinfo.check_matching_rate)
                     {
-                        WNCC_save = (vector<double>*)calloc(sizeof(vector<double>),nccresult[pt_index].NumOfHeight);
-                        WNCC_save_pair_ID = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),nccresult[pt_index].NumOfHeight);
+                        wncc_len = nccresult[pt_index].NumOfHeight;
                     }
+                    vector<vector<double>> WNCC_save(wncc_len);
+                    vector<vector<uint8_t>> WNCC_save_pair_ID(wncc_len);
 
                     GridPT3[pt_index].selected_pair = select_referenceimage(pt_index, proinfo, plevelinfo, nccresult[pt_index].minHeight, nccresult[pt_index].maxHeight);
                     
@@ -7492,26 +7492,6 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                             nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
                         //printf("after peak Pyramid_step %d\t%d\n",Pyramid_step,iteration);
                     }
-                    
-                    if(*plevelinfo.check_matching_rate)
-                    {
-                        for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
-                        {
-                            WNCC_save[grid_voxel_hindex].clear();
-                            vector<double>().swap(WNCC_save[grid_voxel_hindex]);
-                            
-                            WNCC_save_pair_ID[grid_voxel_hindex].clear();
-                            vector<unsigned char>().swap(WNCC_save_pair_ID[grid_voxel_hindex]);
-                        }
-                        
-                        //for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
-                        //    WNCC_save_count[grid_voxel_hindex].clear();
-                            
-                        free(WNCC_save);
-                        free(WNCC_save_pair_ID);
-                        //free(WNCC_save_count);
-                    }
-                    
                 }//end check blunder cell
             }//end check_image_boundary
         } // end omp for
