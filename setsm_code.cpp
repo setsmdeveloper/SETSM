@@ -3128,7 +3128,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     //exit(1);
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char>* grid_pair, CPairInfo &pairinfo)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<uint8_t>> &grid_pair, CPairInfo &pairinfo)
 {
     vector<unsigned char> actual_pair_save;
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
@@ -3922,7 +3922,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.Grid_wgs = Grid_wgs;
                         levelinfo.reference_id = 0;
                         
-                        vector<unsigned char>* Grid_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),Grid_length);
+                        vector<vector<uint8_t>> Grid_pair(Grid_length);
                         //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
@@ -3935,12 +3935,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             {
                                 long int pt_index = trow*Size_Grid2D.width + tcol;
                                 fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
-                                Grid_pair[pt_index].clear();
-                                vector<unsigned char>().swap(Grid_pair[pt_index]);
                             }
                             fprintf(fid_grid,"\n");
                         }
-                        free(Grid_pair);
                         fclose(fid_grid);
                         
                         
