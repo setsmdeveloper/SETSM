@@ -315,36 +315,32 @@ typedef struct LSFinfo{
 class CPairInfo
 {
 private:
-    bool check_allocate;
     
     int m_NumberOfPairs;
     int m_SelectNumberOfPairs;
     int m_MinOffImage;
     float m_HeightStep;
     
-    UI2DPOINT *m_pairs;
-    float *m_BHratio;
-    float *m_ConvergenceAngle;
-    float *m_CenterDist;
-    float *m_SigmaZ;
+    std::vector<UI2DPOINT> m_pairs;
+    std::vector<float> m_BHratio;
+    std::vector<float> m_ConvergenceAngle;
+    std::vector<float> m_CenterDist;
+    std::vector<float> m_SigmaZ;
+
+    void allocate(int numberofpairs)
+    {
+        m_pairs = std::vector<UI2DPOINT>(numberofpairs);
+        m_BHratio = std::vector<float>(numberofpairs);
+        m_ConvergenceAngle = std::vector<float>(numberofpairs);
+        m_CenterDist = std::vector<float>(numberofpairs);
+        m_SigmaZ = std::vector<float>(numberofpairs);
+        
+        printf("allocate pairinfo array\n");
+    }
     
 public:
     CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0)
     {
-        check_allocate = false;
-    }
-    
-    void allocate(int numberofpairs)
-    {
-        check_allocate = true;
-        
-        m_pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*numberofpairs);
-        m_BHratio = (float*)malloc(sizeof(float)*numberofpairs);
-        m_ConvergenceAngle = (float*)malloc(sizeof(float)*numberofpairs);
-        m_CenterDist = (float*)malloc(sizeof(float)*numberofpairs);
-        m_SigmaZ = (float*)malloc(sizeof(float)*numberofpairs);
-        
-        printf("allocate pairinfo array\n");
     }
     
     CPairInfo(int numberofpairs) : m_NumberOfPairs(numberofpairs)
@@ -353,33 +349,11 @@ public:
         allocate(m_NumberOfPairs);
     }
     
-    ~CPairInfo()
-    {
-        if(check_allocate)
-            clearall();
-    }
-    
-    void clearall()
-    {
-        free(m_pairs);
-        free(m_BHratio);
-        free(m_ConvergenceAngle);
-        free(m_CenterDist);
-        free(m_SigmaZ);
-        
-        check_allocate = false;
-        m_NumberOfPairs = 0;
-        
-        printf("clear pairinfo array\n");
-    }
-    
     void SetNumberOfPairs(int numberofpairs)
     {
         m_NumberOfPairs = numberofpairs;
+        m_SelectNumberOfPairs = m_NumberOfPairs;
         
-        if(check_allocate)
-            clearall();
-   
         allocate(m_NumberOfPairs);
     }
     
@@ -400,59 +374,33 @@ public:
     
     void SetPairs(int pos, UI2DPOINT value)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-                m_pairs[pos] = value;
-        }
+        m_pairs[pos] = value;
     }
     
     void SetPairs(int pos, int X, int Y)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-            {
-                m_pairs[pos].m_X = X;
-                m_pairs[pos].m_Y = Y;
-            }
-        }
+        m_pairs[pos].m_X = X;
+        m_pairs[pos].m_Y = Y;
     }
     
     void SetBHratio(int pos, float value)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-                m_BHratio[pos] = value;
-        }
+        m_BHratio[pos] = value;
     }
     
     void SetConvergenceAngle(int pos, float value)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-                m_ConvergenceAngle[pos] = value;
-        }
+        m_ConvergenceAngle[pos] = value;
     }
     
     void SetCenterDist(int pos, float value)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-                m_CenterDist[pos] = value;
-        }
+        m_CenterDist[pos] = value;
     }
     
     void SetSigmaZ(int pos, float value)
     {
-        if(check_allocate)
-        {
-            if(pos < m_NumberOfPairs)
-                m_SigmaZ[pos] = value;
-        }
+        m_SigmaZ[pos] = value;
     }
     
     int& NumberOfPairs()
@@ -462,9 +410,6 @@ public:
     
     int& SelectNumberOfPairs()
     {
-        if(m_SelectNumberOfPairs == 0)
-            m_SelectNumberOfPairs = m_NumberOfPairs;
-            
         return m_SelectNumberOfPairs;
     }
     
@@ -501,19 +446,6 @@ public:
     float& SigmaZ(int pos)
     {
         return m_SigmaZ[pos];
-    }
-    
-    void Replace(CPairInfo &pair, int tarpos, int pos)
-    {
-        m_pairs[tarpos] = pair.pairs(pos);
-        m_BHratio[tarpos] = pair.BHratio(pos);
-        m_ConvergenceAngle[tarpos] = pair.ConvergenceAngle(pos);
-        m_CenterDist[tarpos] = pair.CenterDist(pos);
-        m_SigmaZ[tarpos] = pair.SigmaZ(pos);
-        
-        m_MinOffImage = pair.MinOffImageID();
-        m_HeightStep = pair.HeightStep();
-        
     }
 };
 
