@@ -2512,6 +2512,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         if(!proinfo->check_checktiff)
                         {
+                            // Possibly OOB read here
                             for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
                                 fprintf(pMetafile,"RA Params=%d\t%d\t%f\t%f\t%f\n",pairinfo.pairs(ti).m_X,pairinfo.pairs(ti).m_Y,Imageparams[ti][0],Imageparams[ti][1],pairinfo.BHratio(ti));
                    
@@ -3446,6 +3447,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 {
                     sprintf(save_file,"%s/txt/echo_result_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
                     fid         = fopen(save_file,"w");
+                    // possible OOB read here
                     for(int ti = 0 ; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
                         fprintf(fid,"RA param X = %f\tY = %f\t%d\t%d\t%f\n",t_Imageparams[ti][0],t_Imageparams[ti][1],pairinfo_return.pairs(ti).m_X,pairinfo_return.pairs(ti).m_Y,pairinfo_return.BHratio(ti));
                     
@@ -3925,7 +3927,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.Grid_wgs = Grid_wgs;
                         levelinfo.reference_id = 0;
                         
-                        vector<vector<uint8_t>> Grid_pair = vector<vector<uint8_t>>(Grid_length);
+                        vector<vector<uint8_t>> Grid_pair(Grid_length);
                         //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
@@ -5201,6 +5203,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 Imageparams[ti][0] /= RA_count[ti];
                 Imageparams[ti][1] /= RA_count[ti];
                 
+                // Posible OOB read somewhere in here (according to asan)
                 printf("RPC bias %d\t%f\t%f\t%d\t%d\t%f\n",ti,Imageparams[ti][0],Imageparams[ti][1],pairinfo_return.pairs(ti).m_X,pairinfo_return.pairs(ti).m_Y,pairinfo_return.BHratio(ti));
             }
         }
@@ -7109,14 +7112,14 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                 
                 if(!check_blunder_cell && nccresult[pt_index].NumOfHeight > 0)
                 {
-                    vector<double> *WNCC_save = NULL;
-                    vector<unsigned char> *WNCC_save_pair_ID = NULL;
                     
+                    int wncc_len = 0;
                     if(*plevelinfo.check_matching_rate)
                     {
-                        WNCC_save = (vector<double>*)calloc(sizeof(vector<double>),nccresult[pt_index].NumOfHeight);
-                        WNCC_save_pair_ID = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),nccresult[pt_index].NumOfHeight);
+                        wncc_len = nccresult[pt_index].NumOfHeight;
                     }
+                    vector<vector<double>> WNCC_save(wncc_len);
+                    vector<vector<uint8_t>> WNCC_save_pair_ID(wncc_len);
 
                     GridPT3[pt_index].selected_pair = select_referenceimage(pt_index, proinfo, plevelinfo, nccresult[pt_index].minHeight, nccresult[pt_index].maxHeight);
                     
@@ -7530,26 +7533,6 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                             nccresult[pt_index].max_WNCC = DoubleToSignedChar_result(max_WNCC);
                         //printf("after peak Pyramid_step %d\t%d\n",Pyramid_step,iteration);
                     }
-                    
-                    if(*plevelinfo.check_matching_rate)
-                    {
-                        for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
-                        {
-                            WNCC_save[grid_voxel_hindex].clear();
-                            vector<double>().swap(WNCC_save[grid_voxel_hindex]);
-                            
-                            WNCC_save_pair_ID[grid_voxel_hindex].clear();
-                            vector<unsigned char>().swap(WNCC_save_pair_ID[grid_voxel_hindex]);
-                        }
-                        
-                        //for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
-                        //    WNCC_save_count[grid_voxel_hindex].clear();
-                            
-                        free(WNCC_save);
-                        free(WNCC_save_pair_ID);
-                        //free(WNCC_save_count);
-                    }
-                    
                 }//end check blunder cell
             }//end check_image_boundary
         } // end omp for
@@ -8782,8 +8765,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 
                 final_height = multimps[pt_index][selected_pair].peak_height;
                 
-                vector<unsigned char>* save_pair = (vector<unsigned char>*)calloc(sizeof(vector<unsigned char>),(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
-                vector<double>* save_height = (vector<double>*)calloc(sizeof(vector<double>),(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
+                vector<vector<uint8_t>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+
                 double* mid_H = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
                 double* weight_height = (double*)malloc(sizeof(double)*(rlevelinfo.pairinfo->SelectNumberOfPairs()+1));
                 double mean_bhratio;
@@ -9052,8 +9036,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     }
                 }
                 
-                free(save_height);
-                free(save_pair);
                 free(mid_H);
                 
                 
@@ -9245,6 +9227,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
+        free(LHcost_pre);
+        free(LHcost_curr);
       }
     }
     
@@ -9558,6 +9542,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
+        free(LHcost_pre);
+        free(LHcost_curr);
       }
     }
    
@@ -10042,6 +10028,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                     }
                 } // end ti loop
                 
+                // Posible OOB read in here
                 //if(!check_AWNCC && GridPT3[pt_index].ncc_seleceted_pair > -1)
                 {
                     if(Pyramid_step >= 0)
