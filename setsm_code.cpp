@@ -28,6 +28,8 @@
 
 const char setsm_version[] = "4.3.6";
 
+bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
+
 int main(int argc,char *argv[])
 {
 
@@ -3165,7 +3167,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             
             if(check_stop && check_CA)
             {
-                if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
+                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
                     grid_pair[iter_count].push_back(pair_number);
                 
                 if(actual_pair_save.size() > 0)
@@ -13651,6 +13653,117 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
      */
     return check;
 
+}
+
+D2DPOINT get_pyramid_point(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double height, const int ti, const int pair_number, bool check_ref)
+{
+    D2DPOINT img;
+
+    if(proinfo->sensor_type == SB)
+    {
+        D3DPOINT gp = {pos_xy.m_X, pos_xy.m_Y, height};
+
+        double ref_LIA[] = {0.0, 0.0};
+        const double *LIA = check_ref ? ref_LIA : plevelinfo.ImageAdjust[pair_number];
+
+        img = GetObjectToImageRPC_single(plevelinfo.RPCs[ti], *plevelinfo.NumOfIAparam, LIA, gp);
+
+    }
+    else
+    {
+        D3DPOINT gp = {pos_xy_m.m_X, pos_xy_m.m_Y, height};
+
+        D2DPOINT photo  = GetPhotoCoordinate_single(gp, proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+
+        img = PhotoToImage_single(photo, proinfo->frameinfo.m_Camera.m_CCDSize, proinfo->frameinfo.m_Camera.m_ImageSize);
+    }
+    D2DPOINT py_pt = OriginalToPyramid_single(img, plevelinfo.py_Startpos[ti], *plevelinfo.Pyramid_step);
+
+    return py_pt;
+}
+
+constexpr uint32_t TOP    = 1 << 1;
+constexpr uint32_t BOTTOM = 1 << 2;
+constexpr uint32_t RIGHT  = 1 << 3;
+constexpr uint32_t LEFT   = 1 << 4;
+
+bool calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right) {
+    uint32_t code = 0;
+    if(p.m_X < bottom_left.m_X)
+        code |= LEFT;
+    if(p.m_X > top_right.m_X)
+        code |= RIGHT;
+    if(p.m_Y < bottom_left.m_Y)
+        code |= BOTTOM;
+    if(p.m_Y > top_right.m_Y)
+        code |= TOP;
+    return code;
+}
+
+// Uses the Cohen–Sutherland algorithm algoritm
+bool line_intersects_box(D2DPOINT p1,D2DPOINT p2,D2DPOINT bottom_left,D2DPOINT top_right) {
+
+    while(true)
+    {
+        // calculate code for points
+        uint32_t p1_code = calc_code(p1, bottom_left, top_right);
+        uint32_t p2_code = calc_code(p2, bottom_left, top_right);
+
+        // Either is inside
+        if(!p1_code || !p2_code)
+            return true;
+        // Both on same side, intersection not possible
+        if(p1_code & p1_code)
+            return false;
+
+        // nontrivial case - update p1 to to intersection
+        // of (extended) box. Will happen at most twice.
+        auto m = (p2.m_Y - p1.m_Y) / (p2.m_X - p1.m_X);
+        auto b = p1.m_Y - m * p1.m_X;
+        if(p1_code & TOP)
+            p1 = { top_right.m_Y/m - b/m, top_right.m_Y };
+        else if(p1_code & BOTTOM)
+            p1 = { bottom_left.m_Y/m - b/m, bottom_left.m_Y };
+        else if(p1_code & RIGHT)
+            p1 = { top_right.m_X, m * top_right.m_X + b };
+        else if(p1_code & LEFT)
+            p1 = { bottom_left.m_X, m * bottom_left.m_X + b };
+    }
+}
+
+/** Check if coordinate is possibly in image
+ *
+ * Arguments:
+ *  proinfo - program info
+ *  plevelinfo - [evel info
+ *  pos_xy_m - the point to check (some coord system)
+ *  pos_xy - the point to check (some other coord system)
+ *  minH - min Height
+ *  maxH - max Height
+ *  H_template_size - template size, used for padding
+ *  image_number - image id we want to check
+ *  pair_number - Used to get ImageAdjust param
+ *  check_ref - whether or not to use ImageAdjust (true = don't use)
+ *
+ */
+bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref)
+{
+    const int buff_pixel = 1;
+    
+    D2DPOINT min_pt = get_pyramid_point(proinfo, plevelinfo, pos_xy_m, pos_xy, minH, image_number, pair_number, check_ref);
+
+    D2DPOINT max_pt = get_pyramid_point(proinfo, plevelinfo, pos_xy_m, pos_xy, maxH, image_number, pair_number, check_ref);
+
+    //double buff = H_template_size + buff_pixel;
+    double buff = -10;
+    D2DPOINT bottom_left = { buff, buff };
+    D2DPOINT upper_right = {
+        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].width - buff,
+        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].height - buff,
+    };
+
+    return line_intersects_box(min_pt, max_pt, bottom_left, upper_right);
+    
 }
 
 bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref)
