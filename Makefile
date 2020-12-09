@@ -89,4 +89,6 @@ clean :
 	rm -f *.o git_description git_description.h
 
 git_description.h: git_description
-	echo "#define GIT_DESCRIPTION \"$(GIT_DESCRIPTION)\"" > $@
+	echo "#define GIT_DESCRIPTION \"$(GIT_DESCRIPTION)\"" > _$@
+	if ! cmp --silent -- $@ _$@; then cp _$@ $@; fi
+	rm _$@
