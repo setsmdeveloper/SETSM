@@ -159,6 +159,8 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
 
 bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
 
+bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
+
 bool check_image_boundary_height(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double Height, const int H_template_size, const int pair_number);
 
 double CalMemorySize_Post(CSize DEM_size,CSize Final_DEMsize);

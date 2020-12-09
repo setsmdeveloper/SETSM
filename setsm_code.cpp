@@ -28,8 +28,6 @@
 
 const char setsm_version[] = "4.3.6";
 
-bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
-
 int main(int argc,char *argv[])
 {
 
@@ -3168,8 +3166,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             
             if(check_stop && check_CA)
             {
-                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
+                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false)) {
                     grid_pair[iter_count].push_back(pair_number);
+                }
                 
                 if(actual_pair_save.size() > 0)
                 {
@@ -3928,8 +3927,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.reference_id = 0;
                         
                         vector<vector<uint8_t>> Grid_pair(Grid_length);
-                        //if(!flag_start)
-                            actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
+
+                        actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
+
                     
                         char fname_grid[500];
                         sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
@@ -7168,40 +7168,6 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             check_select_pair = reference_id == GridPT3[pt_index].selected_pair || ti == GridPT3[pt_index].selected_pair;
                                         if(check_select_pair)
                                         {
-                                            //DEBUG
-                                            auto &pairs = Grid_pair[pt_index];
-                                            int id = pair_number; //alias for my sanity
-                                            if(std::find(pairs.begin(), pairs.end(), id) == pairs.end()) {
-#pragma omp critical
-                                                {
-                                                LOG("Pair mismatch!\n");
-                                                LOG("SelectNumberOfPairs: %d\n", plevelinfo.pairinfo->SelectNumberOfPairs());
-                                                LOG("minHeight: %d\n", nccresult[pt_index].minHeight);
-                                                LOG("maxHeight: %d\n", nccresult[pt_index].maxHeight);
-                                                LOG("Half_template_size: %d\n", Half_template_size);
-                                                LOG("pt_index: %d iter_height: %f pair_number: %d\n", pt_index, iter_height, pair_number);
-                                                LOG("pairs in list:\n");
-                                                for(int i = 0; i < pairs.size(); i++) {
-                                                    LOG("    pair[%d] = %d\n", i, pairs[i]);
-                                                }
-                                                //enum SensorType {SB , AB};
-                                                //enum SensorProvider {DG, PL, PT};
-                                                std::map<SensorType, std::string> sensor_names = 
-                                                    { {AB, "AB"}, {SB,"SB"} };
-                                                std::map<SensorProvider, std::string> sensor_providers = 
-                                                    { {DG, "DG"}, {PL, "PL"}, {PT, "PT"}};
-                                                LOG("sensor type: %s - sensor provider:%s\n",
-                                                    sensor_names[proinfo->sensor_type].c_str(),
-                                                    sensor_providers[proinfo->sensor_provider].c_str()
-                                                    );
-                                                LOG("reference_id: %d - target_id: %d\n", reference_id, ti);
-                                                LOG("selected_pair: %d\n", GridPT3[pt_index].selected_pair);
-
-                                                LOG("quitting...\n");
-                                                exit(1);
-                                                }
-                                            }
-                                            //END DEBUG
                                             if(grid_voxel_hindex == floor(nccresult[pt_index].NumOfHeight/2.0))
                                                 GridPT3[pt_index].total_images = 1;
                                             
