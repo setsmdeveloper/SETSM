@@ -68,7 +68,7 @@ public:
     void allocate(size_t n, const std::vector<uint8_t> &pairs) {
         _pairs = pairs;
         _num_pairs = _pairs.size();
-        _flag_cal = std::vector<BoolWrapper>(n * _num_pairs, BoolWrapper(true));
+        _flag_cal = std::vector<BoolWrapper>(n * _num_pairs, BoolWrapper(false));
         _INCC = std::vector<short>(n * _num_pairs, DoubleToSignedChar_voxel(-1));
     }
 
