@@ -7152,14 +7152,17 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                     double gsd_ratio = ref_gsd/ti_gsd;
                                     //printf("ref ti gsd %f\t%f\t%f\n",ref_gsd,ti_gsd,gsd_ratio);
                                     //exit(1);
-                                    bool check_compute = false;
                                     /*if(GridPT3[pt_index].Matched_flag == 1 || GridPT3[pt_index].Matched_flag == 2)
                                     {
                                         if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,reference_id) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],iter_height,iter_height,Half_template_size,ti))
                                             check_compute = true;
                                     }
-                                    else*/ if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,reference_id,pair_number, true) && check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,nccresult[pt_index].maxHeight,Half_template_size,ti,pair_number, false))
-                                        check_compute = true;
+                                    else*/ 
+                                    bool check_compute = grid_voxel[pt_index].has_pair(pair_number) &&
+                                                    check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,
+                                                                              nccresult[pt_index].maxHeight,Half_template_size,reference_id,pair_number, true) &&
+                                                    check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,
+                                                                              nccresult[pt_index].maxHeight,Half_template_size,ti,pair_number, false);
                                     
                                     if(check_compute)
                                     {

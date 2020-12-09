@@ -50,6 +50,10 @@ public:
         _flag_cal[h_index * _num_pairs + pair_index].val = val;
     }
 
+    bool has_pair(int pair_id) {
+        return get_index(pair_id) >= 0;
+    }
+
     /** Set size to zero and clear memory */
     void clear() {
         std::vector<BoolWrapper>().swap(_flag_cal);
