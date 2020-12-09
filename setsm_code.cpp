@@ -13710,12 +13710,10 @@ bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, cons
 
     D2DPOINT max_pt = get_pyramid_point(proinfo, plevelinfo, pos_xy_m, pos_xy, maxH, image_number, pair_number, check_ref);
 
-    //double buff = H_template_size + buff_pixel;
-    double buff = -10;
-    D2DPOINT bottom_left = { buff, buff };
+    D2DPOINT bottom_left = { 0, 0 };
     D2DPOINT upper_right = {
-        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].width - buff,
-        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].height - buff,
+        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].width,
+        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].height,
     };
 
     return line_intersects_box(min_pt, max_pt, bottom_left, upper_right);
