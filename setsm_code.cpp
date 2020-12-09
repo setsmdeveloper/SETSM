@@ -3137,8 +3137,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     {
         long int pt_index = iter_count;
         grid_pair[iter_count].clear();
-        const int start_H     = minmaxHeight[0] - 1;
-        const int end_H       = minmaxHeight[1] + 1;
+        const int start_H     = minmaxHeight[0];
+        const int end_H       = minmaxHeight[1];
         int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, start_H, end_H);
 
         for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
@@ -4149,7 +4149,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             if(!check_matching_rate)
                                 InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight, Grid_pair);
                             
-                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight, Grid_pair);
+                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                             
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                             
@@ -6954,8 +6954,7 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
     return selected_ref;
 }
 
-int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight,
-    const vector<vector<uint8_t>> &Grid_pair)
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, NCCresult* nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
     const char* save_filepath = proinfo->save_filepath;
