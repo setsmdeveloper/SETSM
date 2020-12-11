@@ -9675,10 +9675,10 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
-        
+        /*
         if(max_roh > 0)
         {
-            if(Pyramid_step == 0 && iteration > 2)
+            if(Pyramid_step == 0 && iteration >= 2)
             {
                 nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                 nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
@@ -9708,8 +9708,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     nccresult[pt_index].result1 = DoubleToSignedChar_result(temp_nccresult_sec);
                 }
             }
-        }
-        /*
+        }*/
+        
         if(max_roh > 0 && temp_nccresult > -100)
         {
             if(Pyramid_step == 0 && iteration >= 2)
@@ -9747,7 +9747,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
             }
         }
-         */
+         
     }
     
     for(int i=0;i<Size_Grid2D.height;i++)
