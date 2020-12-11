@@ -3168,36 +3168,13 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false)) {
                     grid_pair[iter_count].push_back(pair_number);
                 }
-                
-                if(actual_pair_save.size() > 0)
-                {
-                    bool check_stop = false;
-                    int count = 0;
-                    while(count < actual_pair_save.size() && !check_stop)
-                    {
-                        if(actual_pair_save[count] == pair_number)
-                            check_stop = true;
-                        count++;
-                    }
-                    if(!check_stop)
-                    {
-                        actual_pair_save.push_back(pair_number);
-                    }
-                }
-                else
+
+                if(!contains(actual_pair_save, pair_number))
                 {
                     actual_pair_save.push_back(pair_number);
                 }
             }
         }
-    }
-    
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
-    {
-        int pair_number = actual_pair_save[count];
-        const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
-        const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-        printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
     }
     
     //reallocate pair_number by actual_pair_save
@@ -3229,33 +3206,22 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     for(int count = 0 ; count < actual_pair_save.size() ; count++)
     {
         int pair_number = actual_pair_save[count];
-        //temp_pairs.Replace(*plevelinfo.pairinfo,count,pair_number);
         
         temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
         temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
         temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
         temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
         temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
+
+        printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
+            temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
+            temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
+            temp_pairs.BHratio(count), temp_pairs.SigmaZ(count));
     }
+
+    *plevelinfo.pairinfo = temp_pairs;
+    pairinfo = temp_pairs;
     
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
-    {
-        //plevelinfo.pairinfo->Replace(temp_pairs,count,count);
-        plevelinfo.pairinfo->SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
-        plevelinfo.pairinfo->SetBHratio(count, temp_pairs.BHratio(count));
-        plevelinfo.pairinfo->SetCenterDist(count, temp_pairs.CenterDist(count));
-        plevelinfo.pairinfo->SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
-        plevelinfo.pairinfo->SetSigmaZ(count, temp_pairs.SigmaZ(count));
-        //pairinfo.Replace(temp_pairs,count,count);
-        
-        pairinfo.SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
-        pairinfo.SetBHratio(count, temp_pairs.BHratio(count));
-        pairinfo.SetCenterDist(count, temp_pairs.CenterDist(count));
-        pairinfo.SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
-        pairinfo.SetSigmaZ(count, temp_pairs.SigmaZ(count));
-        
-        printf("count %d\t%d\t%d\t%f\t%f\n",count, plevelinfo.pairinfo->pairs(count).m_X,plevelinfo.pairinfo->pairs(count).m_Y,plevelinfo.pairinfo->BHratio(count),plevelinfo.pairinfo->SigmaZ(count));
-    }
 }
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
