@@ -34,8 +34,6 @@ inline double SignedCharToDouble_result(short val);
 inline short DoubleToSignedChar_grid(double val);
 inline double SignedCharToDouble_grid(short val);
 
-inline short DoubleToSignedChar_voxel(double val);
-inline double SignedCharToDouble_voxel(short val);
 
 inline signed char FloatToSignedChar(float val);
 inline float SignedCharToFloat(signed char val);

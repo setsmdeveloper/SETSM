@@ -7,12 +7,12 @@
 #include "log.hpp"
 #include <cstdlib>
 
-inline short DoubleToSignedChar_voxel(double val)
+constexpr inline short DoubleToSignedChar_voxel(double val)
 {
     return (short)(val*1000.0);
 }
 
-inline double SignedCharToDouble_voxel(short val)
+constexpr inline double SignedCharToDouble_voxel(short val)
 {
     return (double)(val)/1000.0;
 }
@@ -40,14 +40,7 @@ public:
         int pair_index = get_index(pair_id);
         if(pair_index < 0)
             return false;
-        return _flag_cal[h_index * _num_pairs + pair_index].val;
-    }
-
-    void set_cal(size_t h_index, int pair_id, bool val) {
-        int pair_index = get_index(pair_id);
-        if(pair_index < 0)
-            dbg_crash(pair_id);
-        _flag_cal[h_index * _num_pairs + pair_index].val = val;
+        return _INCC[h_index * _num_pairs + pair_index] != INCC_UNSET;
     }
 
     bool has_pair(int pair_id) {
@@ -56,20 +49,17 @@ public:
 
     /** Set size to zero and clear memory */
     void clear() {
-        std::vector<BoolWrapper>().swap(_flag_cal);
         std::vector<short>().swap(_INCC);
     }
 
     /** Allocate n elements.
      *
-     * Initialize flag_cal values to false.
      * Initialize INCC values to -1
      */
     void allocate(size_t n, const std::vector<uint8_t> &pairs) {
         _pairs = pairs;
         _num_pairs = _pairs.size();
-        _flag_cal = std::vector<BoolWrapper>(n * _num_pairs, BoolWrapper(false));
-        _INCC = std::vector<short>(n * _num_pairs, DoubleToSignedChar_voxel(-1));
+        _INCC = std::vector<short>(n * _num_pairs, INCC_UNSET);
     }
 
 
@@ -97,8 +87,8 @@ private:
         bool val;
     };
 
+    static constexpr short INCC_UNSET = DoubleToSignedChar_voxel(-1);
     // Cannot use bool here, it's not thread safe. Need to wrap it instead.
-    std::vector<BoolWrapper> _flag_cal;
     std::vector<short> _INCC;
     std::vector<uint8_t> _pairs;
     size_t _num_pairs;

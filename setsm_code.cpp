@@ -7439,12 +7439,10 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             {
                                                 if(check_height_orientation && temp_rho > -1)
                                                 {
-                                                    grid_voxel[pt_index].set_cal(grid_voxel_hindex, pair_number, true);
                                                     grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(db_INCC);
                                                 }
                                                 else
                                                 {
-                                                    grid_voxel[pt_index].set_cal(grid_voxel_hindex, pair_number, false);
                                                     grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(-1);
                                                 }
                                             }
