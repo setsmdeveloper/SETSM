@@ -2001,7 +2001,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 double Image_res[2] = {proinfo->resolution, proinfo->resolution};
                 double Res[2] = {proinfo->resolution, proinfo->DEM_resolution};
                 
-                TransParam param;
+                TransParam param = {};
                 param.projection = args.projection;
                 param.utm_zone   = args.utm_zone;
                 
