@@ -13805,8 +13805,8 @@ bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, cons
 
     D2DPOINT bottom_left = { 0, 0 };
     D2DPOINT upper_right = {
-        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].width,
-        plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].height,
+        static_cast<double>(plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].width),
+        static_cast<double>(plevelinfo.py_Sizes[image_number][*plevelinfo.Pyramid_step].height),
     };
 
     return line_intersects_box(min_pt, max_pt, bottom_left, upper_right);
