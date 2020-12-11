@@ -16,7 +16,6 @@
 
 #include <atomic>
 #include <memory>
-#include <map>
 
 #include "setsm_code.hpp"
 #include "log.hpp"
