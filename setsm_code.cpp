@@ -4742,10 +4742,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 //Save triangulation and delete it since we will not use it
                                 FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
                                 delete origTri;
-                                
+                                printf("done TINCreate_list\n"); 
                                 count_tri = t_trilists.size();
                                 trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                
+                                printf("allocate trilists\n");
                                 for(int i = 0 ; i < t_trilists.size() ; i++)
                                     trilists[i] = t_trilists[i];
                                 
