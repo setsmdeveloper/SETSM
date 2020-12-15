@@ -118,25 +118,48 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 
 void DecisionMPs(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, D3DPOINT *ptslists);
 
+void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists);
+
+
+bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
+
+bool blunder_detection_TIN_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, vector<D3DPOINT> &pts, bool *detectedBlunders, long int num_points, vector<UI3DPOINT> &tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
+
+
+bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3);
+
+bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID *GridPT3);
+
+
 void DecisionMPs_setheight(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, D3DPOINT *ptslists, UI3DPOINT *trilists,int numoftri);
+
+void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, vector<D3DPOINT> &ptslists, vector<UI3DPOINT> &trilists,int numoftri);
+
 
 int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
 
 int AdjustParam(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, D3DPOINT* ptslists);
 
+int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, vector<D3DPOINT> &ptslists);
+
+
 bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix& left_patch_vecs, Matrix& right_patch_vecs);
 
 void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders);
 
-bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
+
 
 double SetMultiWeight(int pairnumbers, vector<double> &save_roh_positive);
 
 int Ortho_blunder(ProInfo *proinfo, LevelInfo &rlevelinfo, D3DPOINT *pts, int numOfPts, UI3DPOINT *tris,int numOfTri, UGRID *GridPT3);
 
-bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3);
+int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, int numOfPts, vector<UI3DPOINT> &tris,int numOfTri, UGRID *GridPT3);
+
 
 UGRID* SetHeightRange(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPts, const int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, D3DPOINT *pts, const UI3DPOINT *tris, const bool level_check_matching_rate);
+
+UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPts, const int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate);
+
 
 UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
 UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSize preSize,const CSize resize_Size,const double* preBoundary,const double* Boundary, const D2DPOINT *resize_Grid, UGRID *preGridPT3, const double pre_gridsize,const double* minmaxheight);

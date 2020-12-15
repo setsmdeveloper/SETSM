@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include <algorithm>
 #include <iostream>
 
 #include "Typedefine.hpp"
@@ -27,9 +26,8 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
-using std::min;
-using std::max;
-
+#define min(a, b)  (((a) < (b)) ? (a) : (b))
+#define max(a, b)  (((a) > (b)) ? (a) : (b))
 #define SUB_RATIO 4.6
 
 char* remove_ext(const char* mystr);
@@ -115,6 +113,8 @@ void GMA_double_sum(GMA_double *a, GMA_double *b, GMA_double *out);
 void GMA_double_printf(GMA_double *a);
 
 FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution);
+
+FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, int numofpts, vector<UI3DPOINT> &trilists, double min_max[], int *count_tri, double resolution);
 
 //void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);

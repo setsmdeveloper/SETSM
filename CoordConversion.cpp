@@ -28,7 +28,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -59,7 +59,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -201,7 +201,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -234,7 +234,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -513,7 +513,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
         double e2 = e * e;
@@ -563,7 +563,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return nullptr;
+            return false;
         }
         
         
@@ -613,7 +613,125 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
     
 }
 
-
+D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_ps)
+{
+    int m_NumOfPts = _numofpts;
+    if(_param.projection == 1)
+    {
+        bool m_bHemisphere = _param.bHemisphere;
+        double a = _param.a;
+        double e = _param.e;
+        double phi_c = _param.phi_c;
+        double lambda_0 = _param.lambda_0;
+        
+        int pm = _param.pm;
+        double t_c = _param.t_c;
+        double m_c = _param.m_c;
+            
+        D3DPOINT *m_sWGS;
+        
+        if (m_NumOfPts > 0) {
+            m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+        } else {
+            return false;
+        }
+        
+        double e2 = e * e;
+        double e4 = e2 * e2;
+        double e6 = e2 * e4;
+        double e8 = e4 * e4;
+        
+#pragma omp parallel for schedule(guided)
+        for (int i = 0; i < m_NumOfPts; i++) {
+          double x = _ps[i].m_X * pm;
+          double y = _ps[i].m_Y * pm;
+            
+            double rho = sqrt(pow(x, 2) + pow(y, 2));
+            double t = rho * t_c / (a * m_c);
+            
+            double chi = PI / 2 - 2 * atan(t);
+            double phi = chi + (e2 / 2 + 5 * e4 / 24 + e6 / 12 + 13 * e8 / 360) * sin(2 * chi) + (7 * e4 / 48 + 29 * e6 / 240 + 811 * e8 / 11520) * sin(4 * chi) +
+                (7 * e6 / 120 + 81 * e8 / 1120) * sin(6 * chi) + (4279 * e8 / 161280) * sin(8 * chi);
+            
+            double lambda = lambda_0 + atan2(x, -y);
+            phi = pm * phi;
+            lambda = pm * lambda;
+            if (lambda > PI) {
+                lambda = lambda - 2 * PI;
+            } else if (lambda < -PI) {
+                lambda = lambda + 2 * PI;
+            }
+            
+            m_sWGS[i].m_Y = RadToDeg * phi;
+            m_sWGS[i].m_X = RadToDeg * lambda;
+            m_sWGS[i].m_Z = _ps[i].m_Z;
+        }
+            
+        return m_sWGS;
+    }
+    else
+    {
+        int hemis = _param.pm; //1 = north, -1 = south
+        double sa = _param.sa;
+        double sb = _param.sb;
+        double e2 = _param.e2;
+        double e2cuadrada = _param.e2cuadrada;
+        double c = _param.c;
+            
+        D3DPOINT *m_sWGS;
+        
+        if (m_NumOfPts > 0) {
+            m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
+        } else {
+            return false;
+        }
+        
+        
+#pragma omp parallel for schedule(guided)
+        for (int i = 0; i < m_NumOfPts; i++) {
+            
+            double x = _ps[i].m_X;
+            double y = _ps[i].m_Y;
+            
+            double X = x - 500000;
+            double Y = y;
+            if (hemis < 0)
+                Y = Y - 10000000;
+            
+            int S = ( ( _param.utm_zone* 6 ) - 183 );
+            double lat =  Y / ( 6366197.724 * 0.9996 );
+            double v = ( c / ( sqrt( 1.0 + ( e2cuadrada * ( cos(lat)*cos(lat) ) ) ) ) ) * 0.9996;
+            double a = X / v;
+            
+            
+            double a1 = sin( 2* lat );
+            double a2 = a1* ( cos(lat)*cos(lat) );
+            double j2 = lat + ( a1 / 2.0 );
+            double j4 = ( ( 3 * j2 ) + a2 ) / 4.0;
+            double j6 = ( ( 5 * j4 ) + ( a2 * ( cos(lat)*cos(lat) )) ) / 3;
+            double alfa = ( 3 / 4.0 ) * e2cuadrada;
+            double beta = ( 5 / 3.0 ) * alfa * alfa;
+            double gama = ( 35 / 27.0 ) * alfa * alfa * alfa;
+            double Bm = 0.9996 * c * ( lat - alfa * j2 + beta * j4 - gama * j6 );
+            double b = ( Y - Bm ) / v;
+            double Epsi = ( ( e2cuadrada * a *a ) / 2.0 ) * ( cos(lat)*cos(lat) );
+            double Eps = a * ( 1 - ( Epsi / 3.0 ) );
+            double nab = ( b * ( 1 - Epsi ) ) + lat;
+            double senoheps = ( exp(Eps) - exp(-Eps) ) / 2;
+            double Delt = atan(senoheps / (cos(nab) ) );
+            double TaO = atan(cos(Delt) * tan(nab));
+            double longitude = (Delt * (180/PI) ) + S;
+            
+            double latitude = ( lat + ( 1 + e2cuadrada * (cos(lat)*cos(lat)) - ( 3/2.0 )* e2cuadrada * sin(lat) * cos(lat) * ( TaO - lat ) )* ( TaO - lat ) ) * (180/PI);
+            
+            m_sWGS[i].m_Y = latitude;
+            m_sWGS[i].m_X = longitude;
+            m_sWGS[i].m_Z = _ps[i].m_Z;
+        }
+        return m_sWGS;
+    }
+    
+}
 
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP)
 {
