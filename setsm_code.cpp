@@ -4388,13 +4388,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             vector<D3DPOINT> MatchedPts_list_blunder;
                             vector<D3DPOINT> MatchedPts_list_anchor;
                             
-                            //D3DPOINT *ptslists = NULL;
                             FILE *pMT_all = NULL;
                             
                             vector<UI3DPOINT> t_trilists;
                             vector<UI3DPOINT>::iterator it_tri;
-                            
-                            //UI3DPOINT *trilists;
                             
                             double min_max[4] = {subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]};
                             
@@ -4415,7 +4412,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         fclose(pMT_all);
                                     }
                                     
-                                    DecisionMPs(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, MatchedPts_list);
+                                    DecisionMPs_vector(proinfo, levelinfo, false,count_MPs,GridPT3, iteration, Hinterval,count_results_anchor, &minH_mps,&maxH_mps,minmaxHeight, MatchedPts_list);
                                     
                                     if(temp_asc_fprint)
                                         pMT_all = fopen(filename_mps_anchor,"w");
@@ -4441,7 +4438,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     printf("blunder detection for all points\n");
                                     
                                     //blunder detection
-                                    DecisionMPs(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, MatchedPts_list);
+                                    DecisionMPs_vector(proinfo, levelinfo, true,count_MPs,GridPT3, iteration, Hinterval,count_results, &minH_mps,&maxH_mps,minmaxHeight, MatchedPts_list);
                                     
                                     if(temp_asc_fprint)
                                         pMT_all = fopen(filename_mps_blunder,"w");
@@ -4458,7 +4455,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             if(minH_mps > MatchedPts_list[tcnt].m_Z)
                                                 minH_mps        = MatchedPts_list[tcnt].m_Z;
-                                            if(maxH_mps < ptslists[tcnt].m_Z)
+                                            if(maxH_mps < MatchedPts_list[tcnt].m_Z)
                                                 maxH_mps       = MatchedPts_list[tcnt].m_Z;
                                         }
                                     }
@@ -4484,20 +4481,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     long i;
                                     
-                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                    /*
-                                    for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                    {
-                                        ptslists[i] = MatchedPts_list_mps[i];
-                                        //if(level >= 3)
-                                        //    ptslists[i].flag = 1; //temporary blunders flag for ortho blunder
-                                    }
-                                    */
-                                    //MatchedPts_list_mps.clear();
-                                    
-                                    //vector<D3DPOINT>().swap(MatchedPts_list_mps);
-                                    
-                                    FullTriangulation *origTri = TINCreate_list_vector(MatchedPts_list_mps,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                    FullTriangulation *origTri = TINCreate_list_vector(MatchedPts_list_mps,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                     delete origTri;
                                     
                                     count_tri = t_trilists.size();
@@ -4608,7 +4592,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             if(minH_mps > MatchedPts_list[tcnt].m_Z)
                                                 minH_mps        = MatchedPts_list[tcnt].m_Z;
-                                            if(maxH_mps < ptslists[tcnt].m_Z)
+                                            if(maxH_mps < MatchedPts_list[tcnt].m_Z)
                                                 maxH_mps       = MatchedPts_list[tcnt].m_Z;
                                         }
                                     }
@@ -4625,31 +4609,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
                                     count_MPs = MatchedPts_list_mps.size();
                                     
-                                    /*
-                                    long i;
-                                    
-                                    ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
-                                    
-                                    for( i = 0 ; i < MatchedPts_list_mps.size() ; i++)
-                                        ptslists[i] = MatchedPts_list_mps[i];
-                                    
-                                    //MatchedPts_list_mps.clear();
-                                    
-                                    //vector<D3DPOINT>().swap(MatchedPts_list_mps);
-                                    /*
-                                    //Save triangulation and delete it since we will not use it
-                                    FullTriangulation *origTri = TINCreate_list(ptslists,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
-                                    delete origTri;
-                                    
-                                    count_tri = t_trilists.size();
-                                    trilists    = (UI3DPOINT*)malloc(sizeof(UI3DPOINT)*count_tri);
-                                    
-                                    for(i = 0 ; i < t_trilists.size() ; i++)
-                                        trilists[i] = t_trilists[i];
-                                    
-                                    t_trilists.clear();
-                                    vector<UI3DPOINT>().swap(t_trilists);
-                                    */
                                     if(pre_matched_pts == 0)
                                         matching_change_rate = 0;
                                     else
@@ -4674,35 +4633,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             check_level_end = true;
                                     }
                                 }
-                                /*
-                                for(long tcnt=0;tcnt<count_MPs;tcnt++)
-                                {
-                                    long t_col         = (long)((ptslists[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
-                                    long t_row         = (long)((ptslists[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
-                                    const long ref_index((long)Size_Grid2D.width*t_row + t_col);
-                                    
-                                    if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
-                                    {
-                                        multimps[ref_index][pair_number].peak_roh = ptslists[tcnt].m_roh;
-                                        multimps[ref_index][pair_number].peak_height = ptslists[tcnt].m_Z;
-                                        multimps[ref_index][pair_number].check_matched = true;
-                                        
-                                        //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps[ref_index][pair_number].peak_roh,multimps[ref_index][pair_number].peak_height);
-                                    }
-                                }
-                                 */
-                                //exit(1);
-                                
-                                //free(ptslists);
-                                //free(trilists);
                                 
                                 lower_level_match = true;
                             }
-                            //else
-                            //    lower_level_match = false;
-                            
-                            //MatchedPts_list.clear();
-                            //vector<D3DPOINT>().swap(MatchedPts_list);
                             
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
                             
@@ -4796,7 +4729,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 else
                                 {
                                     //Save triangulation and delete it since we will not use it
-                                    FullTriangulation *origTri = TINCreate_list_vector(MatchedPts_list_mps,count_MPs,&t_trilists,min_max,&count_tri, grid_resolution);
+                                    FullTriangulation *origTri = TINCreate_list_vector(MatchedPts_list_mps,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
                                     delete origTri;
                                     
                                     count_tri = t_trilists.size();
@@ -4906,8 +4839,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 
                                                 for(int k=0;k<count_MPs;k++)
                                                 {
-                                                    int t_col = floor((ptslists[k].m_X - subBoundary[0])/(double)tilesize_RA);
-                                                    int t_row = floor((ptslists[k].m_Y - subBoundary[1])/(double)tilesize_RA);
+                                                    int t_col = floor((MatchedPts_list_mps[k].m_X - subBoundary[0])/(double)tilesize_RA);
+                                                    int t_row = floor((MatchedPts_list_mps[k].m_Y - subBoundary[1])/(double)tilesize_RA);
                                                     
                                                     t_count[t_col+division_X*t_row] ++;
                                                 }
@@ -5231,16 +5164,16 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
     
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += image;
-    printf("memory 1 %f\t%f\n",Memory,image);
+    //printf("memory 1 %f\t%f\n",Memory,image);
     double GridPT  = (double)(sizeof(D2DPOINT)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT)*3; //gridwgs + gridXY, and temporary
-    printf("memory 2 %f\n",Memory);
+    //printf("memory 2 %f\n",Memory);
     double GridPT3_size = (double)(sizeof(UGRID)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT3_size);
-    printf("memory 3 %f\n",Memory);
+    //printf("memory 3 %f\n",Memory);
     double nccresult_size = (double)(sizeof(NCCresult)*(*(plevelinfo.Grid_length)));
     Memory += (nccresult_size);
-    printf("memory 4 %f\n",Memory);
+    //printf("memory 4 %f\n",Memory);
     
     //verticallinelocus_blunder orthoimage memory
     /*bool check_ortho = true;
@@ -5279,13 +5212,32 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         }
         Memory += (all_im_cd + all_im_cd_next);
     }
-    printf("memory 5 %f\n",Memory);
+    //printf("memory 5 %f\n",Memory);
+    
+    double possible_TIN_size = (*(plevelinfo.Grid_length))*0.8*3;
+    double blunder_size = (double)(sizeof(D3DPOINT)*(*(plevelinfo.Grid_length))*0.8)*2.0;
+    Memory += blunder_size;
+    blunder_size = (double)(sizeof(uint32)*(*(plevelinfo.Grid_length))*0.8);
+    Memory += blunder_size;
+    blunder_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size)*3.0;
+    Memory += blunder_size;
     
     *minimum_memory = (double)(Memory/1024.0/1024.0/1024.0);
     
     //InitializeVoxel memory
     if(!info->IsRA)
     {
+        //for ortho_blunder
+        double ortho_size = (double)(sizeof(double)*possible_TIN_size)*3.0;
+        Memory += ortho_size;
+        ortho_size = (double)(sizeof(int)*possible_TIN_size)*2.0;
+        Memory += ortho_size;
+        ortho_size = (double)(sizeof(bool)*possible_TIN_size);
+        Memory += ortho_size;
+        ortho_size = (double)(sizeof(double)*(*(plevelinfo.Grid_length)))*2.0;
+        Memory += ortho_size;
+        //printf("memory 6 %f\n",Memory);
+        
         double th_height = 1000;
         if(info->DEM_resolution <= 4)
             th_height = 500;
@@ -5294,7 +5246,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         
         double grid_voxel = 0;// = (double)(sizeof(GridVoxel)*(*(plevelinfo.Grid_length)));
         
-        //grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
+        grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
         short maxHeight = 0;
         for(long int t_i = 0 ; t_i < (*(plevelinfo.Grid_length)); t_i++)
         {
@@ -5336,7 +5288,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
                     if(NumberofHeightVoxel > 0 )
                     {
                         //3Dvoxel
-                        grid_voxel += (double)(NumberofHeightVoxel*(sizeof(bool)));
+                        grid_voxel += (double)(NumberofHeightVoxel*(sizeof(short))*plevelinfo.pairinfo->SelectNumberOfPairs());
                         grid_voxel += (double)(NumberofHeightVoxel*(sizeof(short))*plevelinfo.pairinfo->SelectNumberOfPairs());
                         
                         //SumCost in AWNCC_SGM
@@ -5354,12 +5306,17 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         
         Memory += grid_voxel;
     }
-    printf("memory 6 %f\n",Memory);
+    //printf("memory 6-1 %f\n",Memory);
     
-    
+    //for matched pts
     double matched_pts_size = (double)(sizeof(D3DPOINT)*(*(plevelinfo.Grid_length))*0.8)*2.0;
     Memory += matched_pts_size;
-    printf("memory 7 %f\n",Memory);
+    //printf("memory 7 %f\n",Memory);
+    
+    //for TIN
+    double tin_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size);
+    Memory += tin_size;
+    //printf("memory 8 %f\n",Memory);
     
     //for multiple matching
     if(plevelinfo.pairinfo->SelectNumberOfPairs() > 1)
@@ -5367,7 +5324,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         double multimps_size = (double)(sizeof(MultiMPs)*(*(plevelinfo.Grid_length))*plevelinfo.pairinfo->SelectNumberOfPairs());
         Memory += (multimps_size);
         
-        printf("memory 7-1 %f\n",Memory);
+        //printf("memory 7-1 %f\n",Memory);
     }
     
     double result = (double)(Memory/1024.0/1024.0/1024.0);
@@ -11716,7 +11673,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
     int count_tri;
     
     //Save triangulation for later use as we will remove blunders directly from this triangulation
-    origTri = TINCreate_list_vector(ptslists,count_MPs,&t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
+    origTri = TINCreate_list_vector(ptslists,count_MPs,t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
     
     count_tri = t_trilists.size();
     
@@ -11819,7 +11776,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
         
         if (new_blunder_cnt > 0)
         {
-            free(trilists);
+            //free(trilists);
             vector<UI3DPOINT> tt_trilists;
             //If we have many blunders compared to points in triangulations, almost certainly faster to ditch old triangulation
             //Change the threshold by adding a scale factor to either t_tri_counts or t_blunder_counts
@@ -11827,7 +11784,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
             {
                 //Must delete old triangulation and create new one, should be faster
                 delete origTri;
-                origTri = TINCreate_list_vector(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution);
+                origTri = TINCreate_list(input_tri_pts, t_tri_counts, &tt_trilists, min_max, &count_tri, *rlevelinfo.grid_resolution);
             }
             else
             {
@@ -11929,7 +11886,7 @@ void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo,
     
     float* ortho_ncc = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     
-    SetHeightRange_blunder_vecotr(rlevelinfo,ptslists, count_MPs, trilists,numoftri, GridPT3);
+    SetHeightRange_blunder_vector(rlevelinfo,ptslists, count_MPs, trilists,numoftri, GridPT3);
     
     VerticalLineLocus_blunder(proinfo, rlevelinfo, ortho_ncc, GridPT3, iteration, false);
 
@@ -11937,7 +11894,46 @@ void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo,
 
 }
 
-void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders) {
+void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders)
+{
+    // if the flag is already 1 and it's an "old blunder",
+    // then we don't want to update it to 3. This can cause
+    // nondeterminism in the loop. However, the race here is
+    // okay. If it's an "old blunder", we'll always see 1 here.
+    // If it's a new blunder, we may see any of 0, 1 or 3 here.
+    // If it's a new blunder and 1, then detectedBlunders was
+    // already set, so we can exit early. Same with 3. If it's
+    // a new blunder and zero, but there's a race, that's fine
+    // too.
+    uint8_t prev = pts[index].flag;
+    if(prev != 0)
+        return;
+
+    // Only update the detectedBlunders value
+    // if we know that this is a new blunder.
+    // if it was previously zero, we know it is
+    // a new blunder. If it was not previously zero,
+    // there are two possible cases. First, it
+    // was already a blunder. In that case, we don't
+    // want to set detectedBlunders. Alternatively,
+    // it could be a new blunder but another thread
+    // changed it from zero to 1 or 3. In that case,
+    // the other thread/iteration would have
+    // updated detectedBlunders, so we don't need to.
+#pragma omp atomic capture
+    {
+        prev = pts[index].flag;
+        pts[index].flag = val;
+    }
+    if(prev == 0)
+    {
+#pragma omp atomic write
+        detectedBlunders[index] = true;
+    }
+}
+
+void set_blunder_vector(long int index, uint8_t val, vector<D3DPOINT> &pts, bool *detectedBlunders)
+{
     // if the flag is already 1 and it's an "old blunder",
     // then we don't want to update it to 3. This can cause
     // nondeterminism in the loop. However, the race here is
@@ -12685,7 +12681,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
     return true;
 }
 
-bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, vector<D3DPOINT> &pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp)
+bool blunder_detection_TIN_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, vector<D3DPOINT> &pts, bool *detectedBlunders, long int num_points, vector<UI3DPOINT> &tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp)
 {
     int IsRA(proinfo->IsRA);
     const uint8 pyramid_step(*rlevelinfo.Pyramid_step);
@@ -13280,7 +13276,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                                     }
 
                                     if(blunder_neighbor_index >= 0)
-                                        set_blunder(blunder_neighbor_index, 3, pts, detectedBlunders);
+                                        set_blunder_vector(blunder_neighbor_index, 3, pts, detectedBlunders);
                                 }
                             }
                             count++;
@@ -13366,7 +13362,7 @@ bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const 
                 // of just reading the array value because other threads may set
                 // the value to 3 as we're processing.
                 if(pt_is_blunder)
-                    set_blunder(index, 1, pts, detectedBlunders);
+                    set_blunder_vector(index, 1, pts, detectedBlunders);
             }
         }
         

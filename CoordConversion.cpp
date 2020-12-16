@@ -28,7 +28,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -59,7 +59,7 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D2DPOINT *) malloc(sizeof(D2DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -201,7 +201,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -234,7 +234,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
         if (m_NumOfPts > 0) {
             m_sPS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
 #pragma omp parallel for schedule(guided)
@@ -513,7 +513,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
         double e2 = e * e;
@@ -563,7 +563,7 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
         
@@ -633,7 +633,7 @@ D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
         double e2 = e * e;
@@ -683,7 +683,7 @@ D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_
         if (m_NumOfPts > 0) {
             m_sWGS = (D3DPOINT *) malloc(sizeof(D3DPOINT) * m_NumOfPts);
         } else {
-            return false;
+            return nullptr;
         }
         
         

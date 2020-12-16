@@ -147,6 +147,7 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
 
 void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders);
 
+void set_blunder_vector(long int index, uint8_t val, vector<D3DPOINT> &pts, bool *detectedBlunders);
 
 
 double SetMultiWeight(int pairnumbers, vector<double> &save_roh_positive);

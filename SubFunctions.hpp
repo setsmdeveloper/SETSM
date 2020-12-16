@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#include <algorithm>
 #include <iostream>
 
 #include "Typedefine.hpp"
@@ -26,8 +27,9 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
-#define min(a, b)  (((a) < (b)) ? (a) : (b))
-#define max(a, b)  (((a) > (b)) ? (a) : (b))
+using std::min;
+using std::max;
+
 #define SUB_RATIO 4.6
 
 char* remove_ext(const char* mystr);
