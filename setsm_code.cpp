@@ -3570,8 +3570,16 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             
             double max_Memory;
             double minmaxheight_mem[2];
-            minmaxheight_mem[0] =  floor((-1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
-            minmaxheight_mem[1] =  ceil((1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
+            if(proinfo->sensor_type == AB)
+            {
+                minmaxheight_mem[0] =  minmaxHeight[0];
+                minmaxheight_mem[1] =  minmaxHeight[1];
+            }
+            else
+            {
+                minmaxheight_mem[0] =  floor((-1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
+                minmaxheight_mem[1] =  ceil((1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
+            }
             //max_Memory = CalMemorySize_max(proinfo, minmaxheight_mem, Subsetsize, image_info, subBoundary);
             
             if(count_available_images >= 2)
@@ -6131,7 +6139,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
         else
         {
             
-            if(proinfo->sensor_type == AB)
+            //if(proinfo->sensor_type == AB)
             {
                 if(level >= 4)
                 {
@@ -6173,7 +6181,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
                 else
                     *Th_roh_next        = (double)(0.20);
             }
-            else
+            /*else
             {
                 if(level >= 4)
                 {
@@ -6215,7 +6223,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
                 else
                     *Th_roh_next        = (double)(0.20);
             }
-            
+            */
             *Th_roh_start       = (double)(*Th_roh);
         }
         
