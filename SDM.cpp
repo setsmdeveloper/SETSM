@@ -685,7 +685,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                    
                                     if(count_MPs > 5)
                                     {
-                                        int count_tri;
+                                        long int count_tri;
                                         D3DPOINT * ptslists = (D3DPOINT*)malloc(sizeof(D3DPOINT)*count_MPs);
                                         for(long i = 0 ; i < Matched_pts_col.size() ; i++)
                                             ptslists[i] = Matched_pts_col[i];

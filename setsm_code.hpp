@@ -93,7 +93,7 @@ void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double t
 
 void SGM_start_pos(const ProInfo *proinfo, NCCresult *nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, float* LHcost_pre,float **SumCost, double height_step_interval, const int pairnumber);
 
-void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber);
+void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber);
 
 void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, NCCresult *nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, int pair_number);
 
@@ -116,13 +116,17 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
-void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists);
+void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, long int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists);
+
+bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
 
 bool blunder_detection_TIN_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, vector<D3DPOINT> &pts, bool *detectedBlunders, long int num_points, vector<UI3DPOINT> &tris, long int num_triangles, UGRID *Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
 
-bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID *GridPT3);
+bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const long int numPts, UI3DPOINT *tris,const long num_triangles, UGRID *GridPT3);
 
-void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, vector<D3DPOINT> &ptslists, vector<UI3DPOINT> &trilists,int numoftri);
+bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID *GridPT3);
+
+void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, vector<D3DPOINT> &ptslists, vector<UI3DPOINT> &trilists,long int numoftri);
 
 
 int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> MatchedPts_list_anchor,vector<D3DPOINT> MatchedPts_list_blunder,vector<D3DPOINT> *MatchedPts_list_mps);
@@ -132,14 +136,16 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
 
 bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix& left_patch_vecs, Matrix& right_patch_vecs);
 
+void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders);
+
 void set_blunder_vector(long int index, uint8_t val, vector<D3DPOINT> &pts, bool *detectedBlunders);
 
 
 double SetMultiWeight(int pairnumbers, vector<double> &save_roh_positive);
 
-int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, int numOfPts, vector<UI3DPOINT> &tris,int numOfTri, UGRID *GridPT3);
+int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, long int numOfPts, vector<UI3DPOINT> &tris,long int numOfTri, UGRID *GridPT3);
 
-UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPts, const int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate);
+UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long int numOfPts, const long int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate);
 
 
 UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSize resize_Size, double* Boundary, D2DPOINT *resize_Grid, UGRID *preGridPT3, double pre_gridsize, double* minmaxheight);
@@ -184,6 +190,8 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
 void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_start, const int col_start,const int row_end, const int col_end, int buffer_clip, const int final_iteration, const int divide, signed char* Ortho_values, float* value, unsigned char* value_pt, const CSize Final_DEMsize, const double *FinalDEM_boundary);
 
 double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *GridPT3, double *minimum_memory, const uint8 iteration, const double *minmaxHeight);
+
+double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary);
 
 class TileIndexer {
     public:

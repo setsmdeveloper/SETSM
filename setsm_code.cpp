@@ -1335,8 +1335,8 @@ int main(int argc,char *argv[])
                     else
                     {
                         args.tilesize = atoi(argv[i+1]);
-                        if(args.tilesize > 20000)
-                            args.tilesize = 100000;
+                        //if(args.tilesize > 20000)
+                        //    args.tilesize = 100000;
                         
                         printf("%d\n",args.tilesize);
                         args.check_tilesize = true;
@@ -2520,6 +2520,51 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(!args.RA_only)
                         {
                             tile_size           = 4000;
+                            double base_4;
+                            if(proinfo->DEM_resolution == 2)
+                                base_4 = 6;
+                            else if(proinfo->DEM_resolution == 1)
+                                base_4 = 15;
+                            else if(proinfo->DEM_resolution == 0.5)
+                                base_4 = 30;
+                            else
+                                base_4 = 4;
+                            
+                            double required_memory_size;
+                            
+                            bool check_t = false;
+                            double base_tilesize = 4000;
+                            double iter_tile_size = base_tilesize;
+                            double tile_increase = 200;
+                            double DEM_res_rate = 1.0;
+                            if(proinfo->DEM_resolution == 1)
+                                DEM_res_rate = 0.90;
+                            else if(proinfo->DEM_resolution == 0.5)
+                                DEM_res_rate = 0.80;
+                            
+                            while(!check_t && iter_tile_size < 30000)
+                            {
+                                double tile_ratio = iter_tile_size/base_tilesize;
+                                required_memory_size = base_4*tile_ratio*DEM_res_rate;
+                                if(proinfo->System_memory - 5 > required_memory_size)
+                                {
+                                    iter_tile_size += tile_increase;
+                                    double increment = floor(iter_tile_size*0.1/100.0)*100.0;
+                                    iter_tile_size += increment;
+                               }
+                                else
+                                {
+                                    //double increment = floor(iter_tile_size*0.1/100.0)*100.0;
+                                    iter_tile_size -= (tile_increase);
+                                    check_t = true;
+                                }
+                                
+                                printf("required_memory_size %f\titer_tile_size %f\ttile_ratio %f\n",required_memory_size,iter_tile_size,tile_ratio);
+                            }
+                            
+                            tile_size = iter_tile_size;
+                            
+                            //exit(1);
                             
                             if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
                             {
@@ -3335,7 +3380,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
     int col_length = t_col_end-t_col_start;
     int *iterations = (int*)malloc(col_length*row_length*2*sizeof(int));
     int length = 0;
-    int count_tri;
+    long count_tri;
     
     for(row = iter_row_start; row < iter_row_end ; row++)
     {
@@ -3365,7 +3410,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
     }
 #endif
 
-    int tile_iter, i;
+    long tile_iter, i;
     while((tile_iter = tile_indices->next()) != -1)
     {
         row = iterations[2*tile_iter];
@@ -3521,6 +3566,13 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 if(proinfo->check_selected_image[index_image])
                     count_available_images++;
             }
+            
+            
+            double max_Memory;
+            double minmaxheight_mem[2];
+            minmaxheight_mem[0] =  floor((-1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
+            minmaxheight_mem[1] =  ceil((1.0 * RPCs[0][1][4] + RPCs[0][0][4])/10.0)*10;
+            //max_Memory = CalMemorySize_max(proinfo, minmaxheight_mem, Subsetsize, image_info, subBoundary);
             
             if(count_available_images >= 2)
             {
@@ -3930,19 +3982,20 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return);
                     
+                        
                         char fname_grid[500];
                         sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
                         FILE* fid_grid         = fopen(fname_grid,"w");
-                        for(int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                        for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                         {
-                            for(int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                            for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
                             {
                                 long int pt_index = trow*Size_Grid2D.width + tcol;
-                                fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
+                                //fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
                                 Grid_pair[pt_index].clear();
                                 vector<unsigned char>().swap(Grid_pair[pt_index]);
                             }
-                            fprintf(fid_grid,"\n");
+                            //fprintf(fid_grid,"\n");
                         }
                         free(Grid_pair);
                         fclose(fid_grid);
@@ -4055,7 +4108,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         if(level == 0)
                             iteration = final_level_iteration;
                         
-                        int pre_matched_pts=10;
+                        long int pre_matched_pts=10;
                         double matching_change_rate = 100;
                         const double rate_th = 0.00999999;
                         const int max_iteration = 9;
@@ -4064,19 +4117,18 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             mem_th = 10;
                         
                         double minimum_memory;
-                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,minmaxHeight);
+                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,minmaxheight_mem);
                         
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
                         
                         printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
-                        if(minimum_memory > proinfo->System_memory -2)
+                        if(minimum_memory > proinfo->System_memory - 2 && proinfo->IsRA)
                         {
-                            printf("System memory is not enough to run SETSM. Please reduce tilesize or assign more physical memory!!\n");
+                            printf("System memory is not enough to run SETSM RPCs bias compensation. Please assign more physical memory!!\n");
                             exit(1);
                         }
                         
-                        //exit(1);
                         
                         //check_matching_rate = true;
                         
@@ -4128,9 +4180,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             char filename_mps_blunder[500];
                             char filename_mps_all[500];
                             
-                            int count_results[2];
-                            int count_results_anchor[2];
-                            int count_MPs;
+                            long count_results[2];
+                            long count_results_anchor[2];
+                            long count_MPs;
                             bool check_ortho_cal = false;
                             
                             uint8 ortho_level = 2;
@@ -4499,7 +4551,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     if(level >= 3)
                                     {
-                                        int matched_pts = 0;
+                                        long int matched_pts = 0;
                                         vector<D3DPOINT> ortho_list;
                                         for(i=0;i<count_MPs;i++)
                                         {
@@ -4580,7 +4632,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         pMT_all = fopen(filename_mps_blunder,"w");
                                     
                                     count_results[0] = 0;
-                                    for(int tcnt=0;tcnt<count_MPs;tcnt++)
+                                    for(long int tcnt=0;tcnt<count_MPs;tcnt++)
                                     {
                                         if(MatchedPts_list[tcnt].flag != 1 && MatchedPts_list[tcnt].m_X >= subBoundary[0] && MatchedPts_list[tcnt].m_X <= subBoundary[2] && MatchedPts_list[tcnt].m_Y >= subBoundary[1] && MatchedPts_list[tcnt].m_Y <= subBoundary[3])
                                         {
@@ -4664,7 +4716,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     D3DPOINTSAVE *ptslists_save = (D3DPOINTSAVE*)calloc(count_MPs,sizeof(D3DPOINTSAVE));
                                     double minmaxBR[6] = {10000000, 10000000, -10000000, -10000000, 100000, -100000};
                                     
-                                    int i = 0;
+                                    long i = 0;
                                     
                                     if(temp_asc_fprint)
                                         pMT_all = fopen(filename_mps_asc,"w");
@@ -4837,7 +4889,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             {
                                                 int* t_count = (int*)calloc(sizeof(int),total_tile);
                                                 
-                                                for(int k=0;k<count_MPs;k++)
+                                                for(long int k=0;k<count_MPs;k++)
                                                 {
                                                     int t_col = floor((MatchedPts_list_mps[k].m_X - subBoundary[0])/(double)tilesize_RA);
                                                     int t_row = floor((MatchedPts_list_mps[k].m_Y - subBoundary[1])/(double)tilesize_RA);
@@ -5145,7 +5197,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
     const int level = *(plevelinfo.Pyramid_step);
     const int blunder_selected_level = *(plevelinfo.blunder_selected_level);
     
-    printf("%d\t%d\n",level,blunder_selected_level);
+    //printf("%d\t%d\n",level,blunder_selected_level);
     
     double LevelInfo_S = (double)(sizeof(LevelInfo));
     Memory += LevelInfo_S;
@@ -5164,25 +5216,26 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
     
     //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
     Memory += image;
-    //printf("memory 1 %f\t%f\n",Memory,image);
+    //printf("memory 1 %f\t%f\n",Memory/1024.0/1024.0/1024.0,image/1024.0/1024.0/1024.0);
     double GridPT  = (double)(sizeof(D2DPOINT)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT)*3; //gridwgs + gridXY, and temporary
-    //printf("memory 2 %f\n",Memory);
+    //printf("memory 2 %f\n",Memory/1024.0/1024.0/1024.0);
     double GridPT3_size = (double)(sizeof(UGRID)*(*(plevelinfo.Grid_length)));
     Memory += (GridPT3_size);
-    //printf("memory 3 %f\n",Memory);
+    //printf("memory 3 %f\n",Memory/1024.0/1024.0/1024.0);
     double nccresult_size = (double)(sizeof(NCCresult)*(*(plevelinfo.Grid_length)));
     Memory += (nccresult_size);
-    //printf("memory 4 %f\n",Memory);
+    //printf("memory 4 %f\n",Memory/1024.0/1024.0/1024.0);
     
     //verticallinelocus_blunder orthoimage memory
     /*bool check_ortho = true;
     if((level == 4 && iteration == 1) || info->IsRA == true)
         check_ortho = false;
     if(check_ortho)*/
+    if(!(level == 0 && iteration == 3))
     {
-        int sub_imagesize_w, sub_imagesize_h;
-        int sub_imagesize_w_next, sub_imagesize_h_next;
+        long int sub_imagesize_w, sub_imagesize_h;
+        long int sub_imagesize_w_next, sub_imagesize_h_next;
         double all_im_cd = 0;
         double all_im_cd_next = 0;
         double im_resolution = info->resolution*pwrtwo(blunder_selected_level);
@@ -5192,8 +5245,8 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         if(level > 0)
             im_resolution_next = im_resolution*pwrtwo(level-1);
         */
-        sub_imagesize_w = (int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
-        sub_imagesize_h = (int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
+        sub_imagesize_w = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
+        sub_imagesize_h = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
         /*
         if(level > 0)
         {
@@ -5212,31 +5265,41 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         }
         Memory += (all_im_cd + all_im_cd_next);
     }
-    //printf("memory 5 %f\n",Memory);
+    //printf("memory 5 %f\n",Memory/1024.0/1024.0/1024.0);
     
-    double possible_TIN_size = (*(plevelinfo.Grid_length))*0.8*3;
-    double blunder_size = (double)(sizeof(D3DPOINT)*(*(plevelinfo.Grid_length))*0.8)*2.0;
+    double possible_matching_pts = (*(plevelinfo.Grid_length))*0.8;
+    double possible_TIN_size = possible_matching_pts*3;
+    double blunder_size = (double)(sizeof(D3DPOINT)*possible_matching_pts)*2.0;
     Memory += blunder_size;
-    blunder_size = (double)(sizeof(uint32)*(*(plevelinfo.Grid_length))*0.8);
+    blunder_size = (double)(sizeof(uint32)*possible_matching_pts);
     Memory += blunder_size;
     blunder_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size)*3.0;
     Memory += blunder_size;
     
+    blunder_size = (double)(sizeof(float)*(*plevelinfo.Grid_length));
+    Memory += blunder_size;
+    blunder_size = (double)(sizeof(bool)*possible_matching_pts);
+    Memory += blunder_size;
+    //printf("memory 5-1 %f\n",Memory/1024.0/1024.0/1024.0);
     *minimum_memory = (double)(Memory/1024.0/1024.0/1024.0);
     
     //InitializeVoxel memory
     if(!info->IsRA)
     {
-        //for ortho_blunder
-        double ortho_size = (double)(sizeof(double)*possible_TIN_size)*3.0;
-        Memory += ortho_size;
-        ortho_size = (double)(sizeof(int)*possible_TIN_size)*2.0;
-        Memory += ortho_size;
-        ortho_size = (double)(sizeof(bool)*possible_TIN_size);
-        Memory += ortho_size;
-        ortho_size = (double)(sizeof(double)*(*(plevelinfo.Grid_length)))*2.0;
-        Memory += ortho_size;
-        //printf("memory 6 %f\n",Memory);
+     
+        if(level >= 2)
+        {
+            //for ortho_blunder
+            double ortho_size = (double)(sizeof(double)*possible_TIN_size)*3;
+            Memory += ortho_size;
+            ortho_size = (double)(sizeof(int)*possible_TIN_size);
+            Memory += ortho_size;
+            ortho_size = (double)(sizeof(bool)*possible_TIN_size);
+            Memory += ortho_size;
+            ortho_size = (double)(sizeof(double)*possible_matching_pts)*2.0;
+            Memory += ortho_size;
+            //printf("memory 6 %f\n",Memory/1024.0/1024.0/1024.0);
+        }
         
         double th_height = 1000;
         if(info->DEM_resolution <= 4)
@@ -5244,15 +5307,82 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         if(info->sensor_provider == PT)
             th_height = 10000;
         
-        double grid_voxel = 0;// = (double)(sizeof(GridVoxel)*(*(plevelinfo.Grid_length)));
+        double grid_voxel = 0;//(double)(sizeof(float)*(*(plevelinfo.Grid_length)));
         
-        grid_voxel += (double)(sizeof(float)*(*(plevelinfo.Grid_length)));
         short maxHeight = 0;
+        
+        double sum_voxel_mem = 0;
+        
+        const double MPP = plevelinfo.MPP;
+        double BufferOfHeight   = MPP*4.0*pwrtwo(level);
+        if(info->sensor_provider == PT)
+        {
+            BufferOfHeight   = MPP*1.0*pwrtwo(level);
+            
+            if(level == 0)
+            {
+                BufferOfHeight   = MPP;
+                
+                if (BufferOfHeight < 0.5)
+                    BufferOfHeight = 0.5;
+            }
+            
+            if(BufferOfHeight > 200)
+                BufferOfHeight = 200;
+        }
+        else
+        {
+            if (level == 1)
+            {
+                 BufferOfHeight = MPP*3;
+            }
+            else if(level == 0)
+            {
+                if(iteration == 1)
+                    BufferOfHeight = MPP*2;
+                else
+                    BufferOfHeight = MPP;
+                
+                if (BufferOfHeight < 0.5)
+                    BufferOfHeight = 0.5;
+            }
+            
+            if(info->pre_DEMtif)
+            {
+                if(BufferOfHeight > info->seedDEMsigma)
+                    BufferOfHeight = info->seedDEMsigma;
+                
+                //printf("buff %f seed %f \n",BufferOfHeight,info->seedDEMsigma);
+            }
+            
+            BufferOfHeight = ceil(BufferOfHeight);
+            
+            if(BufferOfHeight > 100)
+                BufferOfHeight = 100;
+            
+            //printf("BufferOfHeight = %f\n",BufferOfHeight);
+        }
+        
+        double height_interval = 2.0*BufferOfHeight;
+        if(level == info->pyramid_level)
+            height_interval = minmaxHeight[1] - minmaxHeight[0];
+        if(!(level == 0 && iteration == 3) && level < info->pyramid_level)
+        {
+            if(level == 0)
+                height_interval *= 3.0;
+            else
+                height_interval *= (3 + 4.0*level);
+        }
+        
+        //printf("height_interval = %f\n",height_interval);
+        
+#pragma omp parallel for schedule(dynamic,1) reduction(+:sum_voxel_mem)
         for(long int t_i = 0 ; t_i < (*(plevelinfo.Grid_length)); t_i++)
         {
             int selected_images;
             if(check_image_boundary(info,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7,selected_images))
             {
+                /*
                 bool check_blunder_cell = true;
                 
                 if ( level >= 2)
@@ -5280,19 +5410,19 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
                         }
                     }
                 }
-                
-                if(!check_blunder_cell)
+                */
+                //if(!check_blunder_cell)
                 {
-                    const int NumberofHeightVoxel = (int)((GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight)/(*(plevelinfo.height_step)));
+                    const int NumberofHeightVoxel = (int)(height_interval/(*(plevelinfo.height_step)));
                     
                     if(NumberofHeightVoxel > 0 )
                     {
                         //3Dvoxel
-                        grid_voxel += (double)(NumberofHeightVoxel*(sizeof(short))*plevelinfo.pairinfo->SelectNumberOfPairs());
-                        grid_voxel += (double)(NumberofHeightVoxel*(sizeof(short))*plevelinfo.pairinfo->SelectNumberOfPairs());
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(bool))*plevelinfo.pairinfo->SelectNumberOfPairs());
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(short))*plevelinfo.pairinfo->SelectNumberOfPairs());
                         
                         //SumCost in AWNCC_SGM
-                        grid_voxel += (double)(NumberofHeightVoxel*(sizeof(float)));
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(float)));
                         
                         if(maxHeight < NumberofHeightVoxel)
                             maxHeight = NumberofHeightVoxel;
@@ -5300,23 +5430,28 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
                 }
             }
         }
-        
+        grid_voxel += sum_voxel_mem;
         //LHcost_pre, curr, and temp in AWNCC_SGM
         grid_voxel += (double)(maxHeight*sizeof(float))*3.0;
         
         Memory += grid_voxel;
+        
+        //printf("memory 6-1 %f\t%d\n",Memory/1024.0/1024.0/1024.0,maxHeight);
     }
-    //printf("memory 6-1 %f\n",Memory);
+    
     
     //for matched pts
-    double matched_pts_size = (double)(sizeof(D3DPOINT)*(*(plevelinfo.Grid_length))*0.8)*2.0;
+    double matched_pts_size = (double)(sizeof(D3DPOINT)*possible_matching_pts)*2.0;
     Memory += matched_pts_size;
-    //printf("memory 7 %f\n",Memory);
+    //printf("memory 7 %f\n",Memory/1024.0/1024.0/1024.0);
     
-    //for TIN
-    double tin_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size);
-    Memory += tin_size;
-    //printf("memory 8 %f\n",Memory);
+    if(!(level == 0 && iteration == 3))
+    {
+        //for TIN
+        double tin_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size);
+        Memory += tin_size;
+        //printf("memory 8 %f\n",Memory/1024.0/1024.0/1024.0);
+    }
     
     //for multiple matching
     if(plevelinfo.pairinfo->SelectNumberOfPairs() > 1)
@@ -5324,7 +5459,7 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
         double multimps_size = (double)(sizeof(MultiMPs)*(*(plevelinfo.Grid_length))*plevelinfo.pairinfo->SelectNumberOfPairs());
         Memory += (multimps_size);
         
-        //printf("memory 7-1 %f\n",Memory);
+        //printf("memory 7-1 %f\n",Memory/1024.0/1024.0/1024.0);
     }
     
     double result = (double)(Memory/1024.0/1024.0/1024.0);
@@ -5332,6 +5467,456 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID *Grid
     return result;
 }
 
+double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary)
+{
+    double Max_memory = 0.0;;
+    double MPP;
+    double DEM_resolution = info->DEM_resolution;
+    CPairInfo pairinfo;
+    SetPairs(info,pairinfo,imageinfo);
+    
+    
+    if(info->sensor_type == SB)
+    {
+        double sum_MPP_stereo_angle = 0;
+        double MPP_stereo_angle;
+        for(int pair_number = 0 ; pair_number < pairinfo.SelectNumberOfPairs() ; pair_number++)
+        {
+            const int reference_id = pairinfo.pairs(pair_number).m_X;
+            const int ti = pairinfo.pairs(pair_number).m_Y;
+            
+            double CA = pairinfo.ConvergenceAngle(pair_number);
+            
+            double GSD = (imageinfo[reference_id].GSD.pro_GSD + imageinfo[ti].GSD.pro_GSD)/2.0;
+            
+            MPP_stereo_angle = pairinfo.SigmaZ(pair_number);
+            sum_MPP_stereo_angle += MPP_stereo_angle*MPP_stereo_angle;
+        }
+        MPP = sqrt(sum_MPP_stereo_angle)/pairinfo.SelectNumberOfPairs();
+    }
+    else
+    {
+        MPP = info->resolution*1.5;
+    }
+    
+    if(MPP > 50)
+        MPP = 50;
+    
+    printf("MPP %f\n",MPP);
+    
+    for(int level = info->pyramid_level ; level >= 0 ; level--)
+    {
+        double height_step;
+        
+        if(info->sensor_provider == PT)
+        {
+            double h_divide = 6;
+            height_step = MPP/h_divide*pwrtwo(level);
+            
+            double &&tt1 = height_step*100.0;
+            double &&tt2 = floor(tt1 + 0.1);
+            height_step = tt2/100.0;
+            
+            if(height_step < 0.5)
+                height_step = 0.5;
+        }
+        else
+        {
+            const double h_divide = 4;
+            
+            height_step = MPP/h_divide*pwrtwo(level);
+            
+            double tt1 = height_step*100.0;
+            double tt2 = floor(tt1 + 0.1);
+            height_step = tt2/100.0;
+        }
+        
+        //Set Grid_size
+        CSize max_Size_Grid2D(0,0);
+        for(int final_level_iteration = 1 ; final_level_iteration <= 3 ; final_level_iteration++)
+        {
+            double Memory = 0;
+            double image = 0;
+            
+            double py_resolution, grid_resolution;
+            if(info->IsRA)
+            {
+                py_resolution           = info->resolution*pwrtwo(info->pyramid_level+1);
+                grid_resolution         = info->resolution*pwrtwo(info->pyramid_level+1);
+                
+                if(py_resolution > 30)
+                {
+                    py_resolution = 30;
+                    grid_resolution = 30;
+                }
+            }
+            else
+            {
+                py_resolution   = (double)(info->resolution*pwrtwo(level));
+                grid_resolution = py_resolution;
+                
+                printf("pre resolution %f\t level %d\n",py_resolution,level);
+                
+                if(py_resolution > 32)//low-res original imagery
+                {
+                    py_resolution = (int)(py_resolution/4.0);
+                    grid_resolution = py_resolution;
+                }
+                else
+                {
+                    if(info->resolution >= 0.4)
+                    {
+                        if(level > 0)
+                        {
+                            if((py_resolution)*3 > DEM_resolution) //low-res DEM more than 8m
+                            {
+                                if(DEM_resolution > 8)
+                                {
+                                    py_resolution = DEM_resolution;
+                                }
+                                else
+                                {
+                                    if((py_resolution)*3 > 8)
+                                        py_resolution = 8;
+                                    else
+                                        py_resolution   = (py_resolution)*3;
+                                }
+                            }
+                            else
+                                py_resolution = DEM_resolution;
+                        }
+                        else if(level == 0)
+                        {
+                            if(DEM_resolution >= 2)
+                                py_resolution = DEM_resolution;
+                            else
+                            {
+                                if(final_level_iteration == 1)
+                                {
+                                    if(py_resolution < 2)
+                                    {
+                                        if((py_resolution)*4 > DEM_resolution)
+                                            py_resolution   = (py_resolution)*4;
+                                        else
+                                            py_resolution   = DEM_resolution;
+                                    }
+                                    else
+                                    {
+                                        py_resolution = DEM_resolution;
+                                    }
+                                }
+                                else if(final_level_iteration == 2)
+                                {
+                                    if(py_resolution < 2)
+                                    {
+                                        if((py_resolution)*2 > DEM_resolution)
+                                            py_resolution   = (py_resolution)*2;
+                                        else
+                                            py_resolution   = DEM_resolution;
+                                    }
+                                    else
+                                    {
+                                        py_resolution = DEM_resolution;
+                                    }
+                                }
+                                else
+                                    py_resolution   = DEM_resolution;
+                            }
+                            
+                        }
+                    }
+                    else
+                    {
+                        if(DEM_resolution >= 2)
+                            py_resolution = DEM_resolution;
+                        else
+                        {
+                            if(level == 0)
+                            {
+                                if(final_level_iteration == 1)
+                                {
+                                    if((py_resolution)*4 > DEM_resolution)
+                                        py_resolution   = (py_resolution)*4;
+                                    else
+                                        py_resolution   = DEM_resolution;
+                                }
+                                else if(final_level_iteration == 2)
+                                {
+                                    if((py_resolution)*2 > DEM_resolution)
+                                        py_resolution   = (py_resolution)*2;
+                                    else
+                                        py_resolution   = DEM_resolution;
+                                }
+                                else
+                                    py_resolution   = DEM_resolution;
+                            }
+                        }
+                    }
+                }
+                
+                //full computation
+                if(info->check_full_cal)
+                {
+                    py_resolution   = (double)(info->resolution*pwrtwo(level));
+                    grid_resolution = py_resolution;
+                }
+                
+                if(py_resolution < DEM_resolution)
+                    py_resolution = DEM_resolution;
+                
+                grid_resolution = py_resolution;
+            }
+            
+            CSize Size_Grid2D;
+            Size_Grid2D.width  = (int)(ceil((double)(Boundary[2] - Boundary[0])/(grid_resolution) ));
+            Size_Grid2D.height = (int)(ceil((double)(Boundary[3] - Boundary[1])/(grid_resolution) ));
+            
+            printf("level iteration %d\t%d\tSize_Grid2D  %d\t%d\t%f\n",level,final_level_iteration,Size_Grid2D.width,Size_Grid2D.height, grid_resolution);
+        
+        
+            long int Grid_length = (long int)Size_Grid2D.width*(long int)Size_Grid2D.height;
+            int blunder_selected_level;
+            
+            if(level >= info->pyramid_level)
+                blunder_selected_level = level;
+            else if(level >= 2)
+                blunder_selected_level = level;
+            else
+                blunder_selected_level = level + 1;
+            
+            printf("%d\t%d\n",level,blunder_selected_level);
+            
+            //for images
+            CSize **data_size_lr = (CSize**)malloc(sizeof(CSize*)*info->number_of_images);
+            for(int ti = 0 ; ti < info->number_of_images ; ti++)
+            {
+                data_size_lr[ti] = (CSize*)malloc(sizeof(CSize)*(level+1));
+                SetPySizes(data_size_lr[ti], Subsetsize[ti], level);
+                
+                for (int ttt = 0 ; ttt < level+1 ;ttt++)
+                    printf("data_size %d\t%d\n",data_size_lr[ti][ttt].width,data_size_lr[ti][ttt].height);
+            }
+            
+            for(int iter_level = 0 ; iter_level < level + 1 ; iter_level++)
+            {
+                for(int image_index = 0 ; image_index < info->number_of_images ; image_index++)
+                {
+                    long int data_length = (long int)data_size_lr[image_index][iter_level].height*(long int)data_size_lr[image_index][iter_level].width;
+                        
+                    image += (double)(sizeof(uint16)*data_length)*2.0; // original and magnitude image
+                    image += (double)(sizeof(uint8)*data_length); // orientation image
+                }
+            }
+            
+            //printf("%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3]);
+            Memory += image;
+            printf("memory 1 %f\t%f\n",Memory/1024.0/1024.0/1024.0,image/1024.0/1024.0/1024.0);
+            double GridPT  = (double)(sizeof(D2DPOINT)*Grid_length);
+            Memory += (GridPT)*3; //gridwgs + gridXY, and temporary
+            printf("memory 2 %f\n",Memory/1024.0/1024.0/1024.0);
+            double GridPT3_size = (double)(sizeof(UGRID)*Grid_length);
+            Memory += (GridPT3_size);
+            printf("memory 3 %f\n",Memory/1024.0/1024.0/1024.0);
+            double nccresult_size = (double)(sizeof(NCCresult)*Grid_length);
+            Memory += (nccresult_size);
+            printf("memory 4 %f\n",Memory/1024.0/1024.0/1024.0);
+            
+            //verticallinelocus_blunder orthoimage memory
+            if(!(level == 0 && final_level_iteration == 3))
+            {
+                int sub_imagesize_w, sub_imagesize_h;
+                int sub_imagesize_w_next, sub_imagesize_h_next;
+                double all_im_cd = 0;
+                double all_im_cd_next = 0;
+                double im_resolution = info->resolution*pwrtwo(blunder_selected_level);
+                double im_resolution_next;
+                long int sub_imagesize_total_next;
+                /*
+                if(level > 0)
+                    im_resolution_next = im_resolution*pwrtwo(level-1);
+                */
+                sub_imagesize_w = (int)((Boundary[2] - Boundary[0])/im_resolution)+1;
+                sub_imagesize_h = (int)((Boundary[3] - Boundary[1])/im_resolution)+1;
+                /*
+                if(level > 0)
+                {
+                    sub_imagesize_w_next = (int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution_next)+1;
+                    sub_imagesize_h_next = (int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution_next)+1;
+                    sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
+                }
+                */
+                long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
+                
+                for(int ti = 0 ; ti < info->number_of_images ; ti++)
+                {
+                    all_im_cd += (double)(sizeof(D2DPOINT)*sub_imagesize_total);
+                    //if(level > 0)
+                    //    all_im_cd_next += (double)(sizeof(D2DPOINT)*sub_imagesize_total_next);
+                }
+                Memory += (all_im_cd + all_im_cd_next);
+            }
+            printf("memory 5 %f\n",Memory/1024.0/1024.0/1024.0);
+            
+            double possible_matching_pts = Grid_length*0.8;
+            double possible_TIN_size = possible_matching_pts*3;
+            double blunder_size = (double)(sizeof(D3DPOINT)*possible_matching_pts)*2.0;
+            Memory += blunder_size;
+            blunder_size = (double)(sizeof(uint32)*possible_matching_pts);
+            Memory += blunder_size;
+            blunder_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size)*3.0;
+            Memory += blunder_size;
+            
+            blunder_size = (double)(sizeof(float)*Grid_length);
+            Memory += blunder_size;
+            blunder_size = (double)(sizeof(bool)*possible_matching_pts);
+            Memory += blunder_size;
+            printf("memory 5-1 %f\n",Memory/1024.0/1024.0/1024.0);
+            //*minimum_memory = (double)(Memory/1024.0/1024.0/1024.0);
+            
+            //InitializeVoxel memory
+            if(!info->IsRA)
+            {
+             
+                if(level >= 2)
+                {
+                    //for ortho_blunder
+                    double ortho_size = (double)(sizeof(double)*possible_TIN_size)*3;
+                    Memory += ortho_size;
+                    ortho_size = (double)(sizeof(int)*possible_TIN_size);
+                    Memory += ortho_size;
+                    ortho_size = (double)(sizeof(bool)*possible_TIN_size);
+                    Memory += ortho_size;
+                    ortho_size = (double)(sizeof(double)*possible_matching_pts)*2.0;
+                    Memory += ortho_size;
+                    printf("memory 6 %f\n",Memory/1024.0/1024.0/1024.0);
+                }
+                
+                double grid_voxel = 0;//(double)(sizeof(float)*(*(plevelinfo.Grid_length)));
+                
+                short maxHeight = 0;
+                
+                double sum_voxel_mem = 0;
+                
+                double BufferOfHeight   = MPP*4.0*pwrtwo(level);
+                if(info->sensor_provider == PT)
+                {
+                    BufferOfHeight   = MPP*1.0*pwrtwo(level);
+                    
+                    if(level == 0)
+                    {
+                        BufferOfHeight   = MPP;
+                        
+                        if (BufferOfHeight < 0.5)
+                            BufferOfHeight = 0.5;
+                    }
+                    
+                    if(BufferOfHeight > 200)
+                        BufferOfHeight = 200;
+                }
+                else
+                {
+                    if (level == 1)
+                    {
+                         BufferOfHeight = MPP*3;
+                    }
+                    else if(level == 0)
+                    {
+                        /*if(final_level_iteration == 1)
+                            BufferOfHeight = MPP*2;
+                        else*/
+                            BufferOfHeight = MPP;
+                        
+                        if (BufferOfHeight < 0.5)
+                            BufferOfHeight = 0.5;
+                    }
+                    
+                    if(info->pre_DEMtif)
+                    {
+                        if(BufferOfHeight > info->seedDEMsigma)
+                            BufferOfHeight = info->seedDEMsigma;
+                        
+                        printf("buff %f seed %f \n",BufferOfHeight,info->seedDEMsigma);
+                    }
+                    
+                    BufferOfHeight = ceil(BufferOfHeight);
+                    
+                    if(BufferOfHeight > 100)
+                        BufferOfHeight = 100;
+                    
+                    printf("BufferOfHeight = %f\n",BufferOfHeight);
+                }
+                
+                double height_interval = 2.0*BufferOfHeight;
+                if(level == info->pyramid_level)
+                    height_interval = minmaxHeight[1] - minmaxHeight[0];
+                if(!(level == 0 && final_level_iteration == 3) && level < info->pyramid_level)
+                {
+                    if(level == 0)
+                        height_interval *= 3.0;
+                    else
+                        height_interval *= (3 + 4.0*level);
+                }
+                
+                printf("height_interval = %f\t%f\t%d\n",height_interval,height_step,pairinfo.SelectNumberOfPairs());
+                
+        #pragma omp parallel for schedule(dynamic,1) reduction(+:sum_voxel_mem)
+                for(long int t_i = 0 ; t_i < Grid_length ; t_i++)
+                {
+                    const int NumberofHeightVoxel = (int)(height_interval/height_step);
+                    
+                    if(NumberofHeightVoxel > 0 )
+                    {
+                        //3Dvoxel
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(bool))*pairinfo.SelectNumberOfPairs());
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(short))*pairinfo.SelectNumberOfPairs());
+                        
+                        //SumCost in AWNCC_SGM
+                        sum_voxel_mem += (double)(NumberofHeightVoxel*(sizeof(float)));
+                        
+                        if(maxHeight < NumberofHeightVoxel)
+                            maxHeight = NumberofHeightVoxel;
+                    }
+                    
+                }
+                grid_voxel += sum_voxel_mem;
+                //LHcost_pre, curr, and temp in AWNCC_SGM
+                grid_voxel += (double)(maxHeight*sizeof(float))*3.0;
+                
+                Memory += grid_voxel;
+                
+                printf("memory 6-1 %f\t%d\n",Memory/1024.0/1024.0/1024.0,maxHeight);
+            }
+            
+            
+            //for matched pts
+            double matched_pts_size = (double)(sizeof(D3DPOINT)*possible_matching_pts)*2.0;
+            Memory += matched_pts_size;
+            printf("memory 7 %f\n",Memory/1024.0/1024.0/1024.0);
+            
+            if(!(level == 0 && final_level_iteration == 3))
+            {
+                //for TIN
+                double tin_size = (double)(sizeof(UI3DPOINT)*possible_TIN_size);
+                Memory += tin_size;
+                printf("memory 8 %f\n",Memory/1024.0/1024.0/1024.0);
+            }
+            
+            //for multiple matching
+            if(pairinfo.SelectNumberOfPairs() > 1)
+            {
+                double multimps_size = (double)(sizeof(MultiMPs)*Grid_length*pairinfo.SelectNumberOfPairs());
+                Memory += (multimps_size);
+                
+                printf("memory 7-1 %f\n",Memory/1024.0/1024.0/1024.0);
+            }
+            
+            if(Max_memory < Memory)
+                Max_memory = Memory;
+        }
+        printf("Max_memory %f\n",Max_memory/1024.0/1024.0/1024.0);
+    }
+    return (double)(Max_memory/1024.0/1024.0/1024.0);
+}
 
 bool SetupParam(ProInfo *info, bool *pre_DEMtif)
 {
@@ -5546,7 +6131,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
         else
         {
             
-            //if(proinfo->sensor_type == AB)
+            if(proinfo->sensor_type == AB)
             {
                 if(level >= 4)
                 {
@@ -5588,7 +6173,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
                 else
                     *Th_roh_next        = (double)(0.20);
             }
-            /*else
+            else
             {
                 if(level >= 4)
                 {
@@ -5630,7 +6215,7 @@ void SetThs(const ProInfo *proinfo,const int level, const int final_level_iterat
                 else
                     *Th_roh_next        = (double)(0.20);
             }
-            */
+            
             *Th_roh_start       = (double)(*Th_roh);
         }
         
@@ -7965,7 +8550,7 @@ void SGM_start_pos(const ProInfo *proinfo, NCCresult *nccresult, GridVoxel &grid
     }
 }
 
-void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber)
+void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, NCCresult *nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, float* LHcost_pre, float* LHcost_curr, float **SumCost, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -7996,9 +8581,9 @@ void SGM_con_pos(const ProInfo *proinfo, int pts_col, int pts_row, CSize Size_Gr
                     {
                         WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, count));
                         
-                        const int t_col = pts_col + u_col[direction_iter];
-                        const int t_row = pts_row + v_row[direction_iter];
-                        const int t_index = t_row*Size_Grid2D.width + t_col;
+                        const long int t_col = pts_col + (long)u_col[direction_iter];
+                        const long int t_row = pts_row + (long)v_row[direction_iter];
+                        const long int t_index = t_row*(long)Size_Grid2D.width + t_col;
                         
                         float maxWNCC = SignedCharToDouble_result(nccresult[t_index].max_WNCC);
                         
@@ -9706,11 +10291,11 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
          
     }
     
-    for(int i=0;i<Size_Grid2D.height;i++)
+    for(long i=0;i<Size_Grid2D.height;i++)
     {
-        for(int j=0;j<Size_Grid2D.width;j++)
+        for(long j=0;j<Size_Grid2D.width;j++)
         {
-            long t_index = (long)(i*Size_Grid2D.width) + (long)j;
+            long t_index = i*(long)Size_Grid2D.width + j;
             if(nccresult[t_index].NumOfHeight > 0)
                 free(SumCost[t_index]);
         }
@@ -10316,7 +10901,7 @@ int Ortho_blunder(ProInfo *proinfo, LevelInfo &rlevelinfo, D3DPOINT *pts, int nu
     return numOfPts;
 }
 */
-int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, int numOfPts, vector<UI3DPOINT> &tris,int numOfTri, UGRID *GridPT3)
+int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, long int numOfPts, vector<UI3DPOINT> &tris,long int numOfTri, UGRID *GridPT3)
 {
     const int max_count = 200;
     int while_count = 0;
@@ -10893,7 +11478,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     }
     else
     {
-        if(proinfo->sensor_provider != PT)
+        if(proinfo->sensor_type == AB)
         {
             if(Pyramid_step > 0)
             {
@@ -10925,14 +11510,14 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                     double min_roh_th;
                     double min_Gridroh_th;
                     
-                    if(proinfo->sensor_provider == PT)// Planet
+                    /*if(proinfo->sensor_provider == PT)// Planet
                     {
                         if(Pyramid_step == proinfo->pyramid_level)
                             min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
                         else if(Pyramid_step == 1)
                             min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
                     }
-                    else
+                    else*/
                     {
                         if(Pyramid_step == proinfo->pyramid_level)
                             min_roh_th = 0.20 + (iteration-1)*0.01; //0.3 //0.05
@@ -11375,7 +11960,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     return count_MPs;
 }
 
-void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists)
+void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, long int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists)
 {
     
     *minz_mp = 100000;
@@ -11437,7 +12022,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
     //UI3DPOINT *trilists = NULL;
     FullTriangulation *origTri = NULL;
     vector<UI3DPOINT> t_trilists;
-    int count_tri;
+    long int count_tri;
     
     //Save triangulation for later use as we will remove blunders directly from this triangulation
     origTri = TINCreate_list_vector(ptslists,count_MPs,t_trilists,min_max,&count_tri, *rlevelinfo.grid_resolution);
@@ -11485,7 +12070,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
         free(ortho_ncc);
         
         if(count > 0)
-            count_blunders = abs(int(blunder_count[1]) - pre_count_blunder);
+            count_blunders = abs(blunder_count[1] - pre_count_blunder);
         else
             count_blunders = blunder_count[1];
         
@@ -11608,9 +12193,9 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
     delete origTri;
 }
 
-void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, vector<D3DPOINT> &ptslists, vector<UI3DPOINT> &trilists,int numoftri)
+void DecisionMPs_setheight_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input,UGRID *GridPT3, const uint8 iteration, const double Hinterval, const double *minmaxHeight, vector<D3DPOINT> &ptslists, vector<UI3DPOINT> &trilists,long int numoftri)
 {
-    const int count_MPs       = count_MPs_input;
+    const long int count_MPs       = count_MPs_input;
     const double gridspace            = *rlevelinfo.grid_resolution;
     
     BL blunder_param;
@@ -12455,7 +13040,7 @@ int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID *GridPT3, vector<D3DPOINT> M
     return total_count;
 }
 
-UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const int numOfPts, const int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate)
+UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long int numOfPts, const long int num_triangles, UGRID *GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate)
 {
     UGRID *result = NULL;
     
@@ -12558,9 +13143,9 @@ UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const int 
     for(long tcnt = 0;tcnt < num_triangles;tcnt++)
     {
         const UI3DPOINT &t_tri = (tris[tcnt]);
-        const int pdex0 = t_tri.m_X;
-        const int pdex1 = t_tri.m_Y;
-        const int pdex2 = t_tri.m_Z;
+        const long int pdex0 = t_tri.m_X;
+        const long int pdex1 = t_tri.m_Y;
+        const long int pdex2 = t_tri.m_Z;
         
         if(pdex0 < numOfPts && pdex1 < numOfPts && pdex2 < numOfPts)
         {
@@ -12929,8 +13514,8 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
             double X = resize_Grid[index].m_X;
             double Y = resize_Grid[index].m_Y;
             
-            int pos_c = (int)((X - Boundary[0])/pre_gridsize);
-            int pos_r = (int)((Y - Boundary[1])/pre_gridsize);
+            long pos_c = (long)((X - Boundary[0])/pre_gridsize);
+            long pos_r = (long)((Y - Boundary[1])/pre_gridsize);
             long pre_index = pos_r*(long)preSize.width + pos_c;
             if(pos_c >= 0 && pos_c < preSize.width && pos_r >= 0 && pos_r < preSize.height && pre_index >= 0 && pre_index < (long)preSize.width*(long)preSize.height)
             {
@@ -13081,7 +13666,7 @@ static void update_max(std::atomic<float> *cur, float val) {
     }
 }
 
-bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID *GridPT3)
+bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID *GridPT3)
 {
 
     int len = rlevelinfo.Size_Grid2D->width * rlevelinfo.Size_Grid2D->height;

@@ -3015,7 +3015,7 @@ void GMA_double_printf(GMA_double *a)
 }
 
 //Returns created triangulation pointer
-FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution)
+FullTriangulation *TINCreate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -3095,7 +3095,7 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     return triangulation;
 }
 
-FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, int numofpts, vector<UI3DPOINT> &trilists, double min_max[], int *count_tri, double resolution)
+FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, long int numofpts, vector<UI3DPOINT> &trilists, double min_max[], long int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -3175,7 +3175,7 @@ FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, int numofpt
     return triangulation;
 }
 
-void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
+void TINUpdate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, long int numblunders)
 {
     
     double minX_ptslists = min_max[0];
