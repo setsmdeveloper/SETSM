@@ -1812,7 +1812,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
             {
                 const uint8 NumOfIAparam  = 2;
                 
-                ImageInfo *image_info = (ImageInfo*)malloc(sizeof(ImageInfo)*proinfo->number_of_images);
+                ImageInfo *image_info = (ImageInfo*)calloc(1, sizeof(ImageInfo)*proinfo->number_of_images);
                 CSize *Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
                 double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
                 
@@ -3249,7 +3249,12 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     pairinfo.SetNumberOfPairs(actual_pair_save.size());
     pairinfo.SetSelectNumberOfPairs(actual_pair_save.size());
     
+    // create a temp pairinfo object, and the values from the pairinfo
+    // object into it. We're going to re-map the pair numbers then
+    // copy it to pairinfo
     CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
+    temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
+    temp_pairs.SetHeightStep(pairinfo.HeightStep());
     
     for(int count = 0 ; count < actual_pair_save.size() ; count++)
     {
