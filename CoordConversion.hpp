@@ -20,6 +20,7 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs);
 D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT *_ps);
 D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps);
 D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
+D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_ps);
 
 //RPC conversion : image to object
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP);

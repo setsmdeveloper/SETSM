@@ -145,7 +145,6 @@ double getSystemMemory()
     }
 }
 
-
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo)
 {
     bool check_load_RA = false;
@@ -3018,7 +3017,7 @@ void GMA_double_printf(GMA_double *a)
 }
 
 //Returns created triangulation pointer
-FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution)
+FullTriangulation *TINCreate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution)
 {
     if (numofpts <= 2) {
         *count_tri = 0;
@@ -3098,7 +3097,87 @@ FullTriangulation *TINCreate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DP
     return triangulation;
 }
 
-void TINUpdate_list(D3DPOINT *ptslists, int numofpts, vector<UI3DPOINT> *trilists, double min_max[], int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, int numblunders)
+FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, long int numofpts, vector<UI3DPOINT> &trilists, double min_max[], long int *count_tri, double resolution)
+{
+    if (numofpts <= 2) {
+        *count_tri = 0;
+        return NULL;
+    }
+    
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
+    
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    //Check to ensure grid width/height fit in 16 bit integers
+    if(width > 32767 || height > 32767)
+    {
+        printf("ERROR: Grid is too large. width: %d height: %d\n", width, height);
+        exit(1);
+    }
+    //printf("\tTINCreate: PTS = %d, width = %d, height = %d, resolution = %f\n", numofpts, width, height, resolution);
+    
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    GridPoint *grid_points = new GridPoint[numofpts];
+    
+    //printf("done s1\n");
+    for (std::size_t t = 0; t < numofpts; ++t)
+    {
+        grid_points[t].col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
+        grid_points[t].row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+        index_in_ptslists[grid_points[t].row * width + grid_points[t].col] = t;
+    }
+    
+    //printf("done s2\n");
+    GridPoint **points_ptrs = new GridPoint*[numofpts];
+#pragma omp parallel for
+    for (std::size_t t = 0; t < numofpts; ++t) points_ptrs[t] = grid_points + t;
+    
+    FullTriangulation *triangulation = new FullTriangulation(width, height);
+    //double begin = omp_get_wtime();
+    //printf("done s3\n");
+    triangulation->Triangulate(points_ptrs, numofpts);
+    //printf("done triangulation\n");
+    //double end = omp_get_wtime();
+    //printf("Triangulate took %lf with %d points\n", end - begin, numofpts);
+    
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    //printf("s3-1\n");
+    *count_tri = (int)(triangulation->GetAllTris(&tris));
+    //printf("count tri = %d\n",*count_tri);
+    for(long t = 0 ; t < tris.size() ; t++)
+    {
+        int row, col;
+        UI3DPOINT temp_pt;
+        
+        row = tris[t].pts[0].row;
+        col = tris[t].pts[0].col;
+        temp_pt.m_X = index_in_ptslists[row * width + col];
+        
+        row = tris[t].pts[1].row;
+        col = tris[t].pts[1].col;
+        temp_pt.m_Y = index_in_ptslists[row * width + col];
+        
+        row = tris[t].pts[2].row;
+        col = tris[t].pts[2].col;
+        temp_pt.m_Z = index_in_ptslists[row * width + col];
+        
+        trilists.push_back(temp_pt);
+    }
+    //printf("s4\n");
+    //delete [] tris;
+    delete [] points_ptrs;
+    delete [] grid_points;
+    
+    //printf("s5\n");
+    return triangulation;
+}
+
+void TINUpdate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation *oldTri, D3DPOINT *blunderlist, long int numblunders)
 {
     
     double minX_ptslists = min_max[0];
