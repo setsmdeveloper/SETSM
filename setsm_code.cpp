@@ -7716,7 +7716,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             check_compute = true;
                                     }
                                     else*/ 
-                                    bool check_compute = grid_voxel[pt_index].has_pair(pair_number) &&
+                                    bool check_compute =
                                                     check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,
                                                                               nccresult[pt_index].maxHeight,Half_template_size,reference_id,pair_number, true) &&
                                                     check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],nccresult[pt_index].minHeight,
@@ -7950,7 +7950,10 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                                  }*/
                                             }
                                             
-                                            if(!(*plevelinfo.check_matching_rate) && nccresult[pt_index].check_height_change)
+                                            if(
+                                                !(*plevelinfo.check_matching_rate) &&
+                                                grid_voxel[pt_index].has_pair(pair_number) &&
+                                                nccresult[pt_index].check_height_change)
                                             {
                                                 if(check_height_orientation && temp_rho > -1)
                                                 {
