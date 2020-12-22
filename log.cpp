@@ -28,7 +28,7 @@ int init_logging() {
     }
     int ret = MPI_Bcast(&start_time, 1,MPI_LONG, 0, MPI_COMM_WORLD);
     if(ret != MPI_SUCCESS) {
-        printf("FAILED to init logging!\n");
+        fprintf(stderr, "FAILED to init logging!\n");
         return 1;
     }
 #else
@@ -45,10 +45,10 @@ void LOG(const char *fmt, ...) {
         (std::chrono::system_clock::now().time_since_epoch()).count();
 
     if(!started) {
-        printf("WARNING: logging not initialized, defaulting to printf\n");
+        fprintf(stderr, "WARNING: logging not initialized, defaulting to printf\n");
         va_list ap;
         va_start(ap, fmt);
-        vprintf(fmt, ap);
+        vfprintf(stderr, fmt, ap);
         va_end(ap);
         return;
     }
@@ -65,7 +65,7 @@ void LOG(const char *fmt, ...) {
     vsprintf(buf + n, fmt, ap);
     va_end(ap);
 
-    printf("%s", buf);
+    fprintf(stderr, "%s", buf);
 }
 
 SINGLE_FILE *single_fopen(const char *path, const char *mode) {
