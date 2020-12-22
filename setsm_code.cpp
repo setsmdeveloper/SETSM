@@ -8562,12 +8562,11 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                             double V3 = 0;
                             double V4 = 0;
 
-                            bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
-                            bool is_cal_1 = grid_voxel[t_index].is_cal(t_index_h_index_1, count);
-                            bool is_cal_2 = grid_voxel[t_index].is_cal(t_index_h_index_2, count);
-                            
                             if(t_index_h_index == 0 && t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight)
                             {
+                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
+                                bool is_cal_2 = grid_voxel[t_index].is_cal(t_index_h_index_2, count);
+
                                 if(is_cal && is_cal_2)
                                 {
                                     V2 = LHcost_pre[t_index_h_index_2] - P1;
@@ -8620,6 +8619,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                             }
                             else if(t_index_h_index == nccresult[t_index].NumOfHeight - 1 && t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight)
                             {
+                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
+                                bool is_cal_1 = grid_voxel[t_index].is_cal(t_index_h_index_1, count);
+
                                 if(is_cal && is_cal_1)
                                 {
                                     V1 = LHcost_pre[t_index_h_index_1] - P1;
@@ -8674,6 +8676,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight &&
                                     t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight )
                             {
+                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
+                                bool is_cal_1 = grid_voxel[t_index].is_cal(t_index_h_index_1, count);
+                                bool is_cal_2 = grid_voxel[t_index].is_cal(t_index_h_index_2, count);
                                 
                                 if(is_cal && is_cal_1
                                    && is_cal_2)
