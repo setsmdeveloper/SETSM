@@ -2520,51 +2520,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(!args.RA_only)
                         {
                             tile_size           = 4000;
-                            double base_4;
-                            if(proinfo->DEM_resolution == 2)
-                                base_4 = 6;
-                            else if(proinfo->DEM_resolution == 1)
-                                base_4 = 15;
-                            else if(proinfo->DEM_resolution == 0.5)
-                                base_4 = 30;
-                            else
-                                base_4 = 4;
+                            buffer_area  = 400;
                             
-                            double required_memory_size;
-                            
-                            bool check_t = false;
-                            double base_tilesize = 4000;
-                            double iter_tile_size = base_tilesize;
-                            double tile_increase = 200;
-                            double DEM_res_rate = 1.0;
-                            if(proinfo->DEM_resolution == 1)
-                                DEM_res_rate = 0.90;
-                            else if(proinfo->DEM_resolution == 0.5)
-                                DEM_res_rate = 0.80;
-                            
-                            while(!check_t && iter_tile_size < 30000)
-                            {
-                                double tile_ratio = iter_tile_size/base_tilesize;
-                                required_memory_size = base_4*tile_ratio*DEM_res_rate;
-                                if(proinfo->System_memory - 5 > required_memory_size)
-                                {
-                                    iter_tile_size += tile_increase;
-                                    double increment = floor(iter_tile_size*0.1/100.0)*100.0;
-                                    iter_tile_size += increment;
-                               }
-                                else
-                                {
-                                    //double increment = floor(iter_tile_size*0.1/100.0)*100.0;
-                                    iter_tile_size -= (tile_increase);
-                                    check_t = true;
-                                }
-                                
-                                printf("required_memory_size %f\titer_tile_size %f\ttile_ratio %f\n",required_memory_size,iter_tile_size,tile_ratio);
-                            }
-                            
-                            tile_size = iter_tile_size;
-                            
-                            //exit(1);
                             
                             if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
                             {
@@ -2574,10 +2531,179 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     tile_size = Boundary_size.height;
                             }
                             
-                            if(args.check_tilesize)
-                                tile_size       = args.tilesize;
-                            printf("tilesize %d\n",tile_size);
+                            double X_dis, Y_dis;
+                            int select_tile_row,select_tile_col;
+                            double base_4,tile_ratio;
                             
+                            if(proinfo->DEM_resolution == 2)
+                                base_4 = 6;
+                            else if(proinfo->DEM_resolution == 1)
+                                base_4 = 15;
+                            else if(proinfo->DEM_resolution == 0.5)
+                                base_4 = 28;
+                            else
+                                base_4 = 4;
+                            
+                            double required_memory_size;
+                            
+                            bool check_t = false;
+                            bool check_final = false;
+                            double base_tilesize = 4400;
+                            double iter_tile_size = base_tilesize;
+                            double tile_increase = 500;
+                            double DEM_res_rate = 1.4;
+                            double th_tilesize = 30000;
+                            double large_tile_factor = 1.0;
+                            
+                            if(args.check_tilesize)
+                            {
+                                tile_size       = args.tilesize;
+                                SetTiles(proinfo, Boundary, tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
+                                
+                                double subBoundary_max[4];
+                                int br_iter = 0;
+                                
+                                double max_area;
+                                for(int tile_row = iter_row_start ; tile_row < iter_row_end ; tile_row++)
+                                {
+                                    for(int tile_col = t_col_start ; tile_col < t_col_end ; tile_col++)
+                                    {
+                                        double subBoundary[4];
+                                        SetSubBoundary(Boundary,subX,subY,buffer_area,tile_col,tile_row,subBoundary);
+                                        X_dis = subBoundary[2] - subBoundary[0];
+                                        Y_dis = subBoundary[3] - subBoundary[1];
+                                        double area = sqrt(X_dis*Y_dis);
+                                        if(br_iter == 0)
+                                        {
+                                            subBoundary_max[0] = subBoundary[0];
+                                            subBoundary_max[1] = subBoundary[1];
+                                            subBoundary_max[2] = subBoundary[2];
+                                            subBoundary_max[3] = subBoundary[3];
+                                            
+                                            select_tile_row = tile_row;
+                                            select_tile_col = tile_col;
+                                            max_area = area;
+                                            
+                                            br_iter = 1;
+                                        }
+                                        else
+                                        {
+                                            if(max_area < area)
+                                            {
+                                                subBoundary_max[0] = subBoundary[0];
+                                                subBoundary_max[1] = subBoundary[1];
+                                                subBoundary_max[2] = subBoundary[2];
+                                                subBoundary_max[3] = subBoundary[3];
+                                                select_tile_row = tile_row;
+                                                select_tile_col = tile_col;
+                                                max_area = area;
+                                            }
+                                        }
+                                        
+                                        printf("row col %d\t%d\t area %f\tmax row max col %d\t%d\tmax_area %f\n",tile_row,tile_col,area,select_tile_row,select_tile_col,max_area);
+                                    }
+                                }
+                                X_dis = subBoundary_max[2] - subBoundary_max[0];
+                                Y_dis = subBoundary_max[3] - subBoundary_max[1];
+                                
+                                large_tile_factor = 1.0 + 0.15*(sqrt(X_dis*Y_dis)/base_tilesize - 1);
+                                tile_ratio = sqrt(X_dis*Y_dis)/base_tilesize;
+                                if(tile_size <= base_tilesize)
+                                    DEM_res_rate = 1.0;
+                                else
+                                    DEM_res_rate = 1.4;
+                                required_memory_size = base_4*tile_ratio*DEM_res_rate*large_tile_factor;
+                                
+                                printf("required_memory_size %f\titer_tile_size %f\ttile_ratio %f\t%f\t%f\n",required_memory_size,iter_tile_size,tile_ratio,large_tile_factor,DEM_res_rate);
+                                
+                                args.start_row = select_tile_row;
+                                args.end_row = select_tile_row+1;
+                                args.start_col = select_tile_col;
+                                args.end_col = select_tile_col+1;
+                            }
+                            else
+                            {
+                                while(!check_t && iter_tile_size < th_tilesize)
+                                {
+                                    if(!check_final)
+                                        tile_size = iter_tile_size;
+                                    else
+                                        check_t = true;
+                                    
+                                    SetTiles(proinfo, Boundary, iter_tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
+                                    
+                                    double subBoundary_max[4];
+                                    int br_iter = 0;
+                                    
+                                    double max_area;
+                                    for(int tile_row = iter_row_start ; tile_row < iter_row_end ; tile_row++)
+                                    {
+                                        for(int tile_col = t_col_start ; tile_col < t_col_end ; tile_col++)
+                                        {
+                                            double subBoundary[4];
+                                            SetSubBoundary(Boundary,subX,subY,buffer_area,tile_col,tile_row,subBoundary);
+                                            X_dis = subBoundary[2] - subBoundary[0];
+                                            Y_dis = subBoundary[3] - subBoundary[1];
+                                            double area = sqrt(X_dis*Y_dis);
+                                            if(br_iter == 0)
+                                            {
+                                                subBoundary_max[0] = subBoundary[0];
+                                                subBoundary_max[1] = subBoundary[1];
+                                                subBoundary_max[2] = subBoundary[2];
+                                                subBoundary_max[3] = subBoundary[3];
+                                                
+                                                select_tile_row = tile_row;
+                                                select_tile_col = tile_col;
+                                                max_area = area;
+                                                
+                                                br_iter = 1;
+                                            }
+                                            else
+                                            {
+                                                if(max_area < area)
+                                                {
+                                                    subBoundary_max[0] = subBoundary[0];
+                                                    subBoundary_max[1] = subBoundary[1];
+                                                    subBoundary_max[2] = subBoundary[2];
+                                                    subBoundary_max[3] = subBoundary[3];
+                                                    select_tile_row = tile_row;
+                                                    select_tile_col = tile_col;
+                                                    max_area = area;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    X_dis = subBoundary_max[2] - subBoundary_max[0];
+                                    Y_dis = subBoundary_max[3] - subBoundary_max[1];
+                                    
+                                    large_tile_factor = 1.0 + 0.15*(sqrt(X_dis*Y_dis)/base_tilesize - 1);
+                                    tile_ratio = sqrt(X_dis*Y_dis)/base_tilesize;
+                                    if(tile_size <= base_tilesize)
+                                        DEM_res_rate = 1.0;
+                                    else
+                                        DEM_res_rate = 1.4;
+                                    required_memory_size = base_4*tile_ratio*DEM_res_rate*large_tile_factor;
+                                    
+                                    if(!check_final)
+                                    {
+                                        if(proinfo->System_memory - 5 > required_memory_size)
+                                        {
+                                            iter_tile_size += tile_increase;
+                                        }
+                                        else
+                                        {
+                                            iter_tile_size -= tile_increase;
+                                            check_final = true;
+                                        }
+                                    }
+                                    printf("required_memory_size %f\titer_tile_size %f\ttile_ratio %f\t%f\t%f\n",required_memory_size,iter_tile_size,tile_ratio,large_tile_factor,DEM_res_rate);
+                                }
+                            }
+                            printf("setting tilesize %d\tactual tilesize %f\t%f\t%f\t%d\t%d\t%f\n",tile_size,X_dis,Y_dis,sqrt(X_dis*Y_dis),select_tile_row,select_tile_col,required_memory_size);
+                            
+                            proinfo->required_memory = required_memory_size;
+                            
+                            //exit(1);
                             if(!proinfo->check_checktiff)
                             {
                                 fprintf(pMetafile,"tilesize=%d\n",tile_size);
@@ -2601,9 +2727,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         fprintf(pMetafile, "Output Projection='+proj=utm +zone=%d +south=%s +datum=WGS84 +unit=m +no_defs'\n", param.utm_zone, param.direction);
                                 }
                             }
-                            
-                            buffer_area  = tile_size*0.1;
-                            SetTiles(proinfo, Boundary, tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
                             
                             if (args.check_tiles_SR)
                                 iter_row_start    = args.start_row;
@@ -4130,7 +4253,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
                         
-                        printf("Memory : System %f\t SETSM required %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,minimum_memory,check_matching_rate);
+                        printf("Memory : System %f\t SETSM required level_function %f\t max_estimation %f\tminimum %f\tcheck_matching_rate %d\n",proinfo->System_memory, total_memory,proinfo->required_memory, minimum_memory,check_matching_rate);
                         if(minimum_memory > proinfo->System_memory - 2 && proinfo->IsRA)
                         {
                             printf("System memory is not enough to run SETSM RPCs bias compensation. Please assign more physical memory!!\n");
@@ -11486,7 +11609,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
     }
     else
     {
-        if(proinfo->sensor_type == AB)
+        if(proinfo->sensor_provider != PT)
         {
             if(Pyramid_step > 0)
             {
