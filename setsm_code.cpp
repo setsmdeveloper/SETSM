@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "setsm_code.hpp"
+#include "readtiff.hpp"
 #include "log.hpp"
 
 #ifdef BUILDMPI

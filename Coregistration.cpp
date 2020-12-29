@@ -6,6 +6,7 @@
 //
 
 #include "Coregistration.hpp"
+#include "readtiff.hpp"
 
 //Image Coregistration
 double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath, int gcp_opt, D2DPOINT *adjust_std, bool* cal_check)
