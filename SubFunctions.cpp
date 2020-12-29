@@ -5,6 +5,8 @@
 //  Created by Myoung-Jong Noh on 3/30/20.
 //
 #include "SubFunctions.hpp"
+#include "readtiff.hpp"
+
 int numcols[7] = {6,5,5,5,4,3,0};
 
 char* remove_ext(const char* mystr)
