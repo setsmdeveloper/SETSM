@@ -81,7 +81,8 @@ std::pair<bool, T> get_nodata_value(TIFF *tif, T type) {
             printf("WARNING: failed to parse NODATA value\n");
             nodata_val = 0;
         } else if(nodata_val != 0) {
-            printf("tiff file has a nonzero NODATA value. Will convert to zero when reading.\n");
+            printf("tiff file has a nonzero NODATA value (%s)."
+                   "Will convert to zero when reading.\n", std::to_string(nodata_val).c_str());
             needs_convert = true;
         }
     }
