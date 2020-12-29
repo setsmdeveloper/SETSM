@@ -157,7 +157,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info);
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<unsigned char> *save_pair, CPairInfo &pairinfo);
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<short> *save_pair, CPairInfo &pairinfo, const ImageInfo *image_info);
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[]);
 

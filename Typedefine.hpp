@@ -31,7 +31,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
-#define MaxNCC 16
+#define MaxNCC 700
 #define Nodata -9999
 #ifndef bool
 //#define bool unsigned char
@@ -45,7 +45,7 @@
 #define MAXDIM         10
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
-
+#define CLD_COV 10
 #endif
 
 enum SensorType {SB , AB};
@@ -694,6 +694,7 @@ typedef struct ArgumentInfo{
 	char metafilename[500];
     char EO_Path[500];
     char DEM_input_file[500];
+    char Multi_input_file[500];
     
     bool check_DS_txy;
     bool check_downsample;
@@ -767,6 +768,8 @@ typedef struct tagImageInfo
     float Intrack_angle;
     float Crosstrack_angle;
     float Offnadir_angle;
+    float Offnadir_angle_xml;
+    float Mean_sat_azimuth_angle_xml;
     float cloud;
     float Image_ori;
     float Image_ori_azi;
