@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cerrno>
 #include <type_traits>
+#include <tuple>
 #include"Typedefine.hpp"
 
 constexpr ttag_t HACK_GDAL_NODATA = 42113;
@@ -50,11 +51,20 @@ T *_read_bin(const char *filename, CSize *Imagesize, long int *cols, long int *r
     return out;
 }
 
-// returns the NODATA value for the tiff. Defaults to zero if not present
+/** returns true if the NODATA value should be converted to zero
+ *   The second value in the pair is the value that should be converted
+ *   to zero.
+ */
 template <typename T>
-T get_nodata_value(TIFF *tif, T type) {
+std::pair<bool, T> get_nodata_value(TIFF *tif, T type) {
     (void)type;
 
+    // only consider conversion when type is uint16_t
+    if(!std::is_same<T, uint16_t>::value) {
+        return std::make_pair(false, 0);
+    }
+
+    bool needs_convert = false;
     T nodata_val = 0;
 
     uint32_t count = 0;
@@ -70,12 +80,13 @@ T get_nodata_value(TIFF *tif, T type) {
         {
             printf("WARNING: failed to parse NODATA value\n");
             nodata_val = 0;
+        } else if(nodata_val != 0) {
+            printf("tiff file has a nonzero NODATA value. Will convert to zero when reading.\n");
+            needs_convert = true;
         }
-        if(nodata_val != 0)
-            printf("tiff file has a nonzero NODATA value.\n");
     }
 
-    return nodata_val;
+    return std::make_pair(needs_convert, nodata_val);
 }
 
 /** Read scanline TIFF file */
@@ -105,9 +116,10 @@ T *_read_scanline_tiff(TIFF *tif, CSize *Imagesize, long int *cols, long int *ro
     TIFFGetField(tif,TIFFTAG_SAMPLESPERPIXEL,&nsamples);
     *num_samples = nsamples;
 
-    // will convert NODATA pixels to zero if the NODATA value is nonzero
-    T nodata_val = get_nodata_value(tif, type);
-    bool req_nodata_conversion = (nodata_val != 0);
+    // should we convert NODATA pixels to zero?
+    T nodata_val = 0;
+    bool req_nodata_conversion;
+    std::tie(req_nodata_conversion, nodata_val) = get_nodata_value(tif, type);
     
     //TODO this needs to be updated to read in multi-sample images correctly.
     for(s =0;s< nsamples;s++)
@@ -176,9 +188,10 @@ T *_read_tiled_tiff(TIFF *tif, CSize *Imagesize, long int *cols, long int *rows,
         }
     }
 
-    // will convert NODATA pixels to zero if the NODATA value is nonzero
-    T nodata_val = get_nodata_value(tif, type);
-    bool req_nodata_conversion = (nodata_val != 0);
+    // should we convert NODATA pixels to zero?
+    T nodata_val = 0;
+    bool req_nodata_conversion;
+    std::tie(req_nodata_conversion, nodata_val) = get_nodata_value(tif, type);
 
 
     starttileL      = (uint32_t)(rows[0]/tileL);
