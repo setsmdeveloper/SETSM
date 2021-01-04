@@ -5,6 +5,8 @@
 //  Created by Myoung-Jong Noh on 3/30/20.
 //
 #include "SubFunctions.hpp"
+#include "readtiff.hpp"
+
 int numcols[7] = {6,5,5,5,4,3,0};
 
 char* remove_ext(const char* mystr)
@@ -2126,8 +2128,8 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
         bool check_d = false;
         bool check_i = false;
         bool check_cen = false;
-        
-        while(!feof(pFile) && (!check_br || !check_d || !check_i || !check_cen))
+        bool check_cloud = false;
+        while(!feof(pFile) && (!check_br || !check_d || !check_i || !check_cen || !check_cloud))
         {
             fscanf(pFile,"%s",temp_str);
             
@@ -2146,7 +2148,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                 sscanf(pos2,"%lf %lf",&Iinfo->Center[0],&Iinfo->Center[1]);
                 
                 
-                printf("Center X Y %lf %lf \n",Iinfo->Center[0],Iinfo->Center[1]);
+                //printf("Center X Y %lf %lf \n",Iinfo->Center[0],Iinfo->Center[1]);
                 //exit(1);
             }
             
@@ -2165,7 +2167,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     Iinfo->UL[i]    = UL[i];
                     
                 }
-                printf("UL %f %f \n",UL[0],UL[1]);
+                //printf("UL %f %f \n",UL[0],UL[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2178,7 +2180,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     UR[i]           = atof(pos2);
                     Iinfo->UR[i]    = UR[i];
                 }
-                printf("UR %f %f \n",UR[0],UR[1]);
+                //printf("UR %f %f \n",UR[0],UR[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2191,7 +2193,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     LR[i]           = atof(pos2);
                     Iinfo->LR[i]    = LR[i];
                 }
-                printf("LR %f %f \n",LR[0],LR[1]);
+                //printf("LR %f %f \n",LR[0],LR[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2204,7 +2206,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     LL[i]           = atof(pos2);
                     Iinfo->LL[i]    = LL[i];
                 }
-                printf("LL %f %f \n",LL[0],LL[1]);
+                //printf("LL %f %f \n",LL[0],LL[1]);
             }
             
             if(strcmp(temp_str,"<eop:acquisitionParameters>") == 0 && !check_d)
@@ -2312,22 +2314,43 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     }
                 }
             }
+            
+            if(strcmp(temp_str,"</eop:mask>") == 0 && !check_cloud)
+            {
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                fgets(temp_str,sizeof(temp_str),pFile);
+                
+                fgets(linestr,sizeof(linestr),pFile);
+                
+                strcpy(linestr1,linestr);
+                token1 = strstr(linestr,"<");
+                token = strtok(token1,"=");
+                
+                if(strcmp(token,"<opt:cloudCoverPercentage uom") == 0)
+                {
+                    check_cloud = true;
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    Cloud          = atof(pos2);
+                }
+            }
         }
         
         fclose(pFile);
         
         Iinfo->Mean_sun_azimuth_angle   = MSUNAz;
         Iinfo->Mean_sun_elevation       = MSUNEl;
-        Iinfo->Mean_sat_azimuth_angle   = MSATAz;
+        Iinfo->Mean_sat_azimuth_angle_xml   = MSATAz;
         Iinfo->Mean_sat_elevation       = MSATEl;
         Iinfo->Intrack_angle            = MIntrackangle;
         Iinfo->Crosstrack_angle         = MCrosstrackangle;
-        Iinfo->Offnadir_angle           = MOffnadirangle;
+        Iinfo->Offnadir_angle_xml           = MOffnadirangle;
         Iinfo->cloud                    = Cloud;
         sprintf(Iinfo->imagetime,"%s",imagetime);
         sprintf(Iinfo->SatID,"%s",SatID);
         
-        printf("MSUNAz MSUNEl MSATAz MSATEl MOffnadirangle %f\t%f\t%f\t%f\t%f\t%f\t%f\n",MSUNAz,MSUNEl,MSATAz,MSATEl,MOffnadirangle,Iinfo->GSD.row_GSD,Iinfo->GSD.col_GSD);
+        printf("MSUNAz MSUNEl MSATAz MSATEl MOffnadirangle %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",MSUNAz,MSUNEl,MSATAz,MSATEl,MOffnadirangle,Iinfo->GSD.row_GSD,Iinfo->GSD.col_GSD,Iinfo->cloud);
         
         if(pos1)
             pos1 = NULL;
@@ -2335,6 +2358,92 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
             pos2 = NULL;
         if(token)
             token = NULL;
+    }
+}
+
+
+void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
+{
+    FILE *pFile;
+    pFile           = fopen(_filename,"r");
+    if(pFile)
+    {
+        int total_images;
+        char default_path[500];
+        char full_image_path[500];
+        fscanf(pFile,"%d",&total_images);
+        fscanf(pFile,"%s",default_path);
+        printf("image counts %d\tdefault path %s\n",total_images,default_path);
+        for(int i = 0; i<total_images ; i++)
+        {
+            int strip_ID;
+            char temp_str[1000];
+            fscanf(pFile,"%s\t%d\t%f\t%f\t%f\n",temp_str,&strip_ID,&Iinfo[i].Offnadir_angle,&Iinfo[i].Mean_sat_azimuth_angle,&Iinfo[i].GSD.pro_GSD);
+            
+            char temp_year[5];
+            char temp_month[3];
+            char temp_day[3];
+            for (int k = 0; k < 4; k++)
+                temp_year[k] = temp_str[k];
+            temp_year[4] = '\0';
+            for(int k=0 ; k < 2 ; k++)
+                temp_month[k] = temp_str[k+4];
+            temp_month[2] = '\0';
+            for(int k=0 ; k < 2 ; k++)
+                temp_day[k] = temp_str[k+6];
+            temp_day[2] = '\0';
+            
+            printf("file name %s\t%d\t%f\t%f\t%f\n",temp_str,strip_ID,Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
+            //printf("temp %s\t%s\t%s\n",temp_year,temp_month,temp_day);
+            sprintf(proinfo->Imagefilename[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            sprintf(proinfo->RPCfilename[i],"%s/%s/%s/%s/%d/%s_pan_RPC.TXT",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            sprintf(proinfo->Imagemetafile[i],"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            printf("path %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\n\n",proinfo->Imagefilename[i],proinfo->RPCfilename[i],proinfo->Imagemetafile[i],Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
+            
+        }
+        fclose(pFile);
+    }
+    
+}
+
+void Open_planetmultiinfo_args(ARGINFO *args)
+{
+    FILE *pFile;
+    pFile           = fopen(args->Multi_input_file,"r");
+    if(pFile)
+    {
+        int total_images;
+        char default_path[500];
+        char full_image_path[500];
+        fscanf(pFile,"%d",&total_images);
+        fscanf(pFile,"%s",default_path);
+        printf("image counts %d\tdefault path %s\n",total_images,default_path);
+        args->number_of_images = total_images;
+        for(int i = 0; i<total_images ; i++)
+        {
+            int strip_ID;
+            double temp_value;
+            char temp_str[1000];
+            fscanf(pFile,"%s\t%d\t%f\t%f\t%f\n",temp_str,&strip_ID,&temp_value,&temp_value,&temp_value);
+            
+            char temp_year[5];
+            char temp_month[3];
+            char temp_day[3];
+            for (int k = 0; k < 4; k++)
+                temp_year[k] = temp_str[k];
+            temp_year[4] = '\0';
+            for(int k=0 ; k < 2 ; k++)
+                temp_month[k] = temp_str[k+4];
+            temp_month[2] = '\0';
+            for(int k=0 ; k < 2 ; k++)
+                temp_day[k] = temp_str[k+6];
+            temp_day[2] = '\0';
+            
+            sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            printf("path %s\n\n",args->Image[i]);
+            
+        }
+        fclose(pFile);
     }
 }
 

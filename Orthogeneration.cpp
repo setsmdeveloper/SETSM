@@ -6,6 +6,7 @@
 //
 
 #include "Orthogeneration.hpp"
+#include "readtiff.hpp"
 
 
 //orthogeneration

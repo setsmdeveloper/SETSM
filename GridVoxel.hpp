@@ -56,7 +56,7 @@ public:
      *
      * Initialize INCC values to -1
      */
-    void allocate(size_t n, const std::vector<uint8_t> &pairs) {
+    void allocate(size_t n, const std::vector<short> &pairs) {
         _pairs = pairs;
         _num_pairs = _pairs.size();
         _INCC = std::vector<short>(n * _num_pairs, INCC_UNSET);
@@ -90,7 +90,7 @@ private:
     static constexpr short INCC_UNSET = DoubleToSignedChar_voxel(-1);
     // Cannot use bool here, it's not thread safe. Need to wrap it instead.
     std::vector<short> _INCC;
-    std::vector<uint8_t> _pairs;
+    std::vector<short> _pairs;
     size_t _num_pairs;
 
 };
