@@ -3230,7 +3230,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
-            if(proinfo->sensor_provider = PT)
+            if(proinfo->sensor_provider == PT)
             {
                 if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
                     pair_number++;
@@ -3246,7 +3246,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         if(fabs(image_info[image_number].Offnadir_angle) < minoffnadir)
         {
-            if(proinfo->sensor_provider = PT)
+            if(proinfo->sensor_provider == PT)
             {
                 if(image_info[image_number].cloud < CLD_COV)
                 {
@@ -3292,7 +3292,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                         pairinfo.SetCenterDist(pair_number,0.0);
                         pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                     }
-                    else if(proinfo->sensor_provider = PT)
+                    else if(proinfo->sensor_provider == PT)
                     {
                         double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
                         /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
