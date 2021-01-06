@@ -48,24 +48,48 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
     
     char *tmp_chr = remove_ext(ImageFilename);
-    sprintf(RPCFilename,"%s.xml",tmp_chr);
-    sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
-    FILE *fid_xml = fopen(RPCFilename,"r");
-    if(!fid_xml)
+    if(args.sensor_provider == PT)
     {
-        sprintf(RPCFilename,"%s.XML",tmp_chr);
+        sprintf(RPCFilename,"%s_RPC.TXT",tmp_chr);
         sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
-        FILE *fid_XML = fopen(RPCFilename,"r");
-        if(!fid_XML)
+        FILE *fid_xml = fopen(RPCFilename,"r");
+        if(!fid_xml)
         {
-            printf("Please check xml file!! SETSM supports a format of 'xml' or 'XML'");
-            exit(1);
+            sprintf(RPCFilename,"%s_RPC.txt",tmp_chr);
+            sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
+            FILE *fid_XML = fopen(RPCFilename,"r");
+            if(!fid_XML)
+            {
+                printf("Please check Planet RPC file!! SETSM supports a format of 'txt' or 'TXT'");
+                exit(1);
+            }
+            else
+                fclose(fid_XML);
         }
         else
-            fclose(fid_XML);
+            fclose(fid_xml);
     }
     else
-        fclose(fid_xml);
+    {
+        sprintf(RPCFilename,"%s.xml",tmp_chr);
+        sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
+        FILE *fid_xml = fopen(RPCFilename,"r");
+        if(!fid_xml)
+        {
+            sprintf(RPCFilename,"%s.XML",tmp_chr);
+            sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
+            FILE *fid_XML = fopen(RPCFilename,"r");
+            if(!fid_XML)
+            {
+                printf("Please check xml file!! SETSM supports a format of 'xml' or 'XML'");
+                exit(1);
+            }
+            else
+                fclose(fid_XML);
+        }
+        else
+            fclose(fid_xml);
+    }
     
     free(tmp_chr);
 

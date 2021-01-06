@@ -720,7 +720,8 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                         metadata_file[i] = tmp_chr[i];
                     metadata_file[chr_size - 4] = '\0';
                     
-                    sprintf(info->Imagemetafile[ti],"%s_metadata.xml",metadata_file);
+                    //sprintf(info->Imagemetafile[ti],"%s_metadata.xml",metadata_file);
+                    sprintf(info->Imagemetafile[ti],"%s_metadata.xml",tmp_chr);
                     printf("imagemetafile %s\n",info->Imagemetafile[ti]);
                 }
                                                                               
@@ -2374,11 +2375,16 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
         fscanf(pFile,"%d",&total_images);
         fscanf(pFile,"%s",default_path);
         printf("image counts %d\tdefault path %s\n",total_images,default_path);
+        int selected_count = 0;
+        
         for(int i = 0; i<total_images ; i++)
         {
             int strip_ID;
             char temp_str[1000];
-            fscanf(pFile,"%s\t%d\t%f\t%f\t%f\n",temp_str,&strip_ID,&Iinfo[i].Offnadir_angle,&Iinfo[i].Mean_sat_azimuth_angle,&Iinfo[i].GSD.pro_GSD);
+            char temp_meta[1000];
+            ImageInfo temp_info;
+            
+            fscanf(pFile,"%s\t%d\t%f\t%f\t%f\n",temp_str,&strip_ID,&temp_info.Offnadir_angle,&temp_info.Mean_sat_azimuth_angle,&temp_info.GSD.pro_GSD);
             
             char temp_year[5];
             char temp_month[3];
@@ -2393,17 +2399,39 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 temp_day[k] = temp_str[k+6];
             temp_day[2] = '\0';
             
-            printf("file name %s\t%d\t%f\t%f\t%f\n",temp_str,strip_ID,Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
+            //printf("file name %s\t%d\t%f\t%f\t%f\n",temp_str,strip_ID,Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
             //printf("temp %s\t%s\t%s\n",temp_year,temp_month,temp_day);
-            sprintf(proinfo->Imagefilename[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
-            sprintf(proinfo->RPCfilename[i],"%s/%s/%s/%s/%d/%s_pan_RPC.TXT",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
-            sprintf(proinfo->Imagemetafile[i],"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
-            printf("path %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\n\n",proinfo->Imagefilename[i],proinfo->RPCfilename[i],proinfo->Imagemetafile[i],Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
+            sprintf(temp_meta,"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            printf("temp_meta %s\n",temp_meta);
             
+            OpenXMLFile_orientation_planet(temp_meta,&temp_info);
+            if(temp_info.cloud < proinfo->Cloud_th)
+            {
+                /*
+                sprintf(proinfo->Imagefilename[selected_count],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                sprintf(proinfo->RPCfilename[selected_count],"%s/%s/%s/%s/%d/%s_pan_RPC.TXT",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                sprintf(proinfo->Imagemetafile[selected_count],"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                */
+                
+                sprintf(proinfo->Imagefilename[selected_count],"%s/%s/%s/%s/%d/%s.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                sprintf(proinfo->RPCfilename[selected_count],"%s/%s/%s/%s/%d/%s_RPC.TXT",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                sprintf(proinfo->Imagemetafile[selected_count],"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+                
+                Iinfo[selected_count] = temp_info;
+                //Iinfo[selected_count].Offnadir_angle = temp_info.Offnadir_angle;
+                //Iinfo[selected_count].Mean_sat_azimuth_angle = temp_info.Mean_sat_azimuth_angle;
+                //Iinfo[selected_count].GSD.pro_GSD = temp_info.GSD.pro_GSD;
+                
+                printf("selected_count %d\tpath %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\t%f\n\n",selected_count,proinfo->Imagefilename[selected_count],proinfo->RPCfilename[selected_count],proinfo->Imagemetafile[selected_count],Iinfo[selected_count].Offnadir_angle,Iinfo[selected_count].Mean_sat_azimuth_angle,Iinfo[selected_count].GSD.pro_GSD,Iinfo[selected_count].cloud);
+                
+                selected_count++;
+            }
         }
+        
+        proinfo->number_of_images = selected_count;
+        
         fclose(pFile);
     }
-    
 }
 
 void Open_planetmultiinfo_args(ARGINFO *args)
@@ -2439,7 +2467,8 @@ void Open_planetmultiinfo_args(ARGINFO *args)
                 temp_day[k] = temp_str[k+6];
             temp_day[2] = '\0';
             
-            sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            //sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
+            sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
             printf("path %s\n\n",args->Image[i]);
             
         }

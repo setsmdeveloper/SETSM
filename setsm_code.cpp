@@ -115,6 +115,8 @@ int main(int argc,char *argv[])
     args.DS_sigma = 1.6;
     args.DS_kernel = 9;
     args.GCP_spacing = -9;
+    args.Cloud_th = CLD_COV;
+    args.CA_th = 3;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -469,6 +471,32 @@ int main(int argc,char *argv[])
                 {
                     args.System_memory = atof(argv[i+1]);
                     printf("System memory %f\n",args.System_memory);
+                }
+            }
+            
+            if (strcmp("-CA_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Convergence angle threshold for stereo pair configuration\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.CA_th = atof(argv[i+1]);
+                    printf("Convergence angle threshold %f\n",args.CA_th);
+                }
+            }
+            
+            if (strcmp("-Cloud_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Maximum cloud coverge for image selection\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Cloud_th = atof(argv[i+1]);
+                    printf("Maximum cloud coverge %f\n",args.Cloud_th);
                 }
             }
         }
@@ -1543,18 +1571,18 @@ int main(int argc,char *argv[])
                             
                             if(DEM_divide == 0)
                             {
-                                //if(!args.check_ortho)
+                                if(!args.check_ortho)
                                     sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
-                                //else
-                                //    sprintf(DEMFilename, "%s", args.seedDEMfilename);
+                                else
+                                    sprintf(DEMFilename, "%s", args.seedDEMfilename);
                                 
                                 if(!args.check_Matchtag)
                                 {
                                     orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
                                     orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 }
-                                //else if(args.ortho_count == 2)
-                                //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                else if(args.ortho_count == 2)
+                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 
                                 if(args.check_LSF2 == 2)
                                     remove(DEMFilename);
@@ -1569,8 +1597,8 @@ int main(int argc,char *argv[])
                                         orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
                                         orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
                                     }
-                                    //else if(args.ortho_count == 2)
-                                    //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                    else if(args.ortho_count == 2)
+                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
                                     
                                     if(args.check_LSF2 == 2)
                                         remove(DEMFilename);
@@ -1730,6 +1758,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->check_full_cal = args.check_full_cal;
     proinfo->SGM_py = args.SGM_py;
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
+    proinfo->CA_th = args.CA_th;
+    proinfo->Cloud_th = args.Cloud_th;
+    
     printf("sgm level %d\t system memory %f\t%d\n",proinfo->SGM_py,proinfo->System_memory,args.number_of_images);
     
     if(args.check_ortho)
@@ -1907,7 +1938,35 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         convergence_angle = 40;
                         
                         if(args.check_txt_input == 2)
-                            Open_planetmultiinfo(proinfo, args.Multi_input_file, image_info);
+                        {
+                            free(image_info);
+                            free(Limagesize);
+                            free(Image_gsd_r);
+                            free(Image_gsd_c);
+                            free(Image_gsd);
+                            free(GSD_image);
+                            free(leftright_band);
+                            free(RPCs);
+                            
+                            ImageInfo *temp_image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
+                            
+                            Open_planetmultiinfo(proinfo, args.Multi_input_file, temp_image_info);
+                            
+                            image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
+                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                image_info[ti] = temp_image_info[ti];
+                            free(temp_image_info);
+                            
+                            Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
+                            RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+                            
+                            Image_gsd_r = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            Image_gsd_c = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            Image_gsd = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            
+                            GSD_image = (ImageGSD*)calloc(sizeof(ImageGSD),proinfo->number_of_images);
+                            leftright_band = (BandInfo*)calloc(sizeof(BandInfo),proinfo->number_of_images);
+                        }
                         
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
@@ -1920,12 +1979,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             {
                                 if(ti != 1) //manual setup offnadir direction
                                     image_info[ti].Offnadir_angle = -(image_info[ti].Offnadir_angle_xml);
+                                else
+                                    image_info[ti].Offnadir_angle = (image_info[ti].Offnadir_angle_xml);
                             }
                             
                             sum_product_res += image_info[ti].GSD.pro_GSD;
                             
                             printf("planet header loading %s\tGSD %f\t%f\t%f\t%f\t%f\t%f\t%f\n",proinfo->Imagemetafile[ti],image_info[ti].GSD.row_GSD,image_info[ti].GSD.col_GSD,image_info[ti].Offnadir_angle,image_info[ti].Offnadir_angle_xml,image_info[ti].Mean_sat_azimuth_angle,image_info[ti].Mean_sat_azimuth_angle_xml,image_info[ti].cloud);
                         }
+                        //exit(1);
                     }
                     else
                     {
@@ -2576,7 +2638,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             {
                                 tile_size       = args.tilesize;
                                 SetTiles(proinfo, Boundary, tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
-                                
+                                /* maximum tilesize test
                                 double subBoundary_max[4];
                                 int br_iter = 0;
                                 
@@ -2637,6 +2699,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 args.end_row = select_tile_row+1;
                                 args.start_col = select_tile_col;
                                 args.end_col = select_tile_col+1;
+                                 */
                             }
                             else
                             {
@@ -2769,8 +2832,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if (proinfo->check_tiles_EC)
                                 t_col_end         = proinfo->end_col;
                             
-                            for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
-                                printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
+                            //for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
+                            //    printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                             
@@ -3229,12 +3292,12 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
-            if(proinfo->sensor_provider = PT)
+            /*if(proinfo->sensor_provider = PT)
             {
                 if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
                     pair_number++;
             }
-            else
+            else*/
                 pair_number++;
         }
     }
@@ -3245,7 +3308,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         if(fabs(image_info[image_number].Offnadir_angle) < minoffnadir)
         {
-            if(proinfo->sensor_provider = PT)
+            /*if(proinfo->sensor_provider = PT)
             {
                 if(image_info[image_number].cloud < CLD_COV)
                 {
@@ -3253,7 +3316,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                     pairinfo.SetMinOffImage(image_number);
                 }
             }
-            else
+            else*/
             {
                 minoffnadir = fabs(image_info[image_number].Offnadir_angle);
                 pairinfo.SetMinOffImage(image_number);
@@ -3266,7 +3329,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
-            if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
+            //if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
             {
                 pairinfo.SetPairs(pair_number, ref_ti, ti);
                 
@@ -3291,7 +3354,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                         pairinfo.SetCenterDist(pair_number,0.0);
                         pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                     }
-                    else if(proinfo->sensor_provider = PT)
+                    else if(proinfo->sensor_provider == PT)
                     {
                         double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
                         /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
@@ -3365,7 +3428,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool check_CA = false;
             if(proinfo->sensor_provider == PT)
             {
-                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= 3/* && image_info[reference_id].cloud < CLD_COV && image_info[ti].cloud < CLD_COV*/)
+                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th/* && image_info[reference_id].cloud < CLD_COV && image_info[ti].cloud < CLD_COV*/)
                     check_CA = true;
             }
             else
@@ -3399,70 +3462,81 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
     }
     
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
+    if(actual_pair_save.size() > 0)
     {
-        int pair_number = actual_pair_save[count];
-        const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
-        const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-        printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
-    }
-    
-    //reallocate pair_number by actual_pair_save
-    for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
-    {
-        for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
         {
-            bool check = false;
-            int array_count = 0;
-            while(array_count < actual_pair_save.size() && !check)
+            int pair_number = actual_pair_save[count];
+            const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+            const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+            printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
+        }
+        
+        //reallocate pair_number by actual_pair_save
+        for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+        {
+            for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
             {
-                int b_grid_pair = grid_pair[iter_count][count];
-                if(grid_pair[iter_count][count] == actual_pair_save[array_count])
+                bool check = false;
+                int array_count = 0;
+                while(array_count < actual_pair_save.size() && !check)
                 {
-                    check = true;
-                    grid_pair[iter_count][count] = array_count;
+                    int b_grid_pair = grid_pair[iter_count][count];
+                    if(grid_pair[iter_count][count] == actual_pair_save[array_count])
+                    {
+                        check = true;
+                        grid_pair[iter_count][count] = array_count;
+                    }
+                    array_count++;
                 }
-                array_count++;
             }
         }
+        plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
+        
+        pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
+        pairinfo.SetNumberOfPairs(actual_pair_save.size());
+        pairinfo.SetSelectNumberOfPairs(actual_pair_save.size());
+        
+        CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
+        
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
+        {
+            int pair_number = actual_pair_save[count];
+            //temp_pairs.Replace(*plevelinfo.pairinfo,count,pair_number);
+            
+            temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
+            temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
+            temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
+            temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+            temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
+        }
+        
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
+        {
+            //plevelinfo.pairinfo->Replace(temp_pairs,count,count);
+            plevelinfo.pairinfo->SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
+            plevelinfo.pairinfo->SetBHratio(count, temp_pairs.BHratio(count));
+            plevelinfo.pairinfo->SetCenterDist(count, temp_pairs.CenterDist(count));
+            plevelinfo.pairinfo->SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
+            plevelinfo.pairinfo->SetSigmaZ(count, temp_pairs.SigmaZ(count));
+            //pairinfo.Replace(temp_pairs,count,count);
+            
+            pairinfo.SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
+            pairinfo.SetBHratio(count, temp_pairs.BHratio(count));
+            pairinfo.SetCenterDist(count, temp_pairs.CenterDist(count));
+            pairinfo.SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
+            pairinfo.SetSigmaZ(count, temp_pairs.SigmaZ(count));
+            
+            printf("count %d\t%d\t%d\t%f\t%f\tcloud %f\t%f\n",count, plevelinfo.pairinfo->pairs(count).m_X,plevelinfo.pairinfo->pairs(count).m_Y,plevelinfo.pairinfo->BHratio(count),plevelinfo.pairinfo->SigmaZ(count),image_info[plevelinfo.pairinfo->pairs(count).m_X].cloud,image_info[plevelinfo.pairinfo->pairs(count).m_Y].cloud);
+        }
     }
-    plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
-    
-    pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
-    pairinfo.SetNumberOfPairs(actual_pair_save.size());
-    pairinfo.SetSelectNumberOfPairs(actual_pair_save.size());
-    
-    CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
-    
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
+    else
     {
-        int pair_number = actual_pair_save[count];
-        //temp_pairs.Replace(*plevelinfo.pairinfo,count,pair_number);
+        plevelinfo.pairinfo->SetNumberOfPairs(0);
+        plevelinfo.pairinfo->SetSelectNumberOfPairs(0);
         
-        temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
-        temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
-        temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
-        temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
-        temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
-    }
-    
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
-    {
-        //plevelinfo.pairinfo->Replace(temp_pairs,count,count);
-        plevelinfo.pairinfo->SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
-        plevelinfo.pairinfo->SetBHratio(count, temp_pairs.BHratio(count));
-        plevelinfo.pairinfo->SetCenterDist(count, temp_pairs.CenterDist(count));
-        plevelinfo.pairinfo->SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
-        plevelinfo.pairinfo->SetSigmaZ(count, temp_pairs.SigmaZ(count));
-        //pairinfo.Replace(temp_pairs,count,count);
-        
-        pairinfo.SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
-        pairinfo.SetBHratio(count, temp_pairs.BHratio(count));
-        pairinfo.SetCenterDist(count, temp_pairs.CenterDist(count));
-        pairinfo.SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
-        pairinfo.SetSigmaZ(count, temp_pairs.SigmaZ(count));
-        
-        printf("count %d\t%d\t%d\t%f\t%f\tcloud %f\t%f\n",count, plevelinfo.pairinfo->pairs(count).m_X,plevelinfo.pairinfo->pairs(count).m_Y,plevelinfo.pairinfo->BHratio(count),plevelinfo.pairinfo->SigmaZ(count),image_info[plevelinfo.pairinfo->pairs(count).m_X].cloud,image_info[plevelinfo.pairinfo->pairs(count).m_Y].cloud);
+        printf("please check possible stereo pairs with proper convergence angle!!\n");
+        exit(1);
     }
 }
 
@@ -3673,11 +3747,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             if(proinfo->IsRA)
             {
                 double RA_memory = 0;
-                for(int ti = 0; ti < MaxNCC ; ti++)
+                /*for(int ti = 0; ti < MaxNCC ; ti++)
                 {
                     printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
                 }
-                
+                */
                 //uint16 = original image, magnitude image : uint 8 = orientation image : int16 = directional image in SetPyramidImages
                 for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                 {
@@ -4153,7 +4227,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         vector<short>* Grid_pair = (vector<short>*)calloc(sizeof(vector<short>),Grid_length);
                         //if(!flag_start)
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return,image_info);
-                        exit(1);
+                        //exit(1);
                         
                         char fname_grid[500];
                         sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
@@ -7187,14 +7261,14 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
     double h_divide = 6;
-    if(*rlevelinfo.Pyramid_step == 0)
+    /*if(*rlevelinfo.Pyramid_step == 0)
     {
         if(*rlevelinfo.iteration <= 2)
             h_divide = 6;
         else
             h_divide = 6;
     }
-    
+    */
     double HS = rlevelinfo.MPP/h_divide*pwrtwo(*rlevelinfo.Pyramid_step);
     
     double &&tt1 = HS*100.0;
