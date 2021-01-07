@@ -10462,10 +10462,10 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
-        /*
+        
         if(max_roh > 0)
         {
-            if(Pyramid_step == 0 && iteration >= 2)
+            if(Pyramid_step == 0 && iteration > 2)
             {
                 nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                 nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
@@ -10495,8 +10495,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     nccresult[pt_index].result1 = DoubleToSignedChar_result(temp_nccresult_sec);
                 }
             }
-        }*/
-        
+        }
+        /*
         if(max_roh > 0 && temp_nccresult > -100)
         {
             if(Pyramid_step == 0 && iteration >= 2)
@@ -10534,7 +10534,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
             }
         }
-         
+         */
     }
     
     for(long i=0;i<Size_Grid2D.height;i++)
@@ -11861,14 +11861,24 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 {
                     double min_roh_th;
                     
-                    if(Pyramid_step == 4)
-                        min_roh_th = 0.05 + (iteration-1)*0.01;
-                    else if(Pyramid_step == 3)
-                        min_roh_th = 0.15 + (iteration-1)*0.01;
-                    else if(Pyramid_step == 2)
-                        min_roh_th = 0.60;
-                    else if(Pyramid_step == 1)
-                        min_roh_th = 0.80;
+                    /*if(proinfo->sensor_provider == PT)// Planet
+                    {
+                        if(Pyramid_step == proinfo->pyramid_level)
+                            min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
+                    }
+                    else*/
+                    {
+                        if(Pyramid_step == 4)
+                            min_roh_th = 0.05 + (iteration-1)*0.01;
+                        else if(Pyramid_step == 3)
+                            min_roh_th = 0.15 + (iteration-1)*0.01;
+                        else if(Pyramid_step == 2)
+                            min_roh_th = 0.60;
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.80;
+                    }
                     
                     if(Pyramid_step <= SGM_th_py )
                     {
