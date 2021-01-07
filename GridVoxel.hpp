@@ -44,7 +44,7 @@ public:
      * Initialize INCC values to -1
      */
     void allocate(size_t n) {
-        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(true));
+        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(false));
         _INCC = std::vector<short>(n * ncc_len, DoubleToSignedChar_voxel(-1));
     }
 
