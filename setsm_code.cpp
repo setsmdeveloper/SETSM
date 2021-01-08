@@ -14640,7 +14640,7 @@ constexpr uint32_t BOTTOM = 1 << 2;
 constexpr uint32_t RIGHT  = 1 << 3;
 constexpr uint32_t LEFT   = 1 << 4;
 
-bool calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right) {
+uint32_t calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right) {
     uint32_t code = 0;
     if(p.m_X < bottom_left.m_X)
         code |= LEFT;
@@ -14666,7 +14666,7 @@ bool line_intersects_box(D2DPOINT p1,D2DPOINT p2,D2DPOINT bottom_left,D2DPOINT t
         if(!p1_code || !p2_code)
             return true;
         // Both on same side, intersection not possible
-        if(p1_code & p1_code)
+        if(p1_code & p2_code)
             return false;
 
         // nontrivial case - update p1 to to intersection
