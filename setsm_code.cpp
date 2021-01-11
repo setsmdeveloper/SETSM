@@ -12505,10 +12505,13 @@ void set_blunder_vector(long int index, uint8_t val, vector<D3DPOINT> &pts, bool
     // changed it from zero to 1 or 3. In that case,
     // the other thread/iteration would have
     // updated detectedBlunders, so we don't need to.
+    D3DPOINT *pt = pts.data() + index;
 #pragma omp atomic capture
     {
-        prev = pts[index].flag;
-        pts[index].flag = val;
+        //prev = pts[index].flag;
+        //pts[index].flag = val;
+        prev = pt->flag;
+        pt->flag = val;
     }
     if(prev == 0)
     {
