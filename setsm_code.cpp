@@ -115,6 +115,8 @@ int main(int argc,char *argv[])
     args.DS_sigma = 1.6;
     args.DS_kernel = 9;
     args.GCP_spacing = -9;
+    args.Cloud_th = CLD_COV;
+    args.CA_th = 3;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -469,6 +471,32 @@ int main(int argc,char *argv[])
                 {
                     args.System_memory = atof(argv[i+1]);
                     printf("System memory %f\n",args.System_memory);
+                }
+            }
+            
+            if (strcmp("-CA_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Convergence angle threshold for stereo pair configuration\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.CA_th = atof(argv[i+1]);
+                    printf("Convergence angle threshold %f\n",args.CA_th);
+                }
+            }
+            
+            if (strcmp("-Cloud_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Maximum cloud coverge for image selection\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Cloud_th = atof(argv[i+1]);
+                    printf("Maximum cloud coverge %f\n",args.Cloud_th);
                 }
             }
         }
@@ -1543,18 +1571,18 @@ int main(int argc,char *argv[])
                             
                             if(DEM_divide == 0)
                             {
-                                //if(!args.check_ortho)
+                                if(!args.check_ortho)
                                     sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
-                                //else
-                                //    sprintf(DEMFilename, "%s", args.seedDEMfilename);
+                                else
+                                    sprintf(DEMFilename, "%s", args.seedDEMfilename);
                                 
                                 if(!args.check_Matchtag)
                                 {
                                     orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
                                     orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 }
-                                //else if(args.ortho_count == 2)
-                                //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                else if(args.ortho_count == 2)
+                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 
                                 if(args.check_LSF2 == 2)
                                     remove(DEMFilename);
@@ -1569,8 +1597,8 @@ int main(int argc,char *argv[])
                                         orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
                                         orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
                                     }
-                                    //else if(args.ortho_count == 2)
-                                    //    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                    else if(args.ortho_count == 2)
+                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
                                     
                                     if(args.check_LSF2 == 2)
                                         remove(DEMFilename);
@@ -1730,6 +1758,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->check_full_cal = args.check_full_cal;
     proinfo->SGM_py = args.SGM_py;
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
+    proinfo->CA_th = args.CA_th;
+    proinfo->Cloud_th = args.Cloud_th;
+    
     printf("sgm level %d\t system memory %f\t%d\n",proinfo->SGM_py,proinfo->System_memory,args.number_of_images);
     
     if(args.check_ortho)
@@ -1907,7 +1938,35 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         convergence_angle = 40;
                         
                         if(args.check_txt_input == 2)
-                            Open_planetmultiinfo(proinfo, args.Multi_input_file, image_info);
+                        {
+                            free(image_info);
+                            free(Limagesize);
+                            free(Image_gsd_r);
+                            free(Image_gsd_c);
+                            free(Image_gsd);
+                            free(GSD_image);
+                            free(leftright_band);
+                            free(RPCs);
+                            
+                            ImageInfo *temp_image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
+                            
+                            Open_planetmultiinfo(proinfo, args.Multi_input_file, temp_image_info);
+                            
+                            image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
+                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                                image_info[ti] = temp_image_info[ti];
+                            free(temp_image_info);
+                            
+                            Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
+                            RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+                            
+                            Image_gsd_r = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            Image_gsd_c = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            Image_gsd = (double*)calloc(sizeof(double),proinfo->number_of_images);
+                            
+                            GSD_image = (ImageGSD*)calloc(sizeof(ImageGSD),proinfo->number_of_images);
+                            leftright_band = (BandInfo*)calloc(sizeof(BandInfo),proinfo->number_of_images);
+                        }
                         
                         for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
@@ -1920,12 +1979,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             {
                                 if(ti != 1) //manual setup offnadir direction
                                     image_info[ti].Offnadir_angle = -(image_info[ti].Offnadir_angle_xml);
+                                else
+                                    image_info[ti].Offnadir_angle = (image_info[ti].Offnadir_angle_xml);
                             }
                             
                             sum_product_res += image_info[ti].GSD.pro_GSD;
                             
                             printf("planet header loading %s\tGSD %f\t%f\t%f\t%f\t%f\t%f\t%f\n",proinfo->Imagemetafile[ti],image_info[ti].GSD.row_GSD,image_info[ti].GSD.col_GSD,image_info[ti].Offnadir_angle,image_info[ti].Offnadir_angle_xml,image_info[ti].Mean_sat_azimuth_angle,image_info[ti].Mean_sat_azimuth_angle_xml,image_info[ti].cloud);
                         }
+                        //exit(1);
                     }
                     else
                     {
@@ -2577,7 +2639,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             {
                                 tile_size       = args.tilesize;
                                 SetTiles(proinfo, Boundary, tile_size, &pyramid_step, &buffer_area, &iter_row_start, &iter_row_end, &t_col_start, &t_col_end, &subX, &subY);
-                                
+                                /* maximum tilesize test
                                 double subBoundary_max[4];
                                 int br_iter = 0;
                                 
@@ -2638,6 +2700,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 args.end_row = select_tile_row+1;
                                 args.start_col = select_tile_col;
                                 args.end_col = select_tile_col+1;
+                                 */
                             }
                             else
                             {
@@ -2770,8 +2833,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if (proinfo->check_tiles_EC)
                                 t_col_end         = proinfo->end_col;
                             
-                            for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
-                                printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
+                            //for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
+                            //    printf("RA param = %f\t%f\n",Imageparams[ti][0],Imageparams[ti][1]);
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                             
@@ -3230,12 +3293,12 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
-            if(proinfo->sensor_provider == PT)
+            /*if(proinfo->sensor_provider = PT)
             {
                 if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
                     pair_number++;
             }
-            else
+            else*/
                 pair_number++;
         }
     }
@@ -3246,7 +3309,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         if(fabs(image_info[image_number].Offnadir_angle) < minoffnadir)
         {
-            if(proinfo->sensor_provider == PT)
+            /*if(proinfo->sensor_provider = PT)
             {
                 if(image_info[image_number].cloud < CLD_COV)
                 {
@@ -3254,7 +3317,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                     pairinfo.SetMinOffImage(image_number);
                 }
             }
-            else
+            else*/
             {
                 minoffnadir = fabs(image_info[image_number].Offnadir_angle);
                 pairinfo.SetMinOffImage(image_number);
@@ -3267,7 +3330,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
-            if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
+            //if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
             {
                 pairinfo.SetPairs(pair_number, ref_ti, ti);
                 
@@ -3366,7 +3429,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool check_CA = false;
             if(proinfo->sensor_provider == PT)
             {
-                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= 3/* && image_info[reference_id].cloud < CLD_COV && image_info[ti].cloud < CLD_COV*/)
+                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th/* && image_info[reference_id].cloud < CLD_COV && image_info[ti].cloud < CLD_COV*/)
                     check_CA = true;
             }
             else
@@ -3386,62 +3449,80 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
     }
     
-    //reallocate pair_number by actual_pair_save
-    for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+    if(actual_pair_save.size() > 0)
     {
-        for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
         {
-            bool check = false;
-            int array_count = 0;
-            while(array_count < actual_pair_save.size() && !check)
+            int pair_number = actual_pair_save[count];
+            const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+            const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+            printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
+        }
+        
+        //reallocate pair_number by actual_pair_save
+        for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+        {
+            for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
             {
-                int b_grid_pair = grid_pair[iter_count][count];
-                if(grid_pair[iter_count][count] == actual_pair_save[array_count])
+                bool check = false;
+                int array_count = 0;
+                while(array_count < actual_pair_save.size() && !check)
                 {
-                    check = true;
-                    grid_pair[iter_count][count] = array_count;
+                    int b_grid_pair = grid_pair[iter_count][count];
+                    if(grid_pair[iter_count][count] == actual_pair_save[array_count])
+                    {
+                        check = true;
+                        grid_pair[iter_count][count] = array_count;
+                    }
+                    array_count++;
                 }
-                array_count++;
             }
         }
-    }
-    plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
-    
-    pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
-    pairinfo.SetNumberOfPairs(actual_pair_save.size());
-    pairinfo.SetSelectNumberOfPairs(actual_pair_save.size());
-    
-    // create a temp pairinfo object, and the values from the pairinfo
-    // object into it. We're going to re-map the pair numbers then
-    // copy it to pairinfo
-    CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
-    temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
-    temp_pairs.SetHeightStep(pairinfo.HeightStep());
-    
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
-    {
-        int pair_number = actual_pair_save[count];
+        plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
         
-        temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
-        temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
-        temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
-        temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
-        temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
+        pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
+        pairinfo.SetNumberOfPairs(actual_pair_save.size());
+        pairinfo.SetSelectNumberOfPairs(actual_pair_save.size());
+       
+        // create a temp pairinfo object, and the values from the pairinfo
+        // object into it. We're going to re-map the pair numbers then
+        // copy it to pairinfo
+        CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
+        temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
+        temp_pairs.SetHeightStep(pairinfo.HeightStep());
 
-        printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
-            temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
-            temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
-            temp_pairs.BHratio(count), temp_pairs.SigmaZ(count));
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
+        {
+            int pair_number = actual_pair_save[count];
+            
+            temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
+            temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
+            temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
+            temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+            temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
 
-        printf("pair id: %d imgs=(%d, %d) cloud(first)=%f cloud(second)=%f\n", count,
-            temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
-            image_info[temp_pairs.pairs(count).m_X].cloud,
-            image_info[temp_pairs.pairs(count).m_Y].cloud);
+            printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
+                temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
+                temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
+                temp_pairs.BHratio(count), temp_pairs.SigmaZ(count));
+
+            printf("pair id: %d imgs=(%d, %d) cloud(first)=%f cloud(second)=%f\n", count,
+                temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
+                image_info[temp_pairs.pairs(count).m_X].cloud,
+                image_info[temp_pairs.pairs(count).m_Y].cloud);
+        }
+        
+        *plevelinfo.pairinfo = temp_pairs;
+        pairinfo = temp_pairs;
+    } 
+    else
+    {
+        plevelinfo.pairinfo->SetNumberOfPairs(0);
+        plevelinfo.pairinfo->SetSelectNumberOfPairs(0);
+        
+        printf("please check possible stereo pairs with proper convergence angle!!\n");
+        exit(1);
     }
-
-    *plevelinfo.pairinfo = temp_pairs;
-    pairinfo = temp_pairs;
-
 }
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
@@ -3652,11 +3733,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
             if(proinfo->IsRA)
             {
                 double RA_memory = 0;
-                for(int ti = 0; ti < MaxNCC ; ti++)
+                /*for(int ti = 0; ti < MaxNCC ; ti++)
                 {
                     printf("RA Params=%f\t%f\t\n",Imageparams[ti][0],Imageparams[ti][1]);
                 }
-                
+                */
                 //uint16 = original image, magnitude image : uint 8 = orientation image : int16 = directional image in SetPyramidImages
                 for(int ti = 0; ti < proinfo->number_of_images ; ti++)
                 {
@@ -7164,14 +7245,14 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
     double h_divide = 6;
-    if(*rlevelinfo.Pyramid_step == 0)
+    /*if(*rlevelinfo.Pyramid_step == 0)
     {
         if(*rlevelinfo.iteration <= 2)
             h_divide = 6;
         else
             h_divide = 6;
     }
-    
+    */
     double HS = rlevelinfo.MPP/h_divide*pwrtwo(*rlevelinfo.Pyramid_step);
     
     double &&tt1 = HS*100.0;
@@ -10363,10 +10444,10 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 }
             }
         }
-        /*
+        
         if(max_roh > 0)
         {
-            if(Pyramid_step == 0 && iteration >= 2)
+            if(Pyramid_step == 0 && iteration > 2)
             {
                 nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                 nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
@@ -10396,8 +10477,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     nccresult[pt_index].result1 = DoubleToSignedChar_result(temp_nccresult_sec);
                 }
             }
-        }*/
-        
+        }
+        /*
         if(max_roh > 0 && temp_nccresult > -100)
         {
             if(Pyramid_step == 0 && iteration >= 2)
@@ -10435,7 +10516,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
             }
         }
-         
+         */
     }
     
     for(long i=0;i<Size_Grid2D.height;i++)
@@ -11763,14 +11844,24 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const NCCresult* ro
                 {
                     double min_roh_th;
                     
-                    if(Pyramid_step == 4)
-                        min_roh_th = 0.05 + (iteration-1)*0.01;
-                    else if(Pyramid_step == 3)
-                        min_roh_th = 0.15 + (iteration-1)*0.01;
-                    else if(Pyramid_step == 2)
-                        min_roh_th = 0.60;
-                    else if(Pyramid_step == 1)
-                        min_roh_th = 0.80;
+                    /*if(proinfo->sensor_provider == PT)// Planet
+                    {
+                        if(Pyramid_step == proinfo->pyramid_level)
+                            min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
+                    }
+                    else*/
+                    {
+                        if(Pyramid_step == 4)
+                            min_roh_th = 0.05 + (iteration-1)*0.01;
+                        else if(Pyramid_step == 3)
+                            min_roh_th = 0.15 + (iteration-1)*0.01;
+                        else if(Pyramid_step == 2)
+                            min_roh_th = 0.60;
+                        else if(Pyramid_step == 1)
+                            min_roh_th = 0.80;
+                    }
                     
                     if(Pyramid_step <= SGM_th_py )
                     {
