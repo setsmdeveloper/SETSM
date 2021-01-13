@@ -350,7 +350,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                     
                     printf("level = %d\t final_level_iteration %d\n",level,final_level_iteration);
                     
-                    D2DPOINT Startpos[2];
+                    vector<D2DPOINT> Startpos(2);
                     for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
                     {
                         Startpos[image_index].m_X        = (double)(startpos_ori[image_index].m_X/pwrtwo(prc_level));
@@ -361,7 +361,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                     levelinfo.py_MagImages = SubMagImages[level];
                     levelinfo.py_OriImages = SubOriImages[level];
                     
-                    levelinfo.py_Startpos = Startpos;
+                    levelinfo.py_Startpos = &Startpos;
                     levelinfo.Pyramid_step = &prc_level;
                     levelinfo.py_Sizes = data_size_lr;
                     
@@ -1217,8 +1217,8 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                             D2DPOINT Left_Imagecoord        = GetObjectToImage_single(1,temp_GP,proinfo.LBoundary,proinfo.resolution);
                             D2DPOINT Right_Imagecoord        = GetObjectToImage_single(1,temp_GP_R,proinfo.RBoundary,proinfo.resolution);
                             
-                            D2DPOINT Left_Imagecoord_py     = OriginalToPyramid_single(Left_Imagecoord,plevelinfo.py_Startpos[reference_id],Pyramid_step);
-                            D2DPOINT Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,plevelinfo.py_Startpos[target_id],Pyramid_step);
+                            D2DPOINT Left_Imagecoord_py     = OriginalToPyramid_single(Left_Imagecoord,plevelinfo.py_Startpos->at(reference_id),Pyramid_step);
+                            D2DPOINT Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,plevelinfo.py_Startpos->at(target_id),Pyramid_step);
                             
                             Right_Imagecoord_py.m_Y += (kernel_row + (GridPT3[pt_index].row_shift + Coreg_param[0])/pwrtwo(Pyramid_step));
                             Right_Imagecoord_py.m_X += (kernel_col + (GridPT3[pt_index].col_shift + Coreg_param[1])/pwrtwo(Pyramid_step));
@@ -1545,8 +1545,8 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
                 D2DPOINT Left_Imagecoord        = GetObjectToImage_single(1,temp_GP,proinfo.LBoundary,proinfo.resolution);
                 D2DPOINT Right_Imagecoord       = GetObjectToImage_single(1,temp_GP_R,proinfo.RBoundary,proinfo.resolution);
                 
-                D2DPOINT Left_Imagecoord_py     = OriginalToPyramid_single(Left_Imagecoord,rlevelinfo.py_Startpos[reference_id],Pyramid_step);
-                D2DPOINT Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,rlevelinfo.py_Startpos[target_id],Pyramid_step);
+                D2DPOINT Left_Imagecoord_py     = OriginalToPyramid_single(Left_Imagecoord,rlevelinfo.py_Startpos->at(reference_id),Pyramid_step);
+                D2DPOINT Right_Imagecoord_py    = OriginalToPyramid_single(Right_Imagecoord,rlevelinfo.py_Startpos->at(target_id),Pyramid_step);
                 
                 Right_Imagecoord_py.m_Y += (GridPT3[pt_index].row_shift + Coreg_param[0])/pwrtwo(Pyramid_step);
                 Right_Imagecoord_py.m_X += (GridPT3[pt_index].col_shift + Coreg_param[1])/pwrtwo(Pyramid_step);

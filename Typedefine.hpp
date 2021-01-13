@@ -275,6 +275,20 @@ typedef struct tagNCCresult
     
     bool check_height_change;
 	//int roh_count;
+    
+    tagNCCresult()
+    {
+        result2 = Nodata;
+        result3 = Nodata;
+        minHeight = -1000;
+        maxHeight = -1000;
+        result0 = -1.0;
+        result1 = -1.0;
+        max_WNCC = -1.0;
+        NumOfHeight = 0;
+        result4 = 0;
+        check_height_change = false;
+    }
 } NCCresult;
 
 typedef struct tagMultiMPs
@@ -851,9 +865,9 @@ typedef struct taglevelinfo
     const uint8 * const *py_OriImages_next;
     const uint16 * const *py_MagImages_next;
     
-    const D2DPOINT *py_Startpos;
-    const D2DPOINT *py_BStartpos;
-    const D2DPOINT *py_Startpos_next;
+    const vector<D2DPOINT> *py_Startpos;
+    const vector<D2DPOINT> *py_BStartpos;
+    const vector<D2DPOINT> *py_Startpos_next;
     
     const ImageInfo *imageinfo;
     

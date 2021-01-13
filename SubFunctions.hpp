@@ -123,6 +123,8 @@ FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, long int nu
 //void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, long int numblunders);
 
+void TINUpdate_list_vector(vector<D3DPOINT> &ptslists, long int numofpts, vector<UI3DPOINT> &trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation *oldTri, vector<D3DPOINT> &blunderlist, long int numblunders);
+
 void SetTinBoundary(LevelInfo &rlevelinfo, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
 
 bool IsTinInside(const D3DPOINT &CurGPXY, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, float &Z);
