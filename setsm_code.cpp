@@ -1604,6 +1604,8 @@ int main(int argc,char *argv[])
     }
     free(Imageparams);
 
+    printMaxMemUsage();
+
 #ifdef BUILDMPI
     // Make sure to finalize
     MPI_Finalize();
