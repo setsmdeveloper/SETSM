@@ -12399,22 +12399,22 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                 
                 if(roh_height[grid_index].result3 > Nodata && roh_height[grid_index].result2 > Nodata)
                 {
-                    int height_dis = abs(roh_height[grid_index].result2 - roh_height[grid_index].result3);
+                    //int height_dis = abs(roh_height[grid_index].result2 - roh_height[grid_index].result3);
                     
                     //if(height_dis > MPP)
                     {
                         if(index_1)
                         {
-                            GridPT3[grid_index].minHeight = floor(roh_height[grid_index].result3 - 0.5);
-                            GridPT3[grid_index].maxHeight = ceil(roh_height[grid_index].result2 + 0.5);
+                            //GridPT3[grid_index].minHeight = floor(roh_height[grid_index].result3 - 0.5);
+                            //GridPT3[grid_index].maxHeight = ceil(roh_height[grid_index].result2 + 0.5);
                             GridPT3[grid_index].Matched_flag = 4;
                             
                         }
 
                         if(index_2)
                         {
-                            GridPT3[grid_index].minHeight = floor(roh_height[grid_index].result2 - 0.5);
-                            GridPT3[grid_index].maxHeight = ceil(roh_height[grid_index].result3 + 0.5);
+                            //GridPT3[grid_index].minHeight = floor(roh_height[grid_index].result2 - 0.5);
+                            //GridPT3[grid_index].maxHeight = ceil(roh_height[grid_index].result3 + 0.5);
                             GridPT3[grid_index].Matched_flag = 4;
                         }
                     }
@@ -14585,7 +14585,7 @@ UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long
                             
                             //min, max height setting
                             double t1, t2;
-                            if(pyramid_step >= 1)
+                            if(pyramid_step >= 0)
                             {
                                 t1       = min<double>(temp_MinZ, Z);
                                 t2       = max<double>(temp_MaxZ, Z);
