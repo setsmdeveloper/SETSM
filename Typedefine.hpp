@@ -33,6 +33,8 @@
 #define MaxImages 100
 #define MaxNCC 700
 #define Nodata -9999
+#define Roh_min -30.0
+#define Roh_max 30.0
 #ifndef bool
 //#define bool unsigned char
 #define true 0x1

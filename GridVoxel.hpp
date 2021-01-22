@@ -2,14 +2,26 @@
 #define GRID_VOXEL_H
 
 #include <vector>
+#include <stdio.h>
+#include <stdlib.h>
 
 inline short DoubleToSignedChar_voxel(double val)
 {
+    if(val > 30 || val < -30)
+    {
+        printf("DoubleToSignedChar_voxel overflow %f\n",val);
+        exit(1);
+    }
     return (short)(val*1000.0);
 }
 
 inline double SignedCharToDouble_voxel(short val)
 {
+    if(val > 30000 || val < -30000)
+    {
+        printf("SignedCharToDouble_voxel overflow %f\n",val);
+        exit(1);
+    }
     return (double)(val)/1000.0;
 }
 
@@ -44,7 +56,7 @@ public:
      * Initialize INCC values to -1
      */
     void allocate(size_t n) {
-        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(false));
+        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(true));
         _INCC = std::vector<short>(n * ncc_len, DoubleToSignedChar_voxel(-1));
     }
 
