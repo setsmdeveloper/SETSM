@@ -26,8 +26,8 @@ inline double SQRT(D2DPOINT a, D2DPOINT b);
 inline double SQRT(D3DPOINT a, int dimension = 3);
 inline double SQRT(D3DPOINT a, D3DPOINT b, int dimension = 3);
 
-inline short DoubleToShort_SGM(double val, double factor);
-inline double ShortToDouble_SGM(short val, double factor);
+inline short DoubleToShort_factor(double val, double factor);
+inline double ShortToDouble_factor(short val, double factor);
 
 inline short DoubleToSignedChar_result(double val);
 inline double SignedCharToDouble_result(short val);
@@ -627,12 +627,12 @@ inline double SQRT(D3DPOINT a, D3DPOINT b, int dimension)
         return sqrt( SQ(a.m_X - b.m_X) + SQ(a.m_Y - b.m_Y) + SQ(a.m_Z - b.m_Z) );
 }
 
-inline short DoubleToShort_SGM(double val, double factor)
+inline short DoubleToShort_factor(double val, double factor)
 {
     return (short)round(val*factor);
 }
 
-inline double ShortToDouble_SGM(short val, double factor)
+inline double ShortToDouble_factor(short val, double factor)
 {
     return (double)(val)/factor;
 }

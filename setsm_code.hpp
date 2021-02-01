@@ -75,6 +75,10 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo);
 
+double Set_HeightStep(const double h_divide, const double BufferOfHeight, const double levelMPP);
+
+double GetHeightStep_grids(const ProInfo *proinfo, UGRID *GridPT3, LevelInfo &rlevelinfo, long index, double height_interval, double level_MPP);
+
 double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA);
 
 double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_height, double tar_height, double step_height);
