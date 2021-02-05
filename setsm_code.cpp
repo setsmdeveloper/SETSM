@@ -3398,13 +3398,14 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     //exit(1);
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<short>> &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight)
 {
     vector<short> actual_pair_save;
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
         long int pt_index = iter_count;
-        grid_pair[iter_count].clear();
+
+        vector<short> pairs;
         //vector<short>().swap(grid_pair[iter_count]);
         
         const int start_H     = minmaxHeight[0];
@@ -3437,7 +3438,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             if(check_stop && check_CA)
             {
                 if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false)) {
-                    grid_pair[iter_count].push_back(pair_number);
+                    pairs.push_back(pair_number);
                 }
 
                 if(!contains(actual_pair_save, pair_number))
@@ -3446,6 +3447,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 }
             }
         }
+        grid_pair.add_pairs(iter_count, pairs);
     }
     
     if(actual_pair_save.size() > 0)
@@ -3459,24 +3461,13 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
         
         //reallocate pair_number by actual_pair_save
-        for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
-        {
-            for(int count = 0 ; count < grid_pair[iter_count].size() ; count++)
-            {
-                bool check = false;
-                int array_count = 0;
-                while(array_count < actual_pair_save.size() && !check)
-                {
-                    int b_grid_pair = grid_pair[iter_count][count];
-                    if(grid_pair[iter_count][count] == actual_pair_save[array_count])
-                    {
-                        check = true;
-                        grid_pair[iter_count][count] = array_count;
-                    }
-                    array_count++;
-                }
-            }
+        //reallocate pair_number by actual_pair_save
+        std::map<short, short> pair_map;
+        for(int i = 0; i < actual_pair_save.size(); i++) {
+            pair_map[actual_pair_save[i]] = static_cast<short>(i);
         }
+
+        grid_pair.remap_pairs(pair_map);
         plevelinfo.pairinfo->SetSelectNumberOfPairs(actual_pair_save.size());
         
         pairinfo.SetMinOffImage(plevelinfo.pairinfo->MinOffImageID());
@@ -4209,7 +4200,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         levelinfo.Grid_wgs = Grid_wgs;
                         levelinfo.reference_id = 0;
                         
-                        vector<vector<short>> Grid_pair(Grid_length);
+                        GridPairs Grid_pair(Grid_length);
 
                         actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info, ori_minmaxHeight);
 
@@ -7266,7 +7257,7 @@ double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
     return HS;
 }
 
-void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, vector<NCCresult> &nccresult,const int iteration, const double *minmaxHeight, const vector<vector<short>> &Grid_pair)
+void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, vector<NCCresult> &nccresult,const int iteration, const double *minmaxHeight, GridPairs &Grid_pair)
 {
     const double height_step = *plevelinfo.height_step;
     const uint8 pyramid_step = *plevelinfo.Pyramid_step;
@@ -7453,7 +7444,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
                         
                         nccresult[t_i].NumOfHeight = NumberofHeightVoxel;
                         
-                        grid_voxel[t_i].allocate(NumberofHeightVoxel, Grid_pair[t_i]);
+                        grid_voxel[t_i].allocate(NumberofHeightVoxel, Grid_pair.get_pairs(t_i));
                         
                     }
                     else

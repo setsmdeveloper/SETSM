@@ -21,6 +21,7 @@
 #include "tiffio.h"
 #include "GridVoxel.hpp"
 #include <vector>
+#include <map>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
@@ -996,6 +997,58 @@ private:
 };
 
 typedef MixedHeight3DGrid<short> SumCostContainer;
+
+class GridPairs {
+public:
+    GridPairs(long length) : pair_ids(length, -1), next_id(0) {}
+
+    void add_pairs(long index, const vector<short> &pairs) {
+        short id = find_pair_id(pairs);
+        if(id != -1) {
+            pair_ids[index] = id;
+        } else {
+            // not in our list, so add it
+            pair_lists[next_id] = pairs;
+            pair_ids[index] = next_id;
+            next_id++;
+       }
+    }
+
+    void remap_pairs(const std::map<short, short> &pair_map) {
+        for(auto &it : pair_lists) {
+            for(short &p_num : it.second) {
+                if(pair_map.find(p_num) != pair_map.end()) {
+                    p_num = pair_map.at(p_num);
+                }
+            }
+        }
+    }
+
+    const vector<short>& get_pairs(long index) const {
+        int id = pair_ids[index];
+        if(id < 0) {
+            return empty;
+        } else {
+            return pair_lists.at(id);
+        }
+    }
+
+private:
+
+    short find_pair_id(const vector<short> &pairs) {
+        for(auto &it : pair_lists) {
+            if(it.second == pairs) {
+                return it.first;
+            }
+        }
+        return -1;
+    }
+
+    std::map<int, vector<short>> pair_lists;
+    vector<int> pair_ids;
+    vector<short> empty;
+    int next_id;
+};
 
 #endif
 
