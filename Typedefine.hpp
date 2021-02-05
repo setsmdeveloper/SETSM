@@ -944,5 +944,58 @@ typedef struct tagSetKernel
     ~tagSetKernel() {
     }
 } SetKernel;
+
+template <typename T>
+class MixedHeight3DGrid{
+public:
+    MixedHeight3DGrid() = default; // needed for use in containers
+    MixedHeight3DGrid(long length) : _indices(length, 0) {}
+
+    void reserve(long index, long length) {
+        _indices[index] = length;
+    }
+
+    void allocate(const T &iv) {
+        // get the total length needed
+        long len = 0;
+        for(auto i : _indices)
+        {
+            len += i;
+        }
+
+        // allocate the vector
+        _data = vector<T>(len, iv);
+
+        // update the indices to hold offsets
+        long curr_offset = 0;
+        for(auto &i : _indices)
+        {
+            auto curr_len = i;
+            i = curr_offset;
+            curr_offset += curr_len;
+        }
+    }
+
+    void allocate() {
+        T iv{};
+        allocate(iv);
+    }
+
+    T& value(long i, long j) {
+        return _data[_indices[i] + j];
+    }
+
+    const T& value(long i, long j) const {
+        return _data[_indices[i] + j];
+    }
+
+private:
+
+    vector<long> _indices;
+    vector<T> _data;
+};
+
+typedef MixedHeight3DGrid<short> SumCostContainer;
+
 #endif
 

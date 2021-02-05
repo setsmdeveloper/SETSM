@@ -8725,7 +8725,7 @@ void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double t
 }
 
 
-void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, vector<float> &LHcost_pre,vector<vector<short>> &SumCost, double height_step_interval, const int pairnumber)
+void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, vector<float> &LHcost_pre, SumCostContainer &SumCost, double height_step_interval, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -8763,14 +8763,14 @@ void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVox
            
             LHcost_pre[height_step] = WNCC_sum;
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
+                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
             else
-                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
+                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
         }
     }
 }
 
-void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, vector<NCCresult> &nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, vector<float> &LHcost_pre, vector<float> &LHcost_curr, vector<vector<short>> &SumCost, const int pairnumber)
+void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, vector<NCCresult> &nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, vector<float> &LHcost_pre, vector<float> &LHcost_curr, SumCostContainer &SumCost, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -9072,9 +9072,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
             //SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step]);
             
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
+                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
             else
-                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
+                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
             
             //if(pair_count > 0)
             //    WNCC_sum /= (double)pair_count;
@@ -10467,8 +10467,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
     
     long total_grid_size = (long)Size_Grid2D.width*(long)Size_Grid2D.height;
     printf("before SumCost vector array\n");
-    vector<vector<short>> SumCost(total_grid_size);
-    //SumCost = (float**)calloc(sizeof(float*),total_grid_size);
+
+    SumCostContainer SumCost(total_grid_size);
+
     for(long i=0;i<Size_Grid2D.height;i++)
     {
         for(long j=0;j<Size_Grid2D.width;j++)
@@ -10478,12 +10479,13 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
             if(nccresult[t_index].NumOfHeight > 0)
             {
-                //SumCost[t_index] = (float*)calloc(sizeof(float),nccresult[t_index].NumOfHeight);
-                SumCost[t_index].resize(nccresult[t_index].NumOfHeight,0);
+                SumCost.reserve(t_index, nccresult[t_index].NumOfHeight);
             }
         }
     }
     printf("after SumCost vector array\n");
+    SumCost.allocate();
+
     //left , right, top, bottom, upper left, upper right, bottom left, bottom right
     int v_row[8]    = { 0, 0, -1, 1, -1, -1 ,  1, 1};
     int u_col[8]    = {-1, 1,  0, 0, -1,  1 , -1, 1};
@@ -11040,9 +11042,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(INCC_count > 0)
                 {
                     if(Pyramid_step >= 1)
-                        temp_rho = ShortToDouble_SGM(SumCost[pt_index][height_step],100.0);
+                        temp_rho = ShortToDouble_SGM(SumCost.value(pt_index, height_step),100.0);
                     else
-                        temp_rho = ShortToDouble_SGM(SumCost[pt_index][height_step],100.0);
+                        temp_rho = ShortToDouble_SGM(SumCost.value(pt_index, height_step),100.0);
 
                     FindPeakNcc_SGM(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
