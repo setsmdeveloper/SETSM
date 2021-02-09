@@ -2554,7 +2554,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
-                                buffer_area  = proinfo->DEM_resolution*Tile_buffer;
+                                buffer_area  = 400;
                                 
                                 Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
@@ -2598,7 +2598,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(!args.RA_only)
                         {
                             tile_size           = 4000;
-                            buffer_area  = proinfo->DEM_resolution*Tile_buffer;
+                            buffer_area  = 400;
                             
                             
                             if(Boundary_size.width < tile_size && Boundary_size.height < tile_size)
@@ -2626,7 +2626,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             bool check_t = false;
                             bool check_final = false;
-                            double base_tilesize = tile_size + buffer_area;
+                            double base_tilesize = 4400;
                             double iter_tile_size = base_tilesize;
                             double tile_increase = 500;
                             double DEM_res_rate = 1.4;
@@ -2914,7 +2914,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             float *H_value = NULL;
                             unsigned char* MT_value = NULL;
                             
-                            int buffer_tile = buffer_area + buffer_area*0.10;
+                            int buffer_tile = buffer_area + 20;
                             const int final_iteration = 3;
                             
                             double FinalDEM_boundary[4] = {0.};
@@ -3609,7 +3609,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 
     int final_iteration = -1;
     int row,col;
-    vector<int> RA_count(MaxNCC,0);
+    int* RA_count = (int*)calloc(sizeof(int),MaxNCC);
     
     int row_length = iter_row_end-iter_row_start;
     int col_length = t_col_end-t_col_start;
@@ -4228,9 +4228,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return,image_info);
                         //exit(1);
                         
-                        //char fname_grid[500];
-                        //sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
-                        //FILE* fid_grid         = fopen(fname_grid,"w");
+                        char fname_grid[500];
+                        sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
+                        FILE* fid_grid         = fopen(fname_grid,"w");
                         for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                         {
                             for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
@@ -4238,12 +4238,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 long int pt_index = trow*Size_Grid2D.width + tcol;
                                 //fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
                                 Grid_pair[pt_index].clear();
-                                //vector<short>().swap(Grid_pair[pt_index]);
+                                vector<short>().swap(Grid_pair[pt_index]);
                             }
                             //fprintf(fid_grid,"\n");
                         }
                         //free(Grid_pair);
-                        //fclose(fid_grid);
+                        fclose(fid_grid);
                         
                         
                         printf("done\n");
@@ -4509,8 +4509,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, final_level_iteration, MPP_stereo_angle, &MatchedPts_list);
                                 
                                 printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
-                                
-                                //exit(1);
                                 
                             }
                             else
@@ -5428,9 +5426,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
     for(int ti = 0 ; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
         MPI_Bcast(Imageparams[ti], 2, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
-    //for(int ti = 0 ; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
-    //    printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count[ti],Imageparams[ti][0],Imageparams[ti][1]);
-    //free(RA_count);
+    for(int ti = 0 ; ti < pairinfo_return.SelectNumberOfPairs() ; ti++)
+        printf("Num of RAs = %d\tRA param = %f\t%f\n",RA_count[ti],Imageparams[ti][0],Imageparams[ti][1]);
+    free(RA_count);
     
     return final_iteration;
 }
@@ -6631,7 +6629,6 @@ UGRID *SetGrid3PT(const ProInfo *proinfo, LevelInfo &rlevelinfo, const double Th
         GridPT3[i].minHeight        = floor(minmaxHeight[0] - 0.5);
         GridPT3[i].maxHeight        = ceil(minmaxHeight[1] + 0.5);
         GridPT3[i].Height           = Nodata;
-        GridPT3[i].Height_step      = 10;
         GridPT3[i].selected_pair    = 100;
         GridPT3[i].ncc_seleceted_pair    = -1;
         GridPT3[i].total_images     = 0;
@@ -7271,7 +7268,6 @@ double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
             h_divide = 6;
     }
     */
-    h_divide = 2.5;
     double HS = rlevelinfo.MPP/h_divide*pwrtwo(*rlevelinfo.Pyramid_step);
     
     double &&tt1 = HS*100.0;
@@ -7286,113 +7282,10 @@ double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
     return HS;
 }
 
-double Set_HeightStep(const double h_divide, const double BufferOfHeight, const double levelMPP)
-{
-    double HS = levelMPP/h_divide;
-    
-    double &&tt1 = HS*100.0;
-    double &&tt2 = floor(tt1 + 0.1);
-    HS = tt2/100.0;
-    
-    if(HS < levelMPP/6.0)
-        HS = levelMPP/6.0;
-    
-    if(HS < 0.5)
-        HS = 0.5;
-    
-    //printf("h_divede HS %f\t%f\n",h_divide,HS);
-    
-    return HS;
-}
-
-double GetHeightStep_grids(const ProInfo *proinfo, UGRID *GridPT3, LevelInfo &rlevelinfo, long index, double height_interval, double level_MPP)
-{
-    double BufferOfHeight   = level_MPP*4.0;
-    double MPP = rlevelinfo.MPP;
-    const int pyramid_step      = *rlevelinfo.Pyramid_step;
-    const unsigned char iteration = *rlevelinfo.iteration;
-    
-    if(proinfo->sensor_provider == PT)
-    {
-        BufferOfHeight   = MPP*1.0*pwrtwo(pyramid_step);
-        
-        if(pyramid_step == 0)
-        {
-            BufferOfHeight   = MPP;
-            
-            if (BufferOfHeight < 0.5)
-                BufferOfHeight = 0.5;
-        }
-        
-        if(BufferOfHeight > 200)
-            BufferOfHeight = 200;
-    }
-    else
-    {
-        if (pyramid_step == 1)
-        {
-            if(iteration >= 2)
-                BufferOfHeight = MPP*2;
-            else
-                BufferOfHeight = MPP*3;
-        }
-        else if(pyramid_step == 0)
-        {
-            if(iteration == 1)
-                BufferOfHeight = MPP*2;
-            else
-                BufferOfHeight = MPP;
-            
-            if (BufferOfHeight < 0.5)
-                BufferOfHeight = 0.5;
-        }
-    }
-    
-    BufferOfHeight = BufferOfHeight*2.0;
-    if(BufferOfHeight > height_interval)
-        BufferOfHeight = height_interval;
-    
-    double HS;
-    /*if(height_interval > level_MPP*10)
-        HS = Set_HeightStep(6,BufferOfHeight); //2*6 = 12 steps
-    else if(height_interval > level_MPP*5)
-        HS = Set_HeightStep(3,BufferOfHeight); //2*5= 10 steps
-    //else if(height_interval > level_MPP*4)
-    //    HS = Set_HeightStep(4,level_MPP); //2*4 = 8 steps
-    //else if(height_interval > level_MPP*2)
-    //    HS = Set_HeightStep(2,level_MPP); //2*3 = 6 steps
-    else
-        HS = Set_HeightStep(1,BufferOfHeight); //2*2 = 5 steps
-    */
-    if(GridPT3[index].Matched_flag == 4 || GridPT3[index].Matched_flag == 2) //matched pts
-    {
-        HS = Set_HeightStep(4,BufferOfHeight,level_MPP); // 1 peak
-        //if(rlevelinfo.check_SGM && pyramid_step == 0 /*&& *rlevelinfo.iteration > 1*/)
-        //    HS = Set_HeightStep(4,BufferOfHeight,level_MPP);
-    }
-    else //non-matched pts
-    {
-        if(height_interval > BufferOfHeight*20)
-            HS = Set_HeightStep(8,BufferOfHeight,level_MPP); //4 peaks
-        else
-            HS = Set_HeightStep(6,BufferOfHeight,level_MPP); //2 peaks
-    }
-        
-    //HS = Set_HeightStep(4,BufferOfHeight,level_MPP); // 1 peak
-    
-    /*HS = rlevelinfo.MPP/4.0*pwrtwo(*rlevelinfo.Pyramid_step);
-    double &&tt1 = HS*100.0;
-    double &&tt2 = floor(tt1 + 0.1);
-    HS = tt2/100.0;
-     */
-    
-    return HS;
-}
-
 void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &plevelinfo, UGRID *GridPT3, vector<NCCresult> &nccresult,const int iteration, const double *minmaxHeight)
 {
+    const double height_step = *plevelinfo.height_step;
     const uint8 pyramid_step = *plevelinfo.Pyramid_step;
-    const double level_MPP = plevelinfo.MPP*pwrtwo(*plevelinfo.Pyramid_step);
     
     double th_height = 1000;
     if(proinfo->DEM_resolution <= 4)
@@ -7402,14 +7295,6 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
 #pragma omp parallel for schedule(guided)
     for(long int t_i = 0 ; t_i < *plevelinfo.Grid_length; t_i++)
     {
-        double height_interval = abs(GridPT3[t_i].maxHeight - GridPT3[t_i].minHeight);
-        double height_step = GetHeightStep_grids(proinfo, GridPT3, plevelinfo, t_i, height_interval, level_MPP);
-        GridPT3[t_i].Height_step = DoubleToShort_factor(height_step,100.0);
-        
-        //double height_step = *(plevelinfo.height_step);
-        //GridPT3[t_i].Height_step = DoubleToShort_factor(height_step,100.0);
-        
-        
         int selected_images;
         if(check_image_boundary(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3[t_i].minHeight,GridPT3[t_i].maxHeight,7,selected_images))
         {
@@ -7505,6 +7390,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
             
             if(!check_blunder_cell)
             {
+                
                 if(iteration == 1 || (pyramid_step == 0 && proinfo->DEM_resolution < 2))
                 {
                     nccresult[t_i].minHeight = GridPT3[t_i].minHeight;
@@ -7994,8 +7880,6 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                 if(proinfo->sensor_provider == PT)
                     th_height = 2000;
                 
-                int height_interval = abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight);
-                
                 if ( Pyramid_step >= 2)
                     check_blunder_cell = false;
                 else
@@ -8006,12 +7890,12 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                     {
                         if(Pyramid_step == 1)
                         {
-                            if(height_interval < th_height)
+                            if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
                                 check_blunder_cell = false;
                             else
                                 check_blunder_cell = true;
                         }
-                        else if(height_interval < th_height)
+                        else if((abs(GridPT3[pt_index].maxHeight - GridPT3[pt_index].minHeight) < th_height))
                             check_blunder_cell = false;
                         else
                             check_blunder_cell = true;
@@ -8035,8 +7919,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                         check_blunder_cell = true;
                 }
                 
-                double height_step = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
-                const int NumOfHeights = (int)((end_H -  start_H)/height_step);
+                const int NumOfHeights = (int)((end_H -  start_H)/(*plevelinfo.height_step));
                 if(*plevelinfo.check_matching_rate)
                 {
                     nccresult[pt_index].check_height_change = true;
@@ -8073,7 +7956,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                         
                         for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                         {
-                            float iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*height_step;
+                            float iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*(*plevelinfo.height_step);
                             
                             if(iter_height >= start_H && iter_height <= end_H)
                             {
@@ -8381,7 +8264,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                             bool check_max_WNCC_pair_ID = false;
                             for(int grid_voxel_hindex = 0 ; grid_voxel_hindex < nccresult[pt_index].NumOfHeight ; grid_voxel_hindex++)
                             {
-                                float iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*height_step;
+                                float iter_height = nccresult[pt_index].minHeight + grid_voxel_hindex*(*plevelinfo.height_step);
                                 
                                 double temp_rho(0);
                                 if(WNCC_save[grid_voxel_hindex].size() > 0)
@@ -8868,8 +8751,6 @@ void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double t
 
 void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID *GridPT3, long pt_index, vector<float> &LHcost_pre,vector<vector<short>> &SumCost, double height_step_interval, const int pairnumber)
 {
-    height_step_interval = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
-    
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
         float iter_height = nccresult[pt_index].minHeight + height_step*height_step_interval;//
@@ -8906,17 +8787,15 @@ void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVox
            
             LHcost_pre[height_step] = WNCC_sum;
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost[pt_index][height_step] += DoubleToShort_factor(LHcost_pre[height_step],100.0);
+                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
             else
-                SumCost[pt_index][height_step] += DoubleToShort_factor(LHcost_pre[height_step],100.0);
+                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
         }
     }
 }
 
 void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, vector<NCCresult> &nccresult, GridVoxel &grid_voxel,UGRID *GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, vector<float> &LHcost_pre, vector<float> &LHcost_curr, vector<vector<short>> &SumCost, const int pairnumber)
 {
-    step_height = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
-    
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
         const float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
@@ -9205,12 +9084,12 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
             else
                 LHcost_curr[height_step] = sum_LHcost_curr;
             
-            //SumCost[pt_index][height_step] += DoubleToShort_factor(LHcost_curr[height_step]);
+            //SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step]);
             
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost[pt_index][height_step] += DoubleToShort_factor(LHcost_curr[height_step],100.0);
+                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
             else
-                SumCost[pt_index][height_step] += DoubleToShort_factor(LHcost_curr[height_step],100.0);
+                SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
             
             //if(pair_count > 0)
             //    WNCC_sum /= (double)pair_count;
@@ -9285,8 +9164,6 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
             fid_peak         = fopen(save_file_peak,"w");
         }
         */
-        step_height = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
-        
         for(long height_step = 0 + height_buffer ; height_step < nccresult[pt_index].NumOfHeight - height_buffer ; height_step++)
         {
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
@@ -9359,8 +9236,6 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                 nccresult[pt_index].result1 = DoubleToSignedChar_result(Roh_min);
                 nccresult[pt_index].result3 = Nodata;
             }
-            
-            //printf("roh %d\t%d\t%f\t%f\t%d\n",nccresult[pt_index].result0,nccresult[pt_index].result1,nccresult[pt_index].result2,nccresult[pt_index].result3,nccresult[pt_index].result4);
         }
         else
         {
@@ -9441,8 +9316,6 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
         nccresult[pt_index].result4 = 0;
     
         double db_GNCC, db_INCC;
-        
-        step_height = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
         
         for(long height_step = 0 + height_buffer ; height_step < nccresult[pt_index].NumOfHeight - height_buffer ; height_step++)
         {
@@ -10839,8 +10712,6 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
             fid_peak         = fopen(save_file_peak,"w");
         }
         
-        step_height = ShortToDouble_factor(GridPT3[pt_index].Height_step,100.0);
-        
         for(long height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
@@ -10897,9 +10768,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(INCC_count > 0)
                 {
                     if(Pyramid_step >= 1)
-                        temp_rho = ShortToDouble_factor(SumCost[pt_index][height_step],100.0);
+                        temp_rho = ShortToDouble_SGM(SumCost[pt_index][height_step],100.0);
                     else
-                        temp_rho = ShortToDouble_factor(SumCost[pt_index][height_step],100.0);
+                        temp_rho = ShortToDouble_SGM(SumCost[pt_index][height_step],100.0);
 
                     FindPeakNcc_SGM(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
@@ -10913,13 +10784,13 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         {
             if(max_roh > 0)
             {
-                if(Pyramid_step == 0 && iteration > 2)
+                /*if(Pyramid_step == 0 && iteration > 2)
                 {
                     nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                     nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
                     nccresult[pt_index].result3 = Nodata;
                 }
-                else if(temp_nccresult > 0)
+                else if(temp_nccresult > 0)*/
                 {
                     if(temp_nccresult > temp_nccresult_sec)
                     {
@@ -12048,9 +11919,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double *F_H
     //if(*rlevelinfo.iteration <= 2)
     //    height_step = proinfo->resolution*pwrtwo(Pyramid_step)*MPP;
     //if(proinfo->sensor_provider == PT)
-        //height_step = *rlevelinfo.height_step*2;
-    
-    height_step =  ShortToDouble_factor(GridPT3[target_index].Height_step,100.0)*2;
+        height_step = *rlevelinfo.height_step*2;
     //else
     //    height_step = pwrtwo(Pyramid_step)*MPP;
     
@@ -12663,12 +12532,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
         }
     }
 
-    /*
     double height_step = GetHeightStep(Pyramid_step, proinfo->resolution, rlevelinfo);
     
     if(proinfo->sensor_provider == PT)
         height_step = GetHeightStep_Planet(proinfo, rlevelinfo);
-    */
+    
     double ROR_lv0 = (0.1 - 0.03*(3 - Pyramid_step));
     //if(proinfo->sensor_provider == PT)
     //    ROR_lv0 = 0.1;
@@ -12678,8 +12546,6 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
         long row     = (long)(floor(iter_index/rlevelinfo.Size_Grid2D->width));
         long col     = iter_index % rlevelinfo.Size_Grid2D->width;
         long grid_index = iter_index;//row*(long)rlevelinfo.Size_Grid2D->width + col;
-        
-        double height_step = ShortToDouble_factor(GridPT3[grid_index].Height_step,100.0);
         
         if(row >= 0 && row < rlevelinfo.Size_Grid2D->height && col >= 0 && col < rlevelinfo.Size_Grid2D->width && roh_height[grid_index].NumOfHeight > 2 && GridPT3[grid_index].ncc_seleceted_pair > -1)
         {
@@ -12778,8 +12644,6 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                 }
             }
             
-            //printf("roh index %d\troh1 %f\troh2 %f\theight1 %f\theight2  %f\n",roh_index,SignedCharToDouble_result(roh_height[grid_index].result0),SignedCharToDouble_result(roh_height[grid_index].result1),SignedCharToDouble_result(roh_height[grid_index].result2),SignedCharToDouble_result(roh_height[grid_index].result3));
-            /*
             if(Pyramid_step >= 5)
             {
                 if(GridPT3[grid_index].Matched_flag != 0)
@@ -12829,7 +12693,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                     }
                 }
             }
-            */
+            
             D3DPOINT temp_mp;
             {
                 //Set the matched pts and information
@@ -15044,14 +14908,12 @@ UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long
                                 {
                                     GridPT3[Index].minHeight = floor(Z - BF);
                                     GridPT3[Index].maxHeight = ceil(Z + BF);
-                                    GridPT3[Index].Matched_flag = 4;
                                 }
-                                /*else if(pyramid_step >= 2)
+                                else if(pyramid_step >= 2)
                                 {
                                     GridPT3[Index].minHeight = floor(t1 - BF);
                                     GridPT3[Index].maxHeight = ceil(t2 + BF);
                                 }
-                                 */
                             }
                             
                             GridPT3[Index].minHeight = floor(GridPT3[Index].minHeight);
@@ -15211,7 +15073,6 @@ UGRID* SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long
             result[matlab_index].roh                        = GridPT3[matlab_index].roh;
             
             result[matlab_index].Height                     = GridPT3[matlab_index].Height;
-            result[matlab_index].Height_step                = GridPT3[matlab_index].Height_step;
             
             result[matlab_index].anchor_flag                = 0;
             
@@ -15285,7 +15146,6 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
                 resize_GridPT3[index].maxHeight     = preGridPT3[pre_index].maxHeight;
                 resize_GridPT3[index].Height        = preGridPT3[pre_index].Height;
-                resize_GridPT3[index].Height_step   = preGridPT3[pre_index].Height_step;
                 resize_GridPT3[index].Matched_flag  = preGridPT3[pre_index].Matched_flag;
                 resize_GridPT3[index].roh           = preGridPT3[pre_index].roh;
                 resize_GridPT3[index].anchor_flag   = preGridPT3[pre_index].anchor_flag;
@@ -15310,7 +15170,6 @@ UGRID* ResizeGirdPT3(ProInfo *proinfo, LevelInfo &rlevelinfo, CSize preSize, CSi
                 resize_GridPT3[index].minHeight     = floor(minmaxheight[0] - 0.5);
                 resize_GridPT3[index].maxHeight     = ceil(minmaxheight[1] + 0.5);
                 resize_GridPT3[index].Height        = Nodata;
-                resize_GridPT3[index].Height_step   = 0;
                 resize_GridPT3[index].Matched_flag  = 0;
                 resize_GridPT3[index].roh           = 0.0;
                 resize_GridPT3[index].anchor_flag   = 0;
@@ -15366,7 +15225,6 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
                 resize_GridPT3[index].minHeight     = preGridPT3[pre_index].minHeight;
                 resize_GridPT3[index].maxHeight     = preGridPT3[pre_index].maxHeight;
                 resize_GridPT3[index].Height        = preGridPT3[pre_index].Height;
-                resize_GridPT3[index].Height_step   = preGridPT3[pre_index].Height_step;
                 resize_GridPT3[index].Matched_flag  = preGridPT3[pre_index].Matched_flag;
                 resize_GridPT3[index].roh           = preGridPT3[pre_index].roh;
                 resize_GridPT3[index].anchor_flag   = preGridPT3[pre_index].anchor_flag;
@@ -15385,7 +15243,6 @@ UGRID* ResizeGirdPT3_RA(const ProInfo *proinfo,LevelInfo &rlevelinfo, const CSiz
                 resize_GridPT3[index].minHeight     = floor(minmaxheight[0] - 0.5);
                 resize_GridPT3[index].maxHeight     = ceil(minmaxheight[1] + 0.5);
                 resize_GridPT3[index].Height        = Nodata;
-                resize_GridPT3[index].Height_step   = 0;
                 resize_GridPT3[index].Matched_flag  = 0;
                 resize_GridPT3[index].roh           = 0.0;
                 resize_GridPT3[index].anchor_flag   = 0;
