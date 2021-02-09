@@ -48,6 +48,7 @@
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
 #define CLD_COV 10
+#define Tile_buffer 100
 #endif
 
 enum SensorType {SB , AB};
