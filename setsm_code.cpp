@@ -7259,7 +7259,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
-    double h_divide = 6;
+    double h_divide = 4;
     /*if(*rlevelinfo.Pyramid_step == 0)
     {
         if(*rlevelinfo.iteration <= 2)
@@ -9507,8 +9507,16 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     D3DPOINT temp_3dpoint(0,0,Nodata,0,true);
     vector<D3DPOINT> temp_points((long)Size_Grid2D.height*(long)Size_Grid2D.width,temp_3dpoint);
     int q_kenel_size = 0;
-    if(Pyramid_step <= 1 && proinfo->sensor_provider == PT)
+    if(Pyramid_step <= 1 /*&& proinfo->sensor_provider == PT*/)
         q_kenel_size = 6;
+    
+    
+    double height_interval = (*rlevelinfo.grid_resolution)*10;
+    if(proinfo->sensor_provider == PT)
+    {
+        if(Pyramid_step > 1)
+            height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*2.0;
+    }
     
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < (long)Size_Grid2D.height*(long)Size_Grid2D.width ; iter_count++)
@@ -9546,9 +9554,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     if(pts_col >= 0 && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_row < Size_Grid2D.height && pt_index >= 0 && pt_index < (long)Size_Grid2D.height*(long)Size_Grid2D.width)
                     {
                         GridPT3[pt_index].total_images = 0;
-                        
-                        double height_interval = (*rlevelinfo.grid_resolution)*10;
-                        //double height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step);
                         
                         int selected_pair = -1;
                         if(GridPT3[pt_index].ncc_seleceted_pair == AWNCC_id)
@@ -9644,7 +9649,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             if(rlevelinfo.pairinfo->SelectNumberOfPairs() == 1)
                                 end_query_pair = 1;
                             
-                            q_kenel_size = 0;
+                            //q_kenel_size = 0;
                             for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                             {
                                 for(int q_kr = -q_kenel_size ; q_kr <= q_kenel_size ; q_kr++)
