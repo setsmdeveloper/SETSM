@@ -74,6 +74,7 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 double quickselect(double *arr, int n, int k);
 double quickselect(vector<double> &arr, int n, int k);
+double cal_var(vector<double> &arr);
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb);
 
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);

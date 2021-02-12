@@ -2789,6 +2789,25 @@ double quickselect(vector<double> &arr, int n, int k)
     }
 }
 
+double cal_var(vector<double> &arr)
+{
+    int arr_count = arr.size();
+    double sum = 0;
+    for(int i = 0 ; i < arr_count ; i++)
+    {
+        sum += arr[i];
+        //printf("arr[i] %f\n",arr[i]);
+    }
+    double mean = sum/arr_count;
+    //printf("mean %f\n",mean);
+    double sum_var = 0;
+    for(int i = 0 ; i < arr_count ; i++)
+    {
+        sum_var += (arr[i] - mean)*(arr[i] - mean);
+    }
+    return sqrt(sum_var/arr_count);
+}
+
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb)
 {
     if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
