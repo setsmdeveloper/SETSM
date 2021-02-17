@@ -9504,10 +9504,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     double height_interval = (*rlevelinfo.grid_resolution)*10;
     if(proinfo->sensor_provider == PT)
     {
-        if(Pyramid_step > 1)
+        /*
+        if(Pyramid_step >= 1)
             height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*2.0;
         else
             height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step);
+        */
+        if(Pyramid_step <= 1)
+            height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5;
     }
     
 #pragma omp parallel for schedule(guided)
@@ -9845,9 +9849,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                 }
                                 
                                 double final_weight = 1.0;//query_peak_roh*total_weight;//*save_pair[query_pair].size();
-                                if(max_weight < total_weight && query_pair < AWNCC_id)
+                                if(max_weight < wheight_bh && query_pair < AWNCC_id)
                                 {
-                                    max_weight = total_weight;
+                                    max_weight = wheight_bh;
                                     selected_pair = query_pair;
                                 }
                                 //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
@@ -9869,7 +9873,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 
                 
                 // kernal processing
-                if(Pyramid_step <= -1 && proinfo->sensor_provider == PT)
+                if(Pyramid_step <= 1 && proinfo->sensor_provider == PT)
                 {
                     double ref_height = sum_weight_height/sum_weight;
                     
@@ -11061,13 +11065,13 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         {
             if(max_roh > 0)
             {
-                /*if(Pyramid_step == 0 && iteration > 2)
+                if(Pyramid_step == 0 && iteration > 2)
                 {
                     nccresult[pt_index].result0 = DoubleToSignedChar_result(max_roh);
                     nccresult[pt_index].result1 = DoubleToSignedChar_result(-1.0);
                     nccresult[pt_index].result3 = Nodata;
                 }
-                else if(temp_nccresult > 0)*/
+                else if(temp_nccresult > 0)
                 {
                     if(temp_nccresult > temp_nccresult_sec)
                     {
@@ -12552,7 +12556,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
     }
     else
     {
-        if(proinfo->sensor_provider != PT /*&& proinfo->sensor_type == AB*/)
+        if(true)//proinfo->sensor_provider != PT /*&& proinfo->sensor_type == AB*/)
         {
             if(Pyramid_step > 0)
             {
