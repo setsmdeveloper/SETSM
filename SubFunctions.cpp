@@ -2789,6 +2789,25 @@ double quickselect(vector<double> &arr, int n, int k)
     }
 }
 
+double cal_var(vector<double> &arr)
+{
+    int arr_count = arr.size();
+    double sum = 0;
+    for(int i = 0 ; i < arr_count ; i++)
+    {
+        sum += arr[i];
+        //printf("arr[i] %f\n",arr[i]);
+    }
+    double mean = sum/arr_count;
+    //printf("mean %f\n",mean);
+    double sum_var = 0;
+    for(int i = 0 ; i < arr_count ; i++)
+    {
+        sum_var += (arr[i] - mean)*(arr[i] - mean);
+    }
+    return sqrt(sum_var/arr_count);
+}
+
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb)
 {
     if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
@@ -3377,6 +3396,73 @@ void TINUpdate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *tr
         temp_pt.m_Z = index_in_ptslists[row * width + col];
         
         trilists->push_back(temp_pt);
+    }
+    delete [] blunder_ptrs;
+    delete [] grid_blunders;
+}
+
+void TINUpdate_list_vector(vector<D3DPOINT> &ptslists, long int numofpts, vector<UI3DPOINT> &trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation *oldTri, vector<D3DPOINT> &blunderlist, long int numblunders)
+{
+    
+    double minX_ptslists = min_max[0];
+    double minY_ptslists = min_max[1];
+    double maxX_ptslists = min_max[2];
+    double maxY_ptslists = min_max[3];
+    
+    INDEX width     = 1 + (maxX_ptslists - minX_ptslists) / resolution;
+    INDEX height    = 1 + (maxY_ptslists - minY_ptslists) / resolution;
+    //printf("\tTINUpdate: PTS = %d, blunders = %d, width = %d, height = %d, resolution = %f\n", numofpts, numblunders, width, height, resolution);
+    
+    std::unordered_map<std::size_t, std::size_t> index_in_ptslists;
+    index_in_ptslists.reserve(numofpts);
+    for (std::size_t t = 0; t < numofpts; ++t)
+    {
+        //index_in_ptslists[((ptslists[t].m_Y - minY_ptslists)/resolution)*width+((ptslists[t].m_X - minX_ptslists) / resolution)] = t;
+        INDEX col = 0.5 + (ptslists[t].m_X - minX_ptslists) / resolution;
+        INDEX row = 0.5 + (ptslists[t].m_Y - minY_ptslists) / resolution;
+        index_in_ptslists[row * width + col] = t;
+    }
+    
+    GridPoint *grid_blunders = new GridPoint[numblunders];
+    for (std::size_t t = 0; t < numblunders; ++t)
+    {
+        grid_blunders[t].col = 0.5 + (blunderlist[t].m_X - minX_ptslists) / resolution;
+        grid_blunders[t].row = 0.5 + (blunderlist[t].m_Y - minY_ptslists) / resolution;
+    }
+    
+    GridPoint **blunder_ptrs = new GridPoint*[numblunders];
+#pragma omp parallel for
+    for (std::size_t t = 0; t < numblunders; ++t) blunder_ptrs[t] = grid_blunders + t;
+    
+    //double begin = omp_get_wtime();
+    
+    oldTri->Retriangulate(blunder_ptrs, numblunders);
+    
+    //double end = omp_get_wtime();
+    //printf("Retriangulate took %lf with %d points, %d blunders\n", end - begin, numofpts, numblunders);
+    
+    vector<Tri> tris;
+    vector<Tri>::iterator it_tr;
+    *count_tri = (int)(oldTri->GetAllTris(&tris));
+    for(long t = 0 ; t < tris.size() ; t++)
+    {
+        int row, col;
+        UI3DPOINT temp_pt;
+        
+        row = tris[t].pts[0].row;
+        col = tris[t].pts[0].col;
+        
+        temp_pt.m_X = index_in_ptslists[row * width + col];
+        
+        row = tris[t].pts[1].row;
+        col = tris[t].pts[1].col;
+        temp_pt.m_Y = index_in_ptslists[row * width + col];
+        
+        row = tris[t].pts[2].row;
+        col = tris[t].pts[2].col;
+        temp_pt.m_Z = index_in_ptslists[row * width + col];
+        
+        trilists.push_back(temp_pt);
     }
     delete [] blunder_ptrs;
     delete [] grid_blunders;

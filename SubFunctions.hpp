@@ -74,6 +74,7 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 double quickselect(double *arr, int n, int k);
 double quickselect(vector<double> &arr, int n, int k);
+double cal_var(vector<double> &arr);
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb);
 
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);
@@ -122,6 +123,8 @@ FullTriangulation *TINCreate_list_vector(vector<D3DPOINT> &ptslists, long int nu
 
 //void TINUpdate(D3DPOINT *ptslists, int numofpts, UI3DPOINT* trilists, double min_max[], int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, int numblunders);
 void TINUpdate_list(D3DPOINT *ptslists, long int numofpts, vector<UI3DPOINT> *trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation* oldTri, D3DPOINT* blunderlist, long int numblunders);
+
+void TINUpdate_list_vector(vector<D3DPOINT> &ptslists, long int numofpts, vector<UI3DPOINT> &trilists, double min_max[], long int *count_tri, double resolution, FullTriangulation *oldTri, vector<D3DPOINT> &blunderlist, long int numblunders);
 
 void SetTinBoundary(LevelInfo &rlevelinfo, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, int *PixelMinXY, int *PixelMaxXY, double &Total_Min_Z, double &Total_Max_Z, double &temp_MinZ, double &temp_MaxZ);
 

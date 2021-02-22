@@ -6,15 +6,36 @@
 #include <algorithm>
 #include "log.hpp"
 #include <cstdlib>
+#include <stdio.h>
 
-constexpr inline short DoubleToSignedChar_voxel(double val)
+constexpr inline short _DoubleToSignedChar_voxel(double val)
 {
     return (short)(val*1000.0);
 }
 
-constexpr inline double SignedCharToDouble_voxel(short val)
+constexpr inline double _SignedCharToDouble_voxel(short val)
 {
     return (double)(val)/1000.0;
+}
+
+inline short DoubleToSignedChar_voxel(double val)
+{
+    if(val > 30 || val < -30)
+    {
+        printf("DoubleToSignedChar_voxel overflow %f\n",val);
+        exit(1);
+    }
+    return _DoubleToSignedChar_voxel(val);
+}
+
+inline double SignedCharToDouble_voxel(short val)
+{
+    if(val > 30000 || val < -30000)
+    {
+        printf("SignedCharToDouble_voxel overflow %f\n",val);
+        exit(1);
+    }
+    return _SignedCharToDouble_voxel(val);
 }
 
 class VoxelTower {
@@ -87,7 +108,7 @@ private:
         bool val;
     };
 
-    static constexpr short INCC_UNSET = DoubleToSignedChar_voxel(-1);
+    static constexpr short INCC_UNSET = _DoubleToSignedChar_voxel(-1);
     // Cannot use bool here, it's not thread safe. Need to wrap it instead.
     std::vector<short> _INCC;
     std::vector<short> _pairs;
