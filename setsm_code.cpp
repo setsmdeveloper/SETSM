@@ -9454,7 +9454,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     vector<double> weight_bhratio;
     for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
     {
-        double temp_ratio = rlevelinfo.pairinfo->BHratio(pair_number);
+        double temp_ratio = rlevelinfo.pairinfo->BHratio(pair_number)*1000;
         if(min_bhratio > temp_ratio)
             min_bhratio = temp_ratio;
         
