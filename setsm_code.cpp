@@ -8207,6 +8207,14 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                                 {
                                                     grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(-1);
                                                 }
+                                            } else if(
+                                                !(*plevelinfo.check_matching_rate) &&
+                                                nccresult[pt_index].check_height_change)
+                                            {
+                                                if(grid_voxel[pt_index].has_pair(pair_number)) {
+                                                    printf("WARNING: in vll, pt_index=%ld missing pair %d\n",
+                                                        pt_index, pair_number);
+                                                }
                                             }
                                             
                                             //find peak position
