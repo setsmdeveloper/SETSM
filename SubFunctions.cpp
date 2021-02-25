@@ -524,7 +524,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     if(args.sensor_type == AB)
         info->IsRA = 0;
     if(args.sensor_provider == PT)
-        info->IsRA = false;
+        info->IsRA = true;
     
     if (args.check_arg == 0) // project file open
     {
