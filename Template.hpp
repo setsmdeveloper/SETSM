@@ -35,8 +35,6 @@ inline double SignedCharToDouble_result(short val);
 inline short DoubleToSignedChar_grid(double val);
 inline double SignedCharToDouble_grid(short val);
 
-inline short DoubleToSignedChar_voxel(double val);
-inline double SignedCharToDouble_voxel(short val);
 
 inline signed char FloatToSignedChar(float val);
 inline float SignedCharToFloat(signed char val);
@@ -693,6 +691,11 @@ inline void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSub
     InverseSubA[3][0] = -0.333333; InverseSubA[3][1] =  0.000000; InverseSubA[3][2] =  0.000000; InverseSubA[3][3] =  0.500000; InverseSubA[3][4] =  0.000000; InverseSubA[3][5] =  0.000000;
     InverseSubA[4][0] =  0.000000; InverseSubA[4][1] =  0.000000; InverseSubA[4][2] =  0.000000; InverseSubA[4][3] =  0.000000; InverseSubA[4][4] =  0.250000; InverseSubA[4][5] =  0.000000;
     InverseSubA[5][0] = -0.333333; InverseSubA[5][1] =  0.000000; InverseSubA[5][2] =  0.000000; InverseSubA[5][3] =  0.000000; InverseSubA[5][4] =  0.000000; InverseSubA[5][5] =  0.500000;
+}
+
+template <typename T, typename V>
+inline bool contains(const T &container, const V &value) {
+    return std::find(container.begin(), container.end(), value) != container.end();
 }
 
 #endif /* Template_h */

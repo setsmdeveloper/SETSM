@@ -2,8 +2,21 @@
 #define GRID_VOXEL_H
 
 #include <vector>
+#include <cstdint>
+#include <algorithm>
+#include "log.hpp"
+#include <cstdlib>
 #include <stdio.h>
-#include <stdlib.h>
+
+constexpr inline short _DoubleToSignedChar_voxel(double val)
+{
+    return (short)(val*1000.0);
+}
+
+constexpr inline double _SignedCharToDouble_voxel(short val)
+{
+    return (double)(val)/1000.0;
+}
 
 inline short DoubleToSignedChar_voxel(double val)
 {
@@ -12,7 +25,7 @@ inline short DoubleToSignedChar_voxel(double val)
         printf("DoubleToSignedChar_voxel overflow %f\n",val);
         exit(1);
     }
-    return (short)(val*1000.0);
+    return _DoubleToSignedChar_voxel(val);
 }
 
 inline double SignedCharToDouble_voxel(short val)
@@ -22,55 +35,84 @@ inline double SignedCharToDouble_voxel(short val)
         printf("SignedCharToDouble_voxel overflow %f\n",val);
         exit(1);
     }
-    return (double)(val)/1000.0;
+    return _SignedCharToDouble_voxel(val);
 }
 
 class VoxelTower {
 public:
-    VoxelTower(int max_ncc) : ncc_len(max_ncc) {}
+    VoxelTower() : _num_pairs(0) {}
 
-    bool& flag_cal(size_t h_index, size_t index) {
-        return _flag_cal[h_index * ncc_len + index].val;
-    }
-    short& INCC(size_t h_index, size_t index) {
-        return _INCC[h_index * ncc_len + index];
+    short& INCC(size_t h_index, int pair_id) {
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            dbg_crash(pair_id);
+        return _INCC[h_index * _num_pairs + pair_index];
     }
 
     // const versions of the above
-    const bool& flag_cal(size_t h_index, size_t index) const {
-        return _flag_cal[h_index * ncc_len + index].val;
+    const short& INCC(size_t h_index, int pair_id) const {
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            dbg_crash(pair_id);
+        return _INCC[h_index * _num_pairs + pair_index];
     }
-    const short& INCC(size_t h_index, size_t index) const {
-        return _INCC[h_index * ncc_len + index];
+
+    bool is_cal(size_t h_index, int pair_id) {
+        int pair_index = get_index(pair_id);
+        if(pair_index < 0)
+            return false;
+        return _INCC[h_index * _num_pairs + pair_index] != INCC_UNSET;
+    }
+
+    bool has_pair(int pair_id) {
+        return get_index(pair_id) >= 0;
     }
 
     /** Set size to zero and clear memory */
     void clear() {
-        std::vector<BoolWrapper>().swap(_flag_cal);
         std::vector<short>().swap(_INCC);
     }
 
     /** Allocate n elements.
      *
-     * Initialize flag_cal values to false.
      * Initialize INCC values to -1
      */
-    void allocate(size_t n) {
-        _flag_cal = std::vector<BoolWrapper>(n * ncc_len, BoolWrapper(false));
-        _INCC = std::vector<short>(n * ncc_len, DoubleToSignedChar_voxel(-1));
+    void allocate(size_t n, const std::vector<short> &pairs) {
+        _pairs = pairs;
+        _num_pairs = _pairs.size();
+        _INCC = std::vector<short>(n * _num_pairs, INCC_UNSET);
     }
 
 
 private:
+    int get_index(int pair_id) const {
+        auto it = std::find(_pairs.begin(), _pairs.end(), pair_id);
+        if(it == _pairs.end()) {
+            return -1;
+        }
+        return std::distance(_pairs.begin(), it);
+    }
+
+    void dbg_crash(int pair_id) const {
+        LOG("Failed to find pair id %d\n", pair_id);
+        LOG("number of pairs: %d\n", _pairs.size());
+        LOG("pairs:\n");
+        for(int i = 0; i < _pairs.size(); i++) {
+            LOG("    pair[%d] = %d\n", i, _pairs[i]);
+        }
+        abort();
+    }
+
     struct BoolWrapper {
         BoolWrapper(bool b) { val = b; }
         bool val;
     };
 
+    static constexpr short INCC_UNSET = _DoubleToSignedChar_voxel(-1);
     // Cannot use bool here, it's not thread safe. Need to wrap it instead.
-    std::vector<BoolWrapper> _flag_cal;
     std::vector<short> _INCC;
-    size_t ncc_len;
+    std::vector<short> _pairs;
+    size_t _num_pairs;
 
 };
 
@@ -79,7 +121,7 @@ class GridVoxel {
 public:
     typedef std::vector<VoxelTower>::size_type size_type;
 
-    GridVoxel(size_t length, int max_ncc) : towers(length, VoxelTower(max_ncc)) {}
+    GridVoxel(size_t length) : towers(length) {}
 
     VoxelTower & operator[](size_type n) {
         return towers[n];
