@@ -3398,7 +3398,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     //exit(1);
 }
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<short>> &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info)
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, vector<vector<short>> &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight)
 {
     vector<short> actual_pair_save;
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
@@ -3409,7 +3409,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         
         const int start_H     = minmaxHeight[0];
         const int end_H       = minmaxHeight[1];
-        int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, start_H, end_H);
+        int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, ori_minmaxHeight[0], ori_minmaxHeight[1]);
 
         for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
         {
@@ -4211,7 +4211,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         vector<vector<short>> Grid_pair(Grid_length);
 
-                        actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info);
+                        actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info, ori_minmaxHeight);
 
                         
                         char fname_grid[500];
@@ -4463,7 +4463,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             if(!check_matching_rate)
                                 InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight, Grid_pair);
                             
-                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
+                            const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight, ori_minmaxHeight);
                             
                             printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
                             
@@ -7755,7 +7755,7 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
     return selected_ref;
 }
 
-int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, vector<NCCresult> &nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight)
+int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, vector<NCCresult> &nccresult, LevelInfo &plevelinfo, UGRID *GridPT3, const uint8 iteration, const double *minmaxHeight, const double *ori_minmaxHeight)
 {
     const bool check_matchtag = proinfo->check_Matchtag;
     const char* save_filepath = proinfo->save_filepath;
@@ -7923,7 +7923,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                     vector<vector<double>> WNCC_save(wncc_len);
                     vector<vector<uint8_t>> WNCC_save_pair_ID(wncc_len);
 
-                    GridPT3[pt_index].selected_pair = select_referenceimage(pt_index, proinfo, plevelinfo, nccresult[pt_index].minHeight, nccresult[pt_index].maxHeight);
+                    GridPT3[pt_index].selected_pair = select_referenceimage(pt_index, proinfo, plevelinfo, ori_minmaxHeight[0], ori_minmaxHeight[1]);
                     
                     double max_WNCC = -1;
                     
