@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.6";
+const char setsm_version[] = "4.3.7";
 
 int main(int argc,char *argv[])
 {
