@@ -49,10 +49,8 @@ int WriteGeotiff(char *filename, void *buffer, size_t width, size_t height, doub
     long int int_mem = (long)(bytes*height*width);
     double tif_mem = (double)(int_mem/1024.0/1024.0/1024.0);
     printf("tif mem %f\n",tif_mem);
-    if(tif_mem < 3.5)
-        tif = XTIFFOpen(filename, "w");
-    else
-        tif = XTIFFOpen(filename, "w8");
+
+    tif = XTIFFOpen(filename, "w8");
     if (!tif)
     {
         printf("WriteGeotiff failed in XTIFFOpen\n");
