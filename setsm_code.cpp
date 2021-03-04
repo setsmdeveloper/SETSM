@@ -10465,7 +10465,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         {
             long t_index = i*(long)Size_Grid2D.width + j;
             if(Pyramid_step == 0 && iteration == 3 && nccresult[t_index].NumOfHeight > 2000)
-                printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
+                printf("gridsize %d\t%d\t pos %ld\t%ld\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
             if(nccresult[t_index].NumOfHeight > 0)
             {
                 //SumCost[t_index] = (float*)calloc(sizeof(float),nccresult[t_index].NumOfHeight);
@@ -12589,6 +12589,9 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                 {
                     double min_roh_th;
                     double min_Gridroh_th;
+
+					// Initializing above variables to clear warnings
+					min_roh_th = -99;
                     
                     /*if(proinfo->sensor_provider == PT)// Planet
                     {
