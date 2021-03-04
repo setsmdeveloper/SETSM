@@ -4365,7 +4365,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         printf("Creating GridVoxel with num pairs: %d\n", pairinfo_return.SelectNumberOfPairs());
                         auto grid_voxel_size = check_matching_rate ? 0 : Size_Grid2D.width*Size_Grid2D.height;
-                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size);
+                        GridVoxel grid_voxel = GridVoxel(grid_voxel_size, Grid_pair);
                         
                         
                         
@@ -5283,11 +5283,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         free(GridPT);
                         free(Grid_wgs);
                         
-                        if(!check_matching_rate)
-                        {
-                            grid_voxel.clearall();
-                            printf("free grid_voxel\n");
-                        }
                         
                         if(!check_matching_rate)
                             check_matching_rate = level_check_matching_rate;
@@ -7344,7 +7339,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
                     {
                         if(nccresult[t_i].NumOfHeight > 0)
                         {
-                            grid_voxel[t_i].clear();
+                            grid_voxel.clear(t_i);
                         }
                         
                         nccresult[t_i].NumOfHeight = 0;
@@ -7355,7 +7350,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
                 {
                     if(nccresult[t_i].NumOfHeight > 0)
                     {
-                        grid_voxel[t_i].clear();
+                        grid_voxel.clear(t_i);
                     }
                     
                     nccresult[t_i].NumOfHeight = 0;
@@ -7439,19 +7434,19 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
                     {
                         if(nccresult[t_i].NumOfHeight > 0)
                         {
-                            grid_voxel[t_i].clear();
+                            grid_voxel.clear(t_i);
                         }
                         
                         nccresult[t_i].NumOfHeight = NumberofHeightVoxel;
                         
-                        grid_voxel[t_i].allocate(NumberofHeightVoxel, Grid_pair.get_pairs(t_i));
+                        grid_voxel.allocate(t_i, NumberofHeightVoxel);
                         
                     }
                     else
                     {
                         if(nccresult[t_i].NumOfHeight > 0)
                         {
-                            grid_voxel[t_i].clear();
+                            grid_voxel.clear(t_i);
                         }
                         
                         nccresult[t_i].NumOfHeight = 0;
@@ -7463,7 +7458,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
             {
                 if(nccresult[t_i].NumOfHeight > 0)
                 {
-                    grid_voxel[t_i].clear();
+                    grid_voxel.clear(t_i);
                 }
                 
                 nccresult[t_i].NumOfHeight = 0;
@@ -7474,7 +7469,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
         {
             if(nccresult[t_i].NumOfHeight > 0)
             {
-                grid_voxel[t_i].clear();
+                grid_voxel.clear(t_i);
             }
             
             nccresult[t_i].NumOfHeight = 0;
@@ -7485,7 +7480,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
         {
             if(nccresult[t_i].NumOfHeight > 0)
             {
-                grid_voxel[t_i].clear();
+                grid_voxel.clear(t_i);
             }
             
             nccresult[t_i].NumOfHeight = 0;
@@ -7496,7 +7491,7 @@ void InitializeVoxel(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &pl
         {
             if(nccresult[t_i].NumOfHeight > 0)
             {
-                grid_voxel[t_i].clear();
+                grid_voxel.clear(t_i);
             }
             
             nccresult[t_i].NumOfHeight = 0;
@@ -8187,22 +8182,22 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                             
                                             if(
                                                 !(*plevelinfo.check_matching_rate) &&
-                                                grid_voxel[pt_index].has_pair(pair_number) &&
+                                                grid_voxel.has_pair(pt_index, pair_number) &&
                                                 nccresult[pt_index].check_height_change)
                                             {
                                                 if(check_height_orientation && temp_rho > -1 && temp_rho < 1.0)
                                                 {
-                                                    grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(db_INCC);
+                                                    grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(db_INCC);
                                                 }
                                                 else
                                                 {
-                                                    grid_voxel[pt_index].INCC(grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(-1);
+                                                    grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(-1);
                                                 }
                                             } else if(
                                                 !(*plevelinfo.check_matching_rate) &&
                                                 nccresult[pt_index].check_height_change)
                                             {
-                                                if(grid_voxel[pt_index].has_pair(pair_number)) {
+                                                if(grid_voxel.has_pair(pt_index, pair_number)) {
                                                     printf("WARNING: in vll, pt_index=%ld missing pair %d\n",
                                                         pt_index, pair_number);
                                                 }
@@ -8742,9 +8737,9 @@ void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVox
                 
                 if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
-                    if(grid_voxel[pt_index].is_cal(height_step, count))
+                    if(grid_voxel.is_cal(pt_index, height_step, count))
                     {
-                        WNCC_sum += SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, count))*bhratio;
+                        WNCC_sum += SignedCharToDouble_voxel(grid_voxel.INCC(pt_index, height_step, count))*bhratio;
                         pair_count++;
                     }
                 }
@@ -8788,9 +8783,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                 
                 if(check_select_pair /*&& GridPT3[pt_index].ncc_seleceted_pair == count*/)
                 {
-                    if(grid_voxel[pt_index].is_cal(height_step, count))
+                    if(grid_voxel.is_cal(pt_index, height_step, count))
                     {
-                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, count));
+                        WNCC_sum = SignedCharToDouble_voxel(grid_voxel.INCC(pt_index, height_step, count));
                         
                         const long int t_col = pts_col + (long)u_col[direction_iter];
                         const long int t_row = pts_row + (long)v_row[direction_iter];
@@ -8810,8 +8805,8 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
 
                             if(t_index_h_index == 0 && t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight)
                             {
-                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
-                                bool is_cal_2 = grid_voxel[t_index].is_cal(t_index_h_index_2, count);
+                                bool is_cal = grid_voxel.is_cal(t_index, t_index_h_index, count);
+                                bool is_cal_2 = grid_voxel.is_cal(t_index, t_index_h_index_2, count);
 
                                 if(is_cal && is_cal_2)
                                 {
@@ -8865,8 +8860,8 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                             }
                             else if(t_index_h_index == nccresult[t_index].NumOfHeight - 1 && t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight)
                             {
-                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
-                                bool is_cal_1 = grid_voxel[t_index].is_cal(t_index_h_index_1, count);
+                                bool is_cal = grid_voxel.is_cal(t_index, t_index_h_index, count);
+                                bool is_cal_1 = grid_voxel.is_cal(t_index, t_index_h_index_1, count);
 
                                 if(is_cal && is_cal_1)
                                 {
@@ -8922,9 +8917,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight &&
                                     t_index_h_index_2 >= 0 && t_index_h_index_2 < nccresult[t_index].NumOfHeight )
                             {
-                                bool is_cal = grid_voxel[t_index].is_cal(t_index_h_index, count);
-                                bool is_cal_1 = grid_voxel[t_index].is_cal(t_index_h_index_1, count);
-                                bool is_cal_2 = grid_voxel[t_index].is_cal(t_index_h_index_2, count);
+                                bool is_cal = grid_voxel.is_cal(t_index, t_index_h_index, count);
+                                bool is_cal_1 = grid_voxel.is_cal(t_index, t_index_h_index_1, count);
+                                bool is_cal_2 = grid_voxel.is_cal(t_index, t_index_h_index_2, count);
                                 
                                 if(is_cal && is_cal_1
                                    && is_cal_2)
@@ -9155,10 +9150,10 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                 
                 if(check_select_pair)
                 {
-                    if(grid_voxel[pt_index].is_cal(height_step, pair_number))
+                    if(grid_voxel.is_cal(pt_index, height_step, pair_number))
                     {
                         double db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
-                        double db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
+                        double db_INCC = SignedCharToDouble_voxel(grid_voxel.INCC(pt_index, height_step, pair_number));
 
                         double temp_rho = 0;
                         double WNCC_temp_rho = db_INCC;
@@ -9313,10 +9308,10 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                     {
                         
                         
-                        if(grid_voxel[pt_index].is_cal(height_step, pair_number))
+                        if(grid_voxel.is_cal(pt_index, height_step, pair_number))
                         {
                             double db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pair_number]);
-                            double db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pair_number));
+                            double db_INCC = SignedCharToDouble_voxel(grid_voxel.INCC(pt_index, height_step, pair_number));
                             double gncc_weight = 1.0;//SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
                             
                             if((Pyramid_step == 4 && iteration == 1))
@@ -10995,10 +10990,10 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 if(check_select_pair)
                 {
                     
-                    if(grid_voxel[pt_index].is_cal(height_step, pairnumber))
+                    if(grid_voxel.is_cal(pt_index, height_step, pairnumber))
                     {
                         double db_GNCC = SignedCharToDouble_grid(GridPT3[pt_index].ortho_ncc[pairnumber]);
-                        double db_INCC = SignedCharToDouble_voxel(grid_voxel[pt_index].INCC(height_step, pairnumber));
+                        double db_INCC = SignedCharToDouble_voxel(grid_voxel.INCC(pt_index, height_step, pairnumber));
 
                         //double gncc_weight = SetGnccWeight(Pyramid_step, db_GNCC, db_INCC, GridPT3[pt_index].Height, iter_height, step_height);
                         
