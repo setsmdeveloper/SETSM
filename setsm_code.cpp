@@ -9440,6 +9440,12 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
     }
 }
 
+double BHratio_convert(double ori_bhratio)
+{
+    return ori_bhratio; //linear
+    //return 1.0/ori_bhratio; //inverse
+}
+
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID *GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, MultiMPs **multimps, vector<D3DPOINT> &MatchedPts_list_mps)
 {
     long count_MPs = 0;
@@ -9454,7 +9460,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     vector<double> weight_bhratio;
     for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
     {
-        double temp_ratio = rlevelinfo.pairinfo->BHratio(pair_number)*1000;
+        double temp_ratio = BHratio_convert(rlevelinfo.pairinfo->BHratio(pair_number));
+        //temp_ratio = 1.0/rlevelinfo.pairinfo->BHratio(pair_number);
         if(min_bhratio > temp_ratio)
             min_bhratio = temp_ratio;
         
@@ -9679,7 +9686,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         height_diff = fabs(multimps[q_pt_index][AWNCC_id].peak_height - multimps[q_pt_index][pair_number].peak_height);
                                                         if(height_diff < height_interval && pair_peak_roh > 0.0)
                                                         {
-                                                            sum_bhratio += pow(1.0/rlevelinfo.pairinfo->BHratio(pair_number),1.0);
+                                                            //sum_bhratio += pow(1.0/rlevelinfo.pairinfo->BHratio(pair_number),1.0);
+                                                            
+                                                            sum_bhratio += BHratio_convert(rlevelinfo.pairinfo->BHratio(pair_number));
+                                                            
                                                             count_pair++;
                                                         }
                                                     }
@@ -9765,7 +9775,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                     bool weight_MinOff = 1.0;
                                     if(pair_number == rlevelinfo.pairinfo->MinOffImageID())
-                                        weight_MinOff = 1.3;
+                                        weight_MinOff = 1.1;
                                     
                                     /*if(rlevelinfo.check_SGM)
                                     {

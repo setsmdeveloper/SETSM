@@ -701,7 +701,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
             }
             else
             {
-                printf("image%d load faied. Please check filename!!\n",ti);
+                printf("image(%d/%d) load faied. Please check filename!! %s\n",ti,args.number_of_images,info->Imagefilename[ti]);
                 exit(1);
             }
             
