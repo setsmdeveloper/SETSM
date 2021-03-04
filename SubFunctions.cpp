@@ -1934,6 +1934,12 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
+
+	// Initializng variables that throw warnings
+	Cloud = -99;
+	MOffnadirangle = -99;
+	MCrosstrackangle = -99;
+	MIntrackangle = -99;
     
     //printf("%s\n",_filename);
     
@@ -2119,6 +2125,17 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
+
+	// Initializng variables that throw warnings
+	Cloud = -99;
+	MOffnadirangle = -99;
+	MCrosstrackangle = -99;
+	MIntrackangle = -99;
+	MSATE1 = -99;
+	MSATAz = -99;
+	MSUNE1 = -99;
+	MSUNAz = -99;
+	
     
     //printf("%s\n",_filename);
     
