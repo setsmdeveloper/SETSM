@@ -875,86 +875,43 @@ typedef struct taglevelinfo
     double MPP;
 } LevelInfo;
 
+template <typename T>
 class Matrix {
 public:
-    Matrix(unsigned rows, unsigned cols)
+    Matrix(size_t rows, size_t cols)
       : rows_ {rows},
         cols_ {cols},
-        data_ {new double[rows_ * cols_]()}
+        data_(rows * cols)
     {
     }
 
-    ~Matrix() {
-        delete[] data_;
-    }
-
-    Matrix(const Matrix& m)
-    : rows_{m.rows_},
-      cols_{m.cols_},
-      data_ {new double[rows_ * cols_]}
+    Matrix(size_t rows, size_t cols, const T& initial_value)
+      : rows_ {rows},
+        cols_ {cols},
+        data_(rows * cols, initial_value)
     {
-        memcpy(data_, m.data_, sizeof(double) * rows_ * cols_);
     }
 
-    Matrix(Matrix &&m)
-    : rows_{m.rows_},
-      cols_{m.cols_},
-      data_{m.data_}
-    {
-        m.data_ = nullptr;
-        m.rows_ = 0;
-        m.cols_ = 0;
-    }
-
-    Matrix& operator= (const Matrix& m)
-    {
-        double *p = new double[m.rows_ * m.cols_];
-
-        memcpy(p, m.data_, sizeof(double) * m.rows_ * m.cols_);
-
-        delete[] data_;
-        data_ = p;
-        rows_ = m.rows_;
-        cols_ = m.cols_;
-
-        return *this;
-
-    }
-    Matrix& operator= (Matrix &&m)
-    {
-        delete[] data_;
-
-        data_ = m.data_;
-        rows_ = m.rows_;
-        cols_ = m.cols_;
-    
-        m.data_ = nullptr;
-        m.rows_ = 0;
-        m.cols_ = 0;
-
-        return *this;
-    }
-
-    double& operator() (unsigned row, unsigned col)
+    T& operator() (unsigned row, unsigned col)
     {
         return data_[cols_*row + col];
     }
 
-    double operator() (unsigned row, unsigned col) const
+    const T& operator() (unsigned row, unsigned col) const
     {
         return data_[cols_*row + col];
     }
 
     inline
-    const double * row(unsigned i) const
+    const T * row(size_t i) const
     {
-        return data_ + cols_*i;
+        return data_.data()  + cols_*i;
     }
 
 private:
-    unsigned rows_ = 0;
-    unsigned cols_ = 0;
-    double *data_ = nullptr;
+    size_t rows_ = 0;
+    size_t cols_ = 0;
+    vector<T> data_;
 };
 
 typedef struct tagSetKernel
@@ -964,10 +921,10 @@ typedef struct tagSetKernel
     const int Half_template_size;
     unsigned patch_size;
 
-    Matrix left_patch_vecs;
-    Matrix left_mag_patch_vecs;
-    Matrix right_patch_vecs;
-    Matrix right_mag_patch_vecs;
+    Matrix<double> left_patch_vecs;
+    Matrix<double> left_mag_patch_vecs;
+    Matrix<double> right_patch_vecs;
+    Matrix<double> right_mag_patch_vecs;
 
 
     tagSetKernel(const int reference_id,const int ti,const int Half_template_size):

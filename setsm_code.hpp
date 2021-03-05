@@ -140,7 +140,7 @@ int SetttingFlagOfGrid(LevelInfo &rlevelinfo, UGRID &GridPT3, vector<D3DPOINT> M
 int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, double **ImageAdjust, uint8 total_pyramid, vector<D3DPOINT> &ptslists);
 
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix& left_patch_vecs, Matrix& right_patch_vecs);
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix<double>& left_patch_vecs, Matrix<double>& right_patch_vecs);
 
 void set_blunder(long int index, uint8_t val, D3DPOINT *pts, bool *detectedBlunders);
 

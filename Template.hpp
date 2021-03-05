@@ -41,14 +41,14 @@ inline float SignedCharToFloat(signed char val);
 
 inline void Set6by6Matrix(double subA[][6], double TsubA[][9], double InverseSubA[][6]);
 
-static Matrix CreateGaussianFilter(int filter_size, double sigma) {
+static Matrix<double> CreateGaussianFilter(int filter_size, double sigma) {
 
     int half_filter_size = (int)(filter_size/2);
     double sum = 0;
     double tmp = -1/(2*sigma*sigma);
     double scale=1/(sqrt(2*PI)*sigma);
 
-    Matrix GaussianFilter(filter_size, filter_size);
+    Matrix<double> GaussianFilter(filter_size, filter_size);
 
 // This parallel section introduces nondeterminism, so disable
 // it for now. Consider re-enabling it if performance in this
@@ -83,7 +83,7 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
 
     int half_filter_size = (int)(_filter_size/2);
 
-    Matrix GaussianFilter = CreateGaussianFilter(_filter_size, _sigma);
+    Matrix<double> GaussianFilter = CreateGaussianFilter(_filter_size, _sigma);
 
     CSize result_size;
     result_size.width = _img_size.width/2;

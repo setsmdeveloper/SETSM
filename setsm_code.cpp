@@ -15881,8 +15881,8 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
 
 #pragma omp parallel reduction(+:count_pts)
                 {
-                    Matrix left_patch_vecs(3, patch_size);
-                    Matrix right_patch_vecs(3, patch_size);
+                    Matrix<double> left_patch_vecs(3, patch_size);
+                    Matrix<double> right_patch_vecs(3, patch_size);
                     
 #pragma omp for schedule(guided)
                     for(long i = 0; i<NumofPts ; i++)
@@ -15958,7 +15958,7 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
     return iter_count;
 }
 
-bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix &left_patch_vecs, Matrix &right_patch_vecs)
+bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_pt, const D2DPOINT right_pt, double subA[][6], double TsubA[][9], double InverseSubA[][6], uint8 Half_template_size, const int reference_ID, const int target_ID, double *sum_weight_X, double *sum_weight_Y, double *sum_max_roh, Matrix<double> &left_patch_vecs, Matrix<double> &right_patch_vecs)
 {
     bool check_pt = false;
  
