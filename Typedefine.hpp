@@ -301,20 +301,61 @@ typedef struct tagMultiMPs
 } MultiMPs;
 
 typedef struct UpdateGrid{
-    float Height; //after blunder detection
-	short minHeight;
-	short maxHeight;
-	
-	short roh;
-	short *ortho_ncc;
-    short Mean_ortho_ncc; // selected peak pair ortho ncc
+    UpdateGrid(long len, long num_pairs) : len(len), num_pairs(num_pairs),
+        _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
+        /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
+        _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
+        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0)
+        {}
+    UpdateGrid() : UpdateGrid(0, 0) {}
 
-    unsigned char Matched_flag;
-	unsigned char anchor_flag;
-    
-    unsigned char selected_pair; //reference image
-    unsigned char total_images;
-    signed char ncc_seleceted_pair; //selected peak pair
+    float &Height(long i) { return _Height[i]; }
+    const float &Height(long i) const { return _Height[i]; }
+    short &minHeight(long i) { return _minHeight[i]; }
+    const short &minHeight(long i) const { return _minHeight[i]; }
+    short &maxHeight(long i) { return _maxHeight[i]; }
+    const short &maxHeight(long i) const { return _maxHeight[i]; }
+
+    short &roh(long i) { return _roh[i]; }
+    const short &roh(long i) const { return _roh[i]; }
+
+    /* HACK for bug TODO fixme (remove +1s) */
+    short &ortho_ncc(long i, long n) { return _ortho_ncc[i * (num_pairs + 1) + n + 1]; }
+    const short &ortho_ncc(long i, long n) const { return _ortho_ncc[i]; }
+
+    short &Mean_ortho_ncc(long i) { return _Mean_ortho_ncc[i]; }
+    const short &Mean_ortho_ncc(long i) const { return _Mean_ortho_ncc[i]; }
+
+    unsigned char &Matched_flag(long i) { return _Matched_flag[i]; }
+    const unsigned char &Matched_flag(long i) const { return _Matched_flag[i]; }
+    unsigned char &anchor_flag(long i) { return _anchor_flag[i]; }
+    const unsigned char &anchor_flag(long i) const { return _anchor_flag[i]; }
+
+    unsigned char &selected_pair(long i) { return _selected_pair[i]; }
+    const unsigned char &selected_pair(long i) const { return _selected_pair[i]; }
+    unsigned char &total_images(long i) { return _total_images[i]; }
+    const unsigned char &total_images(long i) const { return _total_images[i]; }
+    signed char &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
+    const signed char &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
+
+
+private:
+    long len;
+    long num_pairs;
+    vector<float> _Height; //after blunder detection
+    vector<short> _minHeight;
+    vector<short> _maxHeight;
+
+    vector<short> _roh;
+    vector<short> _ortho_ncc;
+    vector<short> _Mean_ortho_ncc; // selected peak pair ortho ncc
+
+    vector<unsigned char> _Matched_flag;
+    vector<unsigned char> _anchor_flag;
+
+    vector<unsigned char> _selected_pair; //reference image
+    vector<unsigned char> _total_images;
+    vector<signed char> _ncc_seleceted_pair; //selected peak pair
 //    float height_counts;
 }UGRID;
 
