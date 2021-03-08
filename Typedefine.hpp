@@ -19,8 +19,8 @@
 //uint definition
 #include "tiff.h"
 #include "tiffio.h"
-#include "GridVoxel.hpp"
 #include <vector>
+#include <map>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
@@ -301,20 +301,61 @@ typedef struct tagMultiMPs
 } MultiMPs;
 
 typedef struct UpdateGrid{
-    float Height; //after blunder detection
-	short minHeight;
-	short maxHeight;
-	
-	short roh;
-	short *ortho_ncc;
-    short Mean_ortho_ncc; // selected peak pair ortho ncc
+    UpdateGrid(long len, long num_pairs) : len(len), num_pairs(num_pairs),
+        _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
+        /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
+        _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
+        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0)
+        {}
+    UpdateGrid() : UpdateGrid(0, 0) {}
 
-    unsigned char Matched_flag;
-	unsigned char anchor_flag;
-    
-    unsigned char selected_pair; //reference image
-    unsigned char total_images;
-    signed char ncc_seleceted_pair; //selected peak pair
+    float &Height(long i) { return _Height[i]; }
+    const float &Height(long i) const { return _Height[i]; }
+    short &minHeight(long i) { return _minHeight[i]; }
+    const short &minHeight(long i) const { return _minHeight[i]; }
+    short &maxHeight(long i) { return _maxHeight[i]; }
+    const short &maxHeight(long i) const { return _maxHeight[i]; }
+
+    short &roh(long i) { return _roh[i]; }
+    const short &roh(long i) const { return _roh[i]; }
+
+    /* HACK for bug TODO fixme (remove +1s) */
+    short &ortho_ncc(long i, long n) { return _ortho_ncc[i * (num_pairs + 1) + n + 1]; }
+    const short &ortho_ncc(long i, long n) const { return _ortho_ncc[i]; }
+
+    short &Mean_ortho_ncc(long i) { return _Mean_ortho_ncc[i]; }
+    const short &Mean_ortho_ncc(long i) const { return _Mean_ortho_ncc[i]; }
+
+    unsigned char &Matched_flag(long i) { return _Matched_flag[i]; }
+    const unsigned char &Matched_flag(long i) const { return _Matched_flag[i]; }
+    unsigned char &anchor_flag(long i) { return _anchor_flag[i]; }
+    const unsigned char &anchor_flag(long i) const { return _anchor_flag[i]; }
+
+    unsigned char &selected_pair(long i) { return _selected_pair[i]; }
+    const unsigned char &selected_pair(long i) const { return _selected_pair[i]; }
+    unsigned char &total_images(long i) { return _total_images[i]; }
+    const unsigned char &total_images(long i) const { return _total_images[i]; }
+    signed char &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
+    const signed char &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
+
+
+private:
+    long len;
+    long num_pairs;
+    vector<float> _Height; //after blunder detection
+    vector<short> _minHeight;
+    vector<short> _maxHeight;
+
+    vector<short> _roh;
+    vector<short> _ortho_ncc;
+    vector<short> _Mean_ortho_ncc; // selected peak pair ortho ncc
+
+    vector<unsigned char> _Matched_flag;
+    vector<unsigned char> _anchor_flag;
+
+    vector<unsigned char> _selected_pair; //reference image
+    vector<unsigned char> _total_images;
+    vector<signed char> _ncc_seleceted_pair; //selected peak pair
 //    float height_counts;
 }UGRID;
 
@@ -834,86 +875,43 @@ typedef struct taglevelinfo
     double MPP;
 } LevelInfo;
 
+template <typename T>
 class Matrix {
 public:
-    Matrix(unsigned rows, unsigned cols)
+    Matrix(size_t rows, size_t cols)
       : rows_ {rows},
         cols_ {cols},
-        data_ {new double[rows_ * cols_]()}
+        data_(rows * cols)
     {
     }
 
-    ~Matrix() {
-        delete[] data_;
-    }
-
-    Matrix(const Matrix& m)
-    : rows_{m.rows_},
-      cols_{m.cols_},
-      data_ {new double[rows_ * cols_]}
+    Matrix(size_t rows, size_t cols, const T& initial_value)
+      : rows_ {rows},
+        cols_ {cols},
+        data_(rows * cols, initial_value)
     {
-        memcpy(data_, m.data_, sizeof(double) * rows_ * cols_);
     }
 
-    Matrix(Matrix &&m)
-    : rows_{m.rows_},
-      cols_{m.cols_},
-      data_{m.data_}
-    {
-        m.data_ = nullptr;
-        m.rows_ = 0;
-        m.cols_ = 0;
-    }
-
-    Matrix& operator= (const Matrix& m)
-    {
-        double *p = new double[m.rows_ * m.cols_];
-
-        memcpy(p, m.data_, sizeof(double) * m.rows_ * m.cols_);
-
-        delete[] data_;
-        data_ = p;
-        rows_ = m.rows_;
-        cols_ = m.cols_;
-
-        return *this;
-
-    }
-    Matrix& operator= (Matrix &&m)
-    {
-        delete[] data_;
-
-        data_ = m.data_;
-        rows_ = m.rows_;
-        cols_ = m.cols_;
-    
-        m.data_ = nullptr;
-        m.rows_ = 0;
-        m.cols_ = 0;
-
-        return *this;
-    }
-
-    double& operator() (unsigned row, unsigned col)
+    T& operator() (unsigned row, unsigned col)
     {
         return data_[cols_*row + col];
     }
 
-    double operator() (unsigned row, unsigned col) const
+    const T& operator() (unsigned row, unsigned col) const
     {
         return data_[cols_*row + col];
     }
 
     inline
-    const double * row(unsigned i) const
+    const T * row(size_t i) const
     {
-        return data_ + cols_*i;
+        return data_.data()  + cols_*i;
     }
 
 private:
-    unsigned rows_ = 0;
-    unsigned cols_ = 0;
-    double *data_ = nullptr;
+    size_t rows_ = 0;
+    size_t cols_ = 0;
+    vector<T> data_;
 };
 
 typedef struct tagSetKernel
@@ -923,10 +921,10 @@ typedef struct tagSetKernel
     const int Half_template_size;
     unsigned patch_size;
 
-    Matrix left_patch_vecs;
-    Matrix left_mag_patch_vecs;
-    Matrix right_patch_vecs;
-    Matrix right_mag_patch_vecs;
+    Matrix<double> left_patch_vecs;
+    Matrix<double> left_mag_patch_vecs;
+    Matrix<double> right_patch_vecs;
+    Matrix<double> right_mag_patch_vecs;
 
 
     tagSetKernel(const int reference_id,const int ti,const int Half_template_size):
@@ -944,5 +942,110 @@ typedef struct tagSetKernel
     ~tagSetKernel() {
     }
 } SetKernel;
+
+template <typename T>
+class MixedHeight3DGrid{
+public:
+    MixedHeight3DGrid() = default; // needed for use in containers
+    MixedHeight3DGrid(long length) : _indices(length, 0) {}
+
+    void reserve(long index, long length) {
+        _indices[index] = length;
+    }
+
+    void allocate(const T &iv) {
+        // get the total length needed
+        long len = 0;
+        for(auto i : _indices)
+        {
+            len += i;
+        }
+
+        // allocate the vector
+        _data = vector<T>(len, iv);
+
+        // update the indices to hold offsets
+        long curr_offset = 0;
+        for(auto &i : _indices)
+        {
+            auto curr_len = i;
+            i = curr_offset;
+            curr_offset += curr_len;
+        }
+    }
+
+    void allocate() {
+        T iv{};
+        allocate(iv);
+    }
+
+    T& value(long i, long j) {
+        return _data[_indices[i] + j];
+    }
+
+    const T& value(long i, long j) const {
+        return _data[_indices[i] + j];
+    }
+
+private:
+
+    vector<long> _indices;
+    vector<T> _data;
+};
+
+typedef MixedHeight3DGrid<short> SumCostContainer;
+
+class GridPairs {
+public:
+    GridPairs(long length) : pair_ids(length, -1), next_id(0) {}
+
+    void add_pairs(long index, const vector<short> &pairs) {
+        short id = find_pair_id(pairs);
+        if(id != -1) {
+            pair_ids[index] = id;
+        } else {
+            // not in our list, so add it
+            pair_lists[next_id] = pairs;
+            pair_ids[index] = next_id;
+            next_id++;
+       }
+    }
+
+    void remap_pairs(const std::map<short, short> &pair_map) {
+        for(auto &it : pair_lists) {
+            for(short &p_num : it.second) {
+                if(pair_map.find(p_num) != pair_map.end()) {
+                    p_num = pair_map.at(p_num);
+                }
+            }
+        }
+    }
+
+    const vector<short>& get_pairs(long index) const {
+        int id = pair_ids[index];
+        if(id < 0) {
+            return empty;
+        } else {
+            return pair_lists.at(id);
+        }
+    }
+
+private:
+
+    short find_pair_id(const vector<short> &pairs) {
+        for(auto &it : pair_lists) {
+            if(it.second == pairs) {
+                return it.first;
+            }
+        }
+        return -1;
+    }
+
+    std::map<int, vector<short>> pair_lists;
+    vector<int> pair_ids;
+    vector<short> empty;
+    int next_id;
+};
+
 #endif
 

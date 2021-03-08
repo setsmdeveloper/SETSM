@@ -1,3 +1,3 @@
 #include "GridVoxel.hpp"
 
-constexpr short VoxelTower::INCC_UNSET;
+constexpr short GridVoxel::INCC_UNSET;
