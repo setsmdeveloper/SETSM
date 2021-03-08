@@ -2131,9 +2131,9 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
 	MOffnadirangle = -99;
 	MCrosstrackangle = -99;
 	MIntrackangle = -99;
-	MSATE1 = -99;
+	MSATEl = -99;
 	MSATAz = -99;
-	MSUNE1 = -99;
+	MSUNEl = -99;
 	MSUNAz = -99;
 	
     

@@ -35,7 +35,7 @@
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
-#ifndef bool
+//#ifndef bool
 //#define bool unsigned char
 #define true 0x1
 #define false 0x0
@@ -48,7 +48,7 @@
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
 #define CLD_COV 10
-#endif
+//#endif
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
