@@ -59,7 +59,7 @@ GIT_DESCRIPTION:=$(shell cat git_description)
 export GIT_DESCRIPTION
 
 setsm : setsm_code.o $(OBJS)
-	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff
+	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff -ljpeg
 
 setsm_mpi : setsm_code_mpi.o $(MPI_OBJS)
 	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o setsm_mpi setsm_code_mpi.o $(MPI_OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff

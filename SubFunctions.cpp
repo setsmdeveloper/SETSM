@@ -86,7 +86,7 @@ char* SetOutpathName(char *_path)
         t_name = (char*)(malloc(sizeof(char)*(lenth+1)));
         int path_size = strlen(t_name);
         for (int i = 0; i < lenth; i++) {
-            t_name[i] = fullseeddir[i+start];
+            t_name[i] = lastSlash[i+start];
         }
         t_name[lenth] = '\0';
     }
@@ -96,7 +96,7 @@ char* SetOutpathName(char *_path)
     }
     
     printf("Outputpath_name %s\n",t_name);
-    
+   
     return t_name;
     
 }
@@ -2923,7 +2923,7 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
                     //long int radius2 = (row * row + col * col);
                     long int pixel_row = mask_row + row;
                     long int pixel_col = mask_col + col;
-                    //if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
+                    if (/*radius2 <= (Half_template_size - 1) * (Half_template_size - 1) &&*/ pixel_row > 0 && pixel_row < main_row - 1 && pixel_col > 0 && pixel_col < main_col - 1)
                     // Possible OOB read in here
                     {
                         double mag = Gmag[pixel_row * main_col + pixel_col];
