@@ -1,4 +1,4 @@
-//
+
 //  SubFunctions.cpp
 //  
 //
@@ -345,12 +345,12 @@ bool GetImageSize(char *filename, CSize *Imagesize)
     {
         char *tmp = remove_ext(filename);
         char extension[] = ".hdr";
-	char *tmp2;
-	int length = strlen(tmp) + strlen(extension) + 1;
-	tmp2 = (char *)malloc(length);
-	strcpy(tmp2, tmp);
-	strcat(tmp2, extension);
-	tmp = tmp2;
+    char *tmp2;
+    int length = strlen(tmp) + strlen(extension) + 1;
+    tmp2 = (char *)malloc(length);
+    strcpy(tmp2, tmp);
+    strcat(tmp2, extension);
+    tmp = tmp2;
         *Imagesize = Envihdr_reader(tmp);
         free(tmp);
         
@@ -1941,11 +1941,11 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
 
-	// Initializng variables that throw warnings
-	Cloud = Nodata;
-	MOffnadirangle = Nodata;
-	MCrosstrackangle = Nodata;
-	MIntrackangle = Nodata;
+    // Initializng variables that throw warnings
+    Cloud = Nodata;
+    MOffnadirangle = Nodata;
+    MCrosstrackangle = Nodata;
+    MIntrackangle = Nodata;
     
     //printf("%s\n",_filename);
     
@@ -2132,16 +2132,16 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
 
-	// Initializng variables that throw warnings
-	Cloud = -99;
-	MOffnadirangle = -99;
-	MCrosstrackangle = -99;
-	MIntrackangle = -99;
-	MSATEl = -99;
-	MSATAz = -99;
-	MSUNEl = -99;
-	MSUNAz = -99;
-	
+    // Initializng variables that throw warnings
+    Cloud = Nodata;
+    MOffnadirangle = Nodata;
+    MCrosstrackangle = Nodata;
+    MIntrackangle = Nodata;
+    MSATEl = Nodata;
+    MSATAz = Nodata;
+    MSUNEl = Nodata;
+    MSUNAz = Nodata;
+    
     
     //printf("%s\n",_filename);
     
