@@ -9745,8 +9745,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                     
                                     bool weight_MinOff = 1.0;
-                                    if(pair_number == rlevelinfo.pairinfo->MinOffImageID())
-                                        weight_MinOff = 1.1;
+                                    //if(pair_number == rlevelinfo.pairinfo->MinOffImageID())
+                                    //    weight_MinOff = 1.1;
                                     
                                     /*if(rlevelinfo.check_SGM)
                                     {
@@ -9773,14 +9773,17 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                     
                                     
-                                    wheight_idw += multimps(q_pt_index, pair_number).peak_height*IDW_w*weightAWNCC*weight_MinOff;
-                                    weight_idw += IDW_w*weightAWNCC*weight_MinOff;
+                                    wheight_idw += multimps(q_pt_index, pair_number).peak_height*IDW_w*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
+                                    weight_idw += IDW_w*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
                                     
-                                    wheight_bh += multimps(q_pt_index, pair_number).peak_height*w_bhratio*weightAWNCC*weight_MinOff;
-                                    weight_bh += w_bhratio*weightAWNCC*weight_MinOff;
+                                    wheight_bh += multimps(q_pt_index, pair_number).peak_height*w_bhratio;//*weightAWNCC*weight_MinOff;
+                                    weight_bh += w_bhratio;//*weightAWNCC*weight_MinOff;
                                     
-                                    wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC*weight_MinOff;
-                                    weight_wncc += w_ncc*weightAWNCC*weight_MinOff;
+                                    wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC;//*weightAWNCC*weight_MinOff;
+                                    weight_wncc += w_ncc*weightAWNCC;//*weightAWNCC*weight_MinOff;
+                                    
+                                    //wheight_bh = 0;
+                                    //wheight_wncc = 0;
                                     
                                     //wheight_awncc += multimps(pt_index, pair_number).peak_height*weightAWNCC;
                                     //weight_awncc += weightAWNCC;
@@ -9809,6 +9812,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                 {
                                     weight_height[query_pair] = 0.50*wheight_idw/weight_idw + 0.50*wheight_wncc/weight_wncc;
                                 }
+                                weight_height[query_pair] = wheight_idw/weight_idw;
                                 
                                 double final_weight = 1.0;//query_peak_roh*total_weight;//*save_pair[query_pair].size();
                                 if(max_weight < wheight_bh && query_pair < AWNCC_id)
@@ -9968,7 +9972,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                             height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
                                                                             if(height_diff < height_interval && pair_peak_roh > 0.0)
                                                                             {
-                                                                                sum_bhratio += pow(1.0/rlevelinfo.pairinfo->BHratio(pair_number),1.0);
+                                                                                sum_bhratio += BHratio_convert(rlevelinfo.pairinfo->BHratio(pair_number));
                                                                                 count_pair++;
                                                                             }
                                                                         }
@@ -9980,6 +9984,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                     save_pair[query_pair].push_back(AWNCC_id);
                                                                     save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
                                                                     mean_bhratio = sum_bhratio/(double)count_pair;
+                                                                    
+                                                                    if(mean_bhratio > max_bhratio || mean_bhratio < min_bhratio)
+                                                                    {
+                                                                        printf("mean_bhratio %f\tmax_bhratio %f\tmin_bhratio %f\n",mean_bhratio,max_bhratio,min_bhratio);
+                                                                        exit(1);
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -10061,8 +10071,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         
                                                         
                                                         bool weight_MinOff = 1.0;
-                                                        if(pair_number == rlevelinfo.pairinfo->MinOffImageID())
-                                                            weight_MinOff = 1.3;
+                                                        //if(pair_number == rlevelinfo.pairinfo->MinOffImageID())
+                                                        //    weight_MinOff = 1.1;
                                                         
                                                         /*if(rlevelinfo.check_SGM)
                                                         {
@@ -10088,7 +10098,19 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         else
                                                             w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                                         
+                                                        wheight_idw += multimps(q_pt_index, pair_number).peak_height*IDW_w*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
+                                                        weight_idw += IDW_w*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
                                                         
+                                                        wheight_bh += multimps(q_pt_index, pair_number).peak_height*w_bhratio;//*weightAWNCC*weight_MinOff;
+                                                        weight_bh += w_bhratio;//*weightAWNCC*weight_MinOff;
+                                                        
+                                                        wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC;//*weightAWNCC*weight_MinOff;
+                                                        weight_wncc += w_ncc*weightAWNCC;//*weightAWNCC*weight_MinOff;
+                                                        
+                                                        //wheight_bh = 0;
+                                                        //wheight_wncc = 0;
+                                                        
+                                                        /*
                                                         wheight_idw += multimps(q_pt_index, pair_number).peak_height*IDW_w*weightAWNCC*weight_MinOff;
                                                         weight_idw += IDW_w*weightAWNCC*weight_MinOff;
                                                         
@@ -10097,6 +10119,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         
                                                         wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC*weight_MinOff;
                                                         weight_wncc += w_ncc*weightAWNCC*weight_MinOff;
+                                                        */
                                                         
                                                         //wheight_awncc += multimps(pt_index, pair_number).peak_height*weightAWNCC;
                                                         //weight_awncc += weightAWNCC;
@@ -10125,7 +10148,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     else
                                                     {
                                                         weight_height[query_pair] = 0.50*wheight_idw/weight_idw + 0.50*wheight_wncc/weight_wncc;
-                                                   }
+                                                    }
+                                                    weight_height[query_pair] = wheight_idw/weight_idw;
                                                     
                                                     double final_weight = 1.0;//query_peak_roh*total_weight;//*save_pair[query_pair].size();
                                                     /*if(max_weight < total_weight && query_pair < AWNCC_id && q_kc == 0 && q_kr == 0)
