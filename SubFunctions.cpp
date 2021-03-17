@@ -428,7 +428,7 @@ bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesi
     if(rows[1]            > Imagesize.height - null_buffer)
         rows[1]            = Imagesize.height - null_buffer;
     
-    printf("cols rows %ld\t%ld\t%ld\t%ldn",cols[0],cols[1],rows[0],rows[1]);
+    printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
     
     free(ImageCoord);
     
@@ -1942,10 +1942,10 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     double angle;
 
 	// Initializng variables that throw warnings
-	Cloud = -99;
-	MOffnadirangle = -99;
-	MCrosstrackangle = -99;
-	MIntrackangle = -99;
+	Cloud = Nodata;
+	MOffnadirangle = Nodata;
+	MCrosstrackangle = Nodata;
+	MIntrackangle = Nodata;
     
     //printf("%s\n",_filename);
     

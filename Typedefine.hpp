@@ -37,8 +37,8 @@
 #define Roh_max 30.0
 //#ifndef bool
 //#define bool unsigned char
-#define true 0x1
-#define false 0x0
+//#define true 0x1
+//#define false 0x0
 #define SQ(x)         (x) * (x)
 #define SWAP(a,b) temp=a;a=b;b=temp;
 #define MAXRAND     0x7fffffff

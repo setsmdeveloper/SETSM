@@ -4,15 +4,17 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATH=/apps/libgeotiff/1.4.3/tiff#=> EDITED 
-TIFFINC=-I$(TIFFPATH)/include
-TIFFLIB=-L$(TIFFPATH)/lib
+TIFFPATHROOT=/home/noh.56/software/tiff-4.0.3
+TIFFPATH=$(TIFFPATHROOT)/libtiff
+TIFFINC=-I$(TIFFPATHROOT)/include
+TIFFLIB=-L$(TIFFPATHROOT)/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH=/apps/libgeotiff/1.4.3#=> EDITED
-GEOTIFFINC=-I$(GEOTIFFPATH)/include
-GEOTIFFLIB=-L$(GEOTIFFPATH)/lib
+GEOTIFFPATHROOT=/home/noh.56/software/libgeotiff-1.4.2
+GEOTIFFPATH=$(GEOTIFFPATHROOT)/libxtiff
+GEOTIFFINC=-I$(GEOTIFFPATHROOT)/include
+GEOTIFFLIB=-L$(GEOTIFFPATHROOT)/lib
 
 MPIFLAGS = -DBUILDMPI
 
@@ -51,7 +53,7 @@ else
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-std=c99 -g -O3 -fopenmp 
-  CXXFLAGS=-std=c++11 -O3 -fopenmp 
+  CXXFLAGS=-std=c++11 -O3 -fopenmp
 endif
 
 $(shell git describe --always --tags --dirty > git_description)
