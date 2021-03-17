@@ -345,12 +345,13 @@ bool GetImageSize(char *filename, CSize *Imagesize)
     {
         char *tmp = remove_ext(filename);
         char extension[] = ".hdr";
-    char *tmp2;
-    int length = strlen(tmp) + strlen(extension) + 1;
-    tmp2 = (char *)malloc(length);
-    strcpy(tmp2, tmp);
-    strcat(tmp2, extension);
-    tmp = tmp2;
+        char *tmp2;
+        int length = strlen(tmp) + strlen(extension) + 1;
+        tmp2 = (char *)malloc(length);
+        strcpy(tmp2, tmp);
+        strcat(tmp2, extension);
+        free(tmp);
+        tmp = tmp2;
         *Imagesize = Envihdr_reader(tmp);
         free(tmp);
         
