@@ -6725,18 +6725,19 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
     {
         char* hdr_path = remove_ext(GIMP_path);
 
-    // Append .hrd extension to hdr_path
-    char extension[] = ".hdr";
-    char *tmp;
-    int length = strlen(hdr_path) + strlen(extension) + 1;
-    tmp = (char *)malloc(length);
-    strcpy(tmp, hdr_path);
-    strcat(tmp, extension);
-    hdr_path = tmp;
+        // Append .hrd extension to hdr_path
+        char extension[] = ".hdr";
+        char *tmp;
+        int length = strlen(hdr_path) + strlen(extension) + 1;
+        tmp = (char *)malloc(length);
+        strcpy(tmp, hdr_path);
+        strcat(tmp, extension);
+        hdr_path = tmp;
 
         printf("hdr path %s\n",hdr_path);
         seeddem_size  = Envihdr_reader_seedDEM(*rlevelinfo.param,hdr_path, &minX, &maxY, &grid_size);
         free(hdr_path);
+        free(tmp);
     }
 
     maxX    = minX + grid_size*((double)seeddem_size.width);
