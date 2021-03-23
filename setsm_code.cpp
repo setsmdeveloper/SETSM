@@ -6732,12 +6732,12 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
         tmp = (char *)malloc(length);
         strcpy(tmp, hdr_path);
         strcat(tmp, extension);
+        free(hdr_path);
         hdr_path = tmp;
 
         printf("hdr path %s\n",hdr_path);
         seeddem_size  = Envihdr_reader_seedDEM(*rlevelinfo.param,hdr_path, &minX, &maxY, &grid_size);
         free(hdr_path);
-        free(tmp);
     }
 
     maxX    = minX + grid_size*((double)seeddem_size.width);
