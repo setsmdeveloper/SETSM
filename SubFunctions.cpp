@@ -1091,6 +1091,8 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     char ttt[100];
     char hem[100];
     
+    printf("param projection %d\n",param->projection);
+    
     tif  = XTIFFOpen(inputfile,"r");
     gtif = GTIFNew(tif);
     
@@ -1154,7 +1156,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         }
         
         cit_length = GTIFKeyInfo( gtif, ProjNatOriginLatGeoKey, &size, &type );
-        //printf("length %d\tsize %d\t type %d\n",cit_length,size,type);
+        printf("length %d\tsize %d\t type %d\n",cit_length,size,type);
         if (cit_length > 0)
         {
             //printf("length %d\tsize %d\t type %d\n",cit_length,size,type);
@@ -1173,7 +1175,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     GTIFFree(gtif);
     XTIFFClose(tif);
     
-    //printf("param %d\t%d\t%d\t%lf\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat);
+    printf("param %d\t%d\t%d\t%lf\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat);
     
     D2DPOINT minXmaxY;
     double t_minXY_X;
@@ -1185,11 +1187,11 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     minXmaxY.m_X = (float)(t_minXY_X + grid_size_c*imagesize.width/2.0);
     minXmaxY.m_Y = (float)(t_minXY_Y - grid_size_c*imagesize.height/2.0);
     
-    //printf("coord %f\t%f\n",minXmaxY.m_X,minXmaxY.m_Y);
+    printf("coord %f\t%f\n",minXmaxY.m_X,minXmaxY.m_Y);
     SetTransParam_param(param,param->bHemisphere);
     D2DPOINT wgs_coord = ps2wgs_single(*param, minXmaxY);
     
-    //printf("coord %f\t%f\n",wgs_coord.m_X,wgs_coord.m_Y);
+    printf("coord %f\t%f\n",wgs_coord.m_X,wgs_coord.m_Y);
     SetTransParam((double)(wgs_coord.m_Y),(double)(wgs_coord.m_X),param);
     
     printf("param %d\t%d\t%d\t%lf\t%d\t%s\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat,param->utm_zone,param->direction);

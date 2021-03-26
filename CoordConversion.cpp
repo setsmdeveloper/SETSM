@@ -442,6 +442,7 @@ D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps)
     else
     {
         int hemis = _param.pm; //1 = north, -1 = south
+        printf("hemis %d\n",hemis);
         double sa = _param.sa;
         double sb = _param.sb;
         double e2 = _param.e2;

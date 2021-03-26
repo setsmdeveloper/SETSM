@@ -267,6 +267,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             fprintf(fid_out,"orthoimage name\tline(row) direction[pixel]\tsample(column) direction[pixel]\tTy[meter]\tTx[meter]\tavg_roh\n");
             
             TransParam param;
+            param = args.param;
             SetTranParam_fromGeoTiff(&param,proinfo->Imagefilename[0]);
             int reference_id = 0;
             for(int ti = 1 ; ti < proinfo->number_of_images ; ti ++)
