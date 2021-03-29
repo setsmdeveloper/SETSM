@@ -9800,14 +9800,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         //w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                     */
                                     
-                                    wheight_idw += multimps(q_pt_index, pair_number).peak_height*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
-                                    weight_idw += w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
+                                    wheight_idw += multimps(q_pt_index, pair_number).peak_height*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
+                                    weight_idw += (exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
                                     
                                     //wheight_bh += multimps(q_pt_index, pair_number).peak_height*w_bhratio;//*weightAWNCC*weight_MinOff;
                                     //weight_bh += w_bhratio;//*weightAWNCC*weight_MinOff;
                                     
-                                    wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC*w_bhratio;//*weightAWNCC*weight_MinOff;
-                                    weight_wncc += w_ncc*weightAWNCC*w_bhratio;//*weightAWNCC*weight_MinOff;
+                                    wheight_wncc += multimps(q_pt_index, pair_number).peak_height*weightAWNCC*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
+                                    weight_wncc += weightAWNCC*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
                                     
                                     wheight_bh = 0;
                                     weight_bh = 0;
@@ -10195,14 +10195,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                             //w_ncc = bhratio_norm/pow(ncc_diff,1.0);
                                                         */
                                                         
-                                                        wheight_idw += multimps(q_pt_index, pair_number).peak_height*w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
-                                                        weight_idw += w_bhratio*w_ncc;//*weightAWNCC*weight_MinOff;
+                                                        wheight_idw += multimps(q_pt_index, pair_number).peak_height*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
+                                                        weight_idw += (exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
                                                         
                                                         //wheight_bh += multimps(q_pt_index, pair_number).peak_height*w_bhratio;//*weightAWNCC*weight_MinOff;
                                                         //weight_bh += w_bhratio;//*weightAWNCC*weight_MinOff;
                                                         
-                                                        wheight_wncc += multimps(q_pt_index, pair_number).peak_height*w_ncc*weightAWNCC*w_bhratio;//*weightAWNCC*weight_MinOff;
-                                                        weight_wncc += w_ncc*weightAWNCC*w_bhratio;//*weightAWNCC*weight_MinOff;
+                                                        wheight_wncc += multimps(q_pt_index, pair_number).peak_height*weightAWNCC*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
+                                                        weight_wncc += weightAWNCC*(exp(w_bhratio+1.0) + exp(w_ncc+1.0));//*weightAWNCC*weight_MinOff;
                                                         
                                                         wheight_bh = 0;
                                                         weight_bh = 0;
