@@ -2941,7 +2941,7 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             for (int row = max<long>(-mask_row, -Half_template_size + 1); row <= min<long>(main_row-mask_row-1, Half_template_size - 1); row++)
             {
                 int dcol = numcols[abs(row)];
-                for (int col = max<long>(-mask_row, -dcol); col <= min<long>(dcol, main_col-mask_col-1); col++)
+                for (int col = max<long>(-mask_col, -dcol); col <= min<long>(dcol, main_col-mask_col-1); col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
                     //long int radius2 = (row * row + col * col);
