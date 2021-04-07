@@ -4,17 +4,17 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATHROOT=/home/noh.56/software/tiff-4.0.3
-TIFFPATH=$(TIFFPATHROOT)/libtiff
-TIFFINC=-I$(TIFFPATHROOT)/include
-TIFFLIB=-L$(TIFFPATHROOT)/lib
+TIFFPATHROOT?=/home/noh.56/software/tiff-4.0.3
+TIFFPATH?=$(TIFFPATHROOT)/libtiff
+TIFFINC?=-I$(TIFFPATHROOT)/include
+TIFFLIB?=-L$(TIFFPATHROOT)/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATHROOT=/home/noh.56/software/libgeotiff-1.4.2
-GEOTIFFPATH=$(GEOTIFFPATHROOT)/libxtiff
-GEOTIFFINC=-I$(GEOTIFFPATHROOT)/include
-GEOTIFFLIB=-L$(GEOTIFFPATHROOT)/lib
+GEOTIFFPATHROOT?=/home/noh.56/software/libgeotiff-1.4.2
+GEOTIFFPATH?=$(GEOTIFFPATHROOT)/libxtiff
+GEOTIFFINC?=-I$(GEOTIFFPATHROOT)/include
+GEOTIFFLIB?=-L$(GEOTIFFPATHROOT)/lib
 
 MPIFLAGS = -DBUILDMPI
 
