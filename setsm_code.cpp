@@ -4462,7 +4462,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight, ori_minmaxHeight);
                             
-                            printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
+                            printf("Done VerticalLineLocus\tgrid %ld\n",Accessable_grid);
                             
                             if(levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA)
                             {
@@ -4488,7 +4488,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 
                                 count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, final_level_iteration, MPP_stereo_angle, &MatchedPts_list);
                                 
-                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
+                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
                                 
                             }
                             else
@@ -4546,7 +4546,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         }
                                     }
                                     
-                                    printf("AWNCC row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                    printf("AWNCC row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                     
                                     MatchedPts_list.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list);
@@ -4600,7 +4600,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         }
                                     }
                                     
-                                    printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                    printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                     
                                     if(count_MPs > 1)
                                         pair_count++;
@@ -4614,7 +4614,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 
                                 
                                 //MatchedPts_list.clear();
-                                printf("start AWNCC_MPs %d\t%d\tpair_count %d\n",MatchedPts_list.size(),total_count_MPs,pair_count);
+                                printf("start AWNCC_MPs %ld\t%ld\tpair_count %d\n",MatchedPts_list.size(),total_count_MPs,pair_count);
                                 
                                 /*if(level <= proinfo->SGM_py) //SGM
                                     AWNCC_MPs_SGM(proinfo,levelinfo,Size_Grid2D, GridPT3,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list);
@@ -4622,7 +4622,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list);
                                 
                                 count_MPs = MatchedPts_list.size();
-                                printf("Done AWNCC_MPs %d\t%d\n",count_MPs,max_count_MPs);
+                                printf("Done AWNCC_MPs %ld\t%ld\n",count_MPs,max_count_MPs);
+                                for(long count = 0 ; count < Grid_length ; count++)
+                                    free(multimps[count]);
+                                free(multimps);
+                                printf("free multimps\n");
                                 
                                 min_pair_H = 9999;
                                 max_pair_H = -9999;
@@ -4646,7 +4650,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 if(temp_asc_fprint)
                                     fclose(pfile_pair);
                                 
-                                printf("merge row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                printf("merge row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                      
                                 //exit(1);
                             }
@@ -4735,14 +4739,14 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                                     
-                                    printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
+                                    printf("settingflag %ld\t%ld\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
                                     count_MPs = SetttingFlagOfGrid(levelinfo, GridPT3, MatchedPts_list_anchor, MatchedPts_list_blunder, &MatchedPts_list_mps);
                                     MatchedPts_list_anchor.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_anchor);
                                     MatchedPts_list_blunder.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_blunder);
                                 
-                                    printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                    printf("count_MPs %ld\t%ld\n",count_MPs,MatchedPts_list_mps.size());
                                     count_MPs = MatchedPts_list_mps.size();
                                     
                                     
@@ -4756,14 +4760,14 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     fprintf(fid,"level = %d\tMatching Pts = %d\n",level,count_results[0]);
                                     
-                                    printf("ortho minmax %f %f pts anchor blunder %d %d \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
+                                    printf("ortho minmax %f %f pts anchor blunder %ld %ld \n",minmaxHeight[0],minmaxHeight[1],count_MPs,count_tri);
                                     
                                     count_results[0] = Ortho_blunder_vector(proinfo, levelinfo, MatchedPts_list_mps, count_MPs, t_trilists,count_tri, GridPT3);
                                     
                                     t_trilists.clear();
                                     vector<UI3DPOINT>().swap(t_trilists);
                                     
-                                    printf("end ortho_blunder %d\n",count_results[0]);
+                                    printf("end ortho_blunder %ld\n",count_results[0]);
                                     
                                     if(level >= 3)
                                     {
@@ -4791,7 +4795,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         vector<D3DPOINT>().swap(ortho_list);
                                     }
                                     
-                                    printf("load ortho_blunder pts %d\n",count_MPs);
+                                    printf("load ortho_blunder pts %ld\n",count_MPs);
                                     
                                     //Save triangulation and delete it since we will not use it
                                     FullTriangulation *origTri_2 = TINCreate_list_vector(MatchedPts_list_mps,count_MPs,t_trilists,min_max,&count_tri, grid_resolution);
@@ -4813,7 +4817,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     matching_rate = count_MPs/(double)(Accessable_grid);
                                     
-                                    printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
+                                    printf("matching change rate pre curr %f\t%ld\t%ld\tmatching rate %f\t%ld\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
                                     pre_matched_pts = count_MPs;
                                     
                                     //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
@@ -4822,7 +4826,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     //if(max_count_MPs < count_MPs)
                                     //    max_count_MPs = count_MPs;
                                     
-                                    printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
+                                    printf("matching change rate pre curr %f\t%ld\t%ld\tTh_roh %f\t%f\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min);
                                     
                                     final_iteration = iteration;
                                     
@@ -4874,7 +4878,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     
                                     printf("RA row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd blunder points\n",row,col,level,iteration);
                                     
-                                    printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                    printf("count_MPs %ld\t%ld\n",count_MPs,MatchedPts_list_mps.size());
                                     count_MPs = MatchedPts_list_mps.size();
                                     
                                     if(pre_matched_pts == 0)
@@ -4882,11 +4886,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     else
                                         matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
                                     
-                                    printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
+                                    printf("matching change rate pre curr %f\t%ld\t%ld\n",matching_change_rate,count_MPs,pre_matched_pts);
                                     pre_matched_pts = count_results[0];
                                     
                                     matching_rate = count_MPs/(double)(Accessable_grid);
-                                    printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
+                                    printf("matching change rate pre curr %f\t%ld\t%ld\tTh_roh %f\t%f\tmatching rate %f\t%ld\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
                                     
                                     //if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                     //    level_check_matching_rate = true;
@@ -4907,7 +4911,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tcheck = %d(%d)\tEnd blunder detection\n",row,col,level,iteration,lower_level_match,count_MPs);
                             
-                            printf("End computation of blunder!! Mps = %d\tTris = %d\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
+                            printf("End computation of blunder!! Mps = %ld\tTris = %ld\tminz Mp = %f\tmaxz Mp = %f minmax %f %f \n",
                                    count_results[0],count_results[1],minH_mps,maxH_mps,minmaxHeight[0],minmaxHeight[1]);
                                 
                             //exit(1);
@@ -5155,7 +5159,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 
                                 fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\tmatching_rate = %f\n",
                                         row,col,level,iteration,count_MPs,minmaxHeight[0],minmaxHeight[1],matching_rate);
-                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\tminH = %f\tmaxH = %f\n",
+                                printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %ld\tminH = %f\tmaxH = %f\n",
                                        row,col,level,iteration,count_MPs,minmaxHeight[0],minmaxHeight[1]);
                             }
                                 
@@ -6702,7 +6706,16 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID &
     else if(check_ftype == 2)
     {
         char* hdr_path = remove_ext(GIMP_path);
-        sprintf(hdr_path,"%s.hdr",hdr_path);
+
+        // Append .hrd extension to hdr_path
+        char extension[] = ".hdr";
+        char *tmp;
+        int length = strlen(hdr_path) + strlen(extension) + 1;
+        tmp = (char *)malloc(length);
+        strcpy(tmp, hdr_path);
+        strcat(tmp, extension);
+        free(hdr_path);
+        hdr_path = tmp;
 
         printf("hdr path %s\n",hdr_path);
         seeddem_size  = Envihdr_reader_seedDEM(*rlevelinfo.param,hdr_path, &minX, &maxY, &grid_size);
@@ -6777,7 +6790,7 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID &
 
             float type(0);
             float *seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size, type);
-            printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
+            printf("Grid size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
 
             SetGridHeightFromSeed(rlevelinfo, Grid, seeddem, seeddem_size, grid_size, minX, maxY, seedDEM_sigma, minmaxHeight);
             
@@ -10648,7 +10661,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         {
             long t_index = i*(long)Size_Grid2D.width + j;
             if(Pyramid_step == 0 && iteration == 3 && nccresult[t_index].NumOfHeight > 2000)
-                printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
+                printf("gridsize %d\t%d\t pos %ld\t%ld\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
             if(nccresult[t_index].NumOfHeight > 0)
             {
                 SumCost.reserve(t_index, nccresult[t_index].NumOfHeight);
@@ -12779,6 +12792,9 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                 {
                     double min_roh_th;
                     double min_Gridroh_th;
+
+                    // Initializing above variables to clear warnings
+                    min_roh_th = Nodata;
                     
                     /*if(proinfo->sensor_provider == PT)// Planet
                     {
