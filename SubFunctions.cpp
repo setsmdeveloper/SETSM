@@ -1,4 +1,4 @@
-
+//
 //  SubFunctions.cpp
 //  
 //
@@ -321,7 +321,7 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
     if(rows[1]          > Imagesize.height - null_buffer)
         rows[1]         = Imagesize.height - null_buffer;
     
-    printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
+    printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
     
     free(ImageCoord);
     
@@ -344,14 +344,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
     else if(!strcmp("bin",ext+1))
     {
         char *tmp = remove_ext(filename);
-        char extension[] = ".hdr";
-        char *tmp2;
-        int length = strlen(tmp) + strlen(extension) + 1;
-        tmp2 = (char *)malloc(length);
-        strcpy(tmp2, tmp);
-        strcat(tmp2, extension);
-        free(tmp);
-        tmp = tmp2;
+        sprintf(tmp,"%s.hdr",tmp);
         *Imagesize = Envihdr_reader(tmp);
         free(tmp);
         
@@ -429,7 +422,7 @@ bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesi
     if(rows[1]            > Imagesize.height - null_buffer)
         rows[1]            = Imagesize.height - null_buffer;
     
-    printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
+    printf("cols rows %d\t%d\t%d\t%d\n",cols[0],cols[1],rows[0],rows[1]);
     
     free(ImageCoord);
     
@@ -886,21 +879,21 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
         {
             while(!feof(fp))
             {
-                fscanf(fp, "%s\n", garbage);
-                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
-                fscanf(fp, "%s\t%d\t%d\n", garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
-                fscanf(fp, "%s\t%lf\n", garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
+                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_focalLength);
+                fscanf(fp, "%s\t%d\t%d\n", &garbage,&proinfo->frameinfo.m_Camera.m_ImageSize.width,&proinfo->frameinfo.m_Camera.m_ImageSize.height);
+                fscanf(fp, "%s\t%lf\n", &garbage,&proinfo->frameinfo.m_Camera.m_CCDSize);
                 proinfo->frameinfo.m_Camera.m_ppx = 0.0;
                 proinfo->frameinfo.m_Camera.m_ppy = 0.0;
                 
                 printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
                        proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
                 
-                fscanf(fp, "%s\n", garbage);
-                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
+                fscanf(fp, "%s\n", &garbage);
+                fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", &garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
                 printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
                 
-                fscanf(fp, "%s\n", garbage);
+                fscanf(fp, "%s\n", &garbage);
                 
                 proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->frameinfo.NumberofPhotos);
                 proinfo->number_of_images = proinfo->frameinfo.NumberofPhotos;
@@ -910,7 +903,7 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
                 {
                     int image_number;
                     int strip_id;
-                    fscanf(fp, "%s\t%d\t%d\n", garbage,&strip_id,&image_number);
+                    fscanf(fp, "%s\t%d\t%d\n", &garbage,&strip_id,&image_number);
                     
                     for(int j=0;j<image_number;j++)
                     {
@@ -1112,12 +1105,12 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         GTIFKeyGet(gtif, GTCitationGeoKey, citation, 0, cit_length);
         
         printf("1 Citation:%s\n",citation);
-        sscanf(citation,"%s %s %d, %s %s",ttt,ttt,&param->utm_zone,hem,ttt);
+        sscanf(citation,"%s %s %d, %s %s",&ttt,&ttt,&param->utm_zone,&hem,&ttt);
         if(strcmp(hem,"Northern") && strcmp(hem,"Southern"))
         {
             char hemzone[500];
             printf("11 Citation:%s\n",citation);
-            sscanf(citation,"%s %s / %s %s %d%s",ttt,ttt,ttt,ttt,&param->utm_zone,hem);
+            sscanf(citation,"%s %s / %s %s %d%s",&ttt,&ttt,&ttt,&ttt,&param->utm_zone,&hem);
             printf("hemzone %s %d\n",hem,param->utm_zone);
         }
     }
@@ -1943,12 +1936,6 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
-
-    // Initializng variables that throw warnings
-    Cloud = Nodata;
-    MOffnadirangle = Nodata;
-    MCrosstrackangle = Nodata;
-    MIntrackangle = Nodata;
     
     //printf("%s\n",_filename);
     
@@ -2134,17 +2121,6 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
-
-    // Initializng variables that throw warnings
-    Cloud = Nodata;
-    MOffnadirangle = Nodata;
-    MCrosstrackangle = Nodata;
-    MIntrackangle = Nodata;
-    MSATEl = Nodata;
-    MSATAz = Nodata;
-    MSUNEl = Nodata;
-    MSUNAz = Nodata;
-    
     
     //printf("%s\n",_filename);
     
@@ -2478,7 +2454,7 @@ void Open_planetmultiinfo_args(ARGINFO *args)
             int strip_ID;
             double temp_value;
             char temp_str[1000];
-            fscanf(pFile,"%s\t%d\t%lf\t%lf\t%lf\n",temp_str,&strip_ID,&temp_value,&temp_value,&temp_value);
+            fscanf(pFile,"%s\t%d\t%f\t%f\t%f\n",temp_str,&strip_ID,&temp_value,&temp_value,&temp_value);
             
             char temp_year[5];
             char temp_month[3];
@@ -2943,7 +2919,7 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
             for (int row = max<long>(-mask_row, -Half_template_size + 1); row <= min<long>(main_row-mask_row-1, Half_template_size - 1); row++)
             {
                 int dcol = numcols[abs(row)];
-                for (int col = max<long>(-mask_col, -dcol); col <= min<long>(dcol, main_col-mask_col-1); col++)
+                for (int col = max<long>(-mask_row, -dcol); col <= min<long>(dcol, main_col-mask_col-1); col++)
                 {
                     double gu_weight = gu_weight_pre_computed[Half_template_size - 1 + row][Half_template_size - 1 + col];
                     //long int radius2 = (row * row + col * col);
@@ -4084,7 +4060,7 @@ uint8 *SubsetImageFrombitsToUint8(const int image_bits, char *imagefile, long *c
                     if(out[index] == 1)
                         count++;
                 }
-                printf("count %d\ttotal count %ld\n",count,data_size);
+                printf("count %d\ttotal count %d\n",count,data_size);
                 free(t_datafloat);
             }
             break;

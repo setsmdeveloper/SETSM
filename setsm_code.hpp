@@ -83,6 +83,8 @@ int select_referenceimage(const long pt_index, const ProInfo *proinfo, LevelInfo
 
 int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageInfo *image_info, vector<NCCresult> &nccresult, LevelInfo &plevelinfo, UGRID &GridPT3, const uint8 iteration,const double *minmaxHeight, const double *ori_minmaxHeight);
 
+void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo, const vector<float> &UHeight, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **all_im_cd, D2DPOINT **all_im_cd_next, int pair_number);
+
 void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGRID &GridPT3, const bool check_combined_WNCC, enum PyImageSelect check_pyimage, const double im_resolution, const double im_resolution_next, long int &sub_imagesize_w, long int &sub_imagesize_h, long int &sub_imagesize_w_next, long int &sub_imagesize_h_next, D2DPOINT **am_im_cd, D2DPOINT **am_im_cd_next);
 
 void FindPeakNcc(const int Pyramid_step, const int iteration, const long int grid_index, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, float &pre_height, int &direction, double &max_WNCC, vector<NCCresult> &nccresult);
@@ -109,6 +111,8 @@ void VerticalLineLocus_seeddem(const ProInfo *proinfo,LevelInfo &rlevelinfo, UGR
 
 bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, float* nccresult, UGRID &GridPT3, uint8 iteration, bool bblunder);
 
+bool VerticalLineLocus_blunder_vector_singlepair(const ProInfo *proinfo,LevelInfo &rlevelinfo, uint8 iteration, int pair_number, const vector<float> &UHeight, vector<short> &ortho_ncc);
+
 bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelinfo, vector<float> &nccresult, UGRID &GridPT3, uint8 iteration, bool bblunder);
 
 int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double *F_Height, D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt, UGRID &GridPT3, int target_index, double *F_sncc);
@@ -120,6 +124,8 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
+void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input, UGRID &GridPT3, const uint8 iteration, vector<D3DPOINT> &ptslists, int pair_number, vector<short> &ortho_ncc);
+
 void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID &GridPT3, const uint8 iteration, const double Hinterval, long int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists);
 
 bool blunder_detection_TIN(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, D3DPOINT *pts, bool *detectedBlunders, long int num_points, UI3DPOINT *tris, long int num_triangles, UGRID &Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
@@ -129,6 +135,8 @@ bool blunder_detection_TIN_vector2(const ProInfo *proinfo, LevelInfo &rlevelinfo
 bool blunder_detection_TIN_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const int iteration, float* ortho_ncc, bool flag_blunder, uint16 count_bl, vector<D3DPOINT> &pts, bool *detectedBlunders, long int num_points, vector<UI3DPOINT> &tris, long int num_triangles, UGRID &Gridpts, long *blunder_count,double *minz_mp, double *maxz_mp);
 
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const long int numPts, UI3DPOINT *tris,const long num_triangles, UGRID &GridPT3);
+
+bool SetHeight_onGrid(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, vector<float> &UHeight);
 
 bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID &GridPT3);
 
