@@ -296,6 +296,7 @@ typedef struct tagNCCresult
 typedef struct tagMultiMPs
 {
     short peak_roh; //first peak roh
+    short ortho_roh;
     float peak_height; //first peak height
     bool check_matched;
 } MultiMPs;
