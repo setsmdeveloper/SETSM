@@ -35,10 +35,10 @@
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
-#ifndef bool
+//#ifndef bool
 //#define bool unsigned char
-#define true 0x1
-#define false 0x0
+//#define true 0x1
+//#define false 0x0
 #define SQ(x)         (x) * (x)
 #define SWAP(a,b) temp=a;a=b;b=temp;
 #define MAXRAND     0x7fffffff
@@ -48,7 +48,7 @@
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
 #define CLD_COV 10
-#endif
+//#endif
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
@@ -296,7 +296,6 @@ typedef struct tagNCCresult
 typedef struct tagMultiMPs
 {
     short peak_roh; //first peak roh
-    short ortho_roh;
     float peak_height; //first peak height
     bool check_matched;
 } MultiMPs;
