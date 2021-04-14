@@ -4623,10 +4623,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 
                                 count_MPs = MatchedPts_list.size();
                                 printf("Done AWNCC_MPs %ld\t%ld\n",count_MPs,max_count_MPs);
-                                for(long count = 0 ; count < Grid_length ; count++)
-                                    free(multimps[count]);
-                                free(multimps);
-                                printf("free multimps\n");
                                 
                                 min_pair_H = 9999;
                                 max_pair_H = -9999;
