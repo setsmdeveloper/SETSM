@@ -1,0 +1,45 @@
+# Automation for building the Docker Image
+name: Docker Image Build
+
+# Trigger on new version release
+on:
+  push:
+    tags:
+      - v[0-9].[0-9].[0-9]
+
+# Build and Push
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with: 
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Build and push GNU
+        id: docker_build_gnu
+        uses: docker/build-push-action@v2
+        env:
+            COMPILER: gnu
+        with:
+          push: true
+          build-args: COMPILER=${{ env.COMPILER }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}, chargje/setsm_fork:{0}-{1}', steps.get_version.outputs.VERSION, env.COMPILER) }}
+      -
+        name: Build and push Intel
+        id: docker_build_intel
+        uses: docker/build-push-action@v2
+        env:
+            COMPILER: intel
+        with:
+          push: true
+          build-args: COMPILER=${{ env.COMPILER }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}, chargje/setsm_fork:{0}-{1}', steps.get_version.outputs.VERSION, env.COMPILER) }}
+      
