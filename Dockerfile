@@ -68,8 +68,6 @@ RUN PATH="$(cat compilerpath):$PATH"; make COMPILER=$COMPILER INCS=-I/usr/includ
 # ------------- RUN STAGE ------------- #
 FROM ubuntu:$VERSION as runner
 
-ARG COMPILER
-
 # Bring in dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
         libgeotiff[0-9]+ \
