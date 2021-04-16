@@ -23,23 +23,54 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
-        name: Build and push GNU
+        name: Build and push GNU (Ubuntu 16.04)
         id: docker_build_gnu
         uses: docker/build-push-action@v2
         env:
             COMPILER: gnu
+            UVERSION: 16.04
         with:
           push: true
-          build-args: COMPILER=${{ env.COMPILER }}
-          tags: ${{ format('chargje/setsm_fork:latest-{1}, chargje/setsm_fork:{0}-{1}', steps.get_version.outputs.VERSION, env.COMPILER) }}
+          build-args: |
+            COMPILER=${{ env.COMPILER }}
+            VERSION=${{ env.UVERSION }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}_ubuntu-{2}, chargje/setsm_fork:{0}-{1}_ubuntu-{2}', steps.get_version.outputs.VERSION, env.COMPILER, env.UVERSION) }}
       -
-        name: Build and push Intel
+        name: Build and push GNU (Ubuntu latest)
+        id: docker_build_gnu_latest
+        uses: docker/build-push-action@v2
+        env:
+            COMPILER: gnu
+            UVERSION: latest
+        with:
+          push: true
+          build-args: |
+            COMPILER=${{ env.COMPILER }}
+            VERSION=${{ env.UVERSION }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}_ubuntu-{2}, chargje/setsm_fork:{0}-{1}_ubuntu-{2}', steps.get_version.outputs.VERSION, env.COMPILER, env.UVERSION) }}
+      -
+        name: Build and push Intel (Ubuntu 16.04)
         id: docker_build_intel
         uses: docker/build-push-action@v2
         env:
             COMPILER: intel
+            UVERSION: 16.04
         with:
           push: true
-          build-args: COMPILER=${{ env.COMPILER }}
-          tags: ${{ format('chargje/setsm_fork:latest-{1}, chargje/setsm_fork:{0}-{1}', steps.get_version.outputs.VERSION, env.COMPILER) }}
-      
+          build-args: |
+            COMPILER=${{ env.COMPILER }}
+            VERSION=${{ env.UVERSION }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}_ubuntu-{2}, chargje/setsm_fork:{0}-{1}_ubuntu-{2}', steps.get_version.outputs.VERSION, env.COMPILER, env.UVERSION) }}
+      -  
+        name: Build and push Intel (Ubuntu latst)
+        id: docker_build_intel_latest
+        uses: docker/build-push-action@v2
+        env:
+            COMPILER: intel
+            UVERSION: latest
+        with:
+          push: true
+          build-args: |
+            COMPILER=${{ env.COMPILER }}
+            VERSION=${{ env.UVERSION }}
+          tags: ${{ format('chargje/setsm_fork:latest-{1}_ubuntu-{2}, chargje/setsm_fork:{0}-{1}_ubuntu-{2}', steps.get_version.outputs.VERSION, env.COMPILER, env.UVERSION) }}
