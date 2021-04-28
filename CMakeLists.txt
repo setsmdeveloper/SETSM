@@ -39,6 +39,24 @@ endif()
 # Create target
 project (setsm)
 
+include_directories(${setsm_BINARY_DIR})
+
+# see here: https://stackoverflow.com/a/32062884
+add_custom_target(dummy_target ${CMAKE_CURRENT_BINARY_DIR}/git_description.h)
+
+# see header file section here:
+# https://gitlab.kitware.com/cmake/community/-/wikis/FAQ#how-can-i-generate-a-source-file-during-the-build
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/git_description.h
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gen_git_description.sh ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS dummy-command
+        )
+
+add_custom_command(
+    OUTPUT dummy-command
+    COMMAND cmake -E echo
+    )
+
 set (SRCS
     CoordConversion.cpp
     SubFunctions.cpp
@@ -56,7 +74,7 @@ set (SRCS
 )
 
 MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
-add_executable (setsm ${SRCS})
+add_executable (setsm ${CMAKE_CURRENT_BINARY_DIR}/git_description.h ${SRCS})
 set (CMAKE_CXX_STANDARD 11)
 
 # Check compiler
