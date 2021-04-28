@@ -11532,10 +11532,10 @@ bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelin
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             D2DPOINT pos_right_before(pos_right);
 
-                                            if((pos_left.m_X == Nodata && pos_left.m_Y == Nodata)
-                                                    || (pos_right.m_X == Nodata && pos_right.m_Y == Nodata)) {
-                                                printf("WARNING: left or right im pos is uninitialized\n");
-                                            }
+                                            //if((pos_left.m_X == Nodata && pos_left.m_Y == Nodata)
+                                            //        || (pos_right.m_X == Nodata && pos_right.m_Y == Nodata)) {
+                                            //    printf("WARNING: left or right im pos is uninitialized\n");
+                                            //}
 
                                             
                                             pos_right.m_X = pos_right.m_X + rlevelinfo.ImageAdjust[pair_number][1]/pwrtwo(*rlevelinfo.blunder_selected_level);
