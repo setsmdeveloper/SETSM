@@ -8352,6 +8352,9 @@ void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo
             printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
             exit(1);
         }
+        for(long i = 0; i < sub_imagesize_total; i++ {
+            all_im_cd[0][i] = { Nodata, Nodata };
+        }
     }
     
     if(proinfo->check_selected_image[ti])
@@ -8361,6 +8364,9 @@ void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo
         {
             printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
             exit(1);
+        }
+        for(long i = 0; i < sub_imagesize_total; i++ {
+            all_im_cd[1][i] = { Nodata, Nodata };
         }
     }
     
