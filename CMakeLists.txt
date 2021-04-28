@@ -40,19 +40,18 @@ endif()
 project (setsm)
 
 set (SRCS
-	CoordConversion.cpp
-	Coregistration.cpp
-	edge_list.cpp
-	grid.cpp
-	grid_triangulation.cpp
-	GridVoxel.cpp
-	log.cpp
-	LSF.cpp
-	Orthogeneration.cpp
-	SDM.cpp
-	setsm_code.cpp
-	setsmgeo.cpp
-	SubFunctions.cpp
+    CoordConversion.cpp
+    SubFunctions.cpp
+    LSF.cpp
+    Orthogeneration.cpp
+    Coregistration.cpp
+    SDM.cpp
+    setsmgeo.cpp
+    grid.cpp
+    grid_triangulation.cpp
+    edge_list.cpp
+    GridVoxel.cpp
+    log.cpp
 )
 
 MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
