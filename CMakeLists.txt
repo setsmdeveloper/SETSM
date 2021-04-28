@@ -23,14 +23,11 @@ set (INTEL_ID "Intel")
 set (PGI_ID "PGI")
 set (CRAY_ID "Cray")
 
+
 # Compiler flags
-#TODO update the mpi here
 if ($ENV{MPI} MATCHES "on")
-  MESSAGE("Building with MPI enabled")
-  set (GNU_FLAGS -O3 -march=native -ffast-math -DBUILDMPI)
-  set (INTEL_FLAGS -O3 -xHost  -fp-model precise -DBUILDMPI)
-  set (PGI_FLAGS -O3 -fast -DBUILDMPI)
-  set (CRAY_FLAGS -DBUILDMPI)
+  #TODO ADD MPI Support
+  MESSAGE(FATAL_ERROR "CMake MPI builds not yet supported")
 else()
   MESSAGE("Building with MPI disabled")
   set (GNU_FLAGS -O3 -march=native -ffast-math)
