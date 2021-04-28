@@ -52,6 +52,7 @@ set (SRCS
     edge_list.cpp
     GridVoxel.cpp
     log.cpp
+    setsm_code.cpp
 )
 
 MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
