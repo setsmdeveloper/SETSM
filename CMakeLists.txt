@@ -2,8 +2,7 @@
 cmake_minimum_required (VERSION 3.0.0)
 
 # minimum version for compilers
-#TODO this gnu version is not supported
-set (GNU_VERSION 4.0.0)
+set (GNU_VERSION 4.9.0)
 set (INTEL_VERSION 14.0.0)
 set (PGI_VERSION 13.0.0)
 set (CRAY_VERSION 0.0.0)
