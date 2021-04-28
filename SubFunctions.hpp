@@ -38,6 +38,7 @@ char* GetFileDir(char file_path[],int *size);
 char* SetOutpathName(char *_path);
 int Maketmpfolders(ProInfo *info);
 double getSystemMemory();
+void printMaxMemUsage();
 
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo);
 bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, CPairInfo &pairinfo);

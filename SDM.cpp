@@ -27,6 +27,9 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
             if(Maketmpfolders(&proinfo))
             {
                 TransParam param;
+                param = args.param;
+                printf("param projection %d\t%d\n",param.projection, args.projection);
+                //exit(1);
                 SetTranParam_fromGeoTiff(&param,proinfo.Imagefilename[0]);
                 
                 double Rimageparam[2] = {0.0};
@@ -1383,6 +1386,7 @@ void echoprint_Gridinfo_SDM(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int
   
     char DEM_str[500];
     sprintf(DEM_str, "%s/%s_roh.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    printf("projection %d\n",rlevelinfo.param->projection);
     WriteGeotiff(DEM_str, Roh, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
     
     free(Roh);

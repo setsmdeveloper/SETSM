@@ -4,15 +4,17 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATH=/home/noh.56/software/tiff-4.0.3/libtiff
-TIFFINC=-I/home/noh.56/software/tiff-4.0.3/include
-TIFFLIB=-L/home/noh.56/software/tiff-4.0.3/lib
+TIFFPATHROOT?=/home/noh.56/software/tiff-4.0.3
+TIFFPATH?=$(TIFFPATHROOT)/libtiff
+TIFFINC?=-I$(TIFFPATHROOT)/include
+TIFFLIB?=-L$(TIFFPATHROOT)/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH=/home/noh.56/software/libgeotiff-1.4.2/libxtiff
-GEOTIFFINC=-I/home/noh.56/software/libgeotiff-1.4.2/include
-GEOTIFFLIB=-L/home/noh.56/software/libgeotiff-1.4.2/lib
+GEOTIFFPATHROOT?=/home/noh.56/software/libgeotiff-1.4.2
+GEOTIFFPATH?=$(GEOTIFFPATHROOT)/libxtiff
+GEOTIFFINC?=-I$(GEOTIFFPATHROOT)/include
+GEOTIFFLIB?=-L$(GEOTIFFPATHROOT)/lib
 
 MPIFLAGS = -DBUILDMPI
 
@@ -51,7 +53,7 @@ else
   MPICC=mpicc
   MPICXX=mpicxx
   CFLAGS=-std=c99 -g -O3 -fopenmp 
-  CXXFLAGS=-std=c++11 -O3 -fopenmp 
+  CXXFLAGS=-std=c++11 -O3 -fopenmp
 endif
 
 $(shell git describe --always --tags --dirty > git_description)
@@ -59,7 +61,7 @@ GIT_DESCRIPTION:=$(shell cat git_description)
 export GIT_DESCRIPTION
 
 setsm : setsm_code.o $(OBJS)
-	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff
+	$(CXX) $(CXXFLAGS) -o setsm setsm_code.o $(OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff -ljpeg
 
 setsm_mpi : setsm_code_mpi.o $(MPI_OBJS)
 	$(MPICXX) $(CXXFLAGS) $(MPIFLAGS) -o setsm_mpi setsm_code_mpi.o $(MPI_OBJS) $(LDFLAGS) -lm -lgeotiff -ltiff

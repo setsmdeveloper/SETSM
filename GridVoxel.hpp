@@ -33,7 +33,7 @@ inline double SignedCharToDouble_voxel(short val)
 {
     if(val > 30000 || val < -30000)
     {
-        printf("SignedCharToDouble_voxel overflow %f\n",val);
+        printf("SignedCharToDouble_voxel overflow %d\n",val);
         exit(1);
     }
     return _SignedCharToDouble_voxel(val);

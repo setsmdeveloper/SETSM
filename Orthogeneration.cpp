@@ -130,6 +130,10 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     double row_grid_size, col_grid_size, product_grid_size;
     double** RPCs;
     BandInfo band;
+
+    // RPC being uninitialized throws a warning
+    RPCs = NULL;
+
     if(args.sensor_type == SB)
     {
         if(args.sensor_provider == DG)
