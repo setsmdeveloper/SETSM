@@ -19,6 +19,7 @@
 //uint definition
 #include "tiff.h"
 #include "tiffio.h"
+#include <algorithm>
 #include <vector>
 #include <map>
 #include <cstdlib>
