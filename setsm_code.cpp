@@ -3524,6 +3524,44 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     }
 }
 
+void CallSigmaZonGrid(const LevelInfo &plevelinfo, const GridPairs &grid_pair, vector<float> &SigmaZArray)
+{
+    for(long int pt_index = 0 ; pt_index < (*plevelinfo.Grid_length) ; pt_index++)
+    {
+        double sum_SigmaZ = 0;
+        //printf("before pairs\n");
+        auto &pairs = grid_pair.get_pairs(pt_index);
+        //printf("after pairs\n");
+        int pair_size = pairs.size();
+        //printf("pairs size %d\n",pair_size);
+        if(pairs.size() > 0)
+        {
+            //printf("paris count %d\n",pairs.size());
+            for(int count = 0 ; count < pairs.size() ; count++)
+            {
+                int pair_number = pairs[count];
+                //if(pair_number >= 0 && pair_number < plevelinfo.pairinfo->SelectNumberOfPairs())
+                {
+                    //printf("pt_index %d\tpair number %d\n",pt_index,pair_number);
+                    double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number);
+                    sum_SigmaZ += (sigmaZ*sigmaZ);
+                }
+                /*else
+                {
+                    printf("out of range pt_index %d\tpair number %d\n",pt_index,pair_number);
+                }*/
+            }
+            
+            if(sum_SigmaZ > 0)
+            {
+                double PSigmaZ = sqrt(sum_SigmaZ)/pairs.size();
+                SigmaZArray[pt_index] = PSigmaZ;
+            }
+            
+        }
+    }
+}
+
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
 {
     Boundary[0] = 10000000;
@@ -4212,20 +4250,31 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 
                         actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info, ori_minmaxHeight);
 
+                        vector<float> SigmaZArray((*levelinfo.Grid_length),-1.0);
+                        printf("Done actural_pair\n");
                         
+                        CallSigmaZonGrid(levelinfo, Grid_pair, SigmaZArray);
+                        printf("Done CallSigmaZonGrid\n");
                         char fname_grid[500];
+                        char fname_sigma[500];
                         sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
+                        sprintf(fname_sigma,"%s/txt/sigmaZ_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
                         FILE* fid_grid         = fopen(fname_grid,"w");
+                        FILE* fid_sigma         = fopen(fname_sigma,"w");
                         for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                         {
                             for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
                             {
                                 long int pt_index = trow*Size_Grid2D.width + tcol;
-                                //fprintf(fid_grid,"%d\t",Grid_pair[pt_index].size());
+                                auto &pairs = Grid_pair.get_pairs(pt_index);
+                                fprintf(fid_grid,"%d\t",pairs.size());
+                                fprintf(fid_sigma,"%f\t",SigmaZArray[pt_index]);
                             }
-                            //fprintf(fid_grid,"\n");
+                            fprintf(fid_grid,"\n");
+                            fprintf(fid_sigma,"\n");
                         }
                         fclose(fid_grid);
+                        fclose(fid_sigma);
                         
                         
                         printf("done\n");
@@ -7253,15 +7302,15 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
-    double h_divide = 6;
-    /*if(*rlevelinfo.Pyramid_step == 0)
+    double h_divide = 20;
+    if(*rlevelinfo.Pyramid_step <= 1)
     {
         if(*rlevelinfo.iteration <= 2)
-            h_divide = 6;
+            h_divide = 30;
         else
-            h_divide = 6;
+            h_divide = 30;
     }
-    */
+    
     double HS = rlevelinfo.MPP/h_divide*pwrtwo(*rlevelinfo.Pyramid_step);
     
     double &&tt1 = HS*100.0;
@@ -9577,17 +9626,40 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc)
         exit(1);
     }
     */
-    if(ncc > ortho_ncc)
-        return (ncc*100);
-    else
-        return (ortho_ncc*100);
     
-    //return (ncc + ortho_ncc)*100;
-    /*if(ncc > 1.0)
-        return (bhratio*100) * exp(ortho_ncc*10);
-    else
-        return (bhratio*100) * exp(ncc*10 * ortho_ncc*10);
-     */
+    
+    if(bhratio > 0.3)
+    {
+        if(ncc > ortho_ncc)
+            return (ncc*100);
+        else
+            return (ortho_ncc*100);
+    }
+    else //Planet Dove
+    {
+        if(ncc > ortho_ncc)
+            return exp(bhratio) * ncc*100;
+        else
+            return exp(bhratio) * ortho_ncc*100;
+    }
+}
+
+double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
+{
+    if(sigmaZ < 5)
+    {
+        if(ncc > ortho_ncc)
+            return (ncc*100);
+        else
+            return (ortho_ncc*100);
+    }
+    else //Planet Dove
+    {
+        if(ncc > ortho_ncc)
+            return exp(1.0/sigmaZ) * ncc*100;
+        else
+            return exp(1.0/sigmaZ) * ortho_ncc*100;
+    }
 }
 
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps)
@@ -9768,7 +9840,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
                     
                     
-                    double optimal_height;
                     double max_weight = -9999;
                     for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                     {
@@ -9919,7 +9990,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             w_ncc = pair_peak_roh;
                                             w_ortho_ncc = pair_ortho_roh;
                                             
-                                            w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                            //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                            
+                                            w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
                                             
                                         }
                                         else
@@ -9981,7 +10054,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     weight_height[query_pair] = wheight_idw/weight_idw;
                                     //weight_height[query_pair] = wheight_idw/weight_idw;
                                     
-                                    double final_weight = total_weight;//*save_pair[query_pair].size();
                                     /*
                                     if(max_weight < total_weight && query_pair < AWNCC_id)
                                     {
@@ -9993,12 +10065,11 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     {
                                         max_weight = weight_idw;
                                         selected_pair = query_pair;
-                                        optimal_height = weight_height[query_pair];
                                     }
                                     //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
                                     {
-                                        sum_weight_height += weight_height[query_pair]*final_weight;
-                                        sum_weight += final_weight;
+                                        sum_weight_height += weight_height[query_pair]*total_weight;
+                                        sum_weight += total_weight;
                                         //printf("q_kr q_kr %d\t%d\tweight_height[query_pair] %f\n",q_kr,q_kc,weight_height[query_pair]);
                                     }
                                     
@@ -10009,8 +10080,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         }
                     }
                     
-                    //if(max_weight > 0)
-                    //    final_height = optimal_height;
                     if(sum_weight > 0)
                         final_height = sum_weight_height/sum_weight;
                     
@@ -10204,7 +10273,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                 w_ncc = pair_peak_roh;
                                                                 w_ortho_ncc = pair_ortho_roh;
                                                                 
-                                                                w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                                                //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                                                w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
                                                                 
                                                             }
                                                             else
@@ -10255,10 +10325,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         kenel_total_weight += total_weight;
                                                         weight_height[query_pair] = wheight_idw/weight_idw;
                                                         
-                                                        double final_weight = total_weight;//*save_pair[query_pair].size();
-                                                        
-                                                        kenel_sum_weight_height += weight_height[query_pair]*final_weight;
-                                                        kenel_sum_weight += final_weight;
+                                                        kenel_sum_weight_height += weight_height[query_pair]*total_weight;
+                                                        kenel_sum_weight += total_weight;
                                                         
                                                         save_pair[query_pair].clear();
                                                         save_height[query_pair].clear();
@@ -10270,7 +10338,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         {
                                             save_kenel_height.push_back(kenel_sum_weight_height/kenel_sum_weight);
                                             save_kernal_height_all.push_back(kenel_sum_weight_height/kenel_sum_weight);
-                                            save_kernal_weight_all.push_back(kenel_total_weight);
+                                            save_kernal_weight_all.push_back(kenel_sum_weight);
                                         }
                                         
                                     }

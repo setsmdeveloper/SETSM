@@ -103,6 +103,10 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
 
 double BHratio_convert(double ori_bhratio);
 
+double Weightparam(double bhratio, double ncc, double ortho_ncc);
+
+double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc);
+
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps);
 
 void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, const int pairnumber);
@@ -171,6 +175,8 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info);
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight);
+
+void CallSigmaZonGrid(const LevelInfo &plevelinfo, const GridPairs &grid_pair, vector<float> &SigmaZArray);
 
 void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[]);
 
