@@ -2,7 +2,7 @@
 cmake_minimum_required (VERSION 3.0.0)
 
 # minimum version for compilers
-set (GNU_VERSION 4.9.0)
+set (GNU_VERSION 4.9.0) # needed for the openmp 4.5 support
 set (INTEL_VERSION 14.0.0)
 set (PGI_VERSION 13.0.0)
 set (CRAY_VERSION 0.0.0)
