@@ -1013,6 +1013,20 @@ public:
        }
     }
 
+    void remove_pairs(long index, std::vector<short> pairs_to_remove) {
+        std::vector<short> current_pairs = get_pairs(index);
+        std::vector<short> new_pairs;
+
+        // build list of new pairs for index
+        for(auto pnum : current_pairs) {
+            if(std::find(pairs_to_remove.begin(), pairs_to_remove.end(), pnum) == pairs_to_remove.end()) {
+                // pair is not in removal list, so add to new list
+                new_pairs.push_back(pnum);
+            }
+        }
+        add_pairs(index, new_pairs);
+    }
+
     void remap_pairs(const std::map<short, short> &pair_map) {
         for(auto &it : pair_lists) {
             for(short &p_num : it.second) {
