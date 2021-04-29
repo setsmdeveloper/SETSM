@@ -23,18 +23,20 @@ set (INTEL_ID "Intel")
 set (PGI_ID "PGI")
 set (CRAY_ID "Cray")
 
+# MPI build options
+# see here: https://stackoverflow.com/a/24470998
+#
+#TODO it might be nice to do some sanity checking for the user
+# if they specify mpi as the CMAKE_BUILD_TYPE, then we might
+# want to check if CXX starts with mpi, and if not, print a
+# warning
+set (CMAKE_CXX_FLAGS_MPI "-DBUILDMPI")
 
-# Compiler flags
-if ($ENV{MPI} MATCHES "on")
-  #TODO ADD MPI Support
-  MESSAGE(FATAL_ERROR "CMake MPI builds not yet supported")
-else()
-  MESSAGE("Building with MPI disabled")
-  set (GNU_FLAGS -std=c++11 -O3 -fopenmp)
-  set (INTEL_FLAGS -std=c++11 -O3 -qopenmp -fp-model precise)
-  set (PGI_FLAGS -std=c++11 -O3 -mp=allcores -fast)
-  set (CRAY_FLAGS -hstd=c++11 -h aggress)
-endif()
+# Set per-compiler flags
+set (GNU_FLAGS -std=c++11 -O3 -fopenmp)
+set (INTEL_FLAGS -std=c++11 -O3 -qopenmp -fp-model precise)
+set (PGI_FLAGS -std=c++11 -O3 -mp=allcores -fast)
+set (CRAY_FLAGS -hstd=c++11 -h aggress)
 
 # Create target
 project (setsm)
