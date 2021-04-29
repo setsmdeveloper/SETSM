@@ -136,6 +136,20 @@ make
 make install
 ```
 
+Example 3: Build with mvapich2 and intel.
+
+```sh
+mkdir build
+cd build
+# below: mpicxx is the intel/mvapich2 compiler
+export CXX=mpicxx
+cmake \
+    -DCMAKE_BUILD_TYPE=mpi \
+    -DCMAKE_PREFIX_PATH="/apps/libgeotiff/1.4.3/tiff;/apps/libgeotiff/1.4.3" \
+    ..
+```
+
+
 ## License
 
 SETSM is released under the Apache 2.0 license, a copy of which is included in
