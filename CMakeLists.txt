@@ -82,7 +82,7 @@ set (SRCS
 MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 add_executable (setsm ${CMAKE_CURRENT_BINARY_DIR}/git_description.h ${SRCS})
 
-# Check compiler
+# Check that the compiler (id, version) is supported
 foreach (CPL ${CC_LIST})
 	if (CMAKE_CXX_COMPILER_ID MATCHES ${${CPL}_ID})
 		set (COMPILER ${CPL})
