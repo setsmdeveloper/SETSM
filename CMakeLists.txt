@@ -33,10 +33,14 @@ set (CRAY_ID "Cray")
 set (CMAKE_CXX_FLAGS_MPI "-DBUILDMPI")
 
 # Set per-compiler flags
-set (GNU_FLAGS -std=c++11 -O3 -fopenmp)
-set (INTEL_FLAGS -std=c++11 -O3 -qopenmp -fp-model precise)
-set (PGI_FLAGS -std=c++11 -O3 -mp=allcores -fast)
+set (GNU_FLAGS -O3)
+set (INTEL_FLAGS -O3 -fp-model precise)
+set (PGI_FLAGS -O3 -mp=allcores -fast)
 set (CRAY_FLAGS -hstd=c++11 -h aggress)
+
+# Set standard to c++11 and disable compiler specific extensions
+set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Create target
 project (setsm)
@@ -77,7 +81,6 @@ set (SRCS
 
 MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 add_executable (setsm ${CMAKE_CURRENT_BINARY_DIR}/git_description.h ${SRCS})
-set (CMAKE_CXX_STANDARD 11)
 
 # Check compiler
 foreach (CPL ${CC_LIST})
@@ -117,7 +120,7 @@ target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
 target_link_libraries (setsm m ${TIFF_LIBRARIES})
 target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 
-list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS}${OPENMP_OPTION})
+list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
 
 # Make install
 #install(TARGETS setsm DESTINATION .)
