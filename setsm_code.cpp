@@ -8450,6 +8450,9 @@ void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo
             printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
             exit(1);
         }
+        for(long i = 0; i < sub_imagesize_total; i++) {
+            all_im_cd[0][i] = { Nodata, Nodata };
+        }
     }
     
     if(proinfo->check_selected_image[ti])
@@ -8459,6 +8462,9 @@ void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo
         {
             printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
             exit(1);
+        }
+        for(long i = 0; i < sub_imagesize_total; i++) {
+            all_im_cd[1][i] = { Nodata, Nodata };
         }
     }
     
@@ -8569,6 +8575,9 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
             {
                 printf("ERROR: Out of memory - all_left_im_cd is NULL\n");
                 exit(1);
+            }
+            for(long i = 0; i < sub_imagesize_total; i++) {
+                all_im_cd[ti][i] = { Nodata, Nodata };
             }
             /*
             if(check_combined_WNCC)
@@ -11639,6 +11648,12 @@ bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelin
                                             D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
                                             D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
                                             D2DPOINT pos_right_before(pos_right);
+
+                                            //if((pos_left.m_X == Nodata && pos_left.m_Y == Nodata)
+                                            //        || (pos_right.m_X == Nodata && pos_right.m_Y == Nodata)) {
+                                            //    printf("WARNING: left or right im pos is uninitialized\n");
+                                            //}
+
                                             
                                             pos_right.m_X = pos_right.m_X + rlevelinfo.ImageAdjust[pair_number][1]/pwrtwo(*rlevelinfo.blunder_selected_level);
                                             pos_right.m_Y = pos_right.m_Y + rlevelinfo.ImageAdjust[pair_number][0]/pwrtwo(*rlevelinfo.blunder_selected_level);
