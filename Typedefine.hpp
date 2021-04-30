@@ -35,10 +35,10 @@
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
-//#ifndef bool
+#ifndef bool
 //#define bool unsigned char
-//#define true 0x1
-//#define false 0x0
+#define true 0x1
+#define false 0x0
 #define SQ(x)         (x) * (x)
 #define SWAP(a,b) temp=a;a=b;b=temp;
 #define MAXRAND     0x7fffffff
@@ -48,7 +48,7 @@
 #define MAXSTR         48
 #define pwrtwo(x) (1 << (x))
 #define CLD_COV 10
-//#endif
+#endif
 
 enum SensorType {SB , AB};
 enum SensorProvider {DG, PL, PT};
@@ -388,7 +388,8 @@ private:
     std::vector<float> m_ConvergenceAngle;
     std::vector<float> m_CenterDist;
     std::vector<float> m_SigmaZ;
-
+    std::vector<float> m_Azimuth;
+    
     void allocate(int numberofpairs)
     {
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
@@ -396,6 +397,7 @@ private:
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
         m_CenterDist = std::vector<float>(numberofpairs);
         m_SigmaZ = std::vector<float>(numberofpairs);
+        m_Azimuth = std::vector<float>(numberofpairs);
         
         printf("allocate pairinfo array\n");
     }
@@ -465,6 +467,11 @@ public:
         m_SigmaZ[pos] = value;
     }
     
+    void SetAzimuth(int pos, float value)
+    {
+        m_Azimuth[pos] = value;
+    }
+    
     int& NumberOfPairs()
     {
         return m_NumberOfPairs;
@@ -508,6 +515,11 @@ public:
     float& SigmaZ(int pos)
     {
         return m_SigmaZ[pos];
+    }
+    
+    float& Azimuth(int pos)
+    {
+        return m_Azimuth[pos];
     }
 };
 

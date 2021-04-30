@@ -3366,6 +3366,9 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                     else if(proinfo->sensor_provider == PT)
                     {
                         double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                        double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
+                        
+                        printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
                         /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
                         {
                             offnadir_weight = 0.7; //30% weight
@@ -3381,6 +3384,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                         printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
                         pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
                         pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                        pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
                         //pairinfo.BHratio[pair_number] = 0.5;
                     }
                 }
@@ -3391,7 +3395,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                 if(maxBH < pairinfo.BHratio(pair_number))
                     maxBH = pairinfo.BHratio(pair_number);
                 
-                printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number));
+                printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\tAzimuth %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number),pairinfo.Azimuth(pair_number));
                 
                 pair_number++;
             }
@@ -3415,7 +3419,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         long int pt_index = iter_count;
 
         vector<short> pairs;
-        //vector<short>().swap(grid_pair[iter_count]);
+        
+        vector<vector<short>> sigma_pairs(60); //32,34,36,...,68
         
         const int start_H     = minmaxHeight[0];
         const int end_H       = minmaxHeight[1];
@@ -3446,19 +3451,63 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             //printf("total pair %d\tpair_number %d\n",plevelinfo.pairinfo->NumberOfPairs(),pair_number);
             if(check_stop && check_CA)
             {
-                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false)) {
-                    pairs.push_back(pair_number);
-                }
-
-                if(!contains(actual_pair_save, pair_number))
+                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
                 {
-                    actual_pair_save.push_back(pair_number);
+                    //pairs.push_back(pair_number);
+                
+                    double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number);
+                    int sigma_pairs_index = ceil((sigmaZ-30));
+                    if(sigma_pairs_index < 0)
+                        sigma_pairs_index = 0;
+                    if(sigma_pairs_index > 59)
+                        sigma_pairs_index = 59;
+                    //printf("sigmaZ %f\t index %d\t%d\n",sigmaZ,sigma_pairs_index,pair_number);
+                    if(fabs(plevelinfo.pairinfo->Azimuth(pair_number)) < 10)
+                        sigma_pairs[sigma_pairs_index].push_back(pair_number);
                 }
             }
         }
+        
+        bool stop_condition = false;
+        int t_count = 0;
+        int total_pair_count = 0;
+        while(!stop_condition && t_count < 60)
+        {
+            //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
+            total_pair_count += sigma_pairs[t_count].size();
+            
+            for(int k = 0 ; k < sigma_pairs[t_count].size() ; k++)
+            {
+                int t_pair_num = sigma_pairs[t_count][k];
+                pairs.push_back(t_pair_num);
+                //printf("t_count %d\tt_pair_num %d\tsigmaZ %f\n",t_count,t_pair_num,plevelinfo.pairinfo->SigmaZ(t_pair_num));
+                if(!contains(actual_pair_save, t_pair_num))
+                {
+                    actual_pair_save.push_back(t_pair_num);
+                }
+            }
+            
+            if(total_pair_count > 10)
+            {
+                stop_condition = true;
+                /*for(int j = 0 ; j < pairs.size() ; j++)
+                {
+                    printf("%d\tfinal pair num %d\t%d\n",pairs.size(),pairs[j],actual_pair_save[j]);
+                }*/
+            }
+            t_count++;
+        }
+        
         grid_pair.add_pairs(iter_count, pairs);
+        
+        //exit(1);
     }
     
+    for(int j = 0 ; j < actual_pair_save.size() ; j++)
+    {
+        printf("final pair num %d\t%d\t%f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
+    }
+    //exit(1);
     if(actual_pair_save.size() > 0)
     {
         for(int count = 0 ; count < actual_pair_save.size() ; count++)
@@ -3499,7 +3548,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
             temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
             temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
-
+            temp_pairs.SetAzimuth(count, plevelinfo.pairinfo->Azimuth(pair_number));
             printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
                 temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
@@ -4281,7 +4330,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
-                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count));
+                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count));
                             
                             if(proinfo->sensor_provider == PT)
                             {
@@ -7302,15 +7351,15 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
-    double h_divide = 20;
-    if(*rlevelinfo.Pyramid_step <= 1)
+    double h_divide = 10 + (3 - (*rlevelinfo.Pyramid_step))*10;
+    /*if(*rlevelinfo.Pyramid_step <= 1)
     {
         if(*rlevelinfo.iteration <= 2)
             h_divide = 30;
         else
             h_divide = 30;
     }
-    
+    */
     double HS = rlevelinfo.MPP/h_divide*pwrtwo(*rlevelinfo.Pyramid_step);
     
     double &&tt1 = HS*100.0;
@@ -9656,9 +9705,9 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
     else //Planet Dove
     {
         if(ncc > ortho_ncc)
-            return exp(1.0/sigmaZ) * ncc*100;
+            return /*exp(1.0/sigmaZ*100) **/ ncc*100;
         else
-            return exp(1.0/sigmaZ) * ortho_ncc*100;
+            return /*exp(1.0/sigmaZ*100) **/ ortho_ncc*100;
     }
 }
 
