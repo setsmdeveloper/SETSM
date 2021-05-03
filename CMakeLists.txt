@@ -10,9 +10,10 @@ set (CRAY_VERSION 0.0.0)
 # Minimum versions for libraries
 set (TIFF_VERSION 4.0.0)
 set (GEOTIFF_VERSION 1.4.0)
+set (PROJ_VERSION 4.4.9)
 
 # The compiler list
-set (CC_LIST GNU INTEL PGI CRAY)
+set (CXX_LIST GNU INTEL PGI CRAY)
 
 # includes geotiff find script
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
@@ -79,11 +80,11 @@ set (SRCS
     setsm_code.cpp
 )
 
-MESSAGE("CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
+MESSAGE(STATUS "CMAKE_CXX_COMPILER_ID is ${CMAKE_CXX_COMPILER_ID}")
 add_executable (setsm ${CMAKE_CURRENT_BINARY_DIR}/git_description.h ${SRCS})
 
 # Check that the compiler (id, version) is supported
-foreach (CPL ${CC_LIST})
+foreach (CPL ${CXX_LIST})
 	if (CMAKE_CXX_COMPILER_ID MATCHES ${${CPL}_ID})
 		set (COMPILER ${CPL})
 	endif ()
@@ -102,10 +103,16 @@ if (NOT TIFF_FOUND)
 endif (NOT TIFF_FOUND)
 
 # Find geotiff
-find_package (GeoTIFF)# ${GEOTIFF_VERSION})
+find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
 	message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
 endif (NOT GEOTIFF_FOUND)
+
+# Find proj
+find_package( PROJ ${PROJ_VERSION})
+if (NOT PROJ_FOUND)
+  message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
+endif (NOT PROJ_FOUND)
 
 # Find OpenMP
 find_package (OpenMP)
