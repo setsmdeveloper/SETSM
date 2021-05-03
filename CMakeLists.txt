@@ -44,7 +44,7 @@ set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Create target
-project (setsm)
+project (setsm CXX)
 
 include_directories(${setsm_BINARY_DIR})
 
@@ -96,23 +96,32 @@ if (CMAKE_CXX_COMPILER_VERSION LESS ${${COMPILER}_VERSION})
 	message (FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} minimum version \"${${COMPILER}_VERSION}\" required.")
 endif ()
 
+# Find proj
+find_package(PROJ ${PROJ_VERSION})
+if (NOT PROJ_FOUND)
+  #message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
+  message ("Cannot find proj/${PROJ_VERSION} or above.")
+  option(PROJ_TESTS OFF)
+  set(CXX icpc) #Replace with parent CXX
+  add_subdirectory(ext_libs/PROJ)
+  find_package(PROJ ${PROJ_VERSION})
+endif (NOT PROJ_FOUND)
+
 # Find tiff
 find_package (TIFF ${TIFF_VERSION})
 if (NOT TIFF_FOUND)
-	message (FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
+  #message (FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
+	message ("Cannot find tiff/${TIFF_VERSION} or above.")
+  add_subdirectory(ext_libs/libtiff)
 endif (NOT TIFF_FOUND)
 
 # Find geotiff
 find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
-	message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
+  #message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
+	message ("Cannot find geotiff/${GEOTIFF_VERSION} or above.")
+  add_subdirectory(ext_libs/libgeotiff/libgeotiff)
 endif (NOT GEOTIFF_FOUND)
-
-# Find proj
-find_package( PROJ ${PROJ_VERSION})
-if (NOT PROJ_FOUND)
-  message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
-endif (NOT PROJ_FOUND)
 
 # Find OpenMP
 find_package (OpenMP)
