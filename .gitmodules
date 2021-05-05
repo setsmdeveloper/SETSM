@@ -4,7 +4,7 @@
 	branch = 6.2
 [submodule "ext_libs/libtiff"]
 	path = ext_libs/libtiff
-	url = https://gitlab.com/libtiff/libtiff
+	url = https://gitlab.com/libtiff/libtiff.git
 [submodule "ext_libs/libgeotiff"]
 	path = ext_libs/libgeotiff
 	url = https://github.com/OSGeo/libgeotiff.git
