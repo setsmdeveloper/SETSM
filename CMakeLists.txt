@@ -106,15 +106,16 @@ if (NOT PROJ_FOUND)
   option(PROJ_TESTS OFF)
   set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/PROJ)
-  find_package(PROJ ${PROJ_VERSION})
 endif (NOT PROJ_FOUND)
 
 # Find tiff
 find_package (TIFF ${TIFF_VERSION})
 if (NOT TIFF_FOUND)
-  #message (FATAL_ERROR "Cannot find tiff/${TIFF_VERSION} or above.")
 	message ("Cannot find tiff/${TIFF_VERSION} or above.")
   add_subdirectory(ext_libs/libtiff)
+else()
+  target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
+  target_link_libraries (setsm m ${TIFF_LIBRARIES})
 endif (NOT TIFF_FOUND)
 
 # Find geotiff
@@ -123,11 +124,19 @@ if (NOT GEOTIFF_FOUND)
   message ("Cannot find geotiff/${GEOTIFF_VERSION} or above.")
   set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/libgeotiff/libgeotiff)
-  find_package (GeoTIFF ${GEOTIFF_VERSION})
+  target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
+  target_link_libraries(setsm m libgeotiff)
+  add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
+  #include_directories(${PROJECT_SOURCE_DIR}/ext/libgeotiff/libgeotiff)
+#  find_package (GeoTIFF ${GEOTIFF_VERSION})
 #  if (NOT GEOTIFF_FOUND)
 #    message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
 #  endif (NOT GEOTIFF_FOUND)
+else()
+  target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
+  target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 endif (NOT GEOTIFF_FOUND)
+add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
 
 # Find OpenMP
 find_package (OpenMP)
@@ -137,12 +146,12 @@ endif (NOT OPENMP_FOUND)
 
 # Build setsm target
 target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
-target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
-target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-target_link_libraries (setsm m ${TIFF_LIBRARIES})
-target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+#target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
+#target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
+#target_link_libraries (setsm m ${TIFF_LIBRARIES})
+#target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 
 list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
 
 # Make install
-#install(TARGETS setsm DESTINATION .)
+install(TARGETS setsm DESTINATION .)
