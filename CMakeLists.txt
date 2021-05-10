@@ -100,7 +100,7 @@ if (CMAKE_CXX_COMPILER_VERSION LESS ${${COMPILER}_VERSION})
 endif ()
 
 # Find proj
-#find_package(PROJ ${PROJ_VERSION})
+find_package(PROJ ${PROJ_VERSION})
 if (NOT PROJ_FOUND)
   #message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
   message ("Cannot find proj/${PROJ_VERSION} or above.")
@@ -125,6 +125,9 @@ find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
   message ("Cannot find geotiff/${GEOTIFF_VERSION} or above.")
   set(CXX icpc) #Replace with parent CXX
+  
+  configure_file(${CMAKE_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/csv/gcs.csv ${CMAKE_SOURCE_DIR}/csv/gcs.csv COPYONLY)
+
   add_subdirectory(ext_libs/libgeotiff/libgeotiff)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff)
