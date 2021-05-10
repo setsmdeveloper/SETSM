@@ -126,6 +126,7 @@ if (NOT GEOTIFF_FOUND)
   message ("Cannot find geotiff/${GEOTIFF_VERSION} or above.")
   set(CXX icpc) #Replace with parent CXX
   
+  # Copy CSV file neccessary to build libgeotiff into source directory
   configure_file(${CMAKE_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/csv/gcs.csv ${CMAKE_SOURCE_DIR}/csv/gcs.csv COPYONLY)
 
   add_subdirectory(ext_libs/libgeotiff/libgeotiff)
