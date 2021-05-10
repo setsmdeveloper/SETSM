@@ -107,6 +107,7 @@ if (NOT PROJ_FOUND)
   option(PROJ_TESTS OFF)
   set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/PROJ)
+  set (PROJ_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/PROJ/lib/libproj.so CACHE FILEPATH "PROJ library path" FORCE)
 endif (NOT PROJ_FOUND)
 
 # Find tiff
@@ -126,19 +127,17 @@ if (NOT GEOTIFF_FOUND)
   set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/libgeotiff/libgeotiff)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
-  target_link_libraries(setsm m libgeotiff)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/libxtiff)
   target_include_directories(setsm PUBLIC ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff)
-  #add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
-  #include_directories(${PROJECT_SOURCE_DIR}/ext/libgeotiff/libgeotiff)
+  set(GEOTIFF_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff/lib/libgeotiff.a CACHE FILEPATH "GEOTIFF library path" FORCE)
 #  find_package (GeoTIFF ${GEOTIFF_VERSION})
 #  if (NOT GEOTIFF_FOUND)
 #    message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
 #  endif (NOT GEOTIFF_FOUND)
 else()
   target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-  target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+  #target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 endif (NOT GEOTIFF_FOUND)
 #add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
 
@@ -150,10 +149,12 @@ endif (NOT OPENMP_FOUND)
 
 # Build setsm target
 target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
+#add_library(libgeotiff ALIAS ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff/lib/libgeotiff.a)
 #target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
 #target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
 #target_link_libraries (setsm m ${TIFF_LIBRARIES})
-#target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+target_link_libraries (setsm m ${PROJ_LIBRARY})
 
 list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
 
