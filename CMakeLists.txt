@@ -141,7 +141,7 @@ if (NOT GEOTIFF_FOUND)
 #  endif (NOT GEOTIFF_FOUND)
 else()
   target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-  #target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+  target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 endif (NOT GEOTIFF_FOUND)
 #add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
 
