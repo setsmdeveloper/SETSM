@@ -8423,17 +8423,22 @@ void SetOrthoImageCoord_singlepair(const ProInfo *proinfo, LevelInfo &plevelinfo
 #pragma omp parallel for schedule(guided)
     for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
     {
+        //im coordinates grid row/col
         long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
         long int pts_col = iter_count % sub_imagesize_w;
-        
-        double t_X     = plevelinfo.Boundary[0] + pts_col*im_resolution;
-        double t_Y     = plevelinfo.Boundary[1] + pts_row*im_resolution;
-        
-        long int t_col   = (long int)((t_X - plevelinfo.Boundary[0])/(*plevelinfo.grid_resolution));
-        long int t_row   = (long int)((t_Y - plevelinfo.Boundary[1])/(*plevelinfo.grid_resolution));
-        
+
+        // dem grid row/col
+        long int t_col   = (long int)((pts_col*im_resolution)/(*plevelinfo.grid_resolution));
+        long int t_row   = (long int)((pts_row*im_resolution)/(*plevelinfo.grid_resolution));
+
+        // convert both of those to their respective indices
         long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
         long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+
+        // ground coordinates for image grid index. Used to find image coordinates
+        // for that index.
+        double t_X     = plevelinfo.Boundary[0] + pts_col*im_resolution;
+        double t_Y     = plevelinfo.Boundary[1] + pts_row*im_resolution;
         
         if(pt_index < *plevelinfo.Grid_length && t_col < plevelinfo.Size_Grid2D->width && t_row < plevelinfo.Size_Grid2D->height)
         {
@@ -8504,19 +8509,9 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
 {
     sub_imagesize_w = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution)+1;
     sub_imagesize_h = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution)+1;
-    /*
-    if(check_combined_WNCC)
-    {
-        sub_imagesize_w_next = (long int)((plevelinfo.Boundary[2] - plevelinfo.Boundary[0])/im_resolution_next)+1;
-        sub_imagesize_h_next = (long int)((plevelinfo.Boundary[3] - plevelinfo.Boundary[1])/im_resolution_next)+1;
-    }
-    */
+
     const long int sub_imagesize_total = (long int)sub_imagesize_w * (long int)sub_imagesize_h;
-    /*
-    long int sub_imagesize_total_next;
-    if(check_combined_WNCC)
-        sub_imagesize_total_next = (long int)sub_imagesize_w_next * (long int)sub_imagesize_h_next;
-    */
+
     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
     {
         if(proinfo->check_selected_image[ti])
@@ -8546,30 +8541,23 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
 #pragma omp parallel for schedule(guided)
     for(long int iter_count = 0 ; iter_count < sub_imagesize_total ; iter_count++)
     {
+        //im coordinates grid row/col
         long int pts_row = (long int)(floor(iter_count/sub_imagesize_w));
         long int pts_col = iter_count % sub_imagesize_w;
-        
+
+        // dem grid row/col
+        long int t_col   = (long int)((pts_col*im_resolution)/(*plevelinfo.grid_resolution));
+        long int t_row   = (long int)((pts_row*im_resolution)/(*plevelinfo.grid_resolution));
+
+        // convert both of those to their respective indices
+        long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
+        long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
+
+        // ground coordinates for image grid index. Used to find image coordinates
+        // for that index.
         double t_X     = plevelinfo.Boundary[0] + pts_col*im_resolution;
         double t_Y     = plevelinfo.Boundary[1] + pts_row*im_resolution;
         
-        long int t_col   = (long int)((t_X - plevelinfo.Boundary[0])/(*plevelinfo.grid_resolution));
-        long int t_row   = (long int)((t_Y - plevelinfo.Boundary[1])/(*plevelinfo.grid_resolution));
-        
-        long int pt_index    = t_row*(long int)plevelinfo.Size_Grid2D->width + t_col;
-        long int pt_index_im = pts_row*(long int)sub_imagesize_w + pts_col;
-        
-        /*
-        long int t_col_next, t_row_next;
-        long int pt_index_im_next;
-        
-        if(check_combined_WNCC)
-        {
-            t_col_next   = (long int)((t_X - plevelinfo.Boundary[0])/im_resolution_next);
-            t_row_next   = (long int)((t_Y - plevelinfo.Boundary[1])/im_resolution_next);
-            
-            pt_index_im_next = t_row_next*(long int)sub_imagesize_w_next + t_col_next;
-        }
-        */
         if(pt_index < *plevelinfo.Grid_length && t_col < plevelinfo.Size_Grid2D->width && t_row < plevelinfo.Size_Grid2D->height)
         {
             if(GridPT3.Height(pt_index) != Nodata)
@@ -8611,16 +8599,6 @@ void SetOrthoImageCoord(const ProInfo *proinfo, LevelInfo &plevelinfo, const UGR
                             Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_BStartpos->at(ti),*plevelinfo.blunder_selected_level);
                         
                         all_im_cd[ti][pt_index_im] = Imagecoord_py;
-                        /*
-                        if(check_combined_WNCC)
-                        {
-                            Imagecoord_py  = OriginalToPyramid_single(Imagecoord,plevelinfo.py_Startpos_next[ti],*plevelinfo.Pyramid_step - 1);
-                            if(pt_index_im_next < sub_imagesize_w_next*sub_imagesize_h_next && t_col_next < sub_imagesize_w_next && t_row_next < sub_imagesize_h_next)
-                            {
-                                all_im_cd_next[ti][pt_index_im_next] = Imagecoord_py;
-                            }
-                        }
-                         */
                     }
                 }
             }
@@ -11400,6 +11378,19 @@ bool VerticalLineLocus_blunder_vector_singlepair(const ProInfo *proinfo,LevelInf
                     int Count_N[3] = {0};
                     double count_GNCC = 0;
                     double t_nccresult = 0;
+
+                    // convert out pt_index to the image coordinates index
+                    // dem grid index -> row, col
+                    long base_dem_grid_row = pt_index / rlevelinfo.Size_Grid2D->width;
+                    long base_dem_grid_col = pt_index % rlevelinfo.Size_Grid2D->width;
+
+                    // dem grid row, col -> image coordinates grid row/col
+                    long int base_im_grid_row = base_dem_grid_row * (*rlevelinfo.grid_resolution) / im_resolution;
+                    long int base_im_grid_col = base_dem_grid_col * (*rlevelinfo.grid_resolution) / im_resolution;
+
+
+
+                        
                     
                     for(int row = -Half_template_size; row <= Half_template_size ; row++)
                     {
@@ -11408,24 +11399,36 @@ bool VerticalLineLocus_blunder_vector_singlepair(const ProInfo *proinfo,LevelInf
                             const int radius2  = row*row + col*col;
                             if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                             {
-                                const double t_X     = rlevelinfo.GridPts[pt_index].m_X + col*im_resolution;
-                                const double t_Y     = rlevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
-                                
-                                long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
-                                long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
-                                long int pt_index_temp = t_row*sub_imagesize_w + t_col;
-                                
-                                const long int tt_col  = (long int)((t_X - subBoundary[0])/(*rlevelinfo.grid_resolution));
-                                const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*rlevelinfo.grid_resolution));
-                                const long int pt_index_dem  = tt_row*(long int)rlevelinfo.Size_Grid2D->width + tt_col;
-                                
-                                if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < numofpts && tt_col >= 0 && tt_col < rlevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < rlevelinfo.Size_Grid2D->height && all_im_cd[0] != NULL && all_im_cd[1] != NULL)
+                                long im_grid_row = base_im_grid_row + row;
+                                long im_grid_col = base_im_grid_col + col;
+
+                                // now get an "aligned" dem grid coordinate
+                                // This dem grid coordinate is aligned to the im_grid
+                                long int aligned_dem_grid_row = im_grid_row * im_resolution / (*rlevelinfo.grid_resolution);
+                                long int aligned_dem_grid_col = im_grid_col * im_resolution / (*rlevelinfo.grid_resolution);
+
+                                // and the corresponding indices for the image coordinate grid and
+                                // the "aligned" dem grid point
+                                long int im_grid_index = im_grid_row * sub_imagesize_w + im_grid_col;
+                                long int aligned_dem_grid_index = aligned_dem_grid_row * rlevelinfo.Size_Grid2D->width
+                                                                  + aligned_dem_grid_col;
+
+                                if(im_grid_index >= 0 && im_grid_index < sub_imagesize_w *sub_imagesize_h
+                                && im_grid_col >= 0 && im_grid_col < sub_imagesize_w
+                                && im_grid_row >=0 && im_grid_row < sub_imagesize_h
+                                && aligned_dem_grid_index >= 0 && aligned_dem_grid_index < numofpts
+                                && aligned_dem_grid_col >= 0 && aligned_dem_grid_col < rlevelinfo.Size_Grid2D->width
+                                && aligned_dem_grid_row >=0 && aligned_dem_grid_row < rlevelinfo.Size_Grid2D->height
+                                && all_im_cd[0] != NULL && all_im_cd[1] != NULL)
                                 {
-                                    if(UHeight[pt_index_dem] != Nodata)
+                                    if(UHeight[aligned_dem_grid_index] != Nodata)
                                     {
-                                        D2DPOINT pos_left(all_im_cd[0][pt_index_temp]);
-                                        D2DPOINT pos_right(all_im_cd[1][pt_index_temp]);
+                                        D2DPOINT pos_left(all_im_cd[0][im_grid_index]);
+                                        D2DPOINT pos_right(all_im_cd[1][im_grid_index]);
                                         D2DPOINT pos_right_before(pos_right);
+                                        if(pos_left.m_X == Nodata || pos_right.m_X == Nodata) {
+                                            fprintf(stderr, "NODATA!\n");
+                                        }
                                         
                                         pos_right.m_X = pos_right.m_X + rlevelinfo.ImageAdjust[pair_number][1]/pwrtwo(*rlevelinfo.blunder_selected_level);
                                         pos_right.m_Y = pos_right.m_Y + rlevelinfo.ImageAdjust[pair_number][0]/pwrtwo(*rlevelinfo.blunder_selected_level);
@@ -11574,6 +11577,18 @@ bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelin
                         double count_GNCC = 0;
                         double t_nccresult = 0;
                         
+                        // convert out pt_index to the image coordinates index
+                        // dem grid index -> row, col
+                        long base_dem_grid_row = pt_index / rlevelinfo.Size_Grid2D->width;
+                        long base_dem_grid_col = pt_index % rlevelinfo.Size_Grid2D->width;
+
+                        // dem grid row, col -> image coordinates grid row/col
+                        long int base_im_grid_row = base_dem_grid_row * (*rlevelinfo.grid_resolution) / im_resolution;
+                        long int base_im_grid_col = base_dem_grid_col * (*rlevelinfo.grid_resolution) / im_resolution;
+
+
+
+                        
                         for(int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
                             for(int col = -Half_template_size; col <= Half_template_size ; col++)
@@ -11581,23 +11596,32 @@ bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelin
                                 const int radius2  = row*row + col*col;
                                 if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                                 {
-                                    const double t_X     = rlevelinfo.GridPts[pt_index].m_X + col*im_resolution;
-                                    const double t_Y     = rlevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
-                                    
-                                    long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
-                                    long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
-                                    long int pt_index_temp = t_row*sub_imagesize_w + t_col;
-                                    
-                                    const long int tt_col  = (long int)((t_X - subBoundary[0])/(*rlevelinfo.grid_resolution));
-                                    const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*rlevelinfo.grid_resolution));
-                                    const long int pt_index_dem  = tt_row*(long int)rlevelinfo.Size_Grid2D->width + tt_col;
-                                    
-                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < numofpts && tt_col >= 0 && tt_col < rlevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < rlevelinfo.Size_Grid2D->height && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+                                    long im_grid_row = base_im_grid_row + row;
+                                    long im_grid_col = base_im_grid_col + col;
+
+                                    // now get an "aligned" dem grid coordinate
+                                    // This dem grid coordinate is aligned to the im_grid
+                                    long int aligned_dem_grid_row = im_grid_row * im_resolution / (*rlevelinfo.grid_resolution);
+                                    long int aligned_dem_grid_col = im_grid_col * im_resolution / (*rlevelinfo.grid_resolution);
+
+                                    // and the corresponding indices for the image coordinate grid and
+                                    // the "aligned" dem grid point
+                                    long int im_grid_index = im_grid_row * sub_imagesize_w + im_grid_col;
+                                    long int aligned_dem_grid_index = aligned_dem_grid_row * rlevelinfo.Size_Grid2D->width
+                                                                      + aligned_dem_grid_col;
+
+                                    if(im_grid_index >= 0 && im_grid_index < sub_imagesize_w *sub_imagesize_h
+                                    && im_grid_col >= 0 && im_grid_col < sub_imagesize_w
+                                    && im_grid_row >=0 && im_grid_row < sub_imagesize_h
+                                    && aligned_dem_grid_index >= 0 && aligned_dem_grid_index < numofpts
+                                    && aligned_dem_grid_col >= 0 && aligned_dem_grid_col < rlevelinfo.Size_Grid2D->width
+                                    && aligned_dem_grid_row >=0 && aligned_dem_grid_row < rlevelinfo.Size_Grid2D->height
+                                    && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                     {
-                                        if(GridPT3.Height(pt_index_dem) != Nodata)
+                                        if(GridPT3.Height(aligned_dem_grid_index) != Nodata)
                                         {
-                                            D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
-                                            D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
+                                            D2DPOINT pos_left(all_im_cd[reference_id][im_grid_index]);
+                                            D2DPOINT pos_right(all_im_cd[ti][im_grid_index]);
                                             D2DPOINT pos_right_before(pos_right);
 
                                             //if((pos_left.m_X == Nodata && pos_left.m_Y == Nodata)
@@ -11790,6 +11814,18 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                         int Count_N[3] = {0};
                         double count_GNCC = 0;
                         double t_nccresult = 0;
+
+                        // convert out pt_index to the image coordinates index
+                        // dem grid index -> row, col
+                        long base_dem_grid_row = pt_index / rlevelinfo.Size_Grid2D->width;
+                        long base_dem_grid_col = pt_index % rlevelinfo.Size_Grid2D->width;
+
+                        // dem grid row, col -> image coordinates grid row/col
+                        long int base_im_grid_row = base_dem_grid_row * (*rlevelinfo.grid_resolution) / im_resolution;
+                        long int base_im_grid_col = base_dem_grid_col * (*rlevelinfo.grid_resolution) / im_resolution;
+
+
+
                         
                         for(int row = -Half_template_size; row <= Half_template_size ; row++)
                         {
@@ -11798,24 +11834,37 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                                 const int radius2  = row*row + col*col;
                                 if(radius2 <= (Half_template_size-1)*(Half_template_size-1))
                                 {
-                                    const double t_X     = rlevelinfo.GridPts[pt_index].m_X + col*im_resolution;
-                                    const double t_Y     = rlevelinfo.GridPts[pt_index].m_Y + row*im_resolution;
-                                    
-                                    long int t_col   = (long int)((t_X - subBoundary[0])/im_resolution);
-                                    long int t_row   = (long int)((t_Y - subBoundary[1])/im_resolution);
-                                    long int pt_index_temp = t_row*sub_imagesize_w + t_col;
-                                    
-                                    const long int tt_col  = (long int)((t_X - subBoundary[0])/(*rlevelinfo.grid_resolution));
-                                    const long int tt_row  = (long int)((t_Y - subBoundary[1])/(*rlevelinfo.grid_resolution));
-                                    const long int pt_index_dem  = tt_row*(long int)rlevelinfo.Size_Grid2D->width + tt_col;
-                                    
-                                    if(pt_index_temp >= 0 && pt_index_temp < sub_imagesize_w *sub_imagesize_h && t_col >= 0 && t_col < sub_imagesize_w && t_row >=0 && t_row < sub_imagesize_h && pt_index_dem >= 0 && pt_index_dem < numofpts && tt_col >= 0 && tt_col < rlevelinfo.Size_Grid2D->width && tt_row >=0 && tt_row < rlevelinfo.Size_Grid2D->height && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
+
+                                    long im_grid_row = base_im_grid_row + row;
+                                    long im_grid_col = base_im_grid_col + col;
+
+                                    // now get an "aligned" dem grid coordinate
+                                    // This dem grid coordinate is aligned to the im_grid
+                                    long int aligned_dem_grid_row = im_grid_row * im_resolution / (*rlevelinfo.grid_resolution);
+                                    long int aligned_dem_grid_col = im_grid_col * im_resolution / (*rlevelinfo.grid_resolution);
+
+                                    // and the corresponding indices for the image coordinate grid and
+                                    // the "aligned" dem grid point
+                                    long int im_grid_index = im_grid_row * sub_imagesize_w + im_grid_col;
+                                    long int aligned_dem_grid_index = aligned_dem_grid_row * rlevelinfo.Size_Grid2D->width
+                                                                      + aligned_dem_grid_col;
+
+                                    if(im_grid_index >= 0 && im_grid_index < sub_imagesize_w *sub_imagesize_h
+                                    && im_grid_col >= 0 && im_grid_col < sub_imagesize_w
+                                    && im_grid_row >=0 && im_grid_row < sub_imagesize_h
+                                    && aligned_dem_grid_index >= 0 && aligned_dem_grid_index < numofpts
+                                    && aligned_dem_grid_col >= 0 && aligned_dem_grid_col < rlevelinfo.Size_Grid2D->width
+                                    && aligned_dem_grid_row >=0 && aligned_dem_grid_row < rlevelinfo.Size_Grid2D->height
+                                    && all_im_cd[reference_id] != NULL && all_im_cd[ti] != NULL)
                                     {
-                                        if(GridPT3.Height(pt_index_dem) != Nodata)
+                                        if(GridPT3.Height(aligned_dem_grid_index) != Nodata)
                                         {
-                                            D2DPOINT pos_left(all_im_cd[reference_id][pt_index_temp]);
-                                            D2DPOINT pos_right(all_im_cd[ti][pt_index_temp]);
+                                            D2DPOINT pos_left(all_im_cd[reference_id][im_grid_index]);
+                                            D2DPOINT pos_right(all_im_cd[ti][im_grid_index]);
                                             D2DPOINT pos_right_before(pos_right);
+                                            if(pos_left.m_X == Nodata || pos_right.m_X == Nodata) {
+                                                fprintf(stderr, "NODATA!\n");
+                                            }
                                             
                                             pos_right.m_X = pos_right.m_X + rlevelinfo.ImageAdjust[pair_number][1]/pwrtwo(*rlevelinfo.blunder_selected_level);
                                             pos_right.m_Y = pos_right.m_Y + rlevelinfo.ImageAdjust[pair_number][0]/pwrtwo(*rlevelinfo.blunder_selected_level);
