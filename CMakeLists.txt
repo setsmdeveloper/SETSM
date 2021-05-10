@@ -167,4 +167,4 @@ add_dependencies(setsm ${DEPENDENCIES})
 list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
 
 # Make install
-install(TARGETS setsm DESTINATION .)
+install(TARGETS setsm)
