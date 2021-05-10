@@ -135,6 +135,7 @@ if (NOT GEOTIFF_FOUND)
   target_include_directories(setsm PUBLIC ${PROJECT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/libxtiff)
   target_include_directories(setsm PUBLIC ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff)
   set(GEOTIFF_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff/lib/libgeotiff.a CACHE FILEPATH "GEOTIFF library path" FORCE)
+  set(DEPENDENCIES geotiff_library)
 #  find_package (GeoTIFF ${GEOTIFF_VERSION})
 #  if (NOT GEOTIFF_FOUND)
 #    message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
@@ -159,6 +160,9 @@ target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
 #target_link_libraries (setsm m ${TIFF_LIBRARIES})
 target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 target_link_libraries (setsm m ${PROJ_LIBRARY})
+
+# Add built dependencies to SETSM
+add_dependencies(setsm ${DEPENDENCIES})
 
 list (APPEND CMAKE_CXX_FLAGS ${OpenMP_CXX_FLAGS})
 
