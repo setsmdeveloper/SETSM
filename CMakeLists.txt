@@ -46,6 +46,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Create target
 project (setsm CXX)
 
+# Include libproj during compilation
 add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/PROJ/include)
 add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/PROJ/src)
 
@@ -115,19 +116,13 @@ if (NOT GEOTIFF_FOUND)
   target_include_directories(setsm PUBLIC ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff)
   set(GEOTIFF_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff/lib/libgeotiff.a CACHE FILEPATH "GEOTIFF library path" FORCE)
   add_dependencies(setsm geotiff_library)
-#  find_package (GeoTIFF ${GEOTIFF_VERSION})
-#  if (NOT GEOTIFF_FOUND)
-#    message (FATAL_ERROR "Cannot find geotiff/${GEOTIFF_VERSION} or above.")
-#  endif (NOT GEOTIFF_FOUND)
 else()
   target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-  #target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 endif (NOT GEOTIFF_FOUND)
 
 # Find proj
 find_package(PROJ ${PROJ_VERSION})
 if (NOT PROJ_FOUND)
-  #message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
   message ("Cannot find proj/${PROJ_VERSION} or above.")
   option(PROJ_TESTS OFF)
   set(CXX icpc) #Replace with parent CXX
@@ -145,9 +140,7 @@ if (NOT TIFF_FOUND)
   add_dependencies(setsm tiff)
 else()
   target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
-  #target_link_libraries (setsm m ${TIFF_LIBRARIES})
 endif (NOT TIFF_FOUND)
-#add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
 
 # Find OpenMP
 find_package (OpenMP)
