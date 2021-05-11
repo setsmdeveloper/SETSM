@@ -99,27 +99,6 @@ if (CMAKE_CXX_COMPILER_VERSION LESS ${${COMPILER}_VERSION})
 	message (FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} minimum version \"${${COMPILER}_VERSION}\" required.")
 endif ()
 
-# Find proj
-find_package(PROJ ${PROJ_VERSION})
-if (NOT PROJ_FOUND)
-  #message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
-  message ("Cannot find proj/${PROJ_VERSION} or above.")
-  option(PROJ_TESTS OFF)
-  set(CXX icpc) #Replace with parent CXX
-  add_subdirectory(ext_libs/PROJ)
-  set (PROJ_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/PROJ/lib/libproj.so CACHE FILEPATH "PROJ library path" FORCE)
-endif (NOT PROJ_FOUND)
-
-# Find tiff
-find_package (TIFF ${TIFF_VERSION})
-if (NOT TIFF_FOUND)
-  message ("Cannot find tiff/${TIFF_VERSION} or above.")
-  add_subdirectory(ext_libs/libtiff)
-else()
-  target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
-  target_link_libraries (setsm m ${TIFF_LIBRARIES})
-endif (NOT TIFF_FOUND)
-
 # Find geotiff
 find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
@@ -142,8 +121,32 @@ if (NOT GEOTIFF_FOUND)
 #  endif (NOT GEOTIFF_FOUND)
 else()
   target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-  target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
+  #target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 endif (NOT GEOTIFF_FOUND)
+
+# Find proj
+find_package(PROJ ${PROJ_VERSION})
+if (NOT PROJ_FOUND)
+  #message (FATAL_ERROR "Cannot find proj/${PROJ_VERSION} or above.")
+  message ("Cannot find proj/${PROJ_VERSION} or above.")
+  option(PROJ_TESTS OFF)
+  set(CXX icpc) #Replace with parent CXX
+  add_subdirectory(ext_libs/PROJ)
+  set (PROJ_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/PROJ/lib/libproj.so CACHE FILEPATH "PROJ library path" FORCE)
+  add_dependencies(geotiff_library proj)
+endif (NOT PROJ_FOUND)
+
+# Find tiff
+find_package (TIFF ${TIFF_VERSION})
+if (NOT TIFF_FOUND)
+  message ("Cannot find tiff/${TIFF_VERSION} or above.")
+  add_subdirectory(ext_libs/libtiff)
+  set (TIFF_LIBRARIES ${PROJECT_BINARY_DIR}/ext_libs/libtiff/libtiff/libtiff.so CACHE FILEPATH "TIFF library path" FORCE)
+  add_dependencies(geotiff_library tiff)
+else()
+  target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
+  #target_link_libraries (setsm m ${TIFF_LIBRARIES})
+endif (NOT TIFF_FOUND)
 #add_compile_options(-I${CMAKE_CURRENT_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/include)
 
 # Find OpenMP
@@ -154,10 +157,7 @@ endif (NOT OPENMP_FOUND)
 
 # Build setsm target
 target_compile_options (setsm PUBLIC ${${COMPILER}_FLAGS})
-#add_library(libgeotiff ALIAS ${PROJECT_BINARY_DIR}/ext_libs/libgeotiff/libgeotiff/lib/libgeotiff.a)
-#target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
-#target_include_directories (setsm PUBLIC ${GEOTIFF_INCLUDE_DIR})
-#target_link_libraries (setsm m ${TIFF_LIBRARIES})
+target_link_libraries (setsm m ${TIFF_LIBRARIES})
 target_link_libraries (setsm m ${GEOTIFF_LIBRARY})
 target_link_libraries (setsm m ${PROJ_LIBRARY})
 
