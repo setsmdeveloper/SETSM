@@ -104,7 +104,6 @@ endif ()
 find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
   message ("Cannot find geotiff/${GEOTIFF_VERSION} or above.")
-  set(CXX icpc) #Replace with parent CXX
   
   # Copy CSV file neccessary to build libgeotiff into source directory
   configure_file(${CMAKE_SOURCE_DIR}/ext_libs/libgeotiff/libgeotiff/csv/gcs.csv ${CMAKE_SOURCE_DIR}/csv/gcs.csv COPYONLY)
@@ -121,11 +120,10 @@ else()
 endif (NOT GEOTIFF_FOUND)
 
 # Find proj
-find_package(PROJ ${PROJ_VERSION})
+#find_package(PROJ ${PROJ_VERSION})
 if (NOT PROJ_FOUND)
   message ("Cannot find proj/${PROJ_VERSION} or above.")
   option(PROJ_TESTS OFF)
-  set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/PROJ)
   set (PROJ_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/PROJ/lib/libproj.so CACHE FILEPATH "PROJ library path" FORCE)
   add_dependencies(setsm proj)
