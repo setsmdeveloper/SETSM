@@ -120,7 +120,7 @@ else()
 endif (NOT GEOTIFF_FOUND)
 
 # Find proj
-#find_package(PROJ ${PROJ_VERSION})
+find_package(PROJ ${PROJ_VERSION})
 if (NOT PROJ_FOUND)
   message ("Cannot find proj/${PROJ_VERSION} or above.")
   option(PROJ_TESTS OFF)
