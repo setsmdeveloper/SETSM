@@ -133,7 +133,7 @@ if (NOT PROJ_FOUND)
   set(CXX icpc) #Replace with parent CXX
   add_subdirectory(ext_libs/PROJ)
   set (PROJ_LIBRARY ${PROJECT_BINARY_DIR}/ext_libs/PROJ/lib/libproj.so CACHE FILEPATH "PROJ library path" FORCE)
-  add_dependencies(geotiff_library proj)
+  add_dependencies(setsm proj)
 endif (NOT PROJ_FOUND)
 
 # Find tiff
@@ -142,7 +142,7 @@ if (NOT TIFF_FOUND)
   message ("Cannot find tiff/${TIFF_VERSION} or above.")
   add_subdirectory(ext_libs/libtiff)
   set (TIFF_LIBRARIES ${PROJECT_BINARY_DIR}/ext_libs/libtiff/libtiff/libtiff.so CACHE FILEPATH "TIFF library path" FORCE)
-  add_dependencies(geotiff_library tiff)
+  add_dependencies(setsm tiff)
 else()
   target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
   #target_link_libraries (setsm m ${TIFF_LIBRARIES})
