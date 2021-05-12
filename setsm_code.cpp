@@ -117,6 +117,7 @@ int main(int argc,char *argv[])
     args.GCP_spacing = -9;
     args.Cloud_th = CLD_COV;
     args.CA_th = 3;
+    args.CA_max_th = 50;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -490,6 +491,19 @@ int main(int argc,char *argv[])
                 {
                     args.CA_th = atof(argv[i+1]);
                     printf("Convergence angle threshold %f\n",args.CA_th);
+                }
+            }
+            
+            if (strcmp("-CA_max_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input maximum Convergence angle threshold for stereo pair configuration\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.CA_max_th = atof(argv[i+1]);
+                    printf("Maximum convergence angle threshold %f\n",args.CA_max_th);
                 }
             }
             
@@ -1767,6 +1781,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->SGM_py = args.SGM_py;
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
     proinfo->CA_th = args.CA_th;
+    proinfo->CA_max_th = args.CA_max_th;
     proinfo->Cloud_th = args.Cloud_th;
     
     printf("sgm level %d\t system memory %f\t%d\n",proinfo->SGM_py,proinfo->System_memory,args.number_of_images);
@@ -2036,6 +2051,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     sum_product_res = sum_product_res/proinfo->number_of_images;
                 }
         
+                if(proinfo->number_of_images < 2)
+                {
+                    printf("not enough images are selected %d/n",proinfo->number_of_images );
+                    exit(1);
+                }
+                
                 if(!args.check_imageresolution)
                 {
                     if(proinfo->sensor_type == AB)
@@ -2849,6 +2870,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             if(!args.check_gridonly)
                             {
                                 Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
+                                
+                                fprintf(pMetafile, "Number of stereo pairs=%d\n",pairinfo.SelectNumberOfPairs());
                             }
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
@@ -3443,7 +3466,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool check_CA = false;
             if(proinfo->sensor_provider == PT)
             {
-                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th/* && image_info[reference_id].cloud < CLD_COV && image_info[ti].cloud < CLD_COV*/)
+                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th)
                     check_CA = true;
             }
             else
@@ -3462,6 +3485,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     if(sigma_pairs_index > 59)
                         sigma_pairs_index = 59;
                     //printf("sigmaZ %f\t index %d\t%d\n",sigmaZ,sigma_pairs_index,pair_number);
+                    
                     if(fabs(plevelinfo.pairinfo->Azimuth(pair_number)) < 10)
                         sigma_pairs[sigma_pairs_index].push_back(pair_number);
                 }
@@ -3471,6 +3495,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         bool stop_condition = false;
         int t_count = 0;
         int total_pair_count = 0;
+        int max_stereo_pair = 10;
         while(!stop_condition && t_count < 60)
         {
             //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
@@ -3487,7 +3512,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 }
             }
             
-            if(total_pair_count > 10)
+            if(total_pair_count > max_stereo_pair)
             {
                 stop_condition = true;
                 /*for(int j = 0 ; j < pairs.size() ; j++)
@@ -4302,6 +4327,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         vector<float> SigmaZArray((*levelinfo.Grid_length),-1.0);
                         printf("Done actural_pair\n");
                         
+                        /*
                         CallSigmaZonGrid(levelinfo, Grid_pair, SigmaZArray);
                         printf("Done CallSigmaZonGrid\n");
                         char fname_grid[500];
@@ -4310,6 +4336,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         sprintf(fname_sigma,"%s/txt/sigmaZ_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
                         FILE* fid_grid         = fopen(fname_grid,"w");
                         FILE* fid_sigma         = fopen(fname_sigma,"w");
+                        
                         for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                         {
                             for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
@@ -4324,7 +4351,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         }
                         fclose(fid_grid);
                         fclose(fid_sigma);
-                        
+                        */
                         
                         printf("done\n");
                         
@@ -4370,6 +4397,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 
                                 if(max_stereo_angle < MPP_stereo_angle)
                                     max_stereo_angle = MPP_stereo_angle;
+                                //printf("max_stereo_angle %f\n",max_stereo_angle);
                             }
                             MPP_simgle_image = sqrt(sum_MPP_simgle_image)/levelinfo.pairinfo->SelectNumberOfPairs();
                             MPP_stereo_angle = sqrt(sum_MPP_stereo_angle)/levelinfo.pairinfo->SelectNumberOfPairs();
@@ -4379,15 +4407,17 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             *stereo_angle_accuracy = MPP_stereo_angle;
                             
-                            if(proinfo->sensor_provider == DG)
+                            //if(proinfo->sensor_provider == PT)
                             {
                                 MPP_stereo_angle = max_stereo_angle;
-                                
+                                /*
                                 if(MPP_stereo_angle > proinfo->resolution*5)
                                     MPP_stereo_angle = proinfo->resolution*5;
                                     
                                 if(MPP_stereo_angle < proinfo->resolution)
                                     MPP_stereo_angle = proinfo->resolution;
+                                 */
+                                //printf("DG max_stereo_angle %f\t%f\n",MPP_stereo_angle,max_stereo_angle);
                             }
                             
                             MPP = MPP_stereo_angle;
@@ -4399,8 +4429,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             else
                                 MPP = MPP_simgle_image;
                             */
-                            if(MPP > 50)
-                                MPP = 50;
+                            
+                            //if(MPP > 50)
+                            //    MPP = 50;
+                            //printf("DG max_stereo_angle %f\n",MPP_stereo_angle);
                         }
                         else
                         {
@@ -4414,7 +4446,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         levelinfo.MPP = MPP;
                         
-                        printf("final MPP %f\t%f\tstereo_angle_accuracy %f\n",MPP_simgle_image,MPP_stereo_angle,*stereo_angle_accuracy);
+                        printf("final MPP %f\t%f\tstereo_angle_accuracy %f\n",levelinfo.MPP,MPP_stereo_angle,*stereo_angle_accuracy);
                         
                         double height_step = GetHeightStep(level,Image_res[0], levelinfo);
                         
@@ -4656,6 +4688,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 FILE *pfile_pair = NULL;
                                 
                                 
+                                vector<vector<unsigned short>> PairArray(*levelinfo.Grid_length);
                                 
                                 for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                                 {
@@ -4716,6 +4749,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 min_pair_H = multimps(ref_index, pair_number).peak_height;
                                             if(max_pair_H < multimps(ref_index, pair_number).peak_height)
                                                 max_pair_H = multimps(ref_index, pair_number).peak_height;
+                                            
+                                            PairArray[ref_index].push_back(pair_number);
                                         }
                                     }
                                     
@@ -4732,6 +4767,43 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     if(temp_asc_fprint)
                                         fclose(pfile_pair);
                                 }
+                                
+                                char fname_grid[500];
+                                char fname_sigma[500];
+                                sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
+                                sprintf(fname_sigma,"%s/txt/sigmaZ_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
+                                FILE* fid_grid         = fopen(fname_grid,"w");
+                                FILE* fid_sigma         = fopen(fname_sigma,"w");
+                                for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                                {
+                                    for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                                    {
+                                        long int pt_index = trow*Size_Grid2D.width + tcol;
+                                        fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
+                                        
+                                        double sum_SigmaZ = 0;
+                                        for(int count = 0 ; count < PairArray[pt_index].size() ; count++)
+                                        {
+                                            int pair_number = PairArray[pt_index][count];
+                                            {
+                                                double sigmaZ = levelinfo.pairinfo->SigmaZ(pair_number);
+                                                sum_SigmaZ += (sigmaZ*sigmaZ);
+                                            }
+                                        }
+                                        
+                                        if(sum_SigmaZ > 0)
+                                        {
+                                            double PSigmaZ = sqrt(sum_SigmaZ)/PairArray[pt_index].size();
+                                            SigmaZArray[pt_index] = PSigmaZ;
+                                        }
+
+                                        fprintf(fid_sigma,"%f\t",SigmaZArray[pt_index]);
+                                    }
+                                    fprintf(fid_grid,"\n");
+                                    fprintf(fid_sigma,"\n");
+                                }
+                                fclose(fid_grid);
+                                fclose(fid_sigma);
                                 
                                 //MatchedPts_list.clear();
                                 printf("start AWNCC_MPs %ld\t%ld\tpair_count %d\n",MatchedPts_list.size(),total_count_MPs,pair_count);
@@ -5355,6 +5427,24 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         {
                             double min_after   = (double)(minH_mps - pwrtwo(level)*10*MPP);
                             double max_after   = (double)(maxH_mps + pwrtwo(level)*10*MPP);
+                            
+                            if(proinfo->sensor_provider == PT)
+                            {
+                                if(MPP > 30)
+                                {
+                                    min_after   = (double)(minH_mps - pwrtwo(level)*2*30);
+                                    max_after   = (double)(maxH_mps + pwrtwo(level)*2*30);
+                                }
+                                else
+                                {
+                                    min_after   = (double)(minH_mps - pwrtwo(level)*2*MPP);
+                                    max_after   = (double)(maxH_mps + pwrtwo(level)*2*MPP);
+                                }
+                            }
+                            
+                            if(min_after < -100)
+                                min_after = -100;
+                            
                             if(level <= 2)
                             {
                                 if(minmaxHeight[0] < min_after)
@@ -7179,7 +7269,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
     
     const double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
-    printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
+    //printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
     if(left_mpp > 5*proinfo->resolution)
         *MPP_simgle_image = right_mpp;
@@ -7351,7 +7441,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
-    double h_divide = 10 + (3 - (*rlevelinfo.Pyramid_step))*10;
+    double h_divide = 20 + (3 - (*rlevelinfo.Pyramid_step))*10;
     /*if(*rlevelinfo.Pyramid_step <= 1)
     {
         if(*rlevelinfo.iteration <= 2)
@@ -7368,7 +7458,7 @@ double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
     
     if(HS < 0.5)
         HS = 0.5;
-    
+    HS = 1.0*pwrtwo(*rlevelinfo.Pyramid_step);
     printf("h_divede HS %f\t%f\n",h_divide,HS);
     
     return HS;
@@ -8855,7 +8945,7 @@ void FindPeakNcc2(const int Pyramid_step, const int iteration, const double temp
     direction              = t_direction;
 }
 
-void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, double &max_roh_sec, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec)
+void FindPeakNcc_SGM(ProInfo *proinfo, const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, double &max_roh_sec, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec)
 {
     double diff_rho;
     int t_direction;
@@ -8882,7 +8972,12 @@ void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double t
     }
     else if(pre_rho != -1)
     {
-        if((iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2)) //Max AWNCC
+        bool check_condition;
+        if(proinfo->sensor_provider == PT)
+            check_condition = (iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2) || (iteration > 2 && Pyramid_step <= 0);
+        else
+            check_condition = (iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2);
+        if(check_condition) //Max AWNCC
         {
             if(temp_nccresult < temp_rho)
             {
@@ -9714,9 +9809,9 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
     else //Planet Dove
     {
         if(ncc > ortho_ncc)
-            return /*exp(1.0/sigmaZ*100) **/ ncc*100;
+            return /*pow(exp(1.0/sigmaZ*100.0),2.0) **/ ncc*100;
         else
-            return /*exp(1.0/sigmaZ*100) **/ ortho_ncc*100;
+            return /*pow(exp(1.0/sigmaZ*100.0),2.0) **/ ortho_ncc*100;
     }
 }
 
@@ -10071,7 +10166,11 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                 w_ncc = pair_peak_roh;
                                                 w_ortho_ncc = pair_ortho_roh;
                                                 
-                                                sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
+                                                //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
+                                                
+                                                sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
+                                                
+                                                
                                                 //if(max_w_bhncc < sum_w_bhncc)
                                                 //    max_w_bhncc = sum_w_bhncc;
                                             }
@@ -10353,7 +10452,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                     w_ncc = pair_peak_roh;
                                                                     w_ortho_ncc = pair_ortho_roh;
                                                                     
-                                                                    sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
+                                                                    //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
+                                                                    
+                                                                    sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
+                                                                    
                                                                     //if(max_w_bhncc < sum_w_bhncc)
                                                                     //    max_w_bhncc = sum_w_bhncc;
                                                                 }
@@ -11111,7 +11213,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     else
                         temp_rho = ShortToDouble_SGM(SumCost.value(pt_index, height_step),100.0);
 
-                    FindPeakNcc_SGM(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
+                    
+                    FindPeakNcc_SGM(proinfo,Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
                 
                 if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
@@ -12756,7 +12859,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
     const double MPP = rlevelinfo.MPP;
     int SGM_th_py = proinfo->SGM_py;
     const int Pyramid_step = *rlevelinfo.Pyramid_step;
-    if(proinfo->IsRA)
+    if(proinfo->IsRA)// || proinfo->sensor_provider == PT)
     {
         minimum_Th = 0.2;
     }
@@ -13072,7 +13175,11 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
             //double peak_step_diff = fabs(roh_height[grid_index].result2 - roh_height[grid_index].result3)/height_step;
             bool check_ROR = (iteration <= 2 && Pyramid_step >= 3) || (iteration <= 1 && Pyramid_step == 2);
             if(proinfo->sensor_provider == PT)
+            {
                 check_ROR = (iteration <= 2 && Pyramid_step >= 2) || (iteration <= 1 && Pyramid_step == 1);
+                //if(Pyramid_step <= 1)
+                //    check_ROR = true;
+            }
             
             if(check_ROR)
                 ROR = 1.0;
@@ -13084,6 +13191,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                     ROR         = 0;
             }
             
+            
             if(Pyramid_step == 0)
             {
                 if(ROR >= ROR_lv0 && SignedCharToDouble_result(roh_height[grid_index].result0) > minimum_Th)
@@ -13094,7 +13202,13 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                 if(ROR >= 0.1 && SignedCharToDouble_result(roh_height[grid_index].result0) > minimum_Th)
                     index_2 = true;
             }
-            
+            /*
+            if(ROR < 1.0 && Pyramid_step <= 1)
+            {
+                printf("check_ROR %d\tROR = %f\n",check_ROR,ROR);
+                exit(1);
+            }
+            */
             //if(!index_2 && peak_step_diff < 10 && SignedCharToDouble_result(roh_height[grid_index].result0) > minimum_Th)
             //    index_2 = true;
             

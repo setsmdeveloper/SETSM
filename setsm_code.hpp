@@ -91,7 +91,7 @@ void FindPeakNcc(const int Pyramid_step, const int iteration, const long int gri
 
 void FindPeakNcc2(const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec);
 
-void FindPeakNcc_SGM(const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, double &max_roh_sec, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec);
+void FindPeakNcc_SGM(ProInfo *proinfo, const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, double &max_roh_sec, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec);
 
 void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID &GridPT3, long pt_index, float* LHcost_pre, SumCostContainer &SumCost, double height_step_interval, const int pairnumber);
 

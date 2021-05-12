@@ -586,6 +586,7 @@ typedef struct ProjectInfo{
     double RBoundary[4];
     double GCP_spacing;
     double CA_th;
+    double CA_max_th;
     double Cloud_th;
     
 	double minHeight;
@@ -670,6 +671,7 @@ typedef struct ArgumentInfo{
     double DS_ty;
     double GCP_spacing;
     double CA_th;
+    double CA_max_th;
     double Cloud_th;
     
 	int check_arg; // 0 : no input, 1: 3 input
