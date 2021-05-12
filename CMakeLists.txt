@@ -120,7 +120,7 @@ else()
 endif (NOT GEOTIFF_FOUND)
 
 # Find proj
-find_package(PROJ ${PROJ_VERSION})
+#find_package(PROJ ${PROJ_VERSION})
 if (NOT PROJ_FOUND)
   message ("Cannot find proj/${PROJ_VERSION} or above.")
   option(PROJ_TESTS OFF)
@@ -130,7 +130,7 @@ if (NOT PROJ_FOUND)
 endif (NOT PROJ_FOUND)
 
 # Find tiff
-find_package (TIFF ${TIFF_VERSION})
+#find_package (TIFF ${TIFF_VERSION})
 if (NOT TIFF_FOUND)
   message ("Cannot find tiff/${TIFF_VERSION} or above.")
   add_subdirectory(ext_libs/libtiff)
