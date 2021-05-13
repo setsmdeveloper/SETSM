@@ -152,9 +152,9 @@ cmake \
 CMake will search for the dependencies to determine if they are installed and built or not. If you do not have
 these three dependencies installed on your system, you can use the following steps to have them installed.
 
-- PROJ
-- GeoTIFF
-- LibTIFF
+- [PROJ](https://github.com/OSGeo/PROJ)
+- [LibTIFF](http://www.simplesystems.org/libtiff/)
+- [libgeotiff](https://github.com/OSGeo/libgeotiff)
 
 If you cloned the repository you can simply run:
 
@@ -162,7 +162,7 @@ If you cloned the repository you can simply run:
 git submodule update --init --recursive
 ```
 
-If instead you downloaded a `tgz` of the source code. You can run this script to handle installing the submodules:
+If instead you downloaded an archive of the source code. You can run this script to handle installing the submodules:
 
 ```sh
 ./SubmoduleInstall.py
