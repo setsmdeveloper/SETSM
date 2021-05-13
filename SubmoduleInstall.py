@@ -1,4 +1,4 @@
-#!/bin/python2
+#!/usr/bin/env python
 # Script that installs the necessary submodules to build with cmake
 
 # Imports
@@ -31,7 +31,8 @@ class Submodule:
         return 'path = {}\nurl = {}\ncommit = {}'.format(self.path, self.url, self.commit)
 
 def color_print(message, color=DEFAULT):
-    print '{}{}{}'.format(color, message, DEFAULT)
+    output = '{}{}{}'.format(color, message, DEFAULT)
+    print(output)
 
 if __name__ == '__main__':
     
