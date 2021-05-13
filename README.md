@@ -149,12 +149,14 @@ cmake \
     ..
 ```
 
-CMake will search for the dependencies to determine if they are installed and built or not. If you do not have
-these three dependencies installed on your system, you can use the following steps to have them installed.
+CMake will search for the dependencies to determine if they are installed and built or not.
 
 - [PROJ](https://github.com/OSGeo/PROJ)
 - [LibTIFF](http://www.simplesystems.org/libtiff/)
 - [libgeotiff](https://github.com/OSGeo/libgeotiff)
+
+If you do not have these three dependencies installed on your system, you can use the
+following steps to have them installed.
 
 If you cloned the repository you can simply run:
 
