@@ -1,10 +1,12 @@
 [submodule "ext_libs/PROJ"]
 	path = ext_libs/PROJ
 	url = https://github.com/OSGeo/PROJ.git
-	branch = 6.2
+	branch = da953c04
 [submodule "ext_libs/libtiff"]
 	path = ext_libs/libtiff
 	url = https://gitlab.com/libtiff/libtiff.git
+    branch = 52bbf49b
 [submodule "ext_libs/libgeotiff"]
 	path = ext_libs/libgeotiff
 	url = https://github.com/OSGeo/libgeotiff.git
+    branch = 0dba341b

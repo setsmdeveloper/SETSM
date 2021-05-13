@@ -1,9 +1,7 @@
-#!/bin/python3
+#!/bin/python2
 # Script that installs the necessary submodules to build with cmake
 
 # Imports
-from pathlib import Path
-import subprocess
 import os
 
 # Colors
@@ -30,10 +28,10 @@ class Submodule:
 
     # Used for debugging
     def __str__(self):
-        return f'path = {self.path}\nurl = {self.url}\ncommit = {self.commit}'
+        return 'path = {}\nurl = {}\ncommit = {}'.format(self.path, self.url, self.commit)
 
 def color_print(message, color=DEFAULT):
-    print(color, message, DEFAULT, sep='')
+    print '{}{}{}'.format(color, message, DEFAULT)
 
 if __name__ == '__main__':
     
@@ -50,7 +48,7 @@ if __name__ == '__main__':
             else:
                 data = line[1 + line.index('='):].strip()
                 if line.startswith('path'):
-                    submodules[index].put_path(Path(data))
+                    submodules[index].put_path(data)
                 elif line.startswith('url'):
                     submodules[index].put_url(data)
                 elif line.startswith('branch'):
@@ -61,17 +59,17 @@ if __name__ == '__main__':
     # Prepare for install
     color_print('Preparing for install...', PROGRESS)
     for submodule in submodules:
-        if submodule.path.exists():
-            color_print(f'{submodule.path} exists. Removing...', WARNING)
-            subprocess.run(['rm', '-rf', submodule.path])
+        if os.path.isdir(submodule.path):
+            color_print('{} exists. Removing...'.format(submodule.path), WARNING)
+            os.system('rm -rf {}'.format(submodule.path))
         else:
-            color_print(f'{submodule.path} does not exist. Good', PASS)
+            color_print('{} does not exist. Good'.format(submodule.path), PASS)
     color_print('DONE', PROGRESS)
     
     # Install submodules
     color_print('Installing submodules...', PROGRESS)
     for submodule in submodules:
-        subprocess.run(['git', 'clone', submodule.url, submodule.path])
+        os.system('git clone {} {}'.format(submodule.url, submodule.path))
     color_print('DONE', PROGRESS)
 
     # Checkout correct commits
@@ -80,7 +78,7 @@ if __name__ == '__main__':
     for submodule in submodules:
         os.chdir(submodule.path)
         try:
-            subprocess.run(['git', 'checkout', submodule.commit])
+            os.system('git checkout {}'.format(submodule.commit))
         except:
             color_print('No commit to check out', WARNING)
         os.chdir(workingdir)
