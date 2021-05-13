@@ -107,8 +107,8 @@ to experiment with floating-point related options if you have problems.
 ### Building and installing SETSM using CMake
 
 A CMake build is provided as an alternative to the Makefile method described 
-above.  The environment variable CXX must be set to the compiler command to be 
-used.  If the TIFF library is in a nonstandard location its path must be 
+above.  The environment variable CXX may be set to the compiler command to be 
+used.  If the TIFF library is in a nonstandard location its path should be 
 provided using a -D flag as shown in the second example below.
 If the TIFF library or the GeoTIFF libraries are in nonstandard locations,
 the path must be provided using the `CMAKE_PREFIX_PATH` variable as shown
@@ -149,6 +149,24 @@ cmake \
     ..
 ```
 
+CMake will search for the dependencies to determine if they are installed and built or not. If you do not have
+these three dependencies installed on your system, you can use the following steps to have them installed.
+
+- PROJ
+- GeoTIFF
+- LibTIFF
+
+If you cloned the repository you can simply run:
+
+```sh
+git submodule update --init --recursive
+```
+
+If instead you downloaded a `tgz` of the source code. You can run this script to handle installing the submodules:
+
+```sh
+./SubmoduleInstall.py
+```
 
 ## License
 
