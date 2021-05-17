@@ -68,6 +68,7 @@ add_custom_command(
     COMMAND cmake -E echo
     )
 
+
 set (SRCS
     CoordConversion.cpp
     SubFunctions.cpp
@@ -144,6 +145,8 @@ endif (NOT TIFF_FOUND)
 find_package(sqlite3)
 if (NOT SQLITE3_FOUND)
   message ("Cannot find sqlite")
+  # Install sqlite3
+  execute_process(COMMAND ./GetSqlite.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 else()
   message("Sqlite found!")
 endif(NOT SQLITE3_FOUND)
