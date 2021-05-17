@@ -140,6 +140,14 @@ else()
   target_include_directories (setsm PUBLIC ${TIFF_INCLUDE_DIR})
 endif (NOT TIFF_FOUND)
 
+# Find sqlite3
+find_package(sqlite3)
+if (NOT SQLITE3_FOUND)
+  message ("Cannot find sqlite")
+else()
+  message("Sqlite found!")
+endif(NOT SQLITE3_FOUND)
+
 # Find OpenMP
 find_package (OpenMP)
 if (NOT OPENMP_FOUND)
