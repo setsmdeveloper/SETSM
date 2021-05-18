@@ -3495,7 +3495,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         bool stop_condition = false;
         int t_count = 0;
         int total_pair_count = 0;
-        int max_stereo_pair = 10;
+        int max_stereo_pair = 40;
         while(!stop_condition && t_count < 60)
         {
             //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
@@ -4407,6 +4407,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             *stereo_angle_accuracy = MPP_stereo_angle;
                             
+                            if(max_stereo_angle > 50)
+                                max_stereo_angle = 50;
                             //if(proinfo->sensor_provider == PT)
                             {
                                 MPP_stereo_angle = max_stereo_angle;
@@ -8478,7 +8480,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                     temp_rho /= WNCC_save[grid_voxel_hindex].size();
                                     double WNCC_temp_rho = temp_rho;
                                     //find peak position
-                                    FindPeakNcc2(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, temp_max_WNCC, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
+                                    FindPeakNcc2(proinfo, Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, temp_max_WNCC, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                                     //FindPeakNcc(*plevelinfo.Pyramid_step, iteration, pt_index, temp_rho, iter_height, check_rho, pre_rho, pre_height, direction, max_WNCC, nccresult);
                                 }
                             }
@@ -8831,7 +8833,7 @@ void FindPeakNcc(const int Pyramid_step, const int iteration, const long int gri
         max_WNCC = temp_rho;
 }
 
-void FindPeakNcc2(const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec)
+void FindPeakNcc2(const ProInfo *proinfo, const int Pyramid_step, const int iteration, const double temp_rho, const float iter_height, bool &check_rho, double &pre_rho, double &pre_rho_WNCC, double WNCC_temp_rho, float &pre_height, int &direction, double &max_roh, NCCresult &nccresult, double &temp_nccresult, double &temp_nccresult_sec)
 {
     double diff_rho;
     int t_direction;
@@ -8858,7 +8860,11 @@ void FindPeakNcc2(const int Pyramid_step, const int iteration, const double temp
     }
     else if(pre_rho != -1)
     {
-        if((iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2)) //Max AWNCC
+        bool check_condition = (iteration <= 3 && Pyramid_step == 4) || (iteration <= 2 && Pyramid_step == 3) || (iteration <= 1 && Pyramid_step == 2);
+        if(proinfo->sensor_provider == PT)
+            check_condition = (iteration <= 3 && Pyramid_step == 3) || (iteration <= 2 && Pyramid_step == 2) || (iteration <= 1 && Pyramid_step == 1);
+        
+        if(check_condition) //Max AWNCC
         {
             if(temp_nccresult < temp_rho)
             {
@@ -9491,7 +9497,7 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                             temp_rho = db_INCC*gncc_weight;
                         }
                         */
-                        FindPeakNcc2(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
+                        FindPeakNcc2(proinfo, Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                         
                         //if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
                         //    fprintf(fid,"%f\t%f\t%f\t%f\n",iter_height,temp_rho,db_GNCC,ortho_th);
@@ -9707,7 +9713,7 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                      temp_nccresult_sec_multi[AWNCC_id] = -1.0;
                      nccresult_pairs[AWNCC_id].result2 = iter_height;
                      }*/
-                    FindPeakNcc2(Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
+                    FindPeakNcc2(proinfo, Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
                 
             }
@@ -9787,9 +9793,9 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
     else //Planet Dove
     {
         if(ncc > ortho_ncc)
-            return /*pow(exp(1.0/sigmaZ*100.0),2.0) **/ ncc*100;
+            return (exp(1.0/sigmaZ) - 1.0)*1000 + ncc*100;
         else
-            return /*pow(exp(1.0/sigmaZ*100.0),2.0) **/ ortho_ncc*100;
+            return (exp(1.0/sigmaZ) - 1.0)*1000 + ortho_ncc*100;
     }
 }
 
