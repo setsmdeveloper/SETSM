@@ -12357,8 +12357,6 @@ int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOIN
         vector<double> com_count(numOfPts,0.0);
         vector<double> com_FNCC(numOfPts,0.0);
 
-        /*  consistency problem but why ??
-        */
 #pragma omp parallel for schedule(dynamic, 1)
         for(long int tcnt=0;tcnt<num_triangles;tcnt++)
         {
