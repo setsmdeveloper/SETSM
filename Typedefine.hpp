@@ -1078,5 +1078,16 @@ private:
     int next_id;
 };
 
+// Used in vectors when thread safety is needed
+// just replace std::vector<bool> with std::vector<ConcurrentBool>
+struct ConcurrentBool {
+    bool val;
+
+    ConcurrentBool(bool val) : val(val) {}
+    operator bool() const { return val; }
+};
+
+
+
 #endif
 
