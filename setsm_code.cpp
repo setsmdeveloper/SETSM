@@ -3511,7 +3511,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool stop_condition = false;
             int t_count = 0;
             int total_pair_count = 0;
-            int max_stereo_pair = 5;
+            int max_stereo_pair = 20;
             while(!stop_condition && t_count < 60)
             {
                 //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
@@ -9809,6 +9809,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     long count_MPs = 0;
     double MPP_half = rlevelinfo.MPP*1.0;
     double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
+    int NR_level = 1;
     
     printf("MPs multi find peak pairs %d\t%f\n",rlevelinfo.pairinfo->SelectNumberOfPairs(),im_resolution);
     
@@ -10019,545 +10020,539 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             if(selected_pair > -1)
             {
                 //if(wncc_interval > 0 && ortho_interval > 0 && bhratio_interval > 0)
+                double min_Height = 9999;
+                double max_Height = -9999;
+                //printf("interval %f\t%f\tminmax %f\t%f\t%f\t%f\n",bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc);
+                if(wncc_interval < 0)
+                    exit(1);
+                
+                final_height = multimps(pt_index, selected_pair).peak_height;
+
+                //printf("mem allocate\n");
+                double sum_weight_height = 0;
+                double sum_weight = 0;
+                //int final_selected_pair = selected_pair;
+                int end_query_pair = rlevelinfo.pairinfo->SelectNumberOfPairs();
+                if(rlevelinfo.pairinfo->SelectNumberOfPairs() == 1)
+                    end_query_pair = 1;
+
+                
+                //center pos
+                long q_pts_row = pts_row_cen;
+                long q_pts_col = pts_col_cen;
+                long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
+                
+                
+                double max_weight = -9999;
+                /*
+                for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                 {
-                    double min_Height = 9999;
-                    double max_Height = -9999;
-                    //printf("interval %f\t%f\tminmax %f\t%f\t%f\t%f\n",bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc);
-                    if(wncc_interval < 0)
-                        exit(1);
+                    vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                    vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                    vector<double> mid_H(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
+                    vector<double> weight_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
                     
-                    final_height = multimps(pt_index, selected_pair).peak_height;
-
-                    //printf("mem allocate\n");
-                    double sum_weight_height = 0;
-                    double sum_weight = 0;
-                    //int final_selected_pair = selected_pair;
-                    int end_query_pair = rlevelinfo.pairinfo->SelectNumberOfPairs();
-                    if(rlevelinfo.pairinfo->SelectNumberOfPairs() == 1)
-                        end_query_pair = 1;
-
+                    //int query_pair = selected_pair;
+                    weight_height[query_pair] = Nodata;
+                    save_pair[query_pair].clear();
+                    save_height[query_pair].clear();
                     
-                    //center pos
-                    long q_pts_row = pts_row_cen;
-                    long q_pts_col = pts_col_cen;
-                    long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
-                    
-                    
-                    double max_weight = -9999;
-                    for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
+                    if(multimps(q_pt_index, query_pair).check_matched )
                     {
-                        vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                        vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                        vector<double> mid_H(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
-                        vector<double> weight_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
-                        
-                        //int query_pair = selected_pair;
-                        weight_height[query_pair] = Nodata;
-                        save_pair[query_pair].clear();
-                        save_height[query_pair].clear();
-                        
-                        if(multimps(q_pt_index, query_pair).check_matched /*&& multimps(pt_index, selected_pair).check_matched*/)
+                        double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
+                        double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
+                        height_diff = fabs(multimps(pt_index, selected_pair).peak_height - multimps(q_pt_index, query_pair).peak_height);
+                        if( (query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min))
                         {
-                            double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
-                            double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
-                            height_diff = fabs(multimps(pt_index, selected_pair).peak_height - multimps(q_pt_index, query_pair).peak_height);
-                            if(/*height_diff < height_interval &&*/ (query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min))
+                            int count = 0;
+                            bool check_query_pair = false;
+                            
+                            if(query_pair < rlevelinfo.pairinfo->SelectNumberOfPairs())
                             {
-                                int count = 0;
-                                bool check_query_pair = false;
+                                int reference_id = rlevelinfo.pairinfo->pairs(query_pair).m_X;
+                                int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
                                 
-                                if(query_pair < rlevelinfo.pairinfo->SelectNumberOfPairs())
+                                bool check_select_pair = true;
+                                if(proinfo->sensor_type == AB)
+                                    check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                
+                                check_query_pair = check_select_pair;
+                            }
+                            else
+                                check_query_pair = true;
+                                
+                            if(check_query_pair)
+                            {
+                                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                                 {
-                                    int reference_id = rlevelinfo.pairinfo->pairs(query_pair).m_X;
-                                    int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
+                                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                     
                                     bool check_select_pair = true;
                                     if(proinfo->sensor_type == AB)
                                         check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                     
-                                    check_query_pair = check_select_pair;
-                                }
-                                else
-                                    check_query_pair = true;
-                                    
-                                if(check_query_pair)
-                                {
-                                    for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                     
+                                    if(check_select_pair)
                                     {
-                                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                                        
-                                        bool check_select_pair = true;
-                                        if(proinfo->sensor_type == AB)
-                                            check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                        
-                                        //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
-                                        
-                                        if(check_select_pair)
+                                        if(multimps(q_pt_index, pair_number).check_matched)//Single peak
                                         {
-                                            if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                            double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                            double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                            height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
+                                            if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
                                             {
-                                                double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
-                                                {
-                                                    save_pair[query_pair].push_back(pair_number);
-                                                    save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    //if(!rlevelinfo.check_SGM)
-                                    {
-                                        //AWNCC add check
-                                        if(multimps(q_pt_index, AWNCC_id).check_matched)
-                                        {
-                                            height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, AWNCC_id).peak_height);
-                                            double awncc_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, AWNCC_id).peak_roh);
-                                            if(height_diff < height_interval && awncc_peak_roh > peak_roh_min)
-                                            {
-                                                //AWNCC bhratio setting
-                                                double sum_bhratio = 0;
-                                                double sum_ortho_roh = 0;
-                                                int count_pair = 0;
-                                                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
-                                                {
-                                                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                                                    
-                                                    bool check_select_pair = true;
-                                                    if(proinfo->sensor_type == AB)
-                                                        check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                                    
-                                                    if(check_select_pair)
-                                                    {
-                                                        if(multimps(q_pt_index, pair_number).check_matched)//Single peak
-                                                        {
-                                                            double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                            double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                            height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                            if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
-                                                            {
-                                                                save_pair[AWNCC_id].push_back(pair_number);
-                                                                count_pair++;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                if(count_pair > 0)
-                                                {
-                                                    save_pair[query_pair].push_back(AWNCC_id);
-                                                    save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
-                                                }
+                                                save_pair[query_pair].push_back(pair_number);
+                                                save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
                                             }
                                         }
                                     }
                                 }
                                 
-                                if(save_pair[query_pair].size() > 0)
+                                //if(!rlevelinfo.check_SGM)
                                 {
-                                    double wheight_idw = 0;
-                                    double weight_idw = 0;
-                                    double wheight_bh = 0;
-                                    double weight_bh = 0;
-                                    double wheight_wncc = 0;
-                                    double weight_wncc = 0;
-                                    double wheight_awncc = 0;
-                                    double weight_awncc = 0;
-                                    
-                                    double total_weight = 0.0;
-                                    
-                                    double sum_height_diff = 0;
-                                    vector<double> Hdiff_save;
-                                    
-                                    for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                    //AWNCC add check
+                                    if(multimps(q_pt_index, AWNCC_id).check_matched)
                                     {
-                                        int pair_number = save_pair[query_pair][count];
-                                        double pair_peak_roh, pair_ortho_roh;
-                                        double w_bhratio,w_ncc,w_ortho_ncc,weightAWNCC(1.0);
-                                        double w_bhncc;
-                                        
-                                        sum_height_diff += save_height[query_pair][count];
-                                        
-                                        
-                                        if(pair_number < AWNCC_id)
+                                        height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, AWNCC_id).peak_height);
+                                        double awncc_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, AWNCC_id).peak_roh);
+                                        if(height_diff < height_interval && awncc_peak_roh > peak_roh_min)
                                         {
-                                            pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                            pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                            //AWNCC bhratio setting
+                                            double sum_bhratio = 0;
+                                            double sum_ortho_roh = 0;
+                                            int count_pair = 0;
+                                            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                            {
+                                                int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                                int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                                
+                                                bool check_select_pair = true;
+                                                if(proinfo->sensor_type == AB)
+                                                    check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                                
+                                                if(check_select_pair)
+                                                {
+                                                    if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                                    {
+                                                        double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                                        double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                                        height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
+                                                        if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
+                                                        {
+                                                            save_pair[AWNCC_id].push_back(pair_number);
+                                                            count_pair++;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if(count_pair > 0)
+                                            {
+                                                save_pair[query_pair].push_back(AWNCC_id);
+                                                save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if(save_pair[query_pair].size() > 0)
+                            {
+                                double wheight_idw = 0;
+                                double weight_idw = 0;
+                                double wheight_bh = 0;
+                                double weight_bh = 0;
+                                double wheight_wncc = 0;
+                                double weight_wncc = 0;
+                                double wheight_awncc = 0;
+                                double weight_awncc = 0;
+                                
+                                double total_weight = 0.0;
+                                
+                                double sum_height_diff = 0;
+                                vector<double> Hdiff_save;
+                                
+                                for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                {
+                                    int pair_number = save_pair[query_pair][count];
+                                    double pair_peak_roh, pair_ortho_roh;
+                                    double w_bhratio,w_ncc,w_ortho_ncc,weightAWNCC(1.0);
+                                    double w_bhncc;
+                                    
+                                    sum_height_diff += save_height[query_pair][count];
+                                    
+                                    
+                                    if(pair_number < AWNCC_id)
+                                    {
+                                        pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                        pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                        
+                                        //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
+                                        //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
+                                        w_ncc = pair_peak_roh;
+                                        w_ortho_ncc = pair_ortho_roh;
+                                        
+                                        //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                        
+                                        w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
+                                        
+                                    }
+                                    else
+                                    {
+                                        weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_id].size();
+                                        
+                                        double sum_w_bhncc=0;
+                                        //double max_w_bhncc = -99;
+                                        for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_id].size() ; awncc_count++)
+                                        {
+                                            int awncc_pair = save_pair[AWNCC_id][awncc_count];
+                                            pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).peak_roh);
+                                            pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).ortho_roh);
                                             
                                             //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
                                             //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
+                                            
                                             w_ncc = pair_peak_roh;
                                             w_ortho_ncc = pair_ortho_roh;
                                             
-                                            //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                            //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
                                             
-                                            w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
+                                            sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
                                             
+                                            
+                                            //if(max_w_bhncc < sum_w_bhncc)
+                                            //    max_w_bhncc = sum_w_bhncc;
                                         }
-                                        else
-                                        {
-                                            weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_id].size();
-                                            
-                                            double sum_w_bhncc=0;
-                                            //double max_w_bhncc = -99;
-                                            for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_id].size() ; awncc_count++)
-                                            {
-                                                int awncc_pair = save_pair[AWNCC_id][awncc_count];
-                                                pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).peak_roh);
-                                                pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).ortho_roh);
-                                                
-                                                //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
-                                                //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
-                                                
-                                                w_ncc = pair_peak_roh;
-                                                w_ortho_ncc = pair_ortho_roh;
-                                                
-                                                //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
-                                                
-                                                sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
-                                                
-                                                
-                                                //if(max_w_bhncc < sum_w_bhncc)
-                                                //    max_w_bhncc = sum_w_bhncc;
-                                            }
-                                            w_bhncc = sum_w_bhncc/save_pair[AWNCC_id].size()*weightAWNCC;
-                                            
-                                            //w_bhncc = 1.0*weightAWNCC;
-                                            
-                                        }
-                     
-                                        wheight_idw += save_height[query_pair][count]*w_bhncc;
-                                        weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
+                                        w_bhncc = sum_w_bhncc/save_pair[AWNCC_id].size()*weightAWNCC;
                                         
-                                        wheight_bh = 0;
-                                        weight_bh = 0;
-                                        wheight_wncc = 0;
-                                        /*
-                                        if(w_bhratio > bhratio_norm || w_bhratio < 0.0 || w_ncc > bhratio_norm || w_ncc < 0.0)
-                                        {
-                                            printf("weight %d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",query_pair,pair_number,pair_peak_roh,w_bhratio,w_ncc,weightAWNCC,max_wncc,min_wncc,weight_bhratio[pair_number],mean_bhratio);
-                                            exit(1);
-                                        }
-                                         */
+                                        //w_bhncc = 1.0*weightAWNCC;
+                                        
                                     }
-                                    
-                                    double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
-                                    double var_Hdiff = 0;
-                                    for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
-                                    {
-                                        var_Hdiff += (save_height[query_pair][count] - avg_Hdiff)*(save_height[query_pair][count] - avg_Hdiff);
-                                    }
-                                    double std_Hdiff = sqrt(var_Hdiff/save_pair[query_pair].size());
-                                    if(std_Hdiff == 0)
-                                        std_Hdiff = 1.0;
-                                    
-                                    double WIDW, WBH;
-                                    
-                                    total_weight = weight_idw*(1.0/std_Hdiff);
-                                    weight_height[query_pair] = wheight_idw/weight_idw;
-                                    //weight_height[query_pair] = wheight_idw/weight_idw;
-                                    
-                                    /*
-                                    if(max_weight < total_weight && query_pair < AWNCC_id)
-                                    {
-                                        max_weight = total_weight;
-                                        selected_pair = query_pair;
-                                    }
-                                    */
-                                    if(max_weight < total_weight && query_pair < AWNCC_id)
-                                    {
-                                        max_weight = weight_idw;
-                                        selected_pair = query_pair;
-                                    }
-                                    //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
-                                    {
-                                        sum_weight_height += weight_height[query_pair]*total_weight;
-                                        sum_weight += total_weight;
-                                        //printf("q_kr q_kr %d\t%d\tweight_height[query_pair] %f\n",q_kr,q_kc,weight_height[query_pair]);
-                                    }
-                                    
-                                    save_pair[query_pair].clear();
-                                    save_height[query_pair].clear();
-                                 }
-                            }
+                 
+                                    wheight_idw += save_height[query_pair][count]*w_bhncc;
+                                    weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
+                                }
+                                
+                                double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
+                                double var_Hdiff = 0;
+                                for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                {
+                                    var_Hdiff += (save_height[query_pair][count] - avg_Hdiff)*(save_height[query_pair][count] - avg_Hdiff);
+                                }
+                                double std_Hdiff = sqrt(var_Hdiff/save_pair[query_pair].size());
+                                if(std_Hdiff == 0)
+                                    std_Hdiff = 1.0;
+                                
+                                double WIDW, WBH;
+                                
+                                total_weight = weight_idw*(1.0/std_Hdiff);
+                                weight_height[query_pair] = wheight_idw/weight_idw;
+                                
+                                if(max_weight < total_weight && query_pair < AWNCC_id)
+                                {
+                                    max_weight = weight_idw;
+                                    selected_pair = query_pair;
+                                }
+                                //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
+                                {
+                                    sum_weight_height += weight_height[query_pair]*total_weight;
+                                    sum_weight += total_weight;
+                                    //printf("q_kr q_kr %d\t%d\tweight_height[query_pair] %f\n",q_kr,q_kc,weight_height[query_pair]);
+                                }
+                                
+                                save_pair[query_pair].clear();
+                                save_height[query_pair].clear();
+                             }
                         }
                     }
+                }
+                
+                if(sum_weight > 0)
+                    final_height = sum_weight_height/sum_weight;
+                */
+                
+                // kernal processing
+                wncc_interval = 10.0;
+                min_wncc = peak_roh_min;
+                double kernel_noise_th = 25;
+                //if(Pyramid_step <= 1 )
+                {
+                    double ref_height;// = final_height;
                     
-                    if(sum_weight > 0)
-                        final_height = sum_weight_height/sum_weight;
+                    //printf("mem allocate\n");
+                    sum_weight_height = 0;
+                    sum_weight = 0;
+                    max_weight = 0.0;
                     
-                    
-                    // kernal processing
-                    wncc_interval = 10.0;
-                    min_wncc = peak_roh_min;
-                    double kernel_noise_th = 25;
-                    if(Pyramid_step <= 1 )//((Pyramid_step == 1 && iteration == 1) || (Pyramid_step == 0 && iteration >= 2) /*&& proinfo->sensor_provider == PT*/)
+                    int q_kenel_size = 0;
+                    int max_kernel_size = 0;
+                    bool check_kernel_iter = true;
+                    if(Pyramid_step <= NR_level )
                     {
-                        double ref_height = final_height;
-                        
-                        //printf("mem allocate\n");
-                        sum_weight_height = 0;
-                        sum_weight = 0;
-                        max_weight = 0.0;
-                        
-                        int q_kenel_size = 2;
-                        bool check_kernel_iter = true;
-                        int max_kernel_size = 10;
-                        //if(Pyramid_step == 1)
-                        //    max_kernel_size = 5;
-                        //vector<double> save_kenel_height;
-                        vector<unsigned char> check_kenel_cal((2*max_kernel_size+1)*(2*max_kernel_size+1),0);
-                        vector<double> save_kernal_height_all;
-                        vector<double> save_kernal_weight_all;
-                        
-                        while(check_kernel_iter && q_kenel_size < max_kernel_size)
+                        q_kenel_size = 2;
+                        max_kernel_size = 9;
+                    }
+                    
+                    //if(Pyramid_step == 1)
+                    //    max_kernel_size = 5;
+                    //vector<double> save_kenel_height;
+                    vector<unsigned char> check_kenel_cal((2*max_kernel_size+1)*(2*max_kernel_size+1),0);
+                    vector<double> save_kernal_height_all;
+                    vector<double> save_kernal_weight_all;
+                    
+                    while(check_kernel_iter && q_kenel_size <= max_kernel_size)
+                    {
+                        vector<double> save_kenel_height;
+                        for(int q_kr = -q_kenel_size ; q_kr <= q_kenel_size ; q_kr++)
                         {
-                            vector<double> save_kenel_height;
-                            for(int q_kr = -q_kenel_size ; q_kr <= q_kenel_size ; q_kr++)
+                            for(int q_kc = -q_kenel_size ; q_kc <= q_kenel_size ; q_kc++)
                             {
-                                for(int q_kc = -q_kenel_size ; q_kc <= q_kenel_size ; q_kc++)
+                                long q_pts_row = pts_row_cen + q_kr;
+                                long q_pts_col = pts_col_cen + q_kc;
+                                long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
+                                long kenel_pos = (q_kr+max_kernel_size)*(2*max_kernel_size + 1) + (q_kc+max_kernel_size);
+                                if(q_pts_col >= 0 && q_pts_col < Size_Grid2D.width && q_pts_row >= 0 && q_pts_row < Size_Grid2D.height && q_pt_index >= 0 && q_pt_index < *rlevelinfo.Grid_length && check_kenel_cal[kenel_pos] == 0)
                                 {
-                                    long q_pts_row = pts_row_cen + q_kr;
-                                    long q_pts_col = pts_col_cen + q_kc;
-                                    long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
-                                    long kenel_pos = (q_kr+max_kernel_size)*(2*max_kernel_size + 1) + (q_kc+max_kernel_size);
-                                    if(q_pts_col >= 0 && q_pts_col < Size_Grid2D.width && q_pts_row >= 0 && q_pts_row < Size_Grid2D.height && q_pt_index >= 0 && q_pt_index < *rlevelinfo.Grid_length && check_kenel_cal[kenel_pos] == 0)
+                                    double kenel_sum_weight_height = 0;
+                                    double kenel_sum_weight = 0;
+                                    double kenel_total_weight = 0;
+                                    check_kenel_cal[kenel_pos] = 1;
+                                    
+                                    for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                                     {
-                                        double kenel_sum_weight_height = 0;
-                                        double kenel_sum_weight = 0;
-                                        double kenel_total_weight = 0;
-                                        check_kenel_cal[kenel_pos] = 1;
+                                        vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                                        vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
+                                        vector<double> mid_H(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
+                                        vector<double> weight_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
                                         
-                                        for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
+                                        //int query_pair = selected_pair;
+                                        weight_height[query_pair] = Nodata;
+                                        save_pair[query_pair].clear();
+                                        save_height[query_pair].clear();
+                                        
+                                        if(multimps(q_pt_index, query_pair).check_matched /*&& multimps(pt_index, selected_pair).check_matched*/)
                                         {
-                                            vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                                            vector<vector<double>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                                            vector<double> mid_H(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
-                                            vector<double> weight_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
+                                            double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
+                                            double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
                                             
-                                            //int query_pair = selected_pair;
-                                            weight_height[query_pair] = Nodata;
-                                            save_pair[query_pair].clear();
-                                            save_height[query_pair].clear();
-                                            
-                                            if(multimps(q_pt_index, query_pair).check_matched /*&& multimps(pt_index, selected_pair).check_matched*/)
+                                            height_diff = fabs(multimps(pt_index, selected_pair).peak_height - multimps(q_pt_index, query_pair).peak_height);
+                                            if(/*height_diff < height_interval &&*/ query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min)
                                             {
-                                                double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
-                                                double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
+                                                int count = 0;
+                                                bool check_query_pair = false;
                                                 
-                                                height_diff = fabs(multimps(pt_index, selected_pair).peak_height - multimps(q_pt_index, query_pair).peak_height);
-                                                
-                                                if(/*height_diff < height_interval &&*/ query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min)
+                                                if(query_pair < rlevelinfo.pairinfo->SelectNumberOfPairs())
                                                 {
-                                                    int count = 0;
-                                                    bool check_query_pair = false;
+                                                    int reference_id = rlevelinfo.pairinfo->pairs(query_pair).m_X;
+                                                    int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
                                                     
-                                                    if(query_pair < rlevelinfo.pairinfo->SelectNumberOfPairs())
+                                                    bool check_select_pair = true;
+                                                    if(proinfo->sensor_type == AB)
+                                                        check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                                    
+                                                    check_query_pair = check_select_pair;
+                                                }
+                                                else
+                                                    check_query_pair = true;
+                                                    
+                                                if(check_query_pair)
+                                                {
+                                                    for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                                                     {
-                                                        int reference_id = rlevelinfo.pairinfo->pairs(query_pair).m_X;
-                                                        int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
+                                                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                         
                                                         bool check_select_pair = true;
                                                         if(proinfo->sensor_type == AB)
                                                             check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                         
-                                                        check_query_pair = check_select_pair;
-                                                    }
-                                                    else
-                                                        check_query_pair = true;
+                                                        //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
                                                         
-                                                    if(check_query_pair)
-                                                    {
-                                                        for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                                        if(check_select_pair)
                                                         {
-                                                            int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                                            int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                                                            
-                                                            bool check_select_pair = true;
-                                                            if(proinfo->sensor_type == AB)
-                                                                check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                                            
-                                                            //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
-                                                            
-                                                            if(check_select_pair)
+                                                            if(multimps(q_pt_index, pair_number).check_matched)//Single peak
                                                             {
-                                                                if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                                                double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                                                double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                                                height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
+                                                                if(height_diff < height_interval && pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min)
                                                                 {
-                                                                    double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                                    double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                                    height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                                    if(height_diff < height_interval && pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min)
-                                                                    {
-                                                                        save_pair[query_pair].push_back(pair_number);
-                                                                        save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        
-                                                        //if(!rlevelinfo.check_SGM)
-                                                        {
-                                                            //AWNCC add check
-                                                            if(multimps(q_pt_index, AWNCC_id).check_matched)
-                                                            {
-                                                                height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, AWNCC_id).peak_height);
-                                                                double awncc_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, AWNCC_id).peak_roh);
-                                                                if(height_diff < height_interval && awncc_peak_roh > peak_roh_min)
-                                                                {
-                                                                    //AWNCC bhratio setting
-                                                                    double sum_bhratio = 0;
-                                                                    double sum_ortho_roh = 0;
-                                                                    int count_pair = 0;
-                                                                    for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
-                                                                    {
-                                                                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                                                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                                                                        
-                                                                        bool check_select_pair = true;
-                                                                        if(proinfo->sensor_type == AB)
-                                                                            check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                                                        
-                                                                        if(check_select_pair)
-                                                                        {
-                                                                            if(multimps(q_pt_index, pair_number).check_matched)//Single peak
-                                                                            {
-                                                                                double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                                                double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                                                height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                                                if(height_diff < height_interval && pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min)
-                                                                                {
-                                                                                    save_pair[AWNCC_id].push_back(pair_number);
-                                                                                    count_pair++;
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    
-                                                                    if(count_pair > 0)
-                                                                    {
-                                                                        save_pair[query_pair].push_back(AWNCC_id);
-                                                                        save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
-                                                                    }
+                                                                    save_pair[query_pair].push_back(pair_number);
+                                                                    save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
                                                                 }
                                                             }
                                                         }
                                                     }
                                                     
-                                                    if(save_pair[query_pair].size() > 0)
+                                                    //if(!rlevelinfo.check_SGM)
                                                     {
-                                                        double wheight_idw = 0;
-                                                        double weight_idw = 0;
-                                                        double wheight_bh = 0;
-                                                        double weight_bh = 0;
-                                                        double wheight_wncc = 0;
-                                                        double weight_wncc = 0;
-                                                        double wheight_awncc = 0;
-                                                        double weight_awncc = 0;
-                                                        
-                                                        double total_weight = 0.0;
-                                                        
-                                                        double sum_height_diff = 0;
-                                                        vector<double> Hdiff_save;
-                                                        
-                                                        for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                                        //AWNCC add check
+                                                        if(multimps(q_pt_index, AWNCC_id).check_matched)
                                                         {
-                                                            int pair_number = save_pair[query_pair][count];
-                                                            double pair_peak_roh, pair_ortho_roh;
-                                                            double w_bhratio,w_ncc,w_ortho_ncc,weightAWNCC(1.0);
-                                                            double w_bhncc;
-                                                            
-                                                            sum_height_diff += save_height[query_pair][count];
-                                                            
-                                                            
-                                                            if(pair_number < AWNCC_id)
+                                                            height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, AWNCC_id).peak_height);
+                                                            double awncc_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, AWNCC_id).peak_roh);
+                                                            if(height_diff < height_interval && awncc_peak_roh > peak_roh_min)
                                                             {
-                                                                pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                                pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                                                //AWNCC bhratio setting
+                                                                double sum_bhratio = 0;
+                                                                double sum_ortho_roh = 0;
+                                                                int count_pair = 0;
+                                                                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                                                {
+                                                                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                                                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                                                    
+                                                                    bool check_select_pair = true;
+                                                                    if(proinfo->sensor_type == AB)
+                                                                        check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                                                    
+                                                                    if(check_select_pair)
+                                                                    {
+                                                                        if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                                                        {
+                                                                            double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                                                            double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                                                            height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
+                                                                            if(height_diff < height_interval && pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min)
+                                                                            {
+                                                                                save_pair[AWNCC_id].push_back(pair_number);
+                                                                                count_pair++;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                
+                                                                if(count_pair > 0)
+                                                                {
+                                                                    save_pair[query_pair].push_back(AWNCC_id);
+                                                                    save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if(save_pair[query_pair].size() > 0)
+                                                {
+                                                    double wheight_idw = 0;
+                                                    double weight_idw = 0;
+                                                    double wheight_bh = 0;
+                                                    double weight_bh = 0;
+                                                    double wheight_wncc = 0;
+                                                    double weight_wncc = 0;
+                                                    double wheight_awncc = 0;
+                                                    double weight_awncc = 0;
+                                                    
+                                                    double total_weight = 0.0;
+                                                    
+                                                    double sum_height_diff = 0;
+                                                    vector<double> Hdiff_save;
+                                                    
+                                                    for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                                    {
+                                                        int pair_number = save_pair[query_pair][count];
+                                                        double pair_peak_roh, pair_ortho_roh;
+                                                        double w_bhratio,w_ncc,w_ortho_ncc,weightAWNCC(1.0);
+                                                        double w_bhncc;
+                                                        
+                                                        sum_height_diff += save_height[query_pair][count];
+                                                        
+                                                        
+                                                        if(pair_number < AWNCC_id)
+                                                        {
+                                                            pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
+                                                            pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                                            
+                                                            //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
+                                                            //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
+                                                            w_ncc = pair_peak_roh;
+                                                            w_ortho_ncc = pair_ortho_roh;
+                                                            
+                                                            //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
+                                                            w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
+                                                            
+                                                        }
+                                                        else
+                                                        {
+                                                            weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_id].size();
+                                                            
+                                                            double sum_w_bhncc=0;
+                                                            //double max_w_bhncc = -99;
+                                                            for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_id].size() ; awncc_count++)
+                                                            {
+                                                                int awncc_pair = save_pair[AWNCC_id][awncc_count];
+                                                                pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).peak_roh);
+                                                                pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).ortho_roh);
                                                                 
                                                                 //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
                                                                 //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
+                                                                
                                                                 w_ncc = pair_peak_roh;
                                                                 w_ortho_ncc = pair_ortho_roh;
                                                                 
-                                                                //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
-                                                                w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
+                                                                //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
                                                                 
+                                                                sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
+                                                                
+                                                                //if(max_w_bhncc < sum_w_bhncc)
+                                                                //    max_w_bhncc = sum_w_bhncc;
                                                             }
-                                                            else
-                                                            {
-                                                                weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_id].size();
-                                                                
-                                                                double sum_w_bhncc=0;
-                                                                //double max_w_bhncc = -99;
-                                                                for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_id].size() ; awncc_count++)
-                                                                {
-                                                                    int awncc_pair = save_pair[AWNCC_id][awncc_count];
-                                                                    pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).peak_roh);
-                                                                    pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).ortho_roh);
-                                                                    
-                                                                    //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
-                                                                    //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
-                                                                    
-                                                                    w_ncc = pair_peak_roh;
-                                                                    w_ortho_ncc = pair_ortho_roh;
-                                                                    
-                                                                    //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
-                                                                    
-                                                                    sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
-                                                                    
-                                                                    //if(max_w_bhncc < sum_w_bhncc)
-                                                                    //    max_w_bhncc = sum_w_bhncc;
-                                                                }
-                                                                w_bhncc = sum_w_bhncc/save_pair[AWNCC_id].size()*weightAWNCC;
-                                                                
-                                                                //w_bhncc = 1.0*weightAWNCC;
-                                                                
-                                                            }
-                                         
-                                                            wheight_idw += save_height[query_pair][count]*w_bhncc;
-                                                            weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
+                                                            w_bhncc = sum_w_bhncc/save_pair[AWNCC_id].size()*weightAWNCC;
+                                                            
+                                                            //w_bhncc = 1.0*weightAWNCC;
+                                                            
                                                         }
-                                                        
-                                                        double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
-                                                        double var_Hdiff = 0;
-                                                        for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
-                                                        {
-                                                            var_Hdiff += (save_pair[query_pair][count] - avg_Hdiff)*(save_pair[query_pair][count] - avg_Hdiff);
-                                                        }
-                                                        double std_Hdiff = sqrt(var_Hdiff/save_pair[query_pair].size());
-                                                        if(std_Hdiff == 0)
-                                                            std_Hdiff = 1.0;
-                                                        
-                                                        double WIDW, WBH;
-                                                        
-                                                        total_weight = weight_idw*(1.0/std_Hdiff);
-                                                        kenel_total_weight += total_weight;
-                                                        weight_height[query_pair] = wheight_idw/weight_idw;
-                                                        
-                                                        kenel_sum_weight_height += weight_height[query_pair]*total_weight;
-                                                        kenel_sum_weight += total_weight;
-                                                        
-                                                        save_pair[query_pair].clear();
-                                                        save_height[query_pair].clear();
-                                                     }
-                                                }
+                                     
+                                                        wheight_idw += save_height[query_pair][count]*w_bhncc;
+                                                        weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
+                                                    }
+                                                    
+                                                    double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
+                                                    double var_Hdiff = 0;
+                                                    for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
+                                                    {
+                                                        var_Hdiff += (save_pair[query_pair][count] - avg_Hdiff)*(save_pair[query_pair][count] - avg_Hdiff);
+                                                    }
+                                                    double std_Hdiff = sqrt(var_Hdiff/save_pair[query_pair].size());
+                                                    if(std_Hdiff == 0)
+                                                        std_Hdiff = 1.0;
+                                                    
+                                                    double WIDW, WBH;
+                                                    
+                                                    total_weight = weight_idw*(1.0/std_Hdiff);
+                                                    weight_height[query_pair] = wheight_idw/weight_idw;
+                                                    
+                                                    
+                                                    kenel_total_weight += total_weight;
+                                                    
+                                                    kenel_sum_weight_height += weight_height[query_pair]*total_weight;
+                                                    kenel_sum_weight += total_weight;
+                                                    
+                                                    save_pair[query_pair].clear();
+                                                    save_height[query_pair].clear();
+                                                 }
                                             }
                                         }
-                                        if(kenel_sum_weight > 0)
-                                        {
-                                            save_kenel_height.push_back(kenel_sum_weight_height/kenel_sum_weight);
-                                            save_kernal_height_all.push_back(kenel_sum_weight_height/kenel_sum_weight);
-                                            save_kernal_weight_all.push_back(kenel_sum_weight);
-                                        }
-                                        
                                     }
+                                    if(kenel_sum_weight > 0)
+                                    {
+                                        final_height = kenel_sum_weight_height/kenel_sum_weight;
+                                        save_kenel_height.push_back(kenel_sum_weight_height/kenel_sum_weight);
+                                        save_kernal_height_all.push_back(kenel_sum_weight_height/kenel_sum_weight);
+                                        save_kernal_weight_all.push_back(kenel_sum_weight);
+                                        
+                                        
+                                        if(Pyramid_step <= NR_level && q_kr == 0 && q_kc == 0)
+                                            ref_height = final_height;
+                                    }
+                                    
                                 }
                             }
-                            
+                        }
+                        
+                        if(Pyramid_step <= NR_level )
+                        {
                             if(save_kenel_height.size() > 1)
                             {
                                 
@@ -10578,38 +10573,20 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     q_kenel_size++;
                                 else
                                     check_kernel_iter = false;
-                                
-                                /*double sum_var = 0;
-                                int count_L = 0;
-                                for(int i = 0 ; i < save_kenel_height.size() ; i++)
-                                {
-                                    double diff_h = fabs(ref_height - save_kenel_height[i]);
-                                    sum_var += diff_h*diff_h;
-                                    if(diff_h > kernel_noise_th*pwrtwo(Pyramid_step))
-                                        count_L ++;
-                                
-                                }
-                                
-                                double var = sqrt(sum_var/save_kenel_height.size());
-                                double ratio_L = (double)count_L/(double)save_kenel_height.size();
-                                if(var < kernel_noise_th*pwrtwo(Pyramid_step) || ratio_L < 0.3)
-                                    q_kenel_size++;
-                                else
-                                    check_kernel_iter = false;
-                                 */
                             }
                             else
                             {
                                 q_kenel_size++;
                             }
-                            
-                            save_kenel_height.clear();
                         }
+                        else
+                            check_kernel_iter = false;
                         
-                        //free(save_height);
-                        //free(save_pair);
-                        //free(mid_H);
-                        
+                        save_kenel_height.clear();
+                    }
+                    
+                    if(Pyramid_step <= NR_level )
+                    {
                         if(save_kernal_height_all.size() > 0)
                         {
                             double sum_WH = 0;
@@ -10621,56 +10598,23 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             }
                             final_height = sum_WH/sum_W;
                         }
-                        
-                        check_kenel_cal.clear();
-                        save_kernal_height_all.clear();
-                        save_kernal_weight_all.clear();
                     }
-                    
-                    /*
-                    if(sum_weight > 0)
-                    {
-                        final_height = sum_weight_height/sum_weight;
-                    }
-                    */
-                    //weighted_height.push_back(final_height);
-                    //weight_value.push_back(kenel_weight);
-                    //kernel_count++;
-                    
-                    //if( final_height >= min_Height && final_height <= max_Height)
-                    
-                    //if(!check_kernel_weight)
-                    {
-                        D3DPOINT point;
-                        point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
-                        point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                        point.m_Z = final_height;
-                        point.m_roh = multimps(pt_index, selected_pair).peak_roh;
-                        point.flag = false;
                         
-                        temp_points[pt_index] = point;
-                        
-                        //GridPT3.Mean_ortho_ncc(pt_index) = GridPT3.ortho_ncc(pt_index, selected_pair);
-                        GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
-                        
-                        //check_kernel_count = true;
-                        //printf("selected_pair %d\t",selected_pair);
-                    }
+                    check_kenel_cal.clear();
+                    save_kernal_height_all.clear();
+                    save_kernal_weight_all.clear();
                 }
-                /*else
-                {
-                    D3DPOINT point;
-                    point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
-                    point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                    point.m_Z = multimps(pt_index, selected_pair).peak_height;;
-                    point.m_roh = multimps(pt_index, selected_pair).peak_roh;
-                    point.flag = false;
-                    
-                    temp_points[pt_index] = point;
-                    
-                    //GridPT3.Mean_ortho_ncc(pt_index) = GridPT3.ortho_ncc(pt_index, selected_pair);
-                    GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
-                }*/
+                
+                D3DPOINT point;
+                point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
+                point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
+                point.m_Z = final_height;
+                point.m_roh = multimps(pt_index, selected_pair).peak_roh;
+                point.flag = false;
+                
+                temp_points[pt_index] = point;
+                
+                GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
             }
             else
             {
@@ -10763,14 +10707,16 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_col == start_col[direction_iter])
                 {
-                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                    //memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
+                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel,rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                    //memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
+                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    LHcost_pre.swap(LHcost_curr);
+                    SWAP(LHcost_pre, LHcost_curr);
                     
                 }
             }
@@ -10787,14 +10733,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_col == start_col[direction_iter])
                 {
-                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    LHcost_pre.swap(LHcost_curr);
+                    SWAP(LHcost_pre, LHcost_curr);
                     
                 }
             }
@@ -10812,14 +10758,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_row == start_row[direction_iter])
                 {
-                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    LHcost_pre.swap(LHcost_curr);
+                    SWAP(LHcost_pre, LHcost_curr);
                 }
             }
         }
@@ -10835,14 +10781,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_row == start_row[direction_iter])
                 {
-                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    LHcost_pre.swap(LHcost_curr);
+                    SWAP(LHcost_pre, LHcost_curr);
                 }
             }
         }
@@ -10883,7 +10829,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10894,9 +10840,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10920,7 +10866,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10931,9 +10877,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10961,7 +10907,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10972,9 +10918,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10998,7 +10944,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -11009,9 +10955,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -11035,7 +10981,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -11046,9 +10992,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -11070,7 +11016,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -11081,9 +11027,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -11107,7 +11053,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -11118,9 +11064,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -11142,7 +11088,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
+                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -11153,9 +11099,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
+                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            LHcost_pre.swap(LHcost_curr);
+                            SWAP(LHcost_pre, LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -12437,15 +12383,24 @@ int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOIN
       
         check_stop_TIN = true;
         
+        double *updated_height = (double*)malloc(sizeof(double)*num_triangles);
+        int *selected_index = (int*)malloc(sizeof(int)*num_triangles);
+        bool *updated_check = (bool*)calloc(sizeof(bool),num_triangles);
+        double *selected_count = (double*)calloc(sizeof(double),num_triangles);
+        double *FNCC = (double*)calloc(sizeof(double),num_triangles);
+        int *selected_target_index = (int*)malloc(sizeof(int)*num_triangles);
+        double* com_count = (double*)calloc(sizeof(double),numOfPts);
+        double* com_FNCC = (double*)calloc(sizeof(double),numOfPts);
+        /*  consistency problem but why ??
         vector<double> updated_height(num_triangles,Nodata);
         vector<int> selected_index(num_triangles,-1);
-        vector<ConcurrentBool> updated_check(num_triangles,false);
-        vector<double> selected_count(num_triangles,0.0);
+        vector<bool> updated_check(num_triangles,false);
+        vector<int> selected_count(num_triangles,0.0);
         vector<double> FNCC(num_triangles,0.0);
         vector<int> selected_target_index(num_triangles,-1);
-        vector<double> com_count(numOfPts,0.0);
+        vector<int> com_count(numOfPts,0.0);
         vector<double> com_FNCC(numOfPts,0.0);
-
+        */
 #pragma omp parallel for schedule(dynamic, 1)
         for(long int tcnt=0;tcnt<num_triangles;tcnt++)
         {
@@ -12600,6 +12555,15 @@ int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOIN
                 }
             }
         }
+        
+        free(updated_height);
+        free(selected_index);
+        free(updated_check);
+        free(selected_count);
+        free(FNCC);
+        free(selected_target_index);
+        free(com_count);
+        free(com_FNCC);
         
         if(check_ortho_cal == false)
             check_stop_TIN = true;
