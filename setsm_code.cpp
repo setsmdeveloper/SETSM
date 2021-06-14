@@ -9859,8 +9859,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         else
             height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step);
         */
-        if(Pyramid_step <= 1)
-            height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5;
+        //if(Pyramid_step <= 1)
+            height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*5.0;
     }
     
     
@@ -10508,6 +10508,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
                                                     }
                                                     
+                                                    weight_height[query_pair] = wheight_idw/weight_idw; //weighted candidate solutions
+                                                    
+                                                    
                                                     double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
                                                     double var_Hdiff = 0;
                                                     for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
@@ -10521,12 +10524,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     double WIDW, WBH;
                                                     
                                                     total_weight = weight_idw*(1.0/std_Hdiff);
-                                                    weight_height[query_pair] = wheight_idw/weight_idw;
-                                                    
                                                     
                                                     kenel_total_weight += total_weight;
                                                     
-                                                    kenel_sum_weight_height += weight_height[query_pair]*total_weight;
+                                                    kenel_sum_weight_height += weight_height[query_pair]*total_weight; // a weighted query solution
                                                     kenel_sum_weight += total_weight;
                                                     
                                                     save_pair[query_pair].clear();
@@ -10569,7 +10570,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                 
                                 double var = sqrt(sum_var/save_kenel_height.size());
                                 double ratio_L = (double)count_L/(double)save_kenel_height.size();
-                                if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5 || ratio_L < 0.3)
+                                if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5 /*|| ratio_L < 0.3*/)
                                     q_kenel_size++;
                                 else
                                     check_kernel_iter = false;
