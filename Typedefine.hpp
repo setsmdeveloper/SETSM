@@ -1087,6 +1087,47 @@ struct ConcurrentBool {
     operator bool() const { return val; }
 };
 
+/** Compute a running average of floating point values
+ *      Example usage:
+ *          RunningAverage avg;
+ *          avg.update(2.0);
+ *          avg.update(6.0);
+ *          avg.update(120.0);
+ *          // will print "average is 42.6667"
+ *          std::cout << "average is " << avg.average() << std::endl;
+ * */
+class RunningAverage {
+    public:
+        RunningAverage() : n(0), v(0) {}
+
+        /* Returns true if no values added, false otherwise */
+        bool is_empty()
+        {
+            return n == 0;
+        }
+
+        /* Returns average of values if not empty,
+         * throws domain_error otherwise */
+        float average()
+        {
+            if(!n)
+            {
+                throw std::domain_error("average of empty list");
+            }
+            return v / n;
+        }
+
+        /* Add value to the running average */
+        void update(float x) {
+            ++n;
+            v += x;
+        };
+
+    private:
+        float v;
+        long n;
+
+};
 
 
 #endif
