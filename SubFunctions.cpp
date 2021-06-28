@@ -2457,7 +2457,7 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
             printf("temp_meta %s\n",temp_meta);
             
             OpenXMLFile_orientation_planet(temp_meta,&temp_info);
-            if(temp_info.cloud < proinfo->Cloud_th)
+            if(temp_info.cloud <= proinfo->Cloud_th)
             {
                 /*
                 sprintf(proinfo->Imagefilename[selected_count],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);

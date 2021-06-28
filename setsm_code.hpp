@@ -107,7 +107,7 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc);
 
 double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc);
 
-void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps);
+void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<uint8>> &PairArray);
 
 void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, const int pairnumber);
 
@@ -197,6 +197,8 @@ double CalMemorySize_Post(CSize DEM_size,CSize Final_DEMsize);
 double CalMemorySize_Post_MT(CSize DEM_size, CSize Final_DEMsize);
 
 double CalMemorySize_Post_LSF(CSize DEM_size, CSize Final_DEMsize);
+
+void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const int iter_row_start, const int t_col_start, const int iter_row_end, const int t_col_end, int buffer, const int final_iteration, float *DEM, const CSize Final_DEMsize, double *FinalDEM_boundary);
 
 void MergeTiles(const ProInfo *info, const int iter_row_start, const int t_col_start, const int iter_row_end, const int t_col_end, int buffer, const int final_iteration, float *DEM, const CSize Final_DEMsize, double *FinalDEM_boundary);
 
