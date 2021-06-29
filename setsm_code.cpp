@@ -3519,7 +3519,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool stop_condition = false;
             int t_count = 0;
             int total_pair_count = 0;
-            int max_stereo_pair = 20;
+            int max_stereo_pair = 100;
             
             while(!stop_condition && t_count < 60)
             {
