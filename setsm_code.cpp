@@ -3157,7 +3157,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     MergeTiles_forMulti(proinfo,param,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Final_DEMsize,FinalDEM_boundary);
                                 else
                                     MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Final_DEMsize,FinalDEM_boundary);
-                                
                                 printf("%f\t",DEM_values[10]);
                                 
                                 printf("Interpolation start!!\n");
@@ -3519,8 +3518,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool stop_condition = false;
             int t_count = 0;
             int total_pair_count = 0;
-            int max_stereo_pair = 100;
-            
+            int max_stereo_pair = 10;
             while(!stop_condition && t_count < 60)
             {
                 //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
@@ -3545,71 +3543,14 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         printf("%d\tfinal pair num %d\t%d\n",pairs.size(),pairs[j],actual_pair_save[j]);
                     }*/
                 }
-                /*
-                if(*plevelinfo.Pyramid_step < 1)
-                {
-                    if(pairs.size() > 0)
-                    {
-                        double sum_SigmaZ = 0;
-                        for(int count = 0 ; count < pairs.size() ; count++)
-                        {
-                            int pair_number = pairs[count];
-                            {
-                                double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number);
-                                printf("pair_number %d\tsigmaZ %f\n",pair_number,sigmaZ);
-                                sum_SigmaZ += (sigmaZ*sigmaZ);
-                            }
-                        }
-                        
-                        if(sum_SigmaZ > 0)
-                        {
-                            double PSigmaZ = sqrt(sum_SigmaZ)/pairs.size();
-                            if(pairs.size() > 2 && PSigmaZ <= 20)
-                            {
-                                printf("pairs %d\tPSigmaZ %f\n",pairs.size(),PSigmaZ);
-                                exit(1);
-                                stop_condition = true;
-                            }
-                        }
-                    }
-                }
-                */
                 t_count++;
             }
             /*
             if(pairs.size() < 2)
             {
-                //printf("index %d\tpairs %d\n",iter_count,pairs.size());
                 pairs.clear();
             }
-            /*
-            if(pairs.size() > 0)
-            {
-                double sum_SigmaZ = 0;
-                for(int count = 0 ; count < pairs.size() ; count++)
-                {
-                    int pair_number = pairs[count];
-                    {
-                        double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number);
-                        sum_SigmaZ += (sigmaZ*sigmaZ);
-                    }
-                }
-                
-                if(sum_SigmaZ > 0)
-                {
-                    double PSigmaZ = sqrt(sum_SigmaZ)/pairs.size();
-                    if(pairs.size() > 1)
-                    {
-                        if(PSigmaZ > 25)
-                            pairs.clear();
-                    }
-                    else if(PSigmaZ > 40)
-                        pairs.clear();
-                }
-                else
-                    pairs.clear();
-            }
-            */
+             */
         }
         
         if(pairs.size() > 0)
@@ -4667,7 +4608,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             if(levelinfo.pairinfo->SelectNumberOfPairs() > 0)
                             {
-                                if((levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA) && proinfo->sensor_provider != PT)
+                                if(levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA)
                                 {
                                     if(!check_matching_rate)
                                     {
@@ -4884,7 +4825,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     /*if(level <= proinfo->SGM_py) //SGM
                                         AWNCC_MPs_SGM(proinfo,levelinfo,Size_Grid2D, GridPT3,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list);
                                     else*/
-                                        AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list,SigmaZArray, PairArray);
+                                    AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list,SigmaZArray, PairArray);
                                     
                                     count_MPs = MatchedPts_list.size();
                                     printf("Done AWNCC_MPs %ld\t%ld\n",count_MPs,max_count_MPs);
@@ -9911,7 +9852,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pt_index = iter_count;
         
         bool check_sigmaZ = false;
-       /* 
+        /*
         if(PairArray[pt_index].size() > 1)
         {
             if(SigmaZArray[pt_index] > 25)
@@ -10477,16 +10418,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_col == start_col[direction_iter])
                 {
-                    //memset(LHcost_pre, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel,rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    //memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
-                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    SWAP(LHcost_pre, LHcost_curr);
+                    LHcost_pre.swap(LHcost_curr);
                     
                 }
             }
@@ -10503,14 +10442,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_col == start_col[direction_iter])
                 {
-                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    SWAP(LHcost_pre, LHcost_curr);
+                    LHcost_pre.swap(LHcost_curr);
                     
                 }
             }
@@ -10528,14 +10467,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_row == start_row[direction_iter])
                 {
-                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    SWAP(LHcost_pre, LHcost_curr);
+                    LHcost_pre.swap(LHcost_curr);
                 }
             }
         }
@@ -10551,14 +10490,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 
                 if(pts_row == start_row[direction_iter])
                 {
-                    LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                     SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                 }
                 else
                 {
-                    LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                    std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                     SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                    SWAP(LHcost_pre, LHcost_curr);
+                    LHcost_pre.swap(LHcost_curr);
                 }
             }
         }
@@ -10599,7 +10538,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10610,9 +10549,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10636,7 +10575,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10647,9 +10586,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10677,7 +10616,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10688,9 +10627,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10714,7 +10653,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10725,9 +10664,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10751,7 +10690,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10762,9 +10701,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10786,7 +10725,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10797,9 +10736,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10823,7 +10762,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10834,9 +10773,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10858,7 +10797,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     {
                         long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                        LHcost_pre.resize(nccresult[pt_index].NumOfHeight,0.0);
+                        std::fill(LHcost_pre.begin(), LHcost_pre.end(), 0.0);
                         SGM_start_pos(proinfo, nccresult, grid_voxel, rlevelinfo, GridPT3, pt_index, LHcost_pre, SumCost, step_height, pairnumber);
                     }
                     else
@@ -10869,9 +10808,9 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         {
                             long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
          
-                            LHcost_curr.resize(nccresult[pt_index].NumOfHeight,0.0);
+                            std::fill(LHcost_curr.begin(), LHcost_curr.end(), 0.0);
                             SGM_con_pos(proinfo, pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, rlevelinfo, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost, pairnumber);
-                            SWAP(LHcost_pre, LHcost_curr);
+                            LHcost_pre.swap(LHcost_curr);
                         }
                         else
                             check_end = true;
@@ -10926,7 +10865,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         nccresult[pt_index].result4 = 0;
     
         
-        /*
+        
         char save_file[500];
         char save_file_peak[500];
         sprintf(save_file,"%s/txt/ncc_profile_center_%d_%d.txt",proinfo->save_filepath,Pyramid_step,iteration);
@@ -10938,7 +10877,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
             fid         = fopen(save_file,"w");
             fid_peak         = fopen(save_file_peak,"w");
         }
-        */
+        
         for(long height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
@@ -11004,8 +10943,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     FindPeakNcc_SGM(proinfo,Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
                 
-                //if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
-                    //fprintf(fid,"%f\t%f\t%d\n",iter_height,temp_rho,INCC_count);
+                if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
+                    fprintf(fid,"%f\t%f\t%d\n",iter_height,temp_rho,INCC_count);
             }
         }
         
@@ -11083,14 +11022,13 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         printf("after peak 1 2 %d\t%d\n",nccresult[pt_index].result0,nccresult[pt_index].result1);
                     
                 }
-                /*
+                
                 if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
                 {
                     fprintf(fid_peak,"%f\t%f\t%f\t%f\t%d\n",nccresult[pt_index].result2,SignedCharToDouble_result(nccresult[pt_index].result0),nccresult[pt_index].result3,SignedCharToDouble_result(nccresult[pt_index].result1),nccresult[pt_index].NumOfHeight);
                     fclose(fid);
                     fclose(fid_peak);
                 }
-                 */
             }
         }
     }
@@ -12154,24 +12092,15 @@ int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOIN
       
         check_stop_TIN = true;
         
-        double *updated_height = (double*)malloc(sizeof(double)*num_triangles);
-        int *selected_index = (int*)malloc(sizeof(int)*num_triangles);
-        bool *updated_check = (bool*)calloc(sizeof(bool),num_triangles);
-        double *selected_count = (double*)calloc(sizeof(double),num_triangles);
-        double *FNCC = (double*)calloc(sizeof(double),num_triangles);
-        int *selected_target_index = (int*)malloc(sizeof(int)*num_triangles);
-        double* com_count = (double*)calloc(sizeof(double),numOfPts);
-        double* com_FNCC = (double*)calloc(sizeof(double),numOfPts);
-        /*  consistency problem but why ??
         vector<double> updated_height(num_triangles,Nodata);
         vector<int> selected_index(num_triangles,-1);
-        vector<bool> updated_check(num_triangles,false);
-        vector<int> selected_count(num_triangles,0.0);
+        vector<ConcurrentBool> updated_check(num_triangles,false);
+        vector<double> selected_count(num_triangles,0.0);
         vector<double> FNCC(num_triangles,0.0);
         vector<int> selected_target_index(num_triangles,-1);
-        vector<int> com_count(numOfPts,0.0);
+        vector<double> com_count(numOfPts,0.0);
         vector<double> com_FNCC(numOfPts,0.0);
-        */
+
 #pragma omp parallel for schedule(dynamic, 1)
         for(long int tcnt=0;tcnt<num_triangles;tcnt++)
         {
@@ -12326,15 +12255,6 @@ int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOIN
                 }
             }
         }
-        
-        free(updated_height);
-        free(selected_index);
-        free(updated_check);
-        free(selected_count);
-        free(FNCC);
-        free(selected_target_index);
-        free(com_count);
-        free(com_FNCC);
         
         if(check_ortho_cal == false)
             check_stop_TIN = true;
@@ -12779,18 +12699,14 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                     // Initializing above variables to clear warnings
                     min_roh_th = Nodata;
 
-                    if(proinfo->sensor_type == AB)// Planet
+                    /*if(proinfo->sensor_provider == PT)// Planet
                     {
                         if(Pyramid_step == proinfo->pyramid_level)
-                            min_roh_th = 0.10 + (iteration-1)*0.01; //0.2 //0.05
-                        else if(Pyramid_step == 3)
-                            min_roh_th = 0.20 + (iteration-1)*0.01; //0.3 //0.15
-                        else if(Pyramid_step == 2)
-                            min_roh_th = 0.60;//0.70;
+                            min_roh_th = 0.30 + (iteration-1)*0.04; //0.3 //0.05
                         else if(Pyramid_step == 1)
-                            min_roh_th = 0.80;//0.70;
+                            min_roh_th = 0.70 + (iteration-1)*0.04; //0.5 //0.15
                     }
-                    else
+                    else*/
                     {
                         if(Pyramid_step == proinfo->pyramid_level)
                             min_roh_th = 0.05 + (iteration-1)*0.01; //0.2 //0.05
