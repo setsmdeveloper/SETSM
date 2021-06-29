@@ -9911,7 +9911,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pt_index = iter_count;
         
         bool check_sigmaZ = false;
-        /*
+       /* 
         if(PairArray[pt_index].size() > 1)
         {
             if(SigmaZArray[pt_index] > 25)
