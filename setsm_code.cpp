@@ -9852,7 +9852,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pt_index = iter_count;
         
         bool check_sigmaZ = false;
-        /*
+        
         if(PairArray[pt_index].size() > 1)
         {
             if(SigmaZArray[pt_index] > 25)
@@ -9862,7 +9862,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         //    check_sigmaZ = true;
         else if(SigmaZArray[pt_index] > 35)
             check_sigmaZ = true;
-        */
+        
         
         if(pts_col >= 0 && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_row < Size_Grid2D.height && pt_index >= 0 && pt_index < *rlevelinfo.Grid_length && !check_sigmaZ)
         {
