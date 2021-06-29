@@ -4608,7 +4608,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             if(levelinfo.pairinfo->SelectNumberOfPairs() > 0)
                             {
-                                if(levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA)
+                                if( (levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA) && proinfo->sensor_provider != PT)
                                 {
                                     if(!check_matching_rate)
                                     {
@@ -10865,7 +10865,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         nccresult[pt_index].result4 = 0;
     
         
-        
+        /*
         char save_file[500];
         char save_file_peak[500];
         sprintf(save_file,"%s/txt/ncc_profile_center_%d_%d.txt",proinfo->save_filepath,Pyramid_step,iteration);
@@ -10877,7 +10877,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
             fid         = fopen(save_file,"w");
             fid_peak         = fopen(save_file_peak,"w");
         }
-        
+        */
         for(long height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
         {
             float iter_height = nccresult[pt_index].minHeight + height_step*step_height;
@@ -10942,9 +10942,10 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                     
                     FindPeakNcc_SGM(proinfo,Pyramid_step, iteration, temp_rho, iter_height, check_rho, pre_rho, pre_rho_WNCC, WNCC_temp_rho, pre_height, direction, max_roh, max_roh_sec, nccresult[pt_index], temp_nccresult, temp_nccresult_sec);
                 }
-                
+                /*
                 if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
                     fprintf(fid,"%f\t%f\t%d\n",iter_height,temp_rho,INCC_count);
+                 */
             }
         }
         
@@ -11022,13 +11023,14 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                         printf("after peak 1 2 %d\t%d\n",nccresult[pt_index].result0,nccresult[pt_index].result1);
                     
                 }
-                
+                /*
                 if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
                 {
                     fprintf(fid_peak,"%f\t%f\t%f\t%f\t%d\n",nccresult[pt_index].result2,SignedCharToDouble_result(nccresult[pt_index].result0),nccresult[pt_index].result3,SignedCharToDouble_result(nccresult[pt_index].result1),nccresult[pt_index].NumOfHeight);
                     fclose(fid);
                     fclose(fid_peak);
                 }
+                 */
             }
         }
     }
