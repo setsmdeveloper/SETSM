@@ -1640,8 +1640,15 @@ int main(int argc,char *argv[])
                                 
                                 if(!args.check_Matchtag)
                                 {
-                                    orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
-                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                    for(int count = 0 ; count < args.number_of_images ; count++)
+                                    {
+                                        if(args.sensor_provider == PT)
+                                            orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,0,DEM_divide,Imageparams);
+                                        else
+                                            orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,count,DEM_divide,Imageparams);
+                                    }
+                                    //orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+                                    //orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                 }
                                 else if(args.ortho_count == 2)
                                     orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
@@ -3442,6 +3449,10 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                     {
                         double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
                         double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
+                        if(azimuthangle_diff > 360)
+                            azimuthangle_diff -= 360;
+                        else if(azimuthangle_diff < -360)
+                            azimuthangle_diff += 360;
                         
                         printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
                         /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
@@ -3605,17 +3616,23 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         
         if(pairs.size() > 0)
             grid_pair.add_pairs(iter_count, pairs);
+        /*
+        for(int j = 0 ; j < actual_pair_save.size() ; j++)
+        {
+            printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
+        }
         
-        //exit(1);
+        exit(1);*/
     }
     
     for(int j = 0 ; j < actual_pair_save.size() ; j++)
     {
-        printf("final pair num %d\t%d\t%f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
+        printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
     }
     //exit(1);
     if(actual_pair_save.size() > 0)
     {
+        /*
         for(int count = 0 ; count < actual_pair_save.size() ; count++)
         {
             int pair_number = actual_pair_save[count];
@@ -3623,7 +3640,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
             printf("pair number %d\t%d\t%d\tCA %f\tCenterDist %f\n",pair_number,reference_id,ti,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->CenterDist(pair_number));
         }
-        
+        */
         //reallocate pair_number by actual_pair_save
         //reallocate pair_number by actual_pair_save
         std::map<short, short> pair_map;
@@ -3655,6 +3672,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
             temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
             temp_pairs.SetAzimuth(count, plevelinfo.pairinfo->Azimuth(pair_number));
+            /*
             printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
                 temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
@@ -3664,6 +3682,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
                 image_info[temp_pairs.pairs(count).m_X].cloud,
                 image_info[temp_pairs.pairs(count).m_Y].cloud);
+             */
         }
         
         *plevelinfo.pairinfo = temp_pairs;
@@ -4405,9 +4424,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 
                         actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info, ori_minmaxHeight);
 
-                        
                         printf("Done actural_pair\n");
-                        
+                        /*
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
                             printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count));
@@ -4422,7 +4440,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             }
                             
                         }
-                         
+                         */
                         double max_stereo_angle = -100;
                         if(proinfo->sensor_type == SB)
                         {
@@ -7404,7 +7422,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
          */
     }
     
-    printf("pair_number = %d\tmpp = %f\t mpr = %f\n",pair_number,*MPP_simgle_image,*MPP_stereo_angle);
+    //printf("pair_number = %d\tmpp = %f\t mpr = %f\n",pair_number,*MPP_simgle_image,*MPP_stereo_angle);
 }
 
 void CalMPP_8(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight, double CA,const double mean_product_res, double *MPP_simgle_image, double *MPP_stereo_angle, const int pair_number)
@@ -8480,10 +8498,10 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                                 !(*plevelinfo.check_matching_rate) &&
                                                 nccresult[pt_index].check_height_change)
                                             {
-                                                if(grid_voxel.has_pair(pt_index, pair_number)) {
-                                                    printf("WARNING: in vll, pt_index=%ld missing pair %d\n",
-                                                        pt_index, pair_number);
-                                                }
+                                                //if(!grid_voxel.has_pair(pt_index, pair_number)) {
+                                                //    printf("WARNING: in vll, pt_index=%ld missing pair %d\n",
+                                                //        pt_index, pair_number);
+                                                //}
                                             }
                                             
                                             //find peak position
@@ -9861,10 +9879,15 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
     }
     else //Planet Dove
     {
-        if(ncc > ortho_ncc)
-            return (exp(1.0/sigmaZ) - 1.0)*1000 + ncc*100;
+        if(ncc > 0 && ortho_ncc > 0)
+        {
+            if(ncc > ortho_ncc)
+                return (exp(1.0/sigmaZ) - 1.0)*1000 + ncc*100;
+            else
+                return (exp(1.0/sigmaZ) - 1.0)*1000 + ortho_ncc*100;
+        }
         else
-            return (exp(1.0/sigmaZ) - 1.0)*1000 + ortho_ncc*100;
+            return 1.0;
     }
 }
 
@@ -9907,12 +9930,28 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         {
             if(PairArray[pt_index].size() > 1)
             {
-                if(SigmaZArray[pt_index] > 25)
-                    check_sigmaZ = true;
+                bool check_sigma_th = false;
+                int count = 0;
+                int total_count = 0;
+                while(count < PairArray[pt_index].size() && !check_sigma_th)
+                {
+                    int pair_number = PairArray[pt_index][count];
+                    if(rlevelinfo.pairinfo->SigmaZ(pair_number) < 75) // 35, 50, 75 equals to 8, 6, 4 degree of ca
+                        total_count++;
+                    
+                    if((double)total_count/(double)PairArray[pt_index].size() > 0.2)
+                        check_sigma_th = true;
+                    
+                    count++;
+                }
+                    
+                if(!check_sigma_th)
+                {
+                    if(SigmaZArray[pt_index] > 55)
+                        check_sigmaZ = true;
+                }
             }
-            //else
-            //    check_sigmaZ = true;
-            else if(SigmaZArray[pt_index] > 35)
+            else if(SigmaZArray[pt_index] > 75)
                 check_sigmaZ = true;
         }
         
