@@ -4482,9 +4482,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             //    max_stereo_angle = 30;
                             if(proinfo->sensor_provider == PT)
                             {
+                                /*
                                 if(max_stereo_angle > 50 - (3-level)*10)
                                     max_stereo_angle = 50 - (3-level)*10;
-                                
+                                */
                                 //if(level == 0)
                                 //    max_stereo_angle = 10;
                                 /*
@@ -4508,8 +4509,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 MPP = MPP_simgle_image;
                             */
                             
-                            //if(MPP > 50)
-                            //    MPP = 50;
+                            if(MPP > 50)
+                                MPP = 50;
                             //printf("DG max_stereo_angle %f\n",MPP_stereo_angle);
                         }
                         else
@@ -9870,6 +9871,11 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc)
 
 double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
 {
+    if(ncc > ortho_ncc)
+        return (ncc*100);
+    else
+        return (ortho_ncc*100);
+    /*
     if(sigmaZ < 5)
     {
         if(ncc > ortho_ncc)
@@ -9889,6 +9895,7 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
         else
             return 1.0;
     }
+     */
 }
 
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<uint8>> &PairArray)
@@ -11254,6 +11261,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 }
                 else
                 {
+                    /*
                     if(multimps(pt_index, AWNCC_id).check_matched)
                     {
                         D3DPOINT point;
@@ -11265,7 +11273,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         
                         temp_points[pt_index] = point;
                     }
-                    
+                    */
                     GridPT3.ncc_seleceted_pair(pt_index) = AWNCC_id;
                 }
             }
