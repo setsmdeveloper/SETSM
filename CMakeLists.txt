@@ -101,6 +101,8 @@ if (CMAKE_CXX_COMPILER_VERSION LESS ${${COMPILER}_VERSION})
 	message (FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} minimum version \"${${COMPILER}_VERSION}\" required.")
 endif ()
 
+execute_process(COMMAND python ./SubmoduleInstall.py WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 # Find geotiff
 find_package (GeoTIFF ${GEOTIFF_VERSION})
 if (NOT GEOTIFF_FOUND)
