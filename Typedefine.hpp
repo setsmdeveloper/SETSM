@@ -587,6 +587,7 @@ typedef struct ProjectInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
+    double pair_max_th;
     double Cloud_th;
     
 	double minHeight;
@@ -600,6 +601,9 @@ typedef struct ProjectInfo{
 	int end_col;
 	int threads_num;
     int number_of_images;
+    int pair_options;
+    int awnccmp;
+    
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
     uint8 pyramid_level;
@@ -672,6 +676,7 @@ typedef struct ArgumentInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
+    double pair_max_th;
     double Cloud_th;
     
 	int check_arg; // 0 : no input, 1: 3 input
@@ -741,6 +746,8 @@ typedef struct ArgumentInfo{
     int check_coreg;
     int check_sdm_ortho;
     int check_DEM_coreg_output;
+    int pair_options;
+    int awnccmp;
     
     //SGM test flag
     bool check_SNCC;
