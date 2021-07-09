@@ -17820,7 +17820,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
     printf("dem size %d\t%d\t%d\n",Final_DEMsize.width,Final_DEMsize.height,buffer);
     
     long DEM_data_size = (long)Final_DEMsize.height*(long)Final_DEMsize.width;
-    vector<vector<float>> DEM_count(DEM_data_size);
+    vector<RunningAverage> DEM_count(DEM_data_size);
     
     unsigned char* DEM_pairs = (unsigned char*)calloc(sizeof(unsigned char),DEM_data_size);
     float* DEM_sigma = (float*)calloc(sizeof(float),DEM_data_size);
@@ -17829,7 +17829,6 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
     for(long index = 0 ; index < DEM_data_size ; index++)
     {
         DEM[index] = Nodata;
-        DEM_count[index].clear();
     }
     
     //setting DEM value
@@ -17934,7 +17933,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                             {
                                                 if(DEM[index] == Nodata)
                                                     DEM[index] = DEM_value;
-                                                DEM_count[index].push_back(DEM_value);
+                                                DEM_count[index].update(DEM_value);
                                                 
                                                 DEM_pairs[index] = DEM_pv;
                                                 DEM_sigma[index] = DEM_s;
@@ -17962,15 +17961,8 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
 #pragma omp parallel for schedule(guided)
     for(long index = 0 ; index < DEM_data_size ; index++)
     {
-        if(DEM_count[index].size() > 0)
-        {
-            double sum = 0;
-            for(int count = 0 ; count < DEM_count[index].size() ; count++)
-            {
-                sum += DEM_count[index][count];
-            }
-            DEM[index] = sum/DEM_count[index].size();
-            DEM_count[index].clear();
+        if(!DEM_count[index].is_empty()) {
+            DEM[index] = DEM_count[index].average();
         }
     }
     
