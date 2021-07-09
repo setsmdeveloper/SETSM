@@ -103,6 +103,7 @@ int main(int argc,char *argv[])
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
     args.param.projection = 3;
+    args.param.pm = 0;
     args.sensor_provider = DG; //DG = 1, Pleiades = 2, Planet = 3
     args.check_imageresolution = false;
     args.utm_zone = -99;
@@ -1811,7 +1812,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
     SINGLE_FILE *time_fid;
-    
+    uint16 buffer_area = 400;
     total_ST = time(0);
     
     bool cal_check;
@@ -1877,7 +1878,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     minLon      = RPCs[0][0][2];
                     SetTransParam(minLat, minLon, &param);
                 }
-               
+                if(args.param.pm != 0)
+                    param.pm = args.param.pm;
+                
                 printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
                 char DEMFilename[500];
                 sprintf(DEMFilename, "%s", args.seedDEMfilename);
@@ -2168,12 +2171,26 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 double minLat, minLon;
                 if(proinfo->sensor_type == SB)
                 {
-                    minLat      = RPCs[0][0][3];
-                    minLon      = RPCs[0][0][2];
+                    double t_boundary[4];
+                    if(args.sensor_provider == DG)
+                    {
+                        findOverlappArea_Imageinfo(proinfo, image_info, t_boundary);
+               
+                        minLat = t_boundary[1] + fabs(t_boundary[3] - t_boundary[1])/2.0;
+                        minLon = t_boundary[0] + fabs(t_boundary[2] - t_boundary[0])/2.0;
+                    }
+                    else
+                    {
+                        minLat      = RPCs[0][0][3];
+                        minLon      = RPCs[0][0][2];
+                    }
                     SetTransParam(minLat,minLon,&param);
                     
                     printf("minLat Lon %f\t%f\n",minLat, minLon);
                 }
+                
+                if(args.param.pm != 0)
+                    param.pm = args.param.pm;
                 
                 printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
                 *return_param = param;
@@ -2278,17 +2295,17 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         
                         if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
                         {
-                            double below_eq = 10000000 - XY[0].m_Y;
+                            double below_eq = (10000000 + buffer_area*2) - (XY[0].m_Y -(buffer_area*2));
                             double above_eq = XY[1].m_Y;
                             if(below_eq > above_eq)
                             {
-                                XY[1].m_Y = 10000000;
-                                XY[2].m_Y = 10000000;
+                                XY[1].m_Y = 10000000 + buffer_area*2;
+                                XY[2].m_Y = 10000000 + buffer_area*2;
                             }
                             else
                             {
-                                XY[0].m_Y = 0;
-                                XY[3].m_Y = 0;
+                                XY[0].m_Y = -(buffer_area*2);
+                                XY[3].m_Y = -(buffer_area*2);
                             }
                         }
                         
@@ -2316,8 +2333,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         Boundary[2] = lonlatboundary[2];
                         Boundary[3] = lonlatboundary[3];
                     }
-                    
-                    
                 }
                 printf("boundary = %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
                 
@@ -2414,7 +2429,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     {
                         const double bin_angle = 360.0/18.0;
                         const uint8 Template_size = 15;
-                        uint16 buffer_area;
+                        
                         uint8 pyramid_step = proinfo->pyramid_level;
                         
                         double seedDEM_gridsize;
@@ -2636,7 +2651,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
-                                buffer_area  = 400;
                                 
                                 Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
@@ -3792,6 +3806,62 @@ void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double
     }
 }
 
+void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double Boundary[])
+{
+    Boundary[0] = 10000000;
+    Boundary[1] = 10000000;
+    Boundary[2] = -10000000;
+    Boundary[3] = -10000000;
+    
+    double LBoundary[4],LminmaxHeight[2];
+    double LHinterval;
+    
+    
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        double lonlatboundary_ref[4] = {0.0};
+        
+        LBoundary[0] = imageinfo[ref_ti].LL[0];
+        LBoundary[1] = imageinfo[ref_ti].LL[1];
+        LBoundary[2] = imageinfo[ref_ti].UR[0];
+        LBoundary[3] = imageinfo[ref_ti].UR[1];
+        
+        for(int i=0;i<4;i++)
+            lonlatboundary_ref[i] = LBoundary[i];
+        
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        {
+            double lonlatboundary[4] = {0.0};
+            
+            LBoundary[0] = imageinfo[ti].LL[0];
+            LBoundary[1] = imageinfo[ti].LL[1];
+            LBoundary[2] = imageinfo[ti].UR[0];
+            LBoundary[3] = imageinfo[ti].UR[1];
+            
+            printf("tar %d\tboundary %f\t%f\t%f\t%f\n",ti,LBoundary[0],LBoundary[1],LBoundary[2],LBoundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    lonlatboundary[i] = max(LBoundary[i], lonlatboundary_ref[i]);
+                else
+                    lonlatboundary[i] = min(LBoundary[i], lonlatboundary_ref[i]);
+            }
+            
+            printf("ref %d tar %d\tboundary %f\t%f\t%f\t%f\n",ref_ti,ti,lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    Boundary[i] = min(Boundary[i], lonlatboundary[i]);
+                else
+                    Boundary[i] = max(Boundary[i], lonlatboundary[i]);
+            }
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+        }
+    }
+}
 
 int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return)
 {
@@ -4001,7 +4071,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 if(proinfo->check_selected_image[index_image])
                     count_available_images++;
             }
-            
             
             double max_Memory;
             double minmaxheight_mem[2];
@@ -4482,10 +4551,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             //    max_stereo_angle = 30;
                             if(proinfo->sensor_provider == PT)
                             {
-                                /*
                                 if(max_stereo_angle > 50 - (3-level)*10)
                                     max_stereo_angle = 50 - (3-level)*10;
-                                */
+                                
                                 //if(level == 0)
                                 //    max_stereo_angle = 10;
                                 /*
@@ -4509,8 +4577,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 MPP = MPP_simgle_image;
                             */
                             
-                            if(MPP > 50)
-                                MPP = 50;
+                            //if(MPP > 50)
+                            //    MPP = 50;
                             //printf("DG max_stereo_angle %f\n",MPP_stereo_angle);
                         }
                         else
@@ -4850,13 +4918,18 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     }
                                     
                                     vector<float> SigmaZArray((*levelinfo.Grid_length),-1.0);
+                                    vector<float> GPratio((*levelinfo.Grid_length),0.0);
                                     
                                     char fname_grid[500];
                                     char fname_sigma[500];
+                                    char fname_gpratio[500];
                                     sprintf(fname_grid,"%s/txt/grid_pairs_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration);
                                     sprintf(fname_sigma,"%s/txt/sigmaZ_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
+                                    sprintf(fname_gpratio,"%s/txt/GPratio_%d_%d_%d.txt",proinfo->save_filepath,row,col,level);
                                     FILE* fid_grid         = fopen(fname_grid,"w");
                                     FILE* fid_sigma         = fopen(fname_sigma,"w");
+                                    FILE* fid_gpratio         = fopen(fname_gpratio,"w");
+                                    
                                     for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                                     {
                                         for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
@@ -4865,12 +4938,16 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
                                             
                                             double sum_SigmaZ = 0;
+                                            double count_gp = 0;
                                             for(int count = 0 ; count < PairArray[pt_index].size() ; count++)
                                             {
                                                 int pair_number = PairArray[pt_index][count];
                                                 {
                                                     double sigmaZ = levelinfo.pairinfo->SigmaZ(pair_number);
                                                     sum_SigmaZ += (sigmaZ*sigmaZ);
+                                                    
+                                                    if(sigmaZ < 75)
+                                                        count_gp++;
                                                 }
                                             }
                                             
@@ -4879,15 +4956,26 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 double PSigmaZ = sqrt(sum_SigmaZ)/PairArray[pt_index].size();
                                                 SigmaZArray[pt_index] = PSigmaZ;
                                             }
-
+                                            
                                             fprintf(fid_sigma,"%f\t",SigmaZArray[pt_index]);
+                                            
+                                            if(PairArray[pt_index].size() > 0)
+                                            {
+                                                float ratio = count_gp/(double)PairArray[pt_index].size();
+                                                //printf("count_gp %f\t%d\t%f\n",count_gp,PairArray[pt_index].size(),ratio);
+                                                fprintf(fid_gpratio,"%f\t",ratio);
+                                            }
+                                            else
+                                                fprintf(fid_gpratio,"0\t");
                                         }
                                         fprintf(fid_grid,"\n");
                                         fprintf(fid_sigma,"\n");
+                                        fprintf(fid_gpratio,"\n");
                                     }
                                     fclose(fid_grid);
                                     fclose(fid_sigma);
-                                    
+                                    fclose(fid_gpratio);
+                                    //exit(1);
                                     //MatchedPts_list.clear();
                                     printf("start AWNCC_MPs %ld\t%ld\tpair_count %d\n",MatchedPts_list.size(),total_count_MPs,pair_count);
                                     
@@ -9871,11 +9959,6 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc)
 
 double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
 {
-    if(ncc > ortho_ncc)
-        return (ncc*100);
-    else
-        return (ortho_ncc*100);
-    /*
     if(sigmaZ < 5)
     {
         if(ncc > ortho_ncc)
@@ -9895,7 +9978,6 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
         else
             return 1.0;
     }
-     */
 }
 
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<uint8>> &PairArray)
@@ -10123,7 +10205,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     // kernal processing
                     double kernel_noise_th = 25;
           
-                    double ref_height;
+                    double ref_height = final_height;
                     
                     int q_kenel_size = 0;
                     int max_kernel_size = 0;
@@ -10156,6 +10238,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     double kenel_total_weight = 0;
                                     check_kenel_cal[kenel_pos] = 1;
                                     
+                                    double max_weight = -9999;
                                     for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                                     {
                                         vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
@@ -10328,6 +10411,15 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     double total_weight = weight_idw*(1.0/std_Hdiff);
                                                     
                                                     kenel_total_weight += total_weight;
+                                                    
+                                                    if(q_kr == 0 && q_kc == 0)
+                                                    {
+                                                        if(max_weight < total_weight && query_pair < AWNCC_id)
+                                                        {
+                                                            max_weight = weight_idw;
+                                                            selected_pair = query_pair;
+                                                        }
+                                                    }
                                                     
                                                     kenel_sum_weight_height += weight_height[query_pair]*total_weight; // a weighted query solution
                                                     kenel_sum_weight += total_weight;
@@ -11261,7 +11353,6 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 }
                 else
                 {
-                    /*
                     if(multimps(pt_index, AWNCC_id).check_matched)
                     {
                         D3DPOINT point;
@@ -11273,7 +11364,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         
                         temp_points[pt_index] = point;
                     }
-                    */
+                    
                     GridPT3.ncc_seleceted_pair(pt_index) = AWNCC_id;
                 }
             }
@@ -17824,6 +17915,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
     
     unsigned char* DEM_pairs = (unsigned char*)calloc(sizeof(unsigned char),DEM_data_size);
     float* DEM_sigma = (float*)calloc(sizeof(float),DEM_data_size);
+    float* DEM_gpratio = (float*)calloc(sizeof(float),DEM_data_size);
     
 #pragma omp parallel for schedule(guided)
     for(long index = 0 ; index < DEM_data_size ; index++)
@@ -17880,10 +17972,14 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                         
                         char hv_pair[500];
                         char hv_sigma[500];
+                        char hv_gpratio[500];
                         sprintf(hv_pair,"%s/txt/grid_pairs_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,find_level,final_iteration);
                         FILE *p_hvpair    = fopen(hv_pair,"r");
                         sprintf(hv_sigma,"%s/txt/sigmaZ_%d_%d_%d.txt",proinfo->save_filepath,row,col,find_level);
                         FILE *p_hvsigma    = fopen(hv_sigma,"r");
+                        sprintf(hv_gpratio,"%s/txt/GPratio_%d_%d_%d.txt",proinfo->save_filepath,row,col,find_level);
+                        FILE *p_hvgpratio    = fopen(hv_gpratio,"r");
+
                         
                         printf("%s\n%s\n",hv_pair,hv_sigma);
                         
@@ -17894,6 +17990,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                             
                             int* temp_pairs = (int*)malloc(sizeof(int)*col_size*row_size);
                             float* temp_sigma = (float*)malloc(sizeof(float)*col_size*row_size);
+                            float* temp_gpratio = (float*)malloc(sizeof(float)*col_size*row_size);
                             
                             for(long t_row = 0 ; t_row < row_size ; t_row++)
                             {
@@ -17901,17 +17998,21 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                 {
                                     long index = t_row*col_size + t_col;
                                     int tt1;
-                                    float tt2;
+                                    float tt2,tt3;
                                     fscanf(p_hvpair,"%d\t",&tt1);
                                     fscanf(p_hvsigma,"%f\t",&tt2);
+                                    fscanf(p_hvgpratio,"%f\t",&tt3);
                                     if(tt1 > 0)
                                         temp_pairs[index] = tt1;
                                     temp_sigma[index] = tt2;
+                                    temp_gpratio[index] = tt3;
                                 }
                             }
                             fclose(p_hvpair);
                             fclose(p_hvsigma);
+                            fclose(p_hvgpratio);
                             printf("done read\n");
+                            
                             #pragma omp parallel for schedule(guided)
                             for(long iter_row = 0 ; iter_row < row_size ; iter_row ++)
                             {
@@ -17930,6 +18031,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                             float DEM_value = temp_height[iter_row*col_size + iter_col];
                                             int DEM_pv = temp_pairs[iter_row*col_size + iter_col];
                                             float DEM_s = temp_sigma[iter_row*col_size + iter_col];
+                                            float DEM_gpr = temp_gpratio[iter_row*col_size + iter_col];
                                             if(DEM_value > Nodata )
                                             {
                                                 if(DEM[index] == Nodata)
@@ -17938,6 +18040,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                                 
                                                 DEM_pairs[index] = DEM_pv;
                                                 DEM_sigma[index] = DEM_s;
+                                                DEM_gpratio[index] = DEM_gpr;
                                             }
                                         }
                                     }
@@ -17949,6 +18052,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                             printf("done assign\n");
                             free(temp_pairs);
                             free(temp_sigma);
+                            free(temp_gpratio);
                             printf("done free\n");
                         }
                         fclose(p_hfile);
@@ -17986,14 +18090,19 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
     
     char DEM_pairs_all[500];
     char DEM_sigma_all[500];
+    char DEM_gpratio_all[500];
     sprintf(DEM_pairs_all, "%s/%s_dem_pairs.tif", proinfo->save_filepath, proinfo->Outputpath_name);
     WriteGeotiff(DEM_pairs_all, DEM_pairs, Final_DEMsize.width, Final_DEMsize.height, proinfo->DEM_resolution, FinalDEM_boundary[0], FinalDEM_boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 1);
     
     sprintf(DEM_sigma_all, "%s/%s_dem_sigma.tif", proinfo->save_filepath, proinfo->Outputpath_name);
     WriteGeotiff(DEM_sigma_all, DEM_sigma, Final_DEMsize.width, Final_DEMsize.height, proinfo->DEM_resolution, FinalDEM_boundary[0], FinalDEM_boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     
+    sprintf(DEM_gpratio_all, "%s/%s_dem_gpratio.tif", proinfo->save_filepath, proinfo->Outputpath_name);
+    WriteGeotiff(DEM_gpratio_all, DEM_gpratio, Final_DEMsize.width, Final_DEMsize.height, proinfo->DEM_resolution, FinalDEM_boundary[0], FinalDEM_boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    
     free(DEM_pairs);
     free(DEM_sigma);
+    free(DEM_gpratio);
 }
 
 

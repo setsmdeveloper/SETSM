@@ -289,6 +289,8 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
     t_pts[6].m_Z    = minmaxHeight[1];
     t_pts[7].m_Z    = minmaxHeight[1];
     
+    printf("subBoundary %f\t%f\t%f\t%f\n%d\t%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],transparam.pm,transparam.sa,transparam.sb,transparam.e2,transparam.c);
+    
     D2DPOINT *ImageCoord = NULL;
     if(sensor_type == SB)
     {
