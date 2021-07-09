@@ -447,6 +447,7 @@ typedef struct ArgumentInfo{
 	int RA_col;
 	int tilesize;
 	int projection; //PS = 1, UTM = 2
+    TransParam param;
     int utm_zone;
     enum SensorType sensor_type; // SB is for RFM (default), AB is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
