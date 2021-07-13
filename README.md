@@ -106,6 +106,8 @@ to experiment with floating-point related options if you have problems.
 
 ### Building and installing SETSM using CMake
 
+_CMake and Python are required to install SETSM with CMake. Make sure you have these on your system before proceeding._
+
 A CMake build is provided as an alternative to the Makefile method described 
 above.  The environment variable CXX may be set to the compiler command to be 
 used.  If the TIFF library is in a nonstandard location its path should be 
