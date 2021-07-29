@@ -1196,10 +1196,13 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
 
 void SetTransParam(double minLat, double minLon, TransParam *param)
 {
-    if(minLat > 0)
-        param->bHemisphere = true;
-    else
-        param->bHemisphere = false;
+    if(param->bHemisphere == 3)
+    {
+        if(minLat > 0)
+            param->bHemisphere = true;
+        else
+            param->bHemisphere = false;
+    }
     
     SetTransParam_param(param,param->bHemisphere);
  
