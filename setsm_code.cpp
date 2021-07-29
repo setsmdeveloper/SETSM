@@ -2165,6 +2165,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 double Res[2] = {proinfo->resolution, proinfo->DEM_resolution};
                 
                 TransParam param = {};
+                param.bHemisphere = 3; //no assigned
                 param.projection = args.projection;
                 param.utm_zone   = args.utm_zone;
                 
@@ -2192,7 +2193,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 if(args.param.pm != 0)
                     param.pm = args.param.pm;
                 
-                printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
+                printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
                 *return_param = param;
                 
                 double Boundary[4], LBoundary[4],RBoundary[4],LminmaxHeight[2],RminmaxHeight[2],ori_minmaxHeight[2];
@@ -2293,25 +2294,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
                         printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
                         
-                        if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
-                        {
-                            double below_eq = (10000000 + buffer_area*2) - (XY[0].m_Y -(buffer_area*2));
-                            double above_eq = XY[1].m_Y;
-                            if(below_eq > above_eq)
-                            {
-                                XY[1].m_Y = 10000000 + buffer_area*2;
-                                XY[2].m_Y = 10000000 + buffer_area*2;
-                            }
-                            else
-                            {
-                                XY[0].m_Y = -(buffer_area*2);
-                                XY[3].m_Y = -(buffer_area*2);
-                            }
-                        }
-                        
-                        printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
-                        printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
-                        
                         double minX = min(XY[3].m_X, min(XY[2].m_X, min(XY[0].m_X, XY[1].m_X)));
                         double maxX = max(XY[3].m_X, max(XY[2].m_X, max(XY[0].m_X, XY[1].m_X)));
                         
@@ -2348,15 +2330,17 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                     else
                     {
-                        if(10000000 - Boundary[3] > Boundary[1])
+                        if(param.pm == 1)
                         {
-                            Boundary[1] = Boundary[3];
-                            Boundary[3] = 10000000;
-                        }
-                        else
-                        {
+                            double temp = Boundary[3];
                             Boundary[3] = Boundary[1];
-                            Boundary[1] = 0;
+                            Boundary[1] = temp - 10000000;
+                        }
+                        else if(param.pm == -1)
+                        {
+                            double temp = Boundary[1];
+                            Boundary[1] = Boundary[3];
+                            Boundary[3] = 10000000 + temp;
                         }
                         
                         Boundary_size.width     = Boundary[2] - Boundary[0];
