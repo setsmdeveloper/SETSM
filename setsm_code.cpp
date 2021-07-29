@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.8";
+const char setsm_version[] = "4.3.9";
 
 int main(int argc,char *argv[])
 {
@@ -1970,6 +1970,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 double Res[2] = {proinfo->resolution, proinfo->DEM_resolution};
                 
                 TransParam param;
+                param.bHemisphere = 3; //no assigned
                 param.projection = args.projection;
                 param.utm_zone   = args.utm_zone;
                 
@@ -1997,7 +1998,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 if(args.param.pm != 0)
                     param.pm = args.param.pm;
                 
-                printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
+                printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
                 *return_param = param;
                 
                 double Boundary[4], LBoundary[4],RBoundary[4],LminmaxHeight[2],RminmaxHeight[2],ori_minmaxHeight[2];
