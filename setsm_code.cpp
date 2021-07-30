@@ -2070,6 +2070,19 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     lonlatboundary[i] = min(LBoundary[i], lonlatboundary[i]);
                             }
                             
+                            double minX = min(lonlatboundary[0],lonlatboundary[2]);
+                            double maxX = max(lonlatboundary[0],lonlatboundary[2]);
+                            
+                            double minY = min(lonlatboundary[1],lonlatboundary[3]);
+                            double maxY = max(lonlatboundary[1],lonlatboundary[3]);
+                            
+                            lonlatboundary[0] = minX;
+                            lonlatboundary[1] = minY;
+                            lonlatboundary[2] = maxX;
+                            lonlatboundary[3] = maxY;
+                            
+                            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                            
                             if(LHinterval > Hinterval)
                                 Hinterval   = LHinterval;
                             
@@ -3012,6 +3025,19 @@ void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double
             }
             
             printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            
+            double minX = min(Boundary[0],Boundary[2]);
+            double maxX = max(Boundary[0],Boundary[2]);
+            
+            double minY = min(Boundary[1],Boundary[3]);
+            double maxY = max(Boundary[1],Boundary[3]);
+            
+            Boundary[0] = minX;
+            Boundary[1] = minY;
+            Boundary[2] = maxX;
+            Boundary[3] = maxY;
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
         }
     }
 }
@@ -3067,6 +3093,19 @@ void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double B
                 else
                     Boundary[i] = max(Boundary[i], lonlatboundary[i]);
             }
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            
+            double minX = min(Boundary[0],Boundary[2]);
+            double maxX = max(Boundary[0],Boundary[2]);
+            
+            double minY = min(Boundary[1],Boundary[3]);
+            double maxY = max(Boundary[1],Boundary[3]);
+            
+            Boundary[0] = minX;
+            Boundary[1] = minY;
+            Boundary[2] = maxX;
+            Boundary[3] = maxY;
             
             printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
         }

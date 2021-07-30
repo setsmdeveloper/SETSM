@@ -215,7 +215,7 @@ typedef struct tagTransParam
     int utm_zone;
 	
 	char direction[2];
-	bool bHemisphere;
+	int bHemisphere;
 } TransParam;
 
 typedef struct tagCSize
