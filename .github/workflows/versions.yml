@@ -5,7 +5,8 @@ name: Docker Image Build
 on:
   push:
     tags:
-      - v[0-9].[0-9].[0-9]
+      - v[0-9]+.[0-9]+.[0-9]+
+      - test-ci*
 
 # Build and Push
 jobs:
