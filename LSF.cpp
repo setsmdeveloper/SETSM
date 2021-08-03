@@ -6,6 +6,7 @@
 //
 
 #include "LSF.hpp"
+#include <cmath>
 
 //LSF smoothing
 void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double MPP, const int divide)
@@ -549,7 +550,7 @@ double LocalSurfaceFitting_DEM(LSFINFO *Grid_info, float *input, long &numpts, d
         for(row = 0; row < XY_save.size() ; row++)
             sum_V += V_matrix->val[row][0];
 
-        if(!isnan(sum_V) && !isnan(X_matrix->val[0][0]) && !isnan(X_matrix->val[1][0]) && !isnan(X_matrix->val[2][0]))
+        if(!std::isnan(sum_V) && !std::isnan(X_matrix->val[0][0]) && !std::isnan(X_matrix->val[1][0]) && !std::isnan(X_matrix->val[2][0]))
         {
             double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
             if(plane_Z > -100 && plane_Z < 15000)
@@ -666,7 +667,7 @@ double LocalSurfaceFitting_DEM(LSFINFO *Grid_info, float *input, long &numpts, d
                     }
 
                     const double p = 1.5;
-                    if(!isnan(sum) && sum > 0 )
+                    if(!std::isnan(sum) && sum > 0 )
                     {
                         sigma = sqrt(sum/(double)selected_count);
 
