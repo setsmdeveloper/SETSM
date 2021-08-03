@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.7";
+const char setsm_version[] = "4.3.9";
 
 int main(int argc,char *argv[])
 {
@@ -102,6 +102,7 @@ int main(int argc,char *argv[])
     
     args.number_of_images = 2;
     args.projection = 3;//PS = 1, UTM = 2
+    args.param.pm = 0;
     args.sensor_provider = DG; //DG = 1, Pleiades = 2, Planet = 3
     args.check_imageresolution = false;
     args.utm_zone = -99;
@@ -1699,7 +1700,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
     SINGLE_FILE *time_fid;
-    
+    uint16 buffer_area = 400;
     total_ST = time(0);
     
     bool cal_check;
@@ -1969,20 +1970,35 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 double Res[2] = {proinfo->resolution, proinfo->DEM_resolution};
                 
                 TransParam param;
+                param.bHemisphere = 3; //no assigned
                 param.projection = args.projection;
                 param.utm_zone   = args.utm_zone;
                 
                 double minLat, minLon;
                 if(proinfo->sensor_type == SB)
                 {
-                    minLat      = RPCs[0][0][3];
-                    minLon      = RPCs[0][0][2];
+                    double t_boundary[4];
+                    if(args.sensor_provider == DG)
+                    {
+                        findOverlappArea_Imageinfo(proinfo, image_info, t_boundary);
+               
+                        minLat = t_boundary[1] + fabs(t_boundary[3] - t_boundary[1])/2.0;
+                        minLon = t_boundary[0] + fabs(t_boundary[2] - t_boundary[0])/2.0;
+                    }
+                    else
+                    {
+                        minLat      = RPCs[0][0][3];
+                        minLon      = RPCs[0][0][2];
+                    }
                     SetTransParam(minLat,minLon,&param);
                     
                     printf("minLat Lon %f\t%f\n",minLat, minLon);
                 }
                 
-                printf("param projection %d\tzone %d\n",param.projection,param.utm_zone);
+                if(args.param.pm != 0)
+                    param.pm = args.param.pm;
+                
+                printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
                 *return_param = param;
                 
                 double Boundary[4], LBoundary[4],RBoundary[4],LminmaxHeight[2],RminmaxHeight[2],ori_minmaxHeight[2];
@@ -2054,6 +2070,19 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     lonlatboundary[i] = min(LBoundary[i], lonlatboundary[i]);
                             }
                             
+                            double minX = min(lonlatboundary[0],lonlatboundary[2]);
+                            double maxX = max(lonlatboundary[0],lonlatboundary[2]);
+                            
+                            double minY = min(lonlatboundary[1],lonlatboundary[3]);
+                            double maxY = max(lonlatboundary[1],lonlatboundary[3]);
+                            
+                            lonlatboundary[0] = minX;
+                            lonlatboundary[1] = minY;
+                            lonlatboundary[2] = maxX;
+                            lonlatboundary[3] = maxY;
+                            
+                            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+                            
                             if(LHinterval > Hinterval)
                                 Hinterval   = LHinterval;
                             
@@ -2061,6 +2090,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             ori_minmaxHeight[1] = max(LminmaxHeight[1],ori_minmaxHeight[1]);
                         }
                     }
+                    
+                    findOverlappArea(proinfo,param,RPCs,Image_res,lonlatboundary);
                     
                     if(proinfo->sensor_type == SB)
                     {
@@ -2077,25 +2108,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         lonlat[3].m_Y = lonlatboundary[1];
                         
                         D2DPOINT *XY = wgs2ps(param, 4, lonlat);
-                        
-                        printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
-                        printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
-                        
-                        if( lonlatboundary[1] < 0 && lonlatboundary[3] > 0)
-                        {
-                            double below_eq = 10000000 - XY[0].m_Y;
-                            double above_eq = XY[1].m_Y;
-                            if(below_eq > above_eq)
-                            {
-                                XY[1].m_Y = 10000000;
-                                XY[2].m_Y = 10000000;
-                            }
-                            else
-                            {
-                                XY[0].m_Y = 0;
-                                XY[3].m_Y = 0;
-                            }
-                        }
                         
                         printf("XY X %f\t%f\t%f\t%f\n",XY[0].m_X,XY[1].m_X,XY[2].m_X,XY[3].m_X);
                         printf("XY Y %f\t%f\t%f\t%f\n",XY[0].m_Y,XY[1].m_Y,XY[2].m_Y,XY[3].m_Y);
@@ -2138,15 +2150,17 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                     else
                     {
-                        if(10000000 - Boundary[3] > Boundary[1])
+                        if(param.pm == 1)
                         {
-                            Boundary[1] = Boundary[3];
-                            Boundary[3] = 10000000;
-                        }
-                        else
-                        {
+                            double temp = Boundary[3];
                             Boundary[3] = Boundary[1];
-                            Boundary[1] = 0;
+                            Boundary[1] = temp - 10000000;
+                        }
+                        else if(param.pm == -1)
+                        {
+                            double temp = Boundary[1];
+                            Boundary[1] = Boundary[3];
+                            Boundary[3] = 10000000 + temp;
                         }
                         
                         Boundary_size.width     = Boundary[2] - Boundary[0];
@@ -2215,7 +2229,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     {
                         const double bin_angle = 360.0/18.0;
                         const uint8 Template_size = 15;
-                        uint16 buffer_area  = 400;
                         uint8 pyramid_step = proinfo->pyramid_level;
                         
                         double seedDEM_gridsize;
@@ -2959,6 +2972,145 @@ public:
         return ret;
     }
 };
+
+void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double *Image_res, double Boundary[])
+{
+    Boundary[0] = 10000000;
+    Boundary[1] = 10000000;
+    Boundary[2] = -10000000;
+    Boundary[3] = -10000000;
+    
+    double LBoundary[4],LminmaxHeight[2];
+    double LHinterval;
+    
+    
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        double lonlatboundary_ref[4] = {0.0};
+        
+        if(proinfo->sensor_type == SB)
+            SetDEMBoundary(RPCs[ref_ti],Image_res,param,LBoundary,LminmaxHeight,&LHinterval);
+        else
+            SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ref_ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ref_ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+        
+        for(int i=0;i<4;i++)
+            lonlatboundary_ref[i] = LBoundary[i];
+        
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        {
+            double lonlatboundary[4] = {0.0};
+            if(proinfo->sensor_type == SB)
+                SetDEMBoundary(RPCs[ti],Image_res,param,LBoundary,LminmaxHeight,&LHinterval);
+            else
+                SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+            
+            printf("tar %d\tboundary %f\t%f\t%f\t%f\n",ti,LBoundary[0],LBoundary[1],LBoundary[2],LBoundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    lonlatboundary[i] = max(LBoundary[i], lonlatboundary_ref[i]);
+                else
+                    lonlatboundary[i] = min(LBoundary[i], lonlatboundary_ref[i]);
+            }
+            
+            printf("ref %d tar %d\tboundary %f\t%f\t%f\t%f\n",ref_ti,ti,lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    Boundary[i] = min(Boundary[i], lonlatboundary[i]);
+                else
+                    Boundary[i] = max(Boundary[i], lonlatboundary[i]);
+            }
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            
+            double minX = min(Boundary[0],Boundary[2]);
+            double maxX = max(Boundary[0],Boundary[2]);
+            
+            double minY = min(Boundary[1],Boundary[3]);
+            double maxY = max(Boundary[1],Boundary[3]);
+            
+            Boundary[0] = minX;
+            Boundary[1] = minY;
+            Boundary[2] = maxX;
+            Boundary[3] = maxY;
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+        }
+    }
+}
+
+void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double Boundary[])
+{
+    Boundary[0] = 10000000;
+    Boundary[1] = 10000000;
+    Boundary[2] = -10000000;
+    Boundary[3] = -10000000;
+    
+    double LBoundary[4],LminmaxHeight[2];
+    double LHinterval;
+    
+    
+    for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
+    {
+        double lonlatboundary_ref[4] = {0.0};
+        
+        LBoundary[0] = imageinfo[ref_ti].LL[0];
+        LBoundary[1] = imageinfo[ref_ti].LL[1];
+        LBoundary[2] = imageinfo[ref_ti].UR[0];
+        LBoundary[3] = imageinfo[ref_ti].UR[1];
+        
+        for(int i=0;i<4;i++)
+            lonlatboundary_ref[i] = LBoundary[i];
+        
+        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        {
+            double lonlatboundary[4] = {0.0};
+            
+            LBoundary[0] = imageinfo[ti].LL[0];
+            LBoundary[1] = imageinfo[ti].LL[1];
+            LBoundary[2] = imageinfo[ti].UR[0];
+            LBoundary[3] = imageinfo[ti].UR[1];
+            
+            printf("tar %d\tboundary %f\t%f\t%f\t%f\n",ti,LBoundary[0],LBoundary[1],LBoundary[2],LBoundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    lonlatboundary[i] = max(LBoundary[i], lonlatboundary_ref[i]);
+                else
+                    lonlatboundary[i] = min(LBoundary[i], lonlatboundary_ref[i]);
+            }
+            
+            printf("ref %d tar %d\tboundary %f\t%f\t%f\t%f\n",ref_ti,ti,lonlatboundary[0],lonlatboundary[1],lonlatboundary[2],lonlatboundary[3]);
+            
+            for(int i=0;i<4;i++)
+            {
+                if(i<2)
+                    Boundary[i] = min(Boundary[i], lonlatboundary[i]);
+                else
+                    Boundary[i] = max(Boundary[i], lonlatboundary[i]);
+            }
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+            
+            double minX = min(Boundary[0],Boundary[2]);
+            double maxX = max(Boundary[0],Boundary[2]);
+            
+            double minY = min(Boundary[1],Boundary[3]);
+            double maxY = max(Boundary[1],Boundary[3]);
+            
+            Boundary[0] = minX;
+            Boundary[1] = minY;
+            Boundary[2] = maxX;
+            Boundary[3] = maxY;
+            
+            printf("all boundary %f\t%f\t%f\t%f\n",Boundary[0],Boundary[1],Boundary[2],Boundary[3]);
+        }
+    }
+}
 
 int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy)
 {

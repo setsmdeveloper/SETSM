@@ -237,6 +237,8 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
     t_pts[6].m_Z    = minmaxHeight[1];
     t_pts[7].m_Z    = minmaxHeight[1];
     
+    printf("subBoundary %f\t%f\t%f\t%f\n%d\t%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],transparam.pm,transparam.sa,transparam.sb,transparam.e2,transparam.c);
+    
     D2DPOINT *ImageCoord = NULL;
     if(sensor_type == SB)
     {
@@ -1194,10 +1196,13 @@ void SetTransParam_param(TransParam *param, bool Hemisphere)
 
 void SetTransParam(double minLat, double minLon, TransParam *param)
 {
-    if(minLat > 0)
-        param->bHemisphere = true;
-    else
-        param->bHemisphere = false;
+    if(param->bHemisphere == 3)
+    {
+        if(minLat > 0)
+            param->bHemisphere = true;
+        else
+            param->bHemisphere = false;
+    }
     
     SetTransParam_param(param,param->bHemisphere);
  

@@ -67,6 +67,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         double grid_size;
         CSize DEM_size;
         TransParam param;
+        param.bHemisphere = 3; //no assigned
         
         DEM_size = GetDEMsize(str_DEMfile,metafilename,&param,&grid_size,&minX,&maxY);
         printf("DEM_size %d\t%d\n",DEM_size.width,DEM_size.height);
