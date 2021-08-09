@@ -1291,7 +1291,7 @@ class RunningAverage {
 
     private:
         float v;
-        long n;
+        int n;
 
 };
 
