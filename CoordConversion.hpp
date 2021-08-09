@@ -12,18 +12,32 @@
 #include <stdlib.h>
 
 #include "Typedefine.hpp"
+#include "SubFunctions.hpp"
 
 //WGS to PS, WGS to UTM
 D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs);
 D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs);
+D3DPOINT wgs2ps_single_3D(TransParam _param, D3DPOINT _wgs);
 D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs);
 D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT *_ps);
 D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps);
 D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
 D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_ps);
 
+double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
+double ** GetIRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
 //RPC conversion : image to object
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP);
+D3DPOINT* GetImageHToObjectIRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, vector<D3DPOINT> &_GP, vector<D2DPOINT> &_IPs);
+void GetRayVectorFromIRPC(const double * const *IRPCs, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize, D3DPOINT &ray_vector);
+void GetRayVectorFromEOBRcenter(const EO eo, CAMERA_INFO camera, CSize imagesize, double *boundary, double *minmaxH, D3DPOINT &ray_vector);
+void GetAZELFromRay(const D3DPOINT ray_vector, float &AZ, float &EL);
+void GetBaseRayFromEO(const EO image1, const EO image2, D3DPOINT &BR);
+void GetBaseRayFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, D3DPOINT &BR);
+void GetPairAnglesFromRays(const double A1, const double A2, const double E1, const double E2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const D3DPOINT base_vector, double &CA, double &AE, double &BIE);
+void GetStereoGeometryFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR);
+void GetStereoGeometryFromEO(const EO image1, const EO image2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, double &CA, double &AE, double &BIE, D3DPOINT &BR);
+
 static D2DPOINT GetObjectToImageRPC_single(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)
 {
     double L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];

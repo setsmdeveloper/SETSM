@@ -180,6 +180,90 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs)
     
 }
 
+D3DPOINT wgs2ps_single_3D(TransParam _param, D3DPOINT _wgs)
+{
+    if(_param.projection == 1)
+    {
+        bool m_bHemisphere = _param.bHemisphere;
+        double a = _param.a;
+        double e = _param.e;
+        double phi_c = _param.phi_c;
+        double lambda_0 = _param.lambda_0;
+        int pm = _param.pm;
+        double t_c = _param.t_c;
+        double m_c = _param.m_c;
+        
+        D2DPOINT m_sWGS;
+        m_sWGS.m_X = _wgs.m_X;
+        m_sWGS.m_Y = _wgs.m_Y;
+        D3DPOINT m_sPS;
+        
+        {
+            m_sWGS.m_X = m_sWGS.m_X * pm * DegToRad;
+            m_sWGS.m_Y = m_sWGS.m_Y * pm * DegToRad;
+            double lambda = m_sWGS.m_X;
+            double phi = m_sWGS.m_Y;
+            
+            double t = tan(PI / 4.0 - phi / 2.0) / pow((1.0 - e * sin(phi)) / (1.0 + e * sin(phi)), e / 2.0);
+            double rho = a * m_c * t / t_c;
+            
+            double m = cos(phi) / sqrt(1.0 - pow(e, 2) * pow(sin(phi), 2));
+            m_sPS.m_X = pm * rho * sin(lambda - lambda_0);
+            m_sPS.m_Y = -pm * rho * cos(lambda - lambda_0);
+            m_sPS.m_Z = _wgs.m_Z;
+        }
+        
+        return m_sPS;
+    }
+    else
+    {
+        double sa = _param.sa;
+        double sb = _param.sb;
+        double e2 = _param.e2;
+        double e2cuadrada = _param.e2cuadrada;
+        double c = _param.c;
+        int Huso = _param.utm_zone;
+        
+        D3DPOINT m_sPS;
+        
+        double Lat = _wgs.m_Y;
+        double Lon = _wgs.m_X;
+        double lon = Lon * DegToRad;
+        double lat = Lat * DegToRad;
+        
+        int S = ( ( Huso * 6 ) - 183 );
+        double deltaS = lon - ( (double)S*DegToRad) ;
+        
+        double a = cos(lat)*sin(deltaS);
+        double epsilon = 0.5 * log( ( 1 +  a)/ ( 1 - a ) );
+        double nu = atan( tan(lat)/cos(deltaS) ) - lat;
+        double v = ( c /  sqrt( 1 + ( e2cuadrada* cos(lat)*cos(lat)) ) )* 0.9996;
+        double ta = ( e2cuadrada/ 2.0 ) * (epsilon*epsilon)* ( cos(lat)*cos(lat) );
+        double a1 = sin( 2* lat );
+        double a2 = a1* ( cos(lat)*cos(lat) );
+        double j2 = lat + ( a1 / 2.0 );
+        double j4 = ( ( 3 * j2 ) + a2 ) / 4.0;
+        double j6 = ( ( 5 * j4 ) + ( a2 * ( cos(lat)*cos(lat) )) ) / 3;
+        double alfa = ( 3 / 4.0 ) * e2cuadrada;
+        double beta = ( 5 / 3.0 ) * alfa * alfa;
+        double gama = ( 35 / 27.0 ) * alfa * alfa * alfa;
+        double Bm = 0.9996 * c * ( lat - alfa * j2 + beta * j4 - gama * j6 );
+        double xx = epsilon * v * ( 1 + ( ta / 3.0 ) ) + 500000;
+        double yy = nu * v * ( 1 + ta ) + Bm;
+        
+        
+        if (yy < 0)
+            yy = 9999999 + yy;
+        
+        m_sPS.m_X = xx;
+        m_sPS.m_Y = yy;
+        m_sPS.m_Z = _wgs.m_Z;
+        
+        return m_sPS;
+    }
+}
+
+
 D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
 {
     int m_NumOfPts = _numofpts;
@@ -734,6 +818,401 @@ D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_
     
 }
 
+double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
+{
+    double mid_H;
+    
+    double VCP_interval = 10;
+    double VCP_intervla_Z = 6;
+    
+    double minLon = (double) (-1.0 * rpc[1][2] + rpc[0][2]);
+    double maxLon = (double) (1.0 * rpc[1][2] + rpc[0][2]);
+    double minLat = (double) (-1.0 * rpc[1][3] + rpc[0][3]);
+    double maxLat = (double) (1.0 * rpc[1][3] + rpc[0][3]);
+    double minH = (double) (-1.0 * rpc[1][4] + rpc[0][4]);
+    double maxH = (double) (1.0 * rpc[1][4] + rpc[0][4]);
+    
+    mid_H = minH + (maxH - minH)/2.0;
+    
+    double temp;
+    if(minLon > maxLon)
+    {
+        temp = minLon;
+        minLon = maxLon;
+        maxLon = temp;
+    }
+    
+    if(minLat > maxLat)
+    {
+        temp = minLat;
+        minLat = maxLat;
+        maxLat = temp;
+    }
+    
+    //printf("minmax Lon %f\t%f\t%f\n",minLon,maxLon,rpc[0][2]);
+    //printf("minmax Lat %f\t%f\t%f\n",minLat,maxLat,rpc[0][3]);
+    //printf("minmax H %f\t%f\t%f\n",minH,maxH,rpc[0][4]);
+    
+    double X_dist = maxLon - minLon;
+    double Y_dist = maxLat - minLat;
+    double dist = (X_dist > Y_dist) ? Y_dist : X_dist;
+    double Z_dist = maxH - minH;
+    double X_interval = X_dist/VCP_interval;
+    double Y_interval = Y_dist/VCP_interval;
+    double Z_interval = Z_dist/VCP_intervla_Z;
+    
+    //printf("inverval %f\t%f\t%f\n",X_interval,Y_interval,Z_interval);
+    for(int i=0;i<VCP_intervla_Z;i++) //Z
+    {
+        for(int j=0;j<VCP_interval;j++) //Y
+        {
+            for(int k=0;k<VCP_interval;k++) //X
+            {
+                D3DPOINT GP;
+                GP.m_X = minLon + k*X_interval;
+                GP.m_Y = minLat + j*Y_interval;
+                GP.m_Z = minH + i*Z_interval;
+                
+                D2DPOINT IP = GetObjectToImageRPC_single_mpp(rpc,numofparam,imageparam,GP);
+                
+                //if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
+                {
+                    VCPs.push_back(GP);
+                    IPs.push_back(IP);
+                }
+            }
+        }
+    }
+    
+    return mid_H;
+}
+
+double ** GetIRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
+{
+    double ** IRPCs = (double**)calloc(7, sizeof(double*));
+    IRPCs[0] = (double*)calloc(5, sizeof(double)); //lineoffset, sampleoffset, longoffset, latoffset, heightoffset
+    IRPCs[1] = (double*)calloc(5, sizeof(double)); //linescale, samplescale, longscale, latscale, heightscale
+    IRPCs[2] = (double*)calloc(20, sizeof(double)); //linenumcoef
+    IRPCs[3] = (double*)calloc(20, sizeof(double)); //linedencoef
+    IRPCs[4] = (double*)calloc(20, sizeof(double)); //samplenumcoef
+    IRPCs[5] = (double*)calloc(20, sizeof(double)); //sampledencoef
+    IRPCs[6] = (double*)calloc(2, sizeof(double)); //errbias, errand for worldview
+    
+    for(int i=0;i<5;i++)
+    {
+        IRPCs[0][i] = rpc[0][i];
+        IRPCs[1][i] = rpc[1][i];
+    }
+
+    for(int i=0;i<2;i++)
+        IRPCs[6][i] = rpc[6][i];
+    
+    IRPCs[3][0] = 1.0;
+    IRPCs[5][0] = 1.0;
+    
+    int count_GCPs = VCPs.size();
+    
+    for(int whole_iter = 0 ; whole_iter < 2 ; whole_iter++)
+    {
+        GMA_double *M_matrix = GMA_double_create(count_GCPs,39);
+        GMA_double *MT_matrix = GMA_double_create(39,count_GCPs);
+        GMA_double *MTM_matrix = GMA_double_create(39,39);
+        GMA_double *MTMI_matrix = GMA_double_create(39,39);
+        
+        GMA_double *R_matrix = GMA_double_create(count_GCPs,1);
+        GMA_double *MTR_matrix = GMA_double_create(39,1);
+        GMA_double *J_matrix = GMA_double_create(39,1);
+        
+        //printf("done matrix create 1\n");
+        
+        //L => X(c), P => Y(r), H => Z
+        double L,P,H,r,c;
+        for(int i=0;i<count_GCPs;i++)
+        {
+            L       = (VCPs[i].m_X - rpc[0][2])/rpc[1][2];
+            P       = (VCPs[i].m_Y - rpc[0][3])/rpc[1][3];
+            H       = (VCPs[i].m_Z - rpc[0][4])/rpc[1][4];
+            
+            r       = (IPs[i].m_Y - imageparam[0] - rpc[0][0])/rpc[1][0]; //Line
+            c       = (IPs[i].m_X - imageparam[1] - rpc[0][1])/rpc[1][1]; //sample
+            
+            /*
+            double temp = r;
+            if(whole_iter == 1)
+                temp = c;
+            
+            r       = P;
+            c       = L;
+            P       = temp;
+            */
+           
+            if(whole_iter == 1)
+                P = L;
+            
+            M_matrix->val[i][0] = 1.0;
+            M_matrix->val[i][1] = c;
+            M_matrix->val[i][2] = r;
+            
+            M_matrix->val[i][3] = H;
+            M_matrix->val[i][4] = c*r;
+            M_matrix->val[i][5] = c*H;
+            
+            M_matrix->val[i][6] = r*H;
+            M_matrix->val[i][7] = c*c;
+            M_matrix->val[i][8] = r*r;
+            
+            M_matrix->val[i][9] = H*H;
+            M_matrix->val[i][10] = c*r*H;
+            M_matrix->val[i][11] = c*c*c;
+            
+            M_matrix->val[i][12] = c*r*r;
+            M_matrix->val[i][13] = c*H*H;
+            M_matrix->val[i][14] = c*c*r;
+            
+            M_matrix->val[i][15] = r*r*r;
+            M_matrix->val[i][16] = r*H*H;
+            M_matrix->val[i][17] = c*c*H;
+            
+            M_matrix->val[i][18] = r*r*H;
+            M_matrix->val[i][19] = H*H*H;
+            
+            
+            M_matrix->val[i][20] = -P*c;
+            M_matrix->val[i][21] = -P*r;
+            
+            M_matrix->val[i][22] = -P*H;
+            M_matrix->val[i][23] = -P*c*r;
+            M_matrix->val[i][24] = -P*c*H;
+            
+            M_matrix->val[i][25] = -P*r*H;
+            M_matrix->val[i][26] = -P*c*c;
+            M_matrix->val[i][27] = -P*r*r;
+            
+            M_matrix->val[i][28] = -P*H*H;
+            M_matrix->val[i][29] = -P*c*r*H;
+            M_matrix->val[i][30] = -P*c*c*c;
+            
+            M_matrix->val[i][31] = -P*c*r*r;
+            M_matrix->val[i][32] = -P*c*H*H;
+            M_matrix->val[i][33] = -P*c*c*r;
+            
+            M_matrix->val[i][34] = -P*r*r*r;
+            M_matrix->val[i][35] = -P*r*H*H;
+            M_matrix->val[i][36] = -P*c*c*H;
+            
+            M_matrix->val[i][37] = -P*r*r*H;
+            M_matrix->val[i][38] = -P*H*H*H;
+            
+            
+            R_matrix->val[i][0] = P;
+        }
+        
+        //GMA_double_printf(M_matrix);
+        //GMA_double_printf(R_matrix);
+        
+        //printf("done matrix M R assign\n");
+        
+        GMA_double_Tran(M_matrix,MT_matrix);
+        GMA_double_mul(MT_matrix,M_matrix,MTM_matrix);
+        GMA_double_inv(MTM_matrix,MTMI_matrix);
+        GMA_double_mul(MT_matrix,R_matrix,MTR_matrix);
+        GMA_double_mul(MTMI_matrix,MTR_matrix,J_matrix);
+        
+        //printf("done matrix cal 1\n");
+        
+        GMA_double_destroy(MTM_matrix);
+        GMA_double_destroy(MTMI_matrix);
+        GMA_double_destroy(MTR_matrix);
+        
+        double sigma_pre = 100000;
+        double sigma_ratio = 100000;
+        int max_iter = 10;
+        int iteration = 0;
+        
+        while(iteration < max_iter && sigma_ratio > 0.1)
+        {
+            GMA_double *DEN_matrix = GMA_double_create(20,1);
+            GMA_double *W_matrix = GMA_double_create(count_GCPs,count_GCPs);
+            
+            DEN_matrix->val[0][0] = 1.0;
+            for(int i=1;i<20;i++)
+            {
+                DEN_matrix->val[i][0] = J_matrix->val[i+19][0];
+                //printf("coef %d\t %Lf\n",i,DEN_matrix->val[i][0] );
+            }
+            
+            //GMA_double_printf(DEN_matrix);
+            //GMA_double_printf(J_matrix);
+            
+            //GMA_double_destroy(J_matrix);
+            
+            //printf("done matrix create 2\n");
+            
+            //weight matrix
+            for(int i=0;i<count_GCPs;i++)
+            {
+                GMA_double *B_matrix = GMA_double_create(1,20);
+                GMA_double *BDEN_matrix = GMA_double_create(1,1);
+          
+                L       = (VCPs[i].m_X - rpc[0][2])/rpc[1][2];
+                P       = (VCPs[i].m_Y - rpc[0][3])/rpc[1][3];
+                H       = (VCPs[i].m_Z - rpc[0][4])/rpc[1][4];
+                
+                r       = (IPs[i].m_Y - imageparam[0] - rpc[0][0])/rpc[1][0]; //Line
+                c       = (IPs[i].m_X - imageparam[1] - rpc[0][1])/rpc[1][1]; //sample
+               
+                /*
+                r       = P;
+                c       = L;
+                */
+                
+                B_matrix->val[0][0] = 1.0;
+                B_matrix->val[0][1] = c;
+                B_matrix->val[0][2] = r;
+                
+                B_matrix->val[0][3] = H;
+                B_matrix->val[0][4] = c*r;
+                B_matrix->val[0][5] = c*H;
+                
+                B_matrix->val[0][6] = r*H;
+                B_matrix->val[0][7] = c*c;
+                B_matrix->val[0][8] = r*r;
+                
+                B_matrix->val[0][9] = H*H;
+                B_matrix->val[0][10] = c*r*H;
+                B_matrix->val[0][11] = c*c*c;
+                
+                B_matrix->val[0][12] = c*r*r;
+                B_matrix->val[0][13] = c*H*H;
+                B_matrix->val[0][14] = c*c*r;
+                
+                B_matrix->val[0][15] = r*r*r;
+                B_matrix->val[0][16] = r*H*H;
+                B_matrix->val[0][17] = c*c*H;
+                
+                B_matrix->val[0][18] = r*r*H;
+                B_matrix->val[0][19] = H*H*H;
+                
+                GMA_double_mul(B_matrix,DEN_matrix,BDEN_matrix);
+                double B = BDEN_matrix->val[0][0];
+                
+                W_matrix->val[i][i] = (double)(1.0/(B*B));
+                
+                GMA_double_destroy(B_matrix);
+                GMA_double_destroy(BDEN_matrix);
+            }
+            
+            //printf("done matrix W assign\n");
+            //GMA_double_printf(W_matrix);
+            
+            GMA_double_destroy(DEN_matrix);
+            
+            GMA_double *MTW_matrix = GMA_double_create(39,count_GCPs);
+            GMA_double *MTWM_matrix = GMA_double_create(39,39);
+            GMA_double *MTWMI_matrix = GMA_double_create(39,39);
+            GMA_double *MTWR_matrix = GMA_double_create(39,1);
+            //GMA_double *JJ_matrix = GMA_double_create(39,1);
+            
+            GMA_double *WM_matrix = GMA_double_create(count_GCPs,39);
+            GMA_double *WMJ_matrix = GMA_double_create(count_GCPs,1);
+            GMA_double *WR_matrix = GMA_double_create(count_GCPs,1);
+            GMA_double *V_matrix = GMA_double_create(count_GCPs,1);
+            
+            //printf("done matrix create 3\n");
+            
+            GMA_double_mul(MT_matrix,W_matrix,MTW_matrix);
+            //printf("MTW_matrix\n");
+            GMA_double_mul(MTW_matrix,M_matrix,MTWM_matrix);
+            //printf("MTWM_matrix\n");
+            GMA_double_inv(MTWM_matrix,MTWMI_matrix);
+            //printf("MTWMI_matrix\n");
+            GMA_double_mul(MTW_matrix,R_matrix,MTWR_matrix);
+            //printf("MTWR_matrix\n");
+            GMA_double_mul(MTWMI_matrix,MTWR_matrix,J_matrix);
+            
+            //printf("done matrix cal 2 1\n");
+            
+            GMA_double_mul(W_matrix,M_matrix,WM_matrix);
+            GMA_double_mul(W_matrix,R_matrix,WR_matrix);
+            GMA_double_sub(WMJ_matrix,WR_matrix,V_matrix);
+            
+            //printf("done matrix cal 2 2\n");
+            
+            
+            
+            GMA_double_destroy(W_matrix);
+            
+            GMA_double_destroy(MTW_matrix);
+            GMA_double_destroy(MTWM_matrix);
+            GMA_double_destroy(MTWMI_matrix);
+            GMA_double_destroy(MTWR_matrix);
+            
+            GMA_double_destroy(WM_matrix);
+            GMA_double_destroy(WMJ_matrix);
+            GMA_double_destroy(WR_matrix);
+            
+            double sum=0;
+            for(int i=0;i<count_GCPs;i++)
+                sum += (V_matrix->val[i][0])*(V_matrix->val[i][0]);
+            
+            GMA_double_destroy(V_matrix);
+            
+            double sigma = sqrt(sum/(count_GCPs-39));
+            
+            sigma_ratio = fabs(sigma_pre - sigma)/sigma_pre;
+            sigma_pre = sigma;
+            
+            //printf("iteration %d\tsigma %f\t%f\n", iteration, sigma,sigma_ratio);
+            
+            //GMA_double_printf(J_matrix);
+            
+            iteration++;
+            
+        }
+        
+        if(whole_iter == 1)
+        {
+            for(int i=0;i<20;i++)
+            {
+                IRPCs[4][i] = J_matrix->val[i][0];
+                //printf("rpc %d\t%e\n",i+1,IRPCs[4][i]);
+            }
+            
+            IRPCs[5][0] = 1.0;
+            //printf("rpc 21\t%e\n",IRPCs[5][0]);
+            for(int i=1;i<20;i++)
+            {
+                IRPCs[5][i] = J_matrix->val[i+19][0];
+                //printf("rpc %d\t%e\n",i+21,IRPCs[5][i]);
+            }
+        }
+        else
+        {
+            for(int i=0;i<20;i++)
+            {
+                IRPCs[2][i] = J_matrix->val[i][0];
+                //printf("rpc %d\t%e\n",i+1,IRPCs[2][i]);
+            }
+            
+            IRPCs[3][0] = 1.0;
+            //printf("rpc 21\t%e\n",IRPCs[3][0]);
+            for(int i=1;i<20;i++)
+            {
+                IRPCs[3][i] = J_matrix->val[i+19][0];
+                //printf("rpc %d\t%e\n",i+21,IRPCs[3][i]);
+            }
+        }
+        
+        GMA_double_destroy(M_matrix);
+        GMA_double_destroy(MT_matrix);
+        GMA_double_destroy(R_matrix);
+        
+        GMA_double_destroy(J_matrix);
+    }
+    
+    return IRPCs;
+}
+
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP)
 {
     D2DPOINT *IP;
@@ -813,6 +1292,266 @@ D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofpara
     return IP;
 }
 
+D3DPOINT* GetImageHToObjectIRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, vector<D3DPOINT> &_GP, vector<D2DPOINT> &_IPs)
+{
+    D3DPOINT *Object;
+    
+    long _numofpts = _GP.size();
+    
+    Object      = (D3DPOINT*)malloc(sizeof(D3DPOINT)*_numofpts);
+    
+#pragma omp parallel for schedule(guided)
+    for(int i=0;i<_numofpts;i++)
+    {
+        double L, P, H, r, c;
+        double Coeff[4];
+
+        r       = (_IPs[i].m_Y - _imageparam[0] - _rpc[0][0])/_rpc[1][0]; //Line
+        c       = (_IPs[i].m_X - _imageparam[1] - _rpc[0][1])/_rpc[1][1]; //sample
+        H       = (_GP[i].m_Z - _rpc[0][4])/_rpc[1][4];
+        
+        P       = r;
+        L       = c;
+        //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        
+        for(int j=0;j<4;j++)
+        {
+            Coeff[j]    = _rpc[j+2][0]*1.0          + _rpc[j+2][1]*L            + _rpc[j+2][2]*P
+                + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
+                + _rpc[j+2][6]*P*H          + _rpc[j+2][7]*L*L          + _rpc[j+2][8]*P*P
+                + _rpc[j+2][9]*H*H          + _rpc[j+2][10]*(P*L)*H     + _rpc[j+2][11]*(L*L)*L
+                + _rpc[j+2][12]*(L*P)*P     + _rpc[j+2][13]*(L*H)*H     + _rpc[j+2][14]*(L*L)*P
+                + _rpc[j+2][15]*(P*P)*P     + _rpc[j+2][16]*(P*H)*H     + _rpc[j+2][17]*(L*L)*H
+                + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
+        }
+
+        P       = Coeff[0]/Coeff[1];
+        L       = Coeff[2]/Coeff[3];
+        
+        Object[i].m_Y = P*_rpc[1][3] + _rpc[0][3]; //Y
+        Object[i].m_X = L*_rpc[1][2] + _rpc[0][2]; //X
+        Object[i].m_Z = _GP[i].m_Z;//Z
+        
+        if(L < -10.0 || L > 10.0)
+        {
+            if(Object[i].m_X > 0)
+                Object[i].m_X = Object[i].m_X - 360;
+            else
+                Object[i].m_X = Object[i].m_X + 360;
+        }
+        
+        if(P < -10.0 || P > 10.0)
+        {
+            if(Object[i].m_Y > 0)
+                Object[i].m_Y = Object[i].m_Y - 360;
+            else
+                Object[i].m_Y = Object[i].m_Y + 360;
+            
+        }
+    }
+
+    return Object;
+}
+
+void GetRayVectorFromIRPC(const double * const *IRPCs, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize, D3DPOINT &ray_vector)
+{
+    double minH = (double) (-1.0 * IRPCs[1][4] + IRPCs[0][4]);
+    double maxH = (double) (1.0 * IRPCs[1][4] + IRPCs[0][4]);
+    double midH = minH + (maxH - minH)/2.0;
+    
+    D2DPOINT imc(imagesize.width/2.0, imagesize.height/2.0);
+    D3DPOINT s_object(0,0,midH);
+    D3DPOINT e_object(0,0,-1.0 * IRPCs[1][4] + IRPCs[0][4]);
+    D3DPOINT *senodes = NULL;
+    
+    vector<D2DPOINT> im_center;
+    vector<D3DPOINT> nodes;
+    
+    im_center.push_back(imc);
+    im_center.push_back(imc);
+    nodes.push_back(s_object);
+    nodes.push_back(e_object);
+    
+    vector<D3DPOINT> nodes_ps;
+    
+    senodes = GetImageHToObjectIRPC(IRPCs,2,imageparam,nodes,im_center);
+    
+    for(int i=0;i<nodes.size();i++)
+    {
+        D2DPOINT wgs_XY(senodes[i].m_X,senodes[i].m_Y);
+        D2DPOINT ps_XY = wgs2ps_single(param,wgs_XY);
+        
+        D3DPOINT temp_ps(ps_XY.m_X,ps_XY.m_Y,senodes[i].m_Z);
+        nodes_ps.push_back(temp_ps);
+        
+        //printf("xyz %f\t%f\t%f\n",senodes[i].m_X,senodes[i].m_Y,senodes[i].m_Z);
+        //printf("xyz %f\t%f\t%f\n",temp_ps.m_X,temp_ps.m_Y,temp_ps.m_Z);
+    }
+    
+    free(senodes);
+
+    ray_vector.m_X = nodes_ps[1].m_X - nodes_ps[0].m_X;
+    ray_vector.m_Y = nodes_ps[1].m_Y - nodes_ps[0].m_Y;
+    ray_vector.m_Z = nodes_ps[1].m_Z - nodes_ps[0].m_Z;
+    
+    double mag = SQRT(ray_vector);
+    ray_vector.m_X /= mag;
+    ray_vector.m_Y /= mag;
+    ray_vector.m_Z /= mag;
+    //printf("ray vector IRPC %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+}
+
+void GetRayVectorFromEOBRcenter(const EO eo, CAMERA_INFO camera, CSize imagesize, double *boundary, double *minmaxH, D3DPOINT &ray_vector)
+{
+    double midH = minmaxH[0] + (minmaxH[1] - minmaxH[0])/2.0;
+    D3DPOINT center(boundary[0] + (boundary[2] - boundary[0])/2.0, boundary[1] + (boundary[3] - boundary[1])/2.0, midH);
+    
+    RM M = MakeRotationMatrix(eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    D2DPOINT photo_coord = GetPhotoCoordinate_single(center, eo, camera, M);
+    D2DPOINT image_coord = PhotoToImage_single(photo_coord, camera.m_CCDSize, imagesize);
+    
+    //printf("image coord %f\t%f\n",image_coord.m_X,image_coord.m_Y);
+    
+    ray_vector.m_X = center.m_X - eo.m_Xl;
+    ray_vector.m_Y = center.m_Y - eo.m_Yl;
+    ray_vector.m_Z = center.m_Z - eo.m_Zl;
+    
+    
+    double mag = SQRT(ray_vector);
+    ray_vector.m_X /= mag;
+    ray_vector.m_Y /= mag;
+    ray_vector.m_Z /= mag;
+    
+    //printf("ray vector EO center %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+}
+
+void GetAZELFromRay(const D3DPOINT ray_vector, float &AZ, float &EL)
+{
+    AZ = atan2(-ray_vector.m_X,-ray_vector.m_Y)*RadToDeg;
+    EL = atan(fabs(ray_vector.m_Z)/sqrt(ray_vector.m_X*ray_vector.m_X + ray_vector.m_Y*ray_vector.m_Y))*RadToDeg;
+    
+    //printf("AZ EL %f\t%f\n",AZ, EL);
+}
+
+void GetBaseRayFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, D3DPOINT &BR)
+{
+    //image1
+    double maxH = image1.m_Zl;// 475000;//(double) (1.0 * IRPCs1[1][4] + IRPCs1[0][4]);
+    
+    D2DPOINT imc(imagesize1.width/2.0, imagesize1.height/2.0);
+    D3DPOINT s_object(0,0,maxH);
+    D3DPOINT *senodes = NULL;
+    
+    vector<D2DPOINT> im_center;
+    vector<D3DPOINT> nodes;
+    
+    im_center.push_back(imc);
+    nodes.push_back(s_object);
+    
+    vector<D3DPOINT> nodes_ps;
+    
+    senodes = GetImageHToObjectIRPC(IRPCs1,numofparam,imageparam,nodes,im_center);
+    
+    D2DPOINT wgs_XY(senodes[0].m_X,senodes[0].m_Y);
+    D2DPOINT ps_XY = wgs2ps_single(param,wgs_XY);
+    
+    D3DPOINT temp_ps(ps_XY.m_X,ps_XY.m_Y,senodes[0].m_Z);
+    nodes_ps.push_back(temp_ps);
+    
+    //printf("xyz %f\t%f\t%f\n",senodes[0].m_X,senodes[0].m_Y,senodes[0].m_Z);
+    //printf("xyz %f\t%f\t%f\t%f\t%f\t%f\n",temp_ps.m_X,temp_ps.m_Y,temp_ps.m_Z,image1.m_Xl,image1.m_Yl,image1.m_Zl);
+    
+    free(senodes);
+    
+    im_center.clear();
+    nodes.clear();
+    
+    imc.m_X = imagesize2.width/2.0;
+    imc.m_Y = imagesize2.height/2.0;
+    im_center.push_back(imc);
+    
+    maxH = image2.m_Zl;
+    s_object.m_X = 0.0;
+    s_object.m_Y = 0.0;
+    s_object.m_Z = maxH;
+    nodes.push_back(s_object);
+    
+    senodes = GetImageHToObjectIRPC(IRPCs2,numofparam,imageparam,nodes,im_center);
+    
+    wgs_XY.m_X = senodes[0].m_X;
+    wgs_XY.m_Y = senodes[0].m_Y;
+    ps_XY = wgs2ps_single(param,wgs_XY);
+    
+    temp_ps.m_X = ps_XY.m_X;
+    temp_ps.m_Y = ps_XY.m_Y;
+    temp_ps.m_Z = senodes[0].m_Z;
+    nodes_ps.push_back(temp_ps);
+    
+    //printf("xyz %f\t%f\t%f\n",senodes[0].m_X,senodes[0].m_Y,senodes[0].m_Z);
+    //printf("xyz %f\t%f\t%f\t%f\t%f\t%f\n",temp_ps.m_X,temp_ps.m_Y,temp_ps.m_Z,image2.m_Xl,image2.m_Yl,image2.m_Zl);
+    
+    free(senodes);
+    
+    BR.m_X = nodes_ps[1].m_X - nodes_ps[0].m_X;
+    BR.m_Y = nodes_ps[1].m_Y - nodes_ps[0].m_Y;
+    BR.m_Z = nodes_ps[1].m_Z - nodes_ps[0].m_Z;
+    
+    double mag = SQRT(BR);
+    BR.m_X /= mag;
+    BR.m_Y /= mag;
+    BR.m_Z /= mag;
+    //printf("base vector %f\t%f\t%f\n",BR.m_X,BR.m_Y,BR.m_Z);
+    
+}
+
+void GetBaseRayFromEO(const EO image1, const EO image2, D3DPOINT &BR)
+{
+    BR.m_X = image2.m_Xl - image1.m_Xl;
+    BR.m_Y = image2.m_Yl - image1.m_Yl;
+    BR.m_Z = image2.m_Zl - image1.m_Zl;
+    
+    double mag = SQRT(BR);
+    BR.m_X /= mag;
+    BR.m_Y /= mag;
+    BR.m_Z /= mag;
+    //printf("base vector %f\t%f\t%f\t%f\n",BR.m_X,BR.m_Y,BR.m_Z, mag);
+    
+    //printf("vector 1 %f\t%f\t%f\n",ray_vector1.m_X,ray_vector1.m_Y,ray_vector1.m_Z);
+    //printf("vector 2 %f\t%f\t%f\n",ray_vector2.m_X,ray_vector2.m_Y,ray_vector2.m_Z);
+}
+
+void GetPairAnglesFromRays(const double A1, const double A2, const double E1, const double E2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const D3DPOINT base_vector, double &CA, double &AE, double &BIE)
+{
+    double mag = SQRT(base_vector);
+    double mag1 = SQRT(ray_vector1);
+    double mag2 = SQRT(ray_vector2);
+    
+    double a1 = acos((ray_vector1.m_X*base_vector.m_X + ray_vector1.m_Y*base_vector.m_Y + ray_vector1.m_Z*base_vector.m_Z)/(mag*mag1))*RadToDeg;
+    double a2 = 180 - acos((ray_vector2.m_X*base_vector.m_X + ray_vector2.m_Y*base_vector.m_Y + ray_vector2.m_Z*base_vector.m_Z)/(mag*mag2))*RadToDeg;
+    //printf("a1 a2 CA %f\t%f\t%f\n",a1,a2,180-a1-a2);
+    
+    CA = 180-a1-a2;
+    AE = fabs((a1 - a2)/2.0);
+    double BIE_num = sin(E1*DegToRad) + sin(E2*DegToRad);
+    double BIE_den = sqrt(2.0)*sqrt( 1.0 + cos((A1-A2)*DegToRad) * cos(E1*DegToRad)*cos(E2*DegToRad) + sin(E1*DegToRad)*sin(E2*DegToRad) );
+    BIE     = asin(BIE_num/BIE_den)*RadToDeg;
+    
+    //printf("vector 1 %f\t%f\t%f\n",ray_vector1.m_X,ray_vector1.m_Y,ray_vector1.m_Z);
+    //printf("vector 2 %f\t%f\t%f\n",ray_vector2.m_X,ray_vector2.m_Y,ray_vector2.m_Z);
+    //printf("a1 a2 CA AE BIE %f\t%f\t%f\t%f\t%f\n",a1,a2,CA,AE,BIE);
+}
+
+void GetStereoGeometryFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR)
+{
+    GetBaseRayFromIRPC(image1, image2, IRPCs1, IRPCs2, param, numofparam, imageparam, imagesize1, imagesize2, BR);
+    GetPairAnglesFromRays(Iinfo1.AZ_ray[0], Iinfo2.AZ_ray[0], Iinfo1.EL_ray[0], Iinfo2.EL_ray[0], ray_vector1, ray_vector2, BR, CA, AE, BIE);
+}
+
+void GetStereoGeometryFromEO(const EO image1, const EO image2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, double &CA, double &AE, double &BIE, D3DPOINT &BR)
+{
+    GetBaseRayFromEO(image1, image2, BR);
+    GetPairAnglesFromRays(Iinfo1.AZ_ray[1], Iinfo2.AZ_ray[1], Iinfo1.EL_ray[1], Iinfo2.EL_ray[1], ray_vector1, ray_vector2, BR, CA, AE, BIE);
+}
 
 D2DPOINT GetObjectToImageRPC_single_mpp(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)
 {

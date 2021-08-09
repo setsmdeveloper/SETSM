@@ -31,6 +31,7 @@
 #include "Coregistration.hpp"
 #include "SDM.hpp"
 #include "GridVoxel.hpp"
+#include "CollinearEQ.hpp"
 
 
 void DownSample(ARGINFO &args);
@@ -172,7 +173,7 @@ void echoprint_Gridinfo(ProInfo *proinfo, vector<NCCresult> &roh_height, int row
 void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCresult> &roh_height,int row,int col,int level, int iteration, CSize Size_Grid2D, UGRID &GridPT3);
 void echo_print_nccresults(char *save_path,int row,int col,int level, int iteration, vector<NCCresult> &nccresult, CSize *Size_Grid2D, char *add_str);
 
-void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info);
+void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize);
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight);
 
@@ -182,7 +183,7 @@ void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double
 
 void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double Boundary[]);
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo);
+int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo);
 
 bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize,const int Template_size, const int pyramid_step);
 
@@ -216,7 +217,7 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
 
 double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID &GridPT3, double *minimum_memory, const uint8 iteration, const double *minmaxHeight);
 
-double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary);
+double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary, const D3DPOINT* ray_vector, const double*const*const* IRPCs);
 
 class TileIndexer {
     public:

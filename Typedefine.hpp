@@ -57,6 +57,35 @@ enum PyImageSelect {OR, BD, NX};
 
 using std::vector;
 
+typedef struct tagUParams
+{
+    double f;//focal length
+    double xp, yp;//principal point
+    double k1, k2, k3;//ratdial distortion
+    double p1, p2;//tangential distortion
+    double a1, a2;//affinity
+    
+    double X, Y, Z;//perspective center
+    double omega, phi, kappa;//attitude
+    
+    double XA, YA, ZA;//Ground Coordinate
+    
+    double xa, ya;//image point
+} UPARAMS;
+
+typedef struct tagPDCs
+{
+    double a[2][2];//image point term
+    double b[2][6];//EO parameters and Ground Coordinates term
+    double c[2][3];//Calibration data term
+    double Fo, Go;//initial approximation of F, G
+} PDCS;
+
+typedef struct tagDLTparam
+{
+    double A1,A2,A3,B1,B2,B3,C1,C2,C3,D1,D2;
+} DLTPARAM;
+
 typedef struct tagUI2DPoint
 {
 	uint32 m_X;
@@ -387,18 +416,44 @@ private:
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
     std::vector<float> m_ConvergenceAngle;
+    std::vector<float> m_ConvergenceAngle_IRPC;
+    std::vector<float> m_ConvergenceAngle_given;
     std::vector<float> m_CenterDist;
     std::vector<float> m_SigmaZ;
-    std::vector<float> m_Azimuth;
+    std::vector<float> m_AzimuthDiff;
+    
+    std::vector<float> m_AE;
+    std::vector<float> m_BIE;
+    std::vector<D3DPOINT> m_BaseRay;
+    
+    std::vector<float> m_AE_IRPC;
+    std::vector<float> m_BIE_IRPC;
+    std::vector<D3DPOINT> m_BaseRay_IRPC;
+    
+    std::vector<float> m_ConvergenceAngle_EQ;
+    std::vector<float> m_ConvergenceAngle_EQ_IRPC;
     
     void allocate(int numberofpairs)
     {
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
+        m_ConvergenceAngle_given = std::vector<float>(numberofpairs);
         m_CenterDist = std::vector<float>(numberofpairs);
         m_SigmaZ = std::vector<float>(numberofpairs);
-        m_Azimuth = std::vector<float>(numberofpairs);
+        m_AzimuthDiff = std::vector<float>(numberofpairs);
+        
+        m_AE = std::vector<float>(numberofpairs);
+        m_BIE = std::vector<float>(numberofpairs);
+        m_BaseRay = std::vector<D3DPOINT>(numberofpairs);
+        
+        m_ConvergenceAngle_IRPC = std::vector<float>(numberofpairs);
+        m_AE_IRPC = std::vector<float>(numberofpairs);
+        m_BIE_IRPC = std::vector<float>(numberofpairs);
+        m_BaseRay_IRPC = std::vector<D3DPOINT>(numberofpairs);
+        
+        m_ConvergenceAngle_EQ = std::vector<float>(numberofpairs);
+        m_ConvergenceAngle_EQ_IRPC = std::vector<float>(numberofpairs);
         
         printf("allocate pairinfo array\n");
     }
@@ -470,8 +525,59 @@ public:
     
     void SetAzimuth(int pos, float value)
     {
-        m_Azimuth[pos] = value;
+        m_AzimuthDiff[pos] = value;
     }
+    
+    void SetAE(int pos, float value)
+    {
+        m_AE[pos] = value;
+    }
+    
+    void SetBIE(int pos, float value)
+    {
+        m_BIE[pos] = value;
+    }
+    
+    void SetBaseRay(int pos, D3DPOINT value)
+    {
+        m_BaseRay[pos] = value;
+    }
+    
+    void SetConvergenceAngle_IRPC(int pos, float value)
+    {
+        m_ConvergenceAngle_IRPC[pos] = value;
+    }
+    
+    void SetAE_IRPC(int pos, float value)
+    {
+        m_AE_IRPC[pos] = value;
+    }
+    
+    void SetBIE_IRPC(int pos, float value)
+    {
+        m_BIE_IRPC[pos] = value;
+    }
+    
+    void SetBaseRay_IRPC(int pos, D3DPOINT value)
+    {
+        m_BaseRay_IRPC[pos] = value;
+    }
+    
+    void SetConvergenceAngle_given(int pos, float value)
+    {
+        m_ConvergenceAngle_given[pos] = value;
+    }
+    
+    void SetConvergenceAngle_EQ(int pos, float value)
+    {
+        m_ConvergenceAngle_EQ[pos] = value;
+    }
+    
+    void SetConvergenceAngle_EQ_IRPC(int pos, float value)
+    {
+        m_ConvergenceAngle_EQ_IRPC[pos] = value;
+    }
+    
     
     int& NumberOfPairs()
     {
@@ -520,7 +626,58 @@ public:
     
     float& Azimuth(int pos)
     {
-        return m_Azimuth[pos];
+        return m_AzimuthDiff[pos];
+    }
+    
+    float& AE(int pos)
+    {
+        return m_AE[pos];
+    }
+    
+    float& BIE(int pos)
+    {
+        return m_BIE[pos];
+    }
+    
+    D3DPOINT& BaseRay(int pos)
+    {
+        return m_BaseRay[pos];
+    }
+    
+    
+    float& AE_IRPC(int pos)
+    {
+        return m_AE_IRPC[pos];
+    }
+    
+    float& BIE_IRPC(int pos)
+    {
+        return m_BIE_IRPC[pos];
+    }
+    
+    float& ConvergenceAngle_IRPC(int pos)
+    {
+        return m_ConvergenceAngle_IRPC[pos];
+    }
+    
+    D3DPOINT& BaseRay_IRPC(int pos)
+    {
+        return m_BaseRay_IRPC[pos];
+    }
+    
+    float& ConvergenceAngle_given(int pos)
+    {
+        return m_ConvergenceAngle_given[pos];
+    }
+    
+    float& ConvergenceAngle_EQ(int pos)
+    {
+        return m_ConvergenceAngle_EQ[pos];
+    }
+    
+    float& ConvergenceAngle_EQ_IRPC(int pos)
+    {
+        return m_ConvergenceAngle_EQ_IRPC[pos];
     }
 };
 
@@ -794,7 +951,9 @@ typedef struct tagImageInfo
     float UL[3], UR[3],LR[3],LL[3];
     double Center[2];
     float convergence_angle;
-	
+    float AZ_ray[2]; //1 for IRPC vector, 2 for EO vector
+    float EL_ray[2];
+    
     ImageGSD GSD;
     
 	int month;

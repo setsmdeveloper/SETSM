@@ -1935,6 +1935,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 ImageInfo *image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
                 CSize *Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
                 double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+                double ***IRPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+                D3DPOINT *ray_vector = (D3DPOINT*)calloc(proinfo->number_of_images*2, sizeof(D3DPOINT));
                 
                 sprintf(_save_filepath,"%s",proinfo->save_filepath);
                 
@@ -2011,9 +2013,13 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 }
                 else
                 {
+                    proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->number_of_images);
+                    
                     if(args.sensor_provider == PT)
                     {
                         convergence_angle = 40;
+                        proinfo->frameinfo.m_Camera.m_CCDSize = 5.5;
+                        proinfo->frameinfo.m_Camera.m_focalLength = 8000; //skysat 3.6m
                         
                         if(args.check_txt_input == 2)
                         {
@@ -2073,6 +2079,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         {
                             if(args.sensor_provider == DG)
                             {
+                                //altitude WV1 = 496km, WV2 = 770 km, WV3 = 617km
+                                proinfo->frameinfo.m_Camera.m_CCDSize = 8; //WV1,2,3 8 um     WV1 = WorldView-60 camera, WV2 and 3 = WorldView-100 camera
+                                proinfo->frameinfo.m_Camera.m_focalLength = 8.8*1000; //WV1 8.8m , WV2,3 13.3m
                                 RPCs[ti]       = OpenXMLFile(proinfo,ti,&Image_gsd_r[ti],&Image_gsd_c[ti],&Image_gsd[ti],&leftright_band[ti]);
                                 
                                 image_info[ti].GSD.row_GSD = Image_gsd_r[ti];
@@ -2104,8 +2113,21 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         }
                     }
                     sum_product_res = sum_product_res/proinfo->number_of_images;
+                    
+                    //Inverse RPCs estimate
+                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    {
+                        vector<D3DPOINT> VCPslatlong;
+                        vector<D2DPOINT> IPs;
+                        
+                        double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
+                        IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
+                        
+                        VCPslatlong.clear();
+                        IPs.clear();
+                    }
                 }
-        
+                
                 if(proinfo->number_of_images < 2)
                 {
                     printf("not enough images are selected %d/n",proinfo->number_of_images );
@@ -2413,6 +2435,47 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 if (ori_minmaxHeight[0] < -100)
                     ori_minmaxHeight[0] = -100;
                 
+                //ray_vector setting
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    vector<D3DPOINT> VCPslatlong;
+                    vector<D2DPOINT> IPs;
+                    double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
+                    
+                    vector<D3DPOINT> VCPsXY;
+                    vector<D2DPOINT> IPsPhoto;
+                    int numofpts = VCPslatlong.size();
+                    for(int i=0;i<numofpts;i++)
+                    {
+                        D2DPOINT tempIP;
+                        D3DPOINT temppt;
+                        tempIP = ImageToPhoto_single(IPs[i],proinfo->frameinfo.m_Camera.m_CCDSize,Limagesize[ti]);
+                        IPsPhoto.push_back(tempIP);
+                        temppt = wgs2ps_single_3D(param,VCPslatlong[i]);
+                        VCPsXY.push_back(temppt);
+                        
+                        //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
+                    }
+                    
+                    //EO eo;
+                    //GetInitialPCfromDLT(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    
+                    CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                           proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                           proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                    printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
+                    
+                    
+                    GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
+                    GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                    
+                    GetRayVectorFromEOBRcenter(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, Limagesize[ti], Boundary, ori_minmaxHeight, ray_vector[proinfo->number_of_images + ti]);
+                    GetAZELFromRay(ray_vector[proinfo->number_of_images + ti],image_info[ti].AZ_ray[1],image_info[ti].EL_ray[1]);
+                    
+                }
+                //exit(1);
+                
                 if(!args.check_ortho)
                 {
                     printf("minmaxH = %f\t%f\n",ori_minmaxHeight[0],ori_minmaxHeight[1]);
@@ -2649,7 +2712,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, IRPCs, ray_vector, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -2932,7 +2995,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs,IRPCs, ray_vector, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 
                                 fprintf(pMetafile, "Number of stereo pairs=%d\n",pairinfo.SelectNumberOfPairs());
                             }
@@ -3385,7 +3448,7 @@ public:
     }
 };
 
-void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info)
+void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize)
 {
     int pair_number = 0;
     float minBH = 100;
@@ -3435,6 +3498,26 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
             {
                 pairinfo.SetPairs(pair_number, ref_ti, ti);
                 
+                double BIE_eo, AE_eo, CA_base_eo;
+                double BIE, AE, CA_base;
+                double convergence_angle_given;
+                D3DPOINT Baseray, Baseray_eo;
+                
+                GetStereoGeometryFromEO(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],ray_vector[proinfo->number_of_images + ref_ti], ray_vector[proinfo->number_of_images + ti], image_info[ref_ti], image_info[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
+                
+                pairinfo.SetAE(pair_number,AE_eo);
+                pairinfo.SetBIE(pair_number,BIE_eo);
+                pairinfo.SetConvergenceAngle(pair_number,CA_base_eo);
+                pairinfo.SetBaseRay(pair_number,Baseray_eo);
+                
+                double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[1]*DegToRad)*sin(image_info[ti].EL_ray[1]*DegToRad) + cos(image_info[ref_ti].EL_ray[1]*DegToRad)*cos(image_info[ti].EL_ray[1]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[1] - image_info[ti].AZ_ray[1])*DegToRad))*RadToDeg;
+                
+                pairinfo.SetConvergenceAngle_EQ(pair_number,convergence_angle_cal);
+                
+                convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[0]*DegToRad)*sin(image_info[ti].EL_ray[0]*DegToRad) + cos(image_info[ref_ti].EL_ray[0]*DegToRad)*cos(image_info[ti].EL_ray[0]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[0] - image_info[ti].AZ_ray[0])*DegToRad))*RadToDeg;
+                
+                pairinfo.SetConvergenceAngle_EQ_IRPC(pair_number,convergence_angle_cal);
+                
                 if(proinfo->sensor_type == AB)
                 {
                     D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
@@ -3442,48 +3525,92 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                     double PC_distance = SQRT(image1_PL,image2_PL,3);
                     pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
                     pairinfo.SetCenterDist(pair_number, 0.0);
-                    pairinfo.SetConvergenceAngle(pair_number, 0);
+                    //pairinfo.SetConvergenceAngle(pair_number, 0);
                     pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                 }
                 else
                 {
+                    /*
+                    double CA_ray = acos( (ray_vector[ref_ti].m_X*ray_vector[ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ti].m_Z) /
+                                     (sqrt(ray_vector[ref_ti].m_X*ray_vector[ref_ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ref_ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ref_ti].m_Z)*
+                                      sqrt(ray_vector[ti].m_X*ray_vector[ti].m_X + ray_vector[ti].m_Y*ray_vector[ti].m_Y + ray_vector[ti].m_Z*ray_vector[ti].m_Z)) )*RadToDeg;
+                    */
+                    
+                    printf("ID %d\t%d\n",ref_ti,ti);
+                    
+                    GetStereoGeometryFromIRPC(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],IRPCs[ref_ti], IRPCs[ti], ray_vector[ref_ti], ray_vector[ti], image_info[ref_ti], image_info[ti], param, numofparam, imageparam[ti], imagesize[ref_ti], imagesize[ti],  CA_base, AE, BIE, Baseray);
+                    
+                    pairinfo.SetAE_IRPC(pair_number,AE);
+                    pairinfo.SetBIE_IRPC(pair_number,BIE);
+                    pairinfo.SetConvergenceAngle_IRPC(pair_number,CA_base);
+                    pairinfo.SetBaseRay_IRPC(pair_number,Baseray);
+                    
+                    pairinfo.SetBHratio(pair_number, 2.0*tan(pairinfo.ConvergenceAngle(pair_number)*DegToRad*0.5));
+                    pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                    
+                    /*
+                    printf("CA AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",pairinfo.CAray(pair_number), pairinfo.AE(pair_number),pairinfo.BIE(pair_number),pairinfo.BaseRay(pair_number).m_X, pairinfo.BaseRay(pair_number).m_Y, pairinfo.BaseRay(pair_number).m_Z);
+                    printf("CA_eo AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",CA_base_eo, AE_eo,BIE_eo,Baseray_eo.m_X, Baseray_eo.m_Y, Baseray_eo.m_Z);
+                    */
                     if(proinfo->sensor_provider == DG)
                     {
-                        double convergence_angle = acos(sin(image_info[ref_ti].Mean_sat_elevation*DegToRad)*sin(image_info[ti].Mean_sat_elevation*DegToRad) + cos(image_info[ref_ti].Mean_sat_elevation*DegToRad)*cos(image_info[ti].Mean_sat_elevation*DegToRad)*cos( (image_info[ref_ti].Mean_sat_azimuth_angle - image_info[ti].Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
+                        convergence_angle_given = acos(sin(image_info[ref_ti].Mean_sat_elevation*DegToRad)*sin(image_info[ti].Mean_sat_elevation*DegToRad) + cos(image_info[ref_ti].Mean_sat_elevation*DegToRad)*cos(image_info[ti].Mean_sat_elevation*DegToRad)*cos( (image_info[ref_ti].Mean_sat_azimuth_angle - image_info[ti].Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
                         
-                        pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
-                        pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
+                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                        
+                        //printf("CA given_eq %f\tray_vector_acos %f\teo_vector_acos %f\tray base %f\teo base %f\t%f\t%f\t%f\t%f\n",convergence_angle,CA_ray,convergence_angle_cal,CA_base,CA_base_eo,AE,AE_eo,BIE,BIE_eo);
+                        
+                        //convergence_angle = CA_ray;
+                        
+                        //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
+                        
                         pairinfo.SetCenterDist(pair_number,0.0);
-                        pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                        
                     }
                     else if(proinfo->sensor_provider == PT)
                     {
-                        double convergence_angle = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                        convergence_angle_given = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                        
+                        
+                        //convergence_angle = CA_ray;
+                        
                         double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
                         if(azimuthangle_diff > 360)
                             azimuthangle_diff -= 360;
                         else if(azimuthangle_diff < -360)
                             azimuthangle_diff += 360;
                         
-                        printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
+                        //printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
                         /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
                         {
                             offnadir_weight = 0.7; //30% weight
                             printf("ref_ti ti %d\t%d\t%f\n",ref_ti,ti,offnadir_weight);
                         }
                         */
-                        pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
-                        pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
+                        
+                        //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
+                        //pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
                         
                         D2DPOINT center_dist;
                         center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
                         center_dist.m_Y = fabs(image_info[ref_ti].Center[1] - image_info[ti].Center[1]);
                         printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
                         pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
-                        pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                        //pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                         pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
                         //pairinfo.BHratio[pair_number] = 0.5;
                     }
+                    
+                    pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                    
+                    printf("CA given_eq_acos %f\neo_geo %f\t irpc_geo %f\neo_eq_acos %f\t irpc_eq_acos %f\n eo_AE %f\t irpc_AE %f\t eo_BIE %f\t irpc_BIE %f\n",pairinfo.ConvergenceAngle_given(pair_number),
+                           pairinfo.ConvergenceAngle(pair_number),pairinfo.ConvergenceAngle_IRPC(pair_number),
+                           pairinfo.ConvergenceAngle_EQ(pair_number),pairinfo.ConvergenceAngle_EQ_IRPC(pair_number),
+                           pairinfo.AE(pair_number),pairinfo.AE_IRPC(pair_number),pairinfo.BIE(pair_number),pairinfo.BIE_IRPC(pair_number));
+                    printf("eo base vector %f\t%f\t%f\nirpc base vector %f\t%f\t%f\n",
+                           pairinfo.BaseRay(pair_number).m_X,pairinfo.BaseRay(pair_number).m_Y,pairinfo.BaseRay(pair_number).m_Z,
+                           pairinfo.BaseRay_IRPC(pair_number).m_X,pairinfo.BaseRay_IRPC(pair_number).m_Y,pairinfo.BaseRay_IRPC(pair_number).m_Z);
                 }
                 
                 if(minBH > pairinfo.BHratio(pair_number))
@@ -3505,7 +3632,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
      printf("pairnumber %d\timage %d\t%d\tBHratio %f\t%f\t%f\n",count,pairinfo.pairs[count].m_X,pairinfo.pairs[count].m_Y,pairinfo.BHratio[count],minBH,maxBH);
      }
      */
-    //exit(1);
+    exit(1);
 }
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight)
@@ -3886,7 +4013,7 @@ void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double B
     }
 }
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return)
+int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -4072,6 +4199,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 }
                  */
             }
+            
+            CPairInfo pairinfo;
+            SetPairs(proinfo,pairinfo,image_info,ray_vector,IRPCs, param, 2, Imageparams, Imagesizes);
             
             time_t PreST = 0, PreET = 0;
             double Pregab = 0;
@@ -4261,8 +4391,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                     
                     while(lower_level_match && level >= 0)
                     {
-                        CPairInfo pairinfo;
-                        SetPairs(proinfo,pairinfo,image_info);
+                        //CPairInfo pairinfo;
+                        //SetPairs(proinfo,pairinfo,image_info,ray_vector);
                         
                         levelinfo.pairinfo = &pairinfo;
                         /*
@@ -6085,13 +6215,13 @@ double CalMemorySize(const ProInfo *info,LevelInfo &plevelinfo,const UGRID &Grid
     return result;
 }
 
-double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary)
+double CalMemorySize_max(ProInfo *info, const double *minmaxHeight, CSize *Subsetsize, const ImageInfo *imageinfo, const double *Boundary, const D3DPOINT* ray_vector, const double*const*const* IRPCs)
 {
     double Max_memory = 0.0;;
     double MPP;
     double DEM_resolution = info->DEM_resolution;
     CPairInfo pairinfo;
-    SetPairs(info,pairinfo,imageinfo);
+    //SetPairs(info,pairinfo,imageinfo,ray_vector,IRPCs);
     
     
     if(info->sensor_type == SB)
