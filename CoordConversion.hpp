@@ -34,8 +34,10 @@ void GetRayVectorFromEOBRcenter(const EO eo, CAMERA_INFO camera, CSize imagesize
 void GetAZELFromRay(const D3DPOINT ray_vector, float &AZ, float &EL);
 void GetBaseRayFromEO(const EO image1, const EO image2, D3DPOINT &BR);
 void GetBaseRayFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, D3DPOINT &BR);
+void GetBaseRayFromIRPC(const double * const *IRPCs1, const double * const *IRPCs2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, D3DPOINT &BR);
 void GetPairAnglesFromRays(const double A1, const double A2, const double E1, const double E2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const D3DPOINT base_vector, double &CA, double &AE, double &BIE);
 void GetStereoGeometryFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR);
+void GetStereoGeometryFromIRPC(const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR);
 void GetStereoGeometryFromEO(const EO image1, const EO image2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, double &CA, double &AE, double &BIE, D3DPOINT &BR);
 
 static D2DPOINT GetObjectToImageRPC_single(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)

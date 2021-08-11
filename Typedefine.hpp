@@ -815,8 +815,6 @@ typedef struct ProjectInfo{
     bool check_8d;
     int SGM_py;
     
-    vector<DATE> image_date;
-    
     FrameInfo frameinfo;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	

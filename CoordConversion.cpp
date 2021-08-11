@@ -1504,6 +1504,77 @@ void GetBaseRayFromIRPC(const EO image1, const EO image2, const double * const *
     
 }
 
+void GetBaseRayFromIRPC(const double * const *IRPCs1, const double * const *IRPCs2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, D3DPOINT &BR)
+{
+    //image1
+    double maxH = 475000;//(double) (1.0 * IRPCs1[1][4] + IRPCs1[0][4]);
+    
+    D2DPOINT imc(imagesize1.width/2.0, imagesize1.height/2.0);
+    D3DPOINT s_object(0,0,maxH);
+    D3DPOINT *senodes = NULL;
+    
+    vector<D2DPOINT> im_center;
+    vector<D3DPOINT> nodes;
+    
+    im_center.push_back(imc);
+    nodes.push_back(s_object);
+    
+    vector<D3DPOINT> nodes_ps;
+    
+    senodes = GetImageHToObjectIRPC(IRPCs1,numofparam,imageparam,nodes,im_center);
+    
+    D2DPOINT wgs_XY(senodes[0].m_X,senodes[0].m_Y);
+    D2DPOINT ps_XY = wgs2ps_single(param,wgs_XY);
+    
+    D3DPOINT temp_ps(ps_XY.m_X,ps_XY.m_Y,senodes[0].m_Z);
+    nodes_ps.push_back(temp_ps);
+    
+    //printf("xyz %f\t%f\t%f\n",senodes[0].m_X,senodes[0].m_Y,senodes[0].m_Z);
+    //printf("xyz %f\t%f\t%f\t%f\t%f\t%f\n",temp_ps.m_X,temp_ps.m_Y,temp_ps.m_Z,image1.m_Xl,image1.m_Yl,image1.m_Zl);
+    
+    free(senodes);
+    
+    im_center.clear();
+    nodes.clear();
+    
+    imc.m_X = imagesize2.width/2.0;
+    imc.m_Y = imagesize2.height/2.0;
+    im_center.push_back(imc);
+    
+    //maxH = image2.m_Zl;
+    s_object.m_X = 0.0;
+    s_object.m_Y = 0.0;
+    s_object.m_Z = maxH;
+    nodes.push_back(s_object);
+    
+    senodes = GetImageHToObjectIRPC(IRPCs2,numofparam,imageparam,nodes,im_center);
+    
+    wgs_XY.m_X = senodes[0].m_X;
+    wgs_XY.m_Y = senodes[0].m_Y;
+    ps_XY = wgs2ps_single(param,wgs_XY);
+    
+    temp_ps.m_X = ps_XY.m_X;
+    temp_ps.m_Y = ps_XY.m_Y;
+    temp_ps.m_Z = senodes[0].m_Z;
+    nodes_ps.push_back(temp_ps);
+    
+    //printf("xyz %f\t%f\t%f\n",senodes[0].m_X,senodes[0].m_Y,senodes[0].m_Z);
+    //printf("xyz %f\t%f\t%f\t%f\t%f\t%f\n",temp_ps.m_X,temp_ps.m_Y,temp_ps.m_Z,image2.m_Xl,image2.m_Yl,image2.m_Zl);
+    
+    free(senodes);
+    
+    BR.m_X = nodes_ps[1].m_X - nodes_ps[0].m_X;
+    BR.m_Y = nodes_ps[1].m_Y - nodes_ps[0].m_Y;
+    BR.m_Z = nodes_ps[1].m_Z - nodes_ps[0].m_Z;
+    
+    double mag = SQRT(BR);
+    BR.m_X /= mag;
+    BR.m_Y /= mag;
+    BR.m_Z /= mag;
+    //printf("base vector %f\t%f\t%f\n",BR.m_X,BR.m_Y,BR.m_Z);
+    
+}
+
 void GetBaseRayFromEO(const EO image1, const EO image2, D3DPOINT &BR)
 {
     BR.m_X = image2.m_Xl - image1.m_Xl;
@@ -1544,6 +1615,12 @@ void GetPairAnglesFromRays(const double A1, const double A2, const double E1, co
 void GetStereoGeometryFromIRPC(const EO image1, const EO image2, const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR)
 {
     GetBaseRayFromIRPC(image1, image2, IRPCs1, IRPCs2, param, numofparam, imageparam, imagesize1, imagesize2, BR);
+    GetPairAnglesFromRays(Iinfo1.AZ_ray[0], Iinfo2.AZ_ray[0], Iinfo1.EL_ray[0], Iinfo2.EL_ray[0], ray_vector1, ray_vector2, BR, CA, AE, BIE);
+}
+
+void GetStereoGeometryFromIRPC(const double * const *IRPCs1, const double * const *IRPCs2, const D3DPOINT ray_vector1, const D3DPOINT ray_vector2, const ImageInfo Iinfo1, const ImageInfo Iinfo2, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize1, CSize imagesize2, double &CA, double &AE, double &BIE, D3DPOINT &BR)
+{
+    GetBaseRayFromIRPC(IRPCs1, IRPCs2, param, numofparam, imageparam, imagesize1, imagesize2, BR);
     GetPairAnglesFromRays(Iinfo1.AZ_ray[0], Iinfo2.AZ_ray[0], Iinfo1.EL_ray[0], Iinfo2.EL_ray[0], ray_vector1, ray_vector2, BR, CA, AE, BIE);
 }
 

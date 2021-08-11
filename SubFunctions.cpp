@@ -2507,11 +2507,9 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 
                 printf("selected_count %d\tpath %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\t%f\n\n",selected_count,proinfo->Imagefilename[selected_count],proinfo->RPCfilename[selected_count],proinfo->Imagemetafile[selected_count],Iinfo[selected_count].Offnadir_angle,Iinfo[selected_count].Mean_sat_azimuth_angle,Iinfo[selected_count].GSD.pro_GSD,Iinfo[selected_count].cloud);
                 
-                DATE temp;
-                temp.year = atoi(temp_year);
-                temp.month = atoi(temp_month);
-                temp.day = atoi(temp_day);
-                proinfo->image_date.push_back(temp);
+                Iinfo[selected_count].year = atoi(temp_year);
+                Iinfo[selected_count].month = atoi(temp_month);
+                Iinfo[selected_count].date = atoi(temp_day);
                 
                 selected_count++;
             }

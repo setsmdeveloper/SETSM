@@ -2507,22 +2507,27 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
                     }
                     
-                    //EO eo;
-                    //GetInitialPCfromDLT(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
+                    {
+                        GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
+                        GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                    }
+                    else
+                    {
+                        CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                        printf("file name %s\n",proinfo->Imagefilename[ti]);
+                        printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                               proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                               proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                        printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
                     
-                    CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
-                    printf("file name %s\n",proinfo->Imagefilename[ti]);
-                    printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
-                           proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
-                           proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
-                    printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
-                
-                    
-                    GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
-                    GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
-                    
-                    GetRayVectorFromEOBRcenter(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, Limagesize[ti], Boundary, ori_minmaxHeight, ray_vector[proinfo->number_of_images + ti]);
-                    GetAZELFromRay(ray_vector[proinfo->number_of_images + ti],image_info[ti].AZ_ray[1],image_info[ti].EL_ray[1]);
+                        
+                        GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
+                        GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                        
+                        GetRayVectorFromEOBRcenter(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, Limagesize[ti], Boundary, ori_minmaxHeight, ray_vector[proinfo->number_of_images + ti]);
+                        GetAZELFromRay(ray_vector[proinfo->number_of_images + ti],image_info[ti].AZ_ray[1],image_info[ti].EL_ray[1]);
+                    }
                     
                 }
                 //exit(1);
@@ -2532,7 +2537,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     GetOverlappedImages_XY(Boundary,param,proinfo->number_of_images,image_info,result);
                     printf("start FindImage\n");
                     vector<int> final_result;
-                    FindImageWithCondition(proinfo, args, image_info, ray_vector, result, final_result);
+                    FindImageWithCondition(proinfo, args, IRPCs, param, Imageparams, image_info, Limagesize, ray_vector, result, final_result);
                     
                     FILE *plistfile = NULL;
                     char listfile[500];
@@ -2542,15 +2547,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     {
                         int ID = final_result[ti];
                         printf("selected file %s\n",proinfo->Imagefilename[ID]);
-                        printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
-                               proinfo->frameinfo.Photoinfo[ID].m_Xl,proinfo->frameinfo.Photoinfo[ID].m_Yl,proinfo->frameinfo.Photoinfo[ID].m_Zl,
-                               proinfo->frameinfo.Photoinfo[ID].m_Wl,proinfo->frameinfo.Photoinfo[ID].m_Pl,proinfo->frameinfo.Photoinfo[ID].m_Kl);
                         fprintf(plistfile,"%s\n",proinfo->Imagefilename[ID]);
-                        
-                        
                     }
                     fclose(plistfile);
-                    printf("list file\n");
                     
                     return 0;
                 }
@@ -3527,7 +3526,7 @@ public:
     }
 };
 
-void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const ImageInfo *image_info, const D3DPOINT* ray_vector, const vector<int> OI, vector<int> &selected_image)
+void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const double * const * const *IRPCs, const TransParam param, double **Imageparams, ImageInfo *image_info, CSize *Imagesize, const D3DPOINT* ray_vector, const vector<int> OI, vector<int> &selected_image)
 {
     int pair_number = 0;
     int total_OI = OI.size();
@@ -3544,36 +3543,31 @@ void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const ImageInfo *ima
             int ref_ti = OI[ref_count];
             int ti = OI[ti_count];
             
-            printf("pair ID %d\t%d\t%d\n",pair_number,ref_ti,ti);
-            printf("image1 %s\nimage2 %s\n",proinfo->Imagefilename[ref_ti],proinfo->Imagefilename[ti]);
-            
-            
-            
-            printf("%d\t%d\t%d\n",proinfo->image_date[ref_ti].year,proinfo->image_date[ref_ti].month,proinfo->image_date[ref_ti].day);
-            
             int startdays = args.start_date.year*365 + args.start_date.month*30 + args.start_date.day;
-            int targetdays1 = proinfo->image_date[ref_ti].year*365 + proinfo->image_date[ref_ti].month*30 + proinfo->image_date[ref_ti].day;
-            printf("startdays targetdays1 %d\t%d\n",startdays,targetdays1);
+            int targetdays1 = image_info[ref_ti].year*365 + image_info[ref_ti].month*30 + image_info[ref_ti].date;
             
-            printf("%d\t%d\t%d\n",proinfo->image_date[ti].year,proinfo->image_date[ti].month,proinfo->image_date[ti].day);
-            
-            int targetdays2 = proinfo->image_date[ti].year*365 + proinfo->image_date[ti].month*30 + proinfo->image_date[ti].day;
-            printf("startdays targetdays2 %d\t%d\n",startdays,targetdays2);
+            int targetdays2 = image_info[ti].year*365 + image_info[ti].month*30 + image_info[ti].date;
             
             int diff1 = targetdays1 - startdays;
             int diff2 = targetdays2 - startdays;
-            printf("diff %d\t%d\n",diff1,diff2);
             
             if( (diff1 > 0 && diff1 < args.start_date.period) && (diff2 > 0 && diff2 < args.start_date.period))
             {
-                GetStereoGeometryFromEO(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],ray_vector[proinfo->number_of_images + ref_ti], ray_vector[proinfo->number_of_images + ti], image_info[ref_ti], image_info[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
+                GetStereoGeometryFromIRPC(IRPCs[ref_ti],IRPCs[ti],ray_vector[ref_ti], ray_vector[ti], image_info[ref_ti], image_info[ti], param,2,Imageparams[ti], Imagesize[ref_ti], Imagesize[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
                 
-                double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[1]*DegToRad)*sin(image_info[ti].EL_ray[1]*DegToRad) + cos(image_info[ref_ti].EL_ray[1]*DegToRad)*cos(image_info[ti].EL_ray[1]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[1] - image_info[ti].AZ_ray[1])*DegToRad))*RadToDeg;
-                
-                printf("CA eo_geo %f\t eo_eq_acos %f\t eo_AE %f\t eo_BIE %f\n",CA_base_eo,convergence_angle_cal,AE_eo,BIE_eo);
+                double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[0]*DegToRad)*sin(image_info[ti].EL_ray[0]*DegToRad) + cos(image_info[ref_ti].EL_ray[0]*DegToRad)*cos(image_info[ti].EL_ray[0]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[0] - image_info[ti].AZ_ray[0])*DegToRad))*RadToDeg;
                 
                 if(convergence_angle_cal >= proinfo->CA_th)
                 {
+                    printf("pair ID %d\t%d\t%d\n",pair_number,ref_ti,ti);
+                    printf("image1 %s\nimage2 %s\n",proinfo->Imagefilename[ref_ti],proinfo->Imagefilename[ti]);
+                    printf("%d\t%d\t%d\n",image_info[ref_ti].year,image_info[ref_ti].month,image_info[ref_ti].date);
+                    printf("startdays targetdays1 %d\t%d\n",startdays,targetdays1);
+                    printf("%d\t%d\t%d\n",image_info[ti].year,image_info[ti].month,image_info[ti].date);
+                    printf("startdays targetdays2 %d\t%d\n",startdays,targetdays2);
+                    printf("diff %d\t%d\n",diff1,diff2);
+                    printf("CA eo_geo %f\t eo_eq_acos %f\t eo_AE %f\t eo_BIE %f\n",CA_base_eo,convergence_angle_cal,AE_eo,BIE_eo);
+                    
                     int s_count = selected_image.size();
                     int iter = 0;
                     bool check_ref = false;
@@ -3594,11 +3588,6 @@ void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const ImageInfo *ima
             }
         }
     }
-    /*
-    int selected_count = selected_image.size();
-    for(int i=0;i<selected_count;i++)
-        printf("ID %d\t%s\n",i,proinfo->Imagefilename[selected_image[i]]);
-     */
 }
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize)
