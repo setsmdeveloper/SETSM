@@ -241,6 +241,14 @@ typedef struct tagD3DPointSave
     float m_Z;
 } D3DPOINTSAVE;
 
+typedef struct tagDate
+{
+    int year;
+    int month;
+    int day;
+    int period;
+} DATE;
+
 typedef struct tagTransParam
 {
 	double t_c, m_c;
@@ -807,6 +815,8 @@ typedef struct ProjectInfo{
     bool check_8d;
     int SGM_py;
     
+    vector<DATE> image_date;
+    
     FrameInfo frameinfo;
     
 	uint8 SPnumber[2],NumOfTile_row, NumOfTile_col;	
@@ -860,13 +870,14 @@ typedef struct ArgumentInfo{
     int RA_sample_count;
     
     char Image[MaxImages][500];
-	char Outputpath[500];
+    char Outputpath[500];
 	char Outputpath_name[500];
 	char seedDEMfilename[500];
 	char metafilename[500];
     char EO_Path[500];
     char DEM_input_file[500];
     char Multi_input_file[500];
+    char TIF_lists[500];
     
     bool check_DS_txy;
     bool check_downsample;
@@ -899,6 +910,7 @@ typedef struct ArgumentInfo{
     bool check_fl;
     bool check_ccd;
     bool check_full_cal;
+
     int check_txt_input;
     int check_coreg;
     int check_sdm_ortho;
@@ -917,6 +929,7 @@ typedef struct ArgumentInfo{
     bool check_8d;
     int SGM_py;
     
+    DATE start_date;
 } ARGINFO;
 
 typedef struct tagImageGSD

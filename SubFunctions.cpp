@@ -2165,7 +2165,8 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
     double UL[3], UR[3], LR[3], LL[3];
     double angle;
-
+    double temp;
+    
     // Initializng variables that throw warnings
     Cloud = Nodata;
     MOffnadirangle = Nodata;
@@ -2225,6 +2226,9 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     Iinfo->UL[i]    = UL[i];
                     
                 }
+                temp = Iinfo->UL[0];
+                Iinfo->UL[0] = Iinfo->UL[1];
+                Iinfo->UL[1] = temp;
                 //printf("UL %f %f \n",UL[0],UL[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2238,6 +2242,9 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     UR[i]           = atof(pos2);
                     Iinfo->UR[i]    = UR[i];
                 }
+                temp = Iinfo->UR[0];
+                Iinfo->UR[0] = Iinfo->UR[1];
+                Iinfo->UR[1] = temp;
                 //printf("UR %f %f \n",UR[0],UR[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2251,6 +2258,9 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     LR[i]           = atof(pos2);
                     Iinfo->LR[i]    = LR[i];
                 }
+                temp = Iinfo->LR[0];
+                Iinfo->LR[0] = Iinfo->LR[1];
+                Iinfo->LR[1] = temp;
                 //printf("LR %f %f \n",LR[0],LR[1]);
                 
                 fgets(temp_str,sizeof(temp_str),pFile);
@@ -2264,6 +2274,9 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     LL[i]           = atof(pos2);
                     Iinfo->LL[i]    = LL[i];
                 }
+                temp = Iinfo->LL[0];
+                Iinfo->LL[0] = Iinfo->LL[1];
+                Iinfo->LL[1] = temp;
                 //printf("LL %f %f \n",LL[0],LL[1]);
             }
             
@@ -2424,9 +2437,22 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
 {
     FILE *pFile;
     pFile           = fopen(_filename,"r");
+    /*
+    int total_line = 0;
+    char t_str[500];
+    while(!feof(pFile))
+    {
+        total_line++;
+        fgets(t_str,500,pFile);
+    }
+    int total_images_end = total_line - 3;
+    
+    rewind(pFile);
+    */
+    int total_images;
+    
     if(pFile)
     {
-        int total_images;
         char default_path[500];
         char full_image_path[500];
         fscanf(pFile,"%d",&total_images);
@@ -2481,6 +2507,12 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 
                 printf("selected_count %d\tpath %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\t%f\n\n",selected_count,proinfo->Imagefilename[selected_count],proinfo->RPCfilename[selected_count],proinfo->Imagemetafile[selected_count],Iinfo[selected_count].Offnadir_angle,Iinfo[selected_count].Mean_sat_azimuth_angle,Iinfo[selected_count].GSD.pro_GSD,Iinfo[selected_count].cloud);
                 
+                DATE temp;
+                temp.year = atoi(temp_year);
+                temp.month = atoi(temp_month);
+                temp.day = atoi(temp_day);
+                proinfo->image_date.push_back(temp);
+                
                 selected_count++;
             }
         }
@@ -2489,15 +2521,29 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
         
         fclose(pFile);
     }
+    //printf("total image %d\t%d\n",total_images_end,total_images);
+    //exit(1);
 }
 
 void Open_planetmultiinfo_args(ARGINFO *args)
 {
     FILE *pFile;
     pFile           = fopen(args->Multi_input_file,"r");
+    /*
+    int total_line = 0;
+    char t_str[500];
+    while(!feof(pFile))
+    {
+        total_line++;
+        fgets(t_str,500,pFile);
+    }
+    int total_images_end = total_line - 3;
+    
+    rewind(pFile);
+    */
+    int total_images;
     if(pFile)
     {
-        int total_images;
         char default_path[500];
         char full_image_path[500];
         fscanf(pFile,"%d",&total_images);
@@ -2527,10 +2573,10 @@ void Open_planetmultiinfo_args(ARGINFO *args)
             //sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s_pan.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
             sprintf(args->Image[i],"%s/%s/%s/%s/%d/%s.tif",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
             printf("path %s\n\n",args->Image[i]);
-            
         }
         fclose(pFile);
     }
+    //printf("total image %d\t%d\n",total_images_end,total_images);
 }
 
 float median(int n, float* x,float min, float max)
@@ -2865,6 +2911,40 @@ double cal_var(vector<double> &arr)
     return sqrt(sum_var/arr_count);
 }
 
+void GetOverlappedImages_LatLong(const double *tile_boundary, const int total_images_count, const ImageInfo *imageinfo, vector<int> &selected_ID)
+{
+    for(int count = 0 ; count < total_images_count ; count++)
+    {
+        D2DPOINT tile_lt(tile_boundary[0], tile_boundary[3]);
+        D2DPOINT tile_rb(tile_boundary[2], tile_boundary[1]);
+        D2DPOINT Image_lt(imageinfo[count].UL[0],imageinfo[count].UL[1]);
+        D2DPOINT Image_rb(imageinfo[count].LR[0],imageinfo[count].LR[1]);
+        bool check_overlap = CheckOverlap(tile_lt, tile_rb, Image_lt, Image_rb);
+        
+        if(check_overlap)
+            selected_ID.push_back(count);
+    }
+}
+
+void GetOverlappedImages_XY(const double *tile_boundary_XY, const TransParam param, const int total_images_count, const ImageInfo *imageinfo, vector<int> &selected_ID)
+{
+    
+    for(int count = 0 ; count < total_images_count ; count++)
+    {
+        D2DPOINT tile_lt(tile_boundary_XY[0], tile_boundary_XY[3]);
+        D2DPOINT tile_rb(tile_boundary_XY[2], tile_boundary_XY[1]);
+        D2DPOINT Image_lt(imageinfo[count].UL[0],imageinfo[count].UL[1]);
+        D2DPOINT Image_rb(imageinfo[count].LR[0],imageinfo[count].LR[1]);
+        
+        D2DPOINT Image_lt_xy = wgs2ps_single(param,Image_lt);
+        D2DPOINT Image_rb_xy = wgs2ps_single(param,Image_rb);
+        bool check_overlap = CheckOverlap(tile_lt, tile_rb, Image_lt_xy, Image_rb_xy);
+        
+        if(check_overlap)
+            selected_ID.push_back(count);
+    }
+}
+
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb)
 {
     if (br1_lt.m_X > br2_rb.m_X || br2_lt.m_X > br1_rb.m_X)
@@ -2875,8 +2955,6 @@ bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT b
     
     return true;
 }
-
-
 
 
 void MakeSobelMagnitudeImage(const CSize _img_size, const uint16* _src_image, uint16* _dist_mag_image, int16* _dir)
@@ -3224,7 +3302,7 @@ void GMA_double_printf(GMA_double *a)
     {
         for(cnt2=0;cnt2<a->ncols;cnt2++)
         {
-            printf("[%ld,%ld] %Lf\t",cnt1,cnt2,a->val[cnt1][cnt2]);
+            printf("[%ld,%ld] %e\t",cnt1,cnt2,a->val[cnt1][cnt2]);
         }
         printf("\n");
     }

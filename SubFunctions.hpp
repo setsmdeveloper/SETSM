@@ -76,6 +76,9 @@ float binmedian(int n, float *x);
 double quickselect(double *arr, int n, int k);
 double quickselect(vector<double> &arr, int n, int k);
 double cal_var(vector<double> &arr);
+
+void GetOverlappedImages_LatLong(const double *tile_boundary, const int total_images_count, const ImageInfo *imageinfo, vector<int> &selected_ID);
+void GetOverlappedImages_XY(const double *tile_boundary_XY, const TransParam param, const int total_images_count, const ImageInfo *imageinfo, vector<int> &selected_ID);
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb);
 
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);

@@ -93,6 +93,7 @@ int main(int argc,char *argv[])
     args.check_fl = false;
     args.check_ccd = false;
     args.check_full_cal = false;
+
     args.check_coreg = 0;     //image coreg = 1, DEM coreg = 2, image + DEM = 3
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
@@ -358,7 +359,7 @@ int main(int argc,char *argv[])
                         sprintf(args.DEM_input_file,"%s",argv[i+2]);
                         printf("txt input %s\n",args.DEM_input_file);
                     }
-                    else if(args.check_txt_input == 2)
+                    else if(args.check_txt_input == 2 || args.check_txt_input == 3)
                     {
                         sprintf(args.Multi_input_file,"%s",argv[i+2]);
                         printf("txt multiinput %s\n",args.Multi_input_file);
@@ -366,6 +367,39 @@ int main(int argc,char *argv[])
                         image_count = args.number_of_images;
                         printf("image count %d\n",image_count);
                     }
+                 }
+            }
+            
+            if (strcmp("-start_date",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input start date(yyyymmdd)\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    //char t_str[500];
+                    //sprintf(t_str,"%s",argv[i+1]);
+                    char temp_year[5];
+                    char temp_month[3];
+                    char temp_day[3];
+                    for (int k = 0; k < 4; k++)
+                        temp_year[k] = argv[i+1][k];
+                    temp_year[4] = '\0';
+                    for(int k=0 ; k < 2 ; k++)
+                        temp_month[k] = argv[i+1][k+4];
+                    temp_month[2] = '\0';
+                    for(int k=0 ; k < 2 ; k++)
+                        temp_day[k] = argv[i+1][k+6];
+                    temp_day[2] = '\0';
+                    
+                    args.start_date.year = atoi(temp_year);
+                    args.start_date.month = atoi(temp_month);
+                    args.start_date.day = atoi(temp_day);
+                    
+                    printf("start date %d\t%d\t%d\n",args.start_date.year,args.start_date.month,args.start_date.day);
+                    args.start_date.period = atoi(argv[i+2]);
+                    printf("period %d\n",args.start_date.period);
                 }
             }
             
@@ -554,6 +588,19 @@ int main(int argc,char *argv[])
             {
                 if (argc == i+1) {
                     printf("Please input Maximum cloud coverge for image selection\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Cloud_th = atof(argv[i+1]);
+                    printf("Maximum cloud coverge %f\n",args.Cloud_th);
+                }
+            }
+            
+            if (strcmp("-Image_selection",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input xml lists\n");
                     cal_flag = false;
                 }
                 else
@@ -1582,7 +1629,7 @@ int main(int argc,char *argv[])
                 
                 bool check_frame_info = true;
                 
-                if(args.check_txt_input == 0 || args.check_txt_input == 2)
+                if(args.check_txt_input == 0 || args.check_txt_input == 2 || args.check_txt_input == 3)
                 {
                     if(args.check_downsample)
                     {
@@ -1617,66 +1664,69 @@ int main(int argc,char *argv[])
                         else if( strcmp(args.Image[0],args.Image[1]) != 0)
                         {
                             DEM_divide = SETSMmainfunction(&param,projectfilename,args,save_filepath,Imageparams);
-
-#ifdef BUILDMPI
-                            if(rank == 0) {
-#endif
-                            char DEMFilename[500];
-                            char Outputpath[500];
                             
-                            sprintf(Outputpath, "%s", save_filepath);
-                            
-                            printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
-                            if(args.projection != 3)
-                                param.projection = args.projection;
-                            
-                            printf("imageparams %f\t%f\t%f\t%f\n",Imageparams[0][0],Imageparams[0][1],Imageparams[1][0],Imageparams[1][1]);
-                            
-                            if(DEM_divide == 0)
+                            if(args.check_txt_input != 3)
                             {
-                                if(!args.check_ortho)
-                                    sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
-                                else
-                                    sprintf(DEMFilename, "%s", args.seedDEMfilename);
+    #ifdef BUILDMPI
+                                if(rank == 0) {
+    #endif
+                                char DEMFilename[500];
+                                char Outputpath[500];
                                 
-                                if(!args.check_Matchtag)
-                                {
-                                    for(int count = 0 ; count < args.number_of_images ; count++)
-                                    {
-                                        if(args.sensor_provider == PT)
-                                            orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,0,DEM_divide,Imageparams);
-                                        else
-                                            orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,count,DEM_divide,Imageparams);
-                                    }
-                                    //orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
-                                    //orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
-                                }
-                                else if(args.ortho_count == 2)
-                                    orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
+                                sprintf(Outputpath, "%s", save_filepath);
                                 
-                                if(args.check_LSF2 == 2)
-                                    remove(DEMFilename);
-                            }
-                            else
-                            {
-                                for(int iter = 1 ; iter <= DEM_divide ; iter++)
+                                printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
+                                if(args.projection != 3)
+                                    param.projection = args.projection;
+                                
+                                printf("imageparams %f\t%f\t%f\t%f\n",Imageparams[0][0],Imageparams[0][1],Imageparams[1][0],Imageparams[1][1]);
+                                
+                                if(DEM_divide == 0)
                                 {
-                                    sprintf(DEMFilename, "%s/%s_%d_dem.tif", save_filepath,args.Outputpath_name,iter);
+                                    if(!args.check_ortho)
+                                        sprintf(DEMFilename, "%s/%s_dem.tif", save_filepath,args.Outputpath_name);
+                                    else
+                                        sprintf(DEMFilename, "%s", args.seedDEMfilename);
+                                    
                                     if(!args.check_Matchtag)
                                     {
-                                        orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
-                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                        for(int count = 0 ; count < args.number_of_images ; count++)
+                                        {
+                                            if(args.sensor_provider == PT)
+                                                orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,0,DEM_divide,Imageparams);
+                                            else
+                                                orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,count,DEM_divide,Imageparams);
+                                        }
+                                        //orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,DEM_divide,Imageparams);
+                                        //orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                     }
                                     else if(args.ortho_count == 2)
-                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                        orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,DEM_divide,Imageparams);
                                     
                                     if(args.check_LSF2 == 2)
                                         remove(DEMFilename);
                                 }
+                                else
+                                {
+                                    for(int iter = 1 ; iter <= DEM_divide ; iter++)
+                                    {
+                                        sprintf(DEMFilename, "%s/%s_%d_dem.tif", save_filepath,args.Outputpath_name,iter);
+                                        if(!args.check_Matchtag)
+                                        {
+                                            orthogeneration(param,args,args.Image[0], DEMFilename, Outputpath,1,iter,Imageparams);
+                                            orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                        }
+                                        else if(args.ortho_count == 2)
+                                            orthogeneration(param,args,args.Image[1], DEMFilename, Outputpath,2,iter,Imageparams);
+                                        
+                                        if(args.check_LSF2 == 2)
+                                            remove(DEMFilename);
+                                    }
+                                }
+    #ifdef BUILDMPI
                             }
-#ifdef BUILDMPI
-                        }
-#endif
+    #endif
+                            }
                         }
                         else
                             printf("Please check input 1 and input 2. Both is same\n");
@@ -1686,7 +1736,7 @@ int main(int argc,char *argv[])
                         printf("Plese check input images\n");
                     }
                 }
-                else if(args.check_txt_input == 1)
+                else if(args.check_txt_input == 1 )
                 {
                     char *Outputpath_name  = SetOutpathName(args.Outputpath);
                     sprintf(args.Outputpath_name,"%s",Outputpath_name);
@@ -2021,7 +2071,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         proinfo->frameinfo.m_Camera.m_CCDSize = 5.5;
                         proinfo->frameinfo.m_Camera.m_focalLength = 8000; //skysat 3.6m
                         
-                        if(args.check_txt_input == 2)
+                        if(args.check_txt_input == 2 || args.check_txt_input == 3)
                         {
                             free(image_info);
                             free(Limagesize);
@@ -2059,7 +2109,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             OpenXMLFile_orientation_planet(proinfo->Imagemetafile[ti],&image_info[ti]);
                             image_info[ti].GSD.pro_GSD = (image_info[ti].GSD.row_GSD + image_info[ti].GSD.col_GSD)/2.0;
-                            if(args.check_txt_input != 2)
+                            if(args.check_txt_input != 2 || args.check_txt_input != 3)
                             {
                                 if(ti != 1) //manual setup offnadir direction
                                     image_info[ti].Offnadir_angle = -(image_info[ti].Offnadir_angle_xml);
@@ -2461,11 +2511,12 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     //GetInitialPCfromDLT(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                     
                     CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    printf("file name %s\n",proinfo->Imagefilename[ti]);
                     printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
                            proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
                            proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
                     printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
-                    
+                
                     
                     GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
                     GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
@@ -2475,6 +2526,34 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     
                 }
                 //exit(1);
+                if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
+                {
+                    vector<int> result;
+                    GetOverlappedImages_XY(Boundary,param,proinfo->number_of_images,image_info,result);
+                    printf("start FindImage\n");
+                    vector<int> final_result;
+                    FindImageWithCondition(proinfo, args, image_info, ray_vector, result, final_result);
+                    
+                    FILE *plistfile = NULL;
+                    char listfile[500];
+                    sprintf(listfile, "%s/%s_overlapped_lists.txt", proinfo->save_filepath, proinfo->Outputpath_name);
+                    plistfile = fopen(listfile,"w");
+                    for(int ti = 0 ; ti < final_result.size() ; ti++)
+                    {
+                        int ID = final_result[ti];
+                        printf("selected file %s\n",proinfo->Imagefilename[ID]);
+                        printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                               proinfo->frameinfo.Photoinfo[ID].m_Xl,proinfo->frameinfo.Photoinfo[ID].m_Yl,proinfo->frameinfo.Photoinfo[ID].m_Zl,
+                               proinfo->frameinfo.Photoinfo[ID].m_Wl,proinfo->frameinfo.Photoinfo[ID].m_Pl,proinfo->frameinfo.Photoinfo[ID].m_Kl);
+                        fprintf(plistfile,"%s\n",proinfo->Imagefilename[ID]);
+                        
+                        
+                    }
+                    fclose(plistfile);
+                    printf("list file\n");
+                    
+                    return 0;
+                }
                 
                 if(!args.check_ortho)
                 {
@@ -3447,6 +3526,80 @@ public:
         return ret;
     }
 };
+
+void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const ImageInfo *image_info, const D3DPOINT* ray_vector, const vector<int> OI, vector<int> &selected_image)
+{
+    int pair_number = 0;
+    int total_OI = OI.size();
+    
+    for(int ref_count = 0 ; ref_count < total_OI - 1 ; ref_count++)
+    {
+        for(int ti_count = ref_count + 1 ; ti_count < total_OI ; ti_count ++)
+        {
+            pair_number++;
+            
+            double BIE_eo, AE_eo, CA_base_eo;
+            D3DPOINT Baseray_eo;
+            
+            int ref_ti = OI[ref_count];
+            int ti = OI[ti_count];
+            
+            printf("pair ID %d\t%d\t%d\n",pair_number,ref_ti,ti);
+            printf("image1 %s\nimage2 %s\n",proinfo->Imagefilename[ref_ti],proinfo->Imagefilename[ti]);
+            
+            
+            
+            printf("%d\t%d\t%d\n",proinfo->image_date[ref_ti].year,proinfo->image_date[ref_ti].month,proinfo->image_date[ref_ti].day);
+            
+            int startdays = args.start_date.year*365 + args.start_date.month*30 + args.start_date.day;
+            int targetdays1 = proinfo->image_date[ref_ti].year*365 + proinfo->image_date[ref_ti].month*30 + proinfo->image_date[ref_ti].day;
+            printf("startdays targetdays1 %d\t%d\n",startdays,targetdays1);
+            
+            printf("%d\t%d\t%d\n",proinfo->image_date[ti].year,proinfo->image_date[ti].month,proinfo->image_date[ti].day);
+            
+            int targetdays2 = proinfo->image_date[ti].year*365 + proinfo->image_date[ti].month*30 + proinfo->image_date[ti].day;
+            printf("startdays targetdays2 %d\t%d\n",startdays,targetdays2);
+            
+            int diff1 = targetdays1 - startdays;
+            int diff2 = targetdays2 - startdays;
+            printf("diff %d\t%d\n",diff1,diff2);
+            
+            if( (diff1 > 0 && diff1 < args.start_date.period) && (diff2 > 0 && diff2 < args.start_date.period))
+            {
+                GetStereoGeometryFromEO(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],ray_vector[proinfo->number_of_images + ref_ti], ray_vector[proinfo->number_of_images + ti], image_info[ref_ti], image_info[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
+                
+                double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[1]*DegToRad)*sin(image_info[ti].EL_ray[1]*DegToRad) + cos(image_info[ref_ti].EL_ray[1]*DegToRad)*cos(image_info[ti].EL_ray[1]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[1] - image_info[ti].AZ_ray[1])*DegToRad))*RadToDeg;
+                
+                printf("CA eo_geo %f\t eo_eq_acos %f\t eo_AE %f\t eo_BIE %f\n",CA_base_eo,convergence_angle_cal,AE_eo,BIE_eo);
+                
+                if(convergence_angle_cal >= proinfo->CA_th)
+                {
+                    int s_count = selected_image.size();
+                    int iter = 0;
+                    bool check_ref = false;
+                    bool check_ti = false;
+                    while(iter < s_count && (!check_ref || !check_ti))
+                    {
+                        if(!strcmp(proinfo->Imagefilename[selected_image[iter]], proinfo->Imagefilename[ref_ti]))
+                            check_ref = true;
+                        if(!strcmp(proinfo->Imagefilename[selected_image[iter]], proinfo->Imagefilename[ti]))
+                            check_ti = true;
+                        iter++;
+                    }
+                    if(!check_ref)
+                        selected_image.push_back(ref_ti);
+                    if(!check_ti)
+                        selected_image.push_back(ti);
+                }
+            }
+        }
+    }
+    /*
+    int selected_count = selected_image.size();
+    for(int i=0;i<selected_count;i++)
+        printf("ID %d\t%s\n",i,proinfo->Imagefilename[selected_image[i]]);
+     */
+}
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize)
 {
