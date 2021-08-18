@@ -65,11 +65,14 @@ void SetTransParam(double minLat, double minLon, TransParam *param);
 void RPCsFree(double **rpcs);
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band);
 double** OpenXMLFile_Pleiades(char* _filename);
+void WriteIRPCs_Planet(char* filename, double **IRPCs);
 double** OpenXMLFile_Planet(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo);
 void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo);
 void Open_planetmultiinfo_args(ARGINFO *args);
+void WriteEOs(char* filename, EO eo, CAMERA_INFO ca);
+void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca);
 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);

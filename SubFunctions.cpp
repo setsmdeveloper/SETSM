@@ -1827,6 +1827,35 @@ double** OpenXMLFile_Pleiades(char* _filename)
     return out;
 }
 
+void WriteIRPCs_Planet(char* filename, double **IRPCs)
+{
+    FILE *pfile = fopen(filename,"w");
+    fprintf(pfile,"LINE_OFF: %f\n",IRPCs[0][0]);
+    fprintf(pfile,"SAMP_OFF: %f\n",IRPCs[0][1]);
+    fprintf(pfile,"LAT_OFF: %f\n",IRPCs[0][3]);
+    fprintf(pfile,"LONG_OFF: %f\n",IRPCs[0][2]);
+    fprintf(pfile,"HEIGHT_OFF: %f\n",IRPCs[0][4]);
+    
+    fprintf(pfile,"LINE_SCALE: %f\n",IRPCs[1][0]);
+    fprintf(pfile,"SAMP_SCALE: %f\n",IRPCs[1][1]);
+    fprintf(pfile,"LAT_SCALE: %f\n",IRPCs[1][3]);
+    fprintf(pfile,"LONG_SCALE: %f\n",IRPCs[1][2]);
+    fprintf(pfile,"HEIGHT_SCALE: %f\n",IRPCs[1][4]);
+    
+    for(int i=0;i<20;i++)
+        fprintf(pfile,"LINE_NUM_COEFF_%d: %16.15e\n",i+1,IRPCs[2][i]);
+    
+    for(int i=0;i<20;i++)
+        fprintf(pfile,"LINE_DEN_COEFF_%d: %16.15e\n",i+1,IRPCs[3][i]);
+    
+    for(int i=0;i<20;i++)
+        fprintf(pfile,"SAMP_NUM_COEFF_%d: %16.15e\n",i+1,IRPCs[4][i]);
+    
+    for(int i=0;i<20;i++)
+        fprintf(pfile,"SAMP_DEN_COEFF_%d: %16.15e\n",i+1,IRPCs[5][i]);
+    fclose(pfile);
+}
+
 double** OpenXMLFile_Planet(char* _filename)
 {
     double** out = NULL;
@@ -2510,6 +2539,8 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 Iinfo[selected_count].year = atoi(temp_year);
                 Iinfo[selected_count].month = atoi(temp_month);
                 Iinfo[selected_count].date = atoi(temp_day);
+                sprintf(Iinfo[selected_count].filename,"%s",temp_str);
+                sprintf(Iinfo[selected_count].fullpath,"%s/%s/%s/%s/%d",default_path,temp_year,temp_month,temp_day,strip_ID);
                 
                 selected_count++;
             }
@@ -2575,6 +2606,24 @@ void Open_planetmultiinfo_args(ARGINFO *args)
         fclose(pFile);
     }
     //printf("total image %d\t%d\n",total_images_end,total_images);
+}
+
+void WriteEOs(char* filename, EO eo, CAMERA_INFO ca)
+{
+    FILE *pfile = fopen(filename,"w");
+    fprintf(pfile,"%f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Xl,eo.m_Yl,eo.m_Zl,eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    fprintf(pfile,"%f\t%f\t%f\n",ca.m_focalLength,ca.m_ppx,ca.m_ppy);
+    fclose(pfile);
+}
+
+void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca)
+{
+    FILE *pfile = fopen(filename,"r");
+    //EO t_eo;
+    fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&eo.m_Xl,&eo.m_Yl,&eo.m_Zl,&eo.m_Wl,&eo.m_Pl,&eo.m_Kl);
+    //eo = t_eo;
+    fscanf(pfile,"%lf\t%lf\t%lf\n",&ca.m_focalLength,&ca.m_ppx,&ca.m_ppy);
+    fclose(pfile);
 }
 
 float median(int n, float* x,float min, float max)

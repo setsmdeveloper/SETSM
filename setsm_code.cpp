@@ -359,7 +359,7 @@ int main(int argc,char *argv[])
                         sprintf(args.DEM_input_file,"%s",argv[i+2]);
                         printf("txt input %s\n",args.DEM_input_file);
                     }
-                    else if(args.check_txt_input == 2 || args.check_txt_input == 3)
+                    else if(args.check_txt_input == 2 || args.check_txt_input == 3) // option 2 : EO estimation , option 3 : IRPCs estimation
                     {
                         sprintf(args.Multi_input_file,"%s",argv[i+2]);
                         printf("txt multiinput %s\n",args.Multi_input_file);
@@ -2165,16 +2165,31 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     sum_product_res = sum_product_res/proinfo->number_of_images;
                     
                     //Inverse RPCs estimate
+                    printf("Inverse RPCs estimate\n");
+                    
+    #pragma omp parallel for schedule(guided)
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     {
-                        vector<D3DPOINT> VCPslatlong;
-                        vector<D2DPOINT> IPs;
-                        
-                        double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
-                        IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
-                        
-                        VCPslatlong.clear();
-                        IPs.clear();
+                        char irpcfile[500];
+                        sprintf(irpcfile,"%s/%s_IRPC.TXT",image_info[ti].fullpath,image_info[ti].filename);
+                        FILE *pfile = fopen(irpcfile,"r");
+                        if(pfile)
+                        {
+                            printf("%d/%d read existing irpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                            IRPCs[ti] = OpenXMLFile_Planet(irpcfile);
+                            //remove(irpcfile);
+                        }
+                        else
+                        {
+                            printf("%d/%d generating irpcs from rpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                            vector<D3DPOINT> VCPslatlong;
+                            vector<D2DPOINT> IPs;
+                            double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
+                            IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
+                            WriteIRPCs_Planet(irpcfile, IRPCs[ti]);
+                            VCPslatlong.clear();
+                            IPs.clear();
+                        }
                     }
                 }
                 
@@ -2507,14 +2522,28 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
                     }
                     
+                    /*
                     if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
                     {
                         GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
                         GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
                     }
-                    else
+                    else*/
                     {
-                        CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                        char eofile[500];
+                        sprintf(eofile,"%s/%s_EO.TXT",image_info[ti].fullpath,image_info[ti].filename);
+                        FILE *pfile = fopen(eofile,"r");
+                        if(pfile)
+                        {
+                            printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
+                            ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                        }
+                        else
+                        {
+                            printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
+                            CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                            WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                        }
                         printf("file name %s\n",proinfo->Imagefilename[ti]);
                         printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
                                proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,

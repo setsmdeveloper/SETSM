@@ -973,6 +973,7 @@ typedef struct tagImageInfo
     int scandirection;
     
     char filename[500];
+    char fullpath[500];
     char Ofilename[500];
     char imagetime[500];
     char SatID[500];
