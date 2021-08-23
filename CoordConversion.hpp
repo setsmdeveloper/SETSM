@@ -25,7 +25,8 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
 D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_ps);
 
 double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
-double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
+double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, TransParam param, CSize imagesize, EO eo, CAMERA_INFO camera, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
+double ** GetRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
 double ** GetIRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
 //RPC conversion : image to object
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP);

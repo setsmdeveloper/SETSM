@@ -2627,79 +2627,93 @@ void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca)
     fclose(pfile);
 }
 
-void SimulatedImageGeneration(char *demfile, char *oriimagefile, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
+void CompareRPCs(double **RPCs, double **comRPCs)
 {
-    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
+    for(int i = 0 ; i< 5 ;i++)
+    {
+        printf("offset %5.4e\n",RPCs[0][i] - comRPCs[0][i]);
+        printf("scale %5.4e\n",RPCs[1][i] - comRPCs[1][i]);
+    }
     
-    CSize imagesize;
-    CSize seeddem_size;
+    for(int i = 0 ; i < 20 ; i++)
+    {
+        printf("linenumcoef %5.4e\t",RPCs[2][i] - comRPCs[2][i]);
+        printf("linedencoef %5.4e\t",RPCs[3][i] - comRPCs[3][i]);
+        printf("samplenumcoef %5.4e\t",RPCs[4][i] - comRPCs[4][i]);
+        printf("sampledencoef %5.4e\n",RPCs[5][i] - comRPCs[5][i]);
+    }
+}
+
+EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
+{
+    EO out_eo;
     
+    D3DPOINT shifted_XYZ;
+    double FL = input_eo.m_Zl - XYZ_center.m_Z;
+    double scale = FL/camera.m_focalLength;
+    
+    D2DPOINT ori_img = GetPhotoCoordinate_single(XYZ_center, input_eo, camera, input_eo.m_Rm);
+    
+    shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*FL;
+    shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*FL;
+    
+    out_eo = input_eo;
+    out_eo.m_Xl += shifted_XYZ.m_X;
+    out_eo.m_Yl += shifted_XYZ.m_Y;
+    out_eo.m_Wl += rotate.m_Wl;
+    out_eo.m_Pl += rotate.m_Pl;
+    
+    RM M = MakeRotationMatrix(out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
+    
+    bool check_stop = false;
+    int max_iteration = 10;
+    int iter = 0;
+    double max_correction = camera.m_CCDSize*UMToMM;
+    while(!check_stop && iter < max_iteration)
+    {
+        iter++;
+    
+        D2DPOINT img_center = GetPhotoCoordinate_single(XYZ_center, out_eo, camera, M);
+        
+        
+        
+        D2DPOINT img_diff;
+        img_diff.m_X = ori_img.m_X - img_center.m_X;
+        img_diff.m_Y = ori_img.m_Y - img_center.m_Y;
+        /*
+        printf("iter %d\timg center %f\t%f\t eo %f\t%f\t%f\t%f\t%f\t%f\n",iter,img_center.m_X,img_center.m_Y,
+               out_eo.m_Xl,out_eo.m_Yl,out_eo.m_Zl,out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
+        printf("img diff %f\t%f\n",img_diff.m_X,img_diff.m_Y);
+        */
+        if(fabs(img_diff.m_X) < max_correction && fabs(img_diff.m_Y) < max_correction)
+        {
+            check_stop = true;
+        }
+        else
+        {
+            shifted_XYZ.m_X = img_diff.m_X*scale;
+            shifted_XYZ.m_Y = img_diff.m_Y*scale;
+            out_eo.m_Xl -= shifted_XYZ.m_X;
+            out_eo.m_Yl -= shifted_XYZ.m_Y;
+        }
+    }
+    
+    return out_eo;
+}
+
+void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
+{
     uint16 *outimage = NULL;
-    
-    GetImageSize(oriimagefile,&imagesize);
-    seeddem_size = ReadGeotiff_info(demfile, &minX, &maxY, &grid_size);
-    
-    maxX    = minX + grid_size*((double)seeddem_size.width);
-    minY    = maxY - grid_size*((double)seeddem_size.height);
-
-    printf("%d\n",seeddem_size.width);
-    printf("%d\n",seeddem_size.height);
-    printf("%f\n",minX);
-    printf("%f\n",minY);
-    printf("%f\n",maxX);
-    printf("%f\n",maxY);
-    printf("%f\n",grid_size);
-    
-    long int cols[2];
-    long int rows[2];
-    CSize data_size;
-
-    cols[0] = 0;
-    cols[1] = seeddem_size.width;
-
-    rows[0] = 0;
-    rows[1] = seeddem_size.height;
-
-    float type(0);
-    float *seeddem = Readtiff_T(demfile,&seeddem_size,cols,rows,&data_size, type);
-    
-    printf("seeddem size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",seeddem_size.width,seeddem_size.height,cols[0],cols[1],rows[0],rows[1]);
-    
-    uint16 type16(0);
-    cols[0] = 0;
-    cols[1] = imagesize.width;
-
-    rows[0] = 0;
-    rows[1] = imagesize.height;
-    uint16 *oriimage = Readtiff_T(oriimagefile,&imagesize,cols,rows,&data_size, type16);
     
     long total_pixel_count = (long)imagesize.width*(long)imagesize.height;
     outimage = (uint16*)calloc(sizeof(uint16),total_pixel_count);
     
-    double min_H = 10000000;
-    double max_H = -10000000;
-    for(long row = 0 ; row < seeddem_size.height ; row++)
-    {
-        for(long col = 0 ; col < seeddem_size.width ; col++)
-        {
-            long pos = row*(long)seeddem_size.width + col;
-            float value = seeddem[pos];
-            if(value > -100)
-            {
-                if(min_H > value)
-                    min_H = value;
-                if(max_H < value)
-                    max_H = value;
-            }
-        }
-    }
-    
-    printf("minmax H %f\t%f\timagesize %d\t%d\n",min_H,max_H,imagesize.width,imagesize.height);
+    printf("minmaxXY %f\t%f\tgrid_size %f\tminmax H %f\t%f\timagesize %d\t%d\n",minX,maxY,grid_size,min_H,max_H,imagesize.width,imagesize.height);
     RM M = MakeRotationMatrix(eo.m_Wl,eo.m_Pl,eo.m_Kl);
     RM ori_M = MakeRotationMatrix(ori_eo.m_Wl,ori_eo.m_Pl,ori_eo.m_Kl);
     CSize new_imagesize(imagesize.width,imagesize.height);
     
-    //exit(1);
+#pragma omp parallel for schedule(guided)
     for(long pos = 0 ; pos <  total_pixel_count; pos++)
     {
         long row = (long)floor(pos/imagesize.width);
@@ -2795,7 +2809,7 @@ void SimulatedImageGeneration(char *demfile, char *oriimagefile, char *imagefile
     
     WriteGeotiff(imagefile,outimage,imagesize.width,imagesize.height,1,0,imagesize.height,param.projection,param.utm_zone,param.bHemisphere,12);
     
-    
+    free(outimage);
 }
 
 float median(int n, float* x,float min, float max)

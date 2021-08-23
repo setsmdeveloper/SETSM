@@ -1959,7 +1959,10 @@ void ImageSimulation(char* _filename, ARGINFO args)
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
                 char *tmp_chr = remove_ext(args.Image[ti]);
-                D2DPOINT average_XY;
+                double Imageparams[2] = {0};
+                vector<D3DPOINT> VCPslatlong, VCPslatlong1;
+                vector<D2DPOINT> IPs, IPs1;
+                
                 char eofile[500];
                 sprintf(eofile,"%s_EO.TXT",tmp_chr);
                 FILE *pfile = fopen(eofile,"r");
@@ -1972,21 +1975,28 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 {
                     printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
                     
-                    vector<D3DPOINT> VCPslatlong;
-                    vector<D2DPOINT> IPs;
-                    double Imageparams[2] = {0};
-                    double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams,Limagesize[ti],VCPslatlong,IPs);
                     
+                    
+                    double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams,Limagesize[ti],VCPslatlong,IPs);
+                    /*
+                    IRPCs[ti] = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong, IPs);
+                    
+                    double midH2 = GetVCPsIPsfromFRPCc(IRPCs[ti],2,Imageparams,Limagesize[ti],VCPslatlong1,IPs1);
+                    
+                    for(int i=0;i<VCPslatlong.size();i++)
+                    {
+                        printf("image %f\t%f\n",IPs[i].m_X - IPs1[i].m_X,IPs[i].m_Y - IPs1[i].m_Y);
+                        printf("XYZ %f\t%f\t%f\n",VCPslatlong[i].m_X - VCPslatlong1[i].m_X, VCPslatlong[i].m_Y - VCPslatlong1[i].m_Y, VCPslatlong[i].m_Z - VCPslatlong1[i].m_Z);
+                    }
+                    
+                    
+                    CompareRPCs(RPCs[ti],IRPCs[ti]);
+                    exit(1);
+                    */
                     vector<D3DPOINT> VCPsXY;
                     vector<D2DPOINT> IPsPhoto;
                     int numofpts = VCPslatlong.size();
                     CSize new_imagesize(Limagesize[ti].width,Limagesize[ti].height);
-                    
-                    double minX,maxX,minY,maxY,minZ,maxZ;
-                    double maxXp = (new_imagesize.width/2.0)*proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM;
-                    double minXp = -maxXp;
-                    double maxYp = (new_imagesize.height/2.0)*proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM;
-                    double minYp = -maxYp;
                     
                     for(int i=0;i<numofpts;i++)
                     {
@@ -1999,7 +2009,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                         temppt = wgs2ps_single_3D(param,VCPslatlong[i]);
                         VCPsXY.push_back(temppt);
                         
-                        printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
+                        //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
                     }
                     
                     CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
@@ -2014,14 +2024,35 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     
                     proinfo->frameinfo.Photoinfo[ti].m_Rm = MakeRotationMatrix(proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
                     
+                    D2DPOINT sum_diff(0,0);
+                    D2DPOINT sum_std(0,0);
+                    D2DPOINT sum_diff_img(0,0);
+                    D2DPOINT sum_std_img(0,0);
+                    D2DPOINT average_XY, average_XY_img, std_diff, std_diff_img;
+                    D2DPOINT max_off_img(-100000,-100000);
+                    D2DPOINT max_off_XY(-100000,-100000);
                     for(int i=0;i<numofpts;i++)
                     {
-                        D2DPOINT t_img = GetPhotoCoordinate_single(VCPsXY[i], proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                        D2DPOINT IP = GetPhotoCoordinate_single(VCPsXY[i], proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                        D2DPOINT t_img = PhotoToImage_single(IP, proinfo->frameinfo.m_Camera.m_CCDSize, Limagesize[ti]);
+                        /*
                         printf("diff image %f\t%f\t%f\t%f\t%f\t%f\n",IPsPhoto[i].m_X,IPsPhoto[i].m_Y,t_img.m_X,t_img.m_Y,
                                (IPsPhoto[i].m_X-t_img.m_X)/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM),
                                (IPsPhoto[i].m_Y-t_img.m_Y)/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM));
+                        */
                         D3DPOINT t_obj = GetObjectCoordinate_single(IPsPhoto[i], VCPsXY[i].m_Z,proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
                         
+                        sum_diff.m_X += VCPsXY[i].m_X - t_obj.m_X;
+                        sum_diff.m_Y += VCPsXY[i].m_Y - t_obj.m_Y;
+                        sum_std.m_X += (VCPsXY[i].m_X - t_obj.m_X)*(VCPsXY[i].m_X - t_obj.m_X);
+                        sum_std.m_Y += (VCPsXY[i].m_Y - t_obj.m_Y)*(VCPsXY[i].m_Y - t_obj.m_Y);
+                        
+                        sum_diff_img.m_X += (IPs[i].m_X-t_img.m_X);///(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM);
+                        sum_diff_img.m_Y += (IPs[i].m_Y-t_img.m_Y);///(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM);
+                        sum_std_img.m_X += ((IPs[i].m_X-t_img.m_X)/*/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM)*/)*((IPs[i].m_X-t_img.m_X)/*/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM)*/);
+                        sum_std_img.m_Y += ((IPs[i].m_Y-t_img.m_Y)/*/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM)*/)*((IPs[i].m_Y-t_img.m_Y)/*/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM)*/);
+                        
+                        /*
                         printf("diff object %f\t%f\t%f\t%f\t%f\t%f\t%f\n",
                                VCPsXY[i].m_X,
                                VCPsXY[i].m_Y,
@@ -2030,8 +2061,35 @@ void ImageSimulation(char* _filename, ARGINFO args)
                                (VCPsXY[i].m_X)-(t_obj.m_X),
                                (VCPsXY[i].m_Y)-(t_obj.m_Y),
                                (VCPsXY[i].m_Z)-(t_obj.m_Z));
+                         */
+                        if(max_off_XY.m_X < fabs(VCPsXY[i].m_X - t_obj.m_X))
+                            max_off_XY.m_X = fabs(VCPsXY[i].m_X - t_obj.m_X);
+                        if(max_off_XY.m_Y < fabs(VCPsXY[i].m_Y - t_obj.m_Y))
+                            max_off_XY.m_Y = fabs(VCPsXY[i].m_Y - t_obj.m_Y);
                         
+                        if(max_off_img.m_X < fabs(IPs[i].m_X-t_img.m_X))
+                            max_off_img.m_X = fabs(IPs[i].m_X-t_img.m_X);
+                        if(max_off_img.m_Y < fabs(IPs[i].m_Y-t_img.m_Y))
+                            max_off_img.m_Y = fabs(IPs[i].m_Y-t_img.m_Y);
+                            
                     }
+                    
+                    average_XY.m_X = sum_diff.m_X/numofpts;
+                    average_XY.m_Y = sum_diff.m_Y/numofpts;
+                    std_diff.m_X = sqrt(sum_std.m_X/numofpts);
+                    std_diff.m_Y = sqrt(sum_std.m_Y/numofpts);
+                    
+                    average_XY_img.m_X = sum_diff_img.m_X/numofpts;
+                    average_XY_img.m_Y = sum_diff_img.m_Y/numofpts;
+                    std_diff_img.m_X = sqrt(sum_std_img.m_X/numofpts);
+                    std_diff_img.m_Y = sqrt(sum_std_img.m_Y/numofpts);
+                    
+                    printf("average diff img %f\t%f\t%f\t%f\n std diff img %f\t%f\nobject %f\t%f\t%f\t%f\n std diff object %f\t%f\n",
+                           average_XY_img.m_X,average_XY_img.m_Y,max_off_img.m_X,max_off_img.m_Y,
+                           std_diff_img.m_X,std_diff_img.m_Y,
+                           average_XY.m_X,average_XY.m_Y,max_off_XY.m_X,max_off_XY.m_Y,
+                           std_diff.m_X,std_diff.m_Y);
+                    
                 }
                 
                 printf("file name %s\n",proinfo->Imagefilename[ti]);
@@ -2040,17 +2098,155 @@ void ImageSimulation(char* _filename, ARGINFO args)
                        proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
                 printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
                 
-                char imagefile[500];
-                char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
-                char *tmp_no_ext = remove_ext(Ifilename);
-                sprintf(imagefile, "%s/%s_sim_p2.tif", proinfo->save_filepath, tmp_no_ext);
-                printf("new imagefile %s\n",imagefile);
-                EO sim_eo;
-                sim_eo = proinfo->frameinfo.Photoinfo[ti];
-                sim_eo.m_Kl += 10;
-                //sim_eo.m_Pl += 1;
-                SimulatedImageGeneration(args.seedDEMfilename, proinfo->Imagefilename[ti], imagefile, proinfo->frameinfo.Photoinfo[ti], sim_eo, proinfo->frameinfo.m_Camera,param);
-            
+                D3DPOINT center_XYZ;
+                D3DPOINT center_latlong;
+                
+                double minLon = (double) (-1.0 * RPCs[ti][1][2] + RPCs[ti][0][2]);
+                double maxLon = (double) (1.0 * RPCs[ti][1][2] + RPCs[ti][0][2]);
+                double minLat = (double) (-1.0 * RPCs[ti][1][3] + RPCs[ti][0][3]);
+                double maxLat = (double) (1.0 * RPCs[ti][1][3] + RPCs[ti][0][3]);
+                double minH = (double) (-1.0 * RPCs[ti][1][4] + RPCs[ti][0][4]);
+                double maxH = (double) (1.0 * RPCs[ti][1][4] + RPCs[ti][0][4]);
+                
+                center_XYZ.m_Z = (maxH + minH)/2.0;
+                
+                center_latlong.m_Y = (minLat + maxLat)/2.0;
+                center_latlong.m_X = (minLon + maxLon)/2.0;
+                center_latlong.m_Z = center_XYZ.m_Z;
+                
+                center_XYZ = wgs2ps_single_3D(param,center_latlong);
+                
+                
+                //Loading DEM and oriimage data
+                CSize seeddem_size;
+                double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
+                seeddem_size = ReadGeotiff_info(args.seedDEMfilename, &minX, &maxY, &grid_size);
+                maxX    = minX + grid_size*((double)seeddem_size.width);
+                minY    = maxY - grid_size*((double)seeddem_size.height);
+                printf("%d\n",seeddem_size.width);
+                printf("%d\n",seeddem_size.height);
+                printf("%f\n",minX);
+                printf("%f\n",minY);
+                printf("%f\n",maxX);
+                printf("%f\n",maxY);
+                printf("%f\n",grid_size);
+                
+                long int cols[2];
+                long int rows[2];
+                CSize data_size;
+                cols[0] = 0;
+                cols[1] = seeddem_size.width;
+                rows[0] = 0;
+                rows[1] = seeddem_size.height;
+                float type(0);
+                float *seeddem = Readtiff_T(args.seedDEMfilename,&seeddem_size,cols,rows,&data_size, type);
+                
+                printf("seeddem size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",seeddem_size.width,seeddem_size.height,cols[0],cols[1],rows[0],rows[1]);
+                double dem_min_H = 10000000;
+                double dem_max_H = -10000000;
+                for(long row = 0 ; row < seeddem_size.height ; row++)
+                {
+                    for(long col = 0 ; col < seeddem_size.width ; col++)
+                    {
+                        long pos = row*(long)seeddem_size.width + col;
+                        float value = seeddem[pos];
+                        if(value > -100)
+                        {
+                            if(dem_min_H > value)
+                                dem_min_H = value;
+                            if(dem_max_H < value)
+                                dem_max_H = value;
+                        }
+                    }
+                }
+                
+                CSize imagesize_ori(Limagesize[ti]);
+                uint16 type16(0);
+                cols[0] = 0;
+                cols[1] = imagesize_ori.width;
+
+                rows[0] = 0;
+                rows[1] = imagesize_ori.height;
+                uint16 *oriimage = Readtiff_T(proinfo->Imagefilename[ti],&imagesize_ori,cols,rows,&data_size, type16);
+                ////
+                
+                EO rotate;
+                for( int k = -4 ; k <= 4 ; k++)
+                {
+                    rotate.m_Pl = 10*k;
+                    EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
+                    simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                    
+                    double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
+                    double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
+                    
+                    
+                    /*
+                    vector<D3DPOINT> VCPs;
+                    vector<D2DPOINT> IPs2;
+                    midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
+                    
+                    double maxX = -100000;
+                    double maxY = -100000;
+                    for(int i=0;i<VCPslatlong.size();i++)
+                    {
+                        printf("image %f\t%f\n",IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
+                        printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
+                        
+                        if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
+                            maxX = fabs(IPs2[i].m_X - IPs1[i].m_X);
+                        if(maxY < fabs(IPs2[i].m_Y - IPs1[i].m_Y))
+                            maxY = fabs(IPs2[i].m_Y - IPs1[i].m_Y);
+                    }
+                    printf("maxXY %f\t%f\n",maxX,maxY);
+                    exit(1);
+                     */
+                    char imagefile[500];
+                    char RPCfile[500];
+                    char metatile[500];
+                    char EOfile[500];
+                    char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
+                    char *tmp_no_ext = remove_ext(Ifilename);
+                    if(k < 0)
+                    {
+                        sprintf(imagefile, "%s/%s_sim_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(RPCfile, "%s/%s_sim_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(EOfile, "%s/%s_sim_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(metatile, "%s/%s_sim_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                    }
+                    else
+                    {
+                        sprintf(imagefile, "%s/%s_sim_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(RPCfile, "%s/%s_sim_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(EOfile, "%s/%s_sim_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(metatile, "%s/%s_sim_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                    }
+                    
+                    printf("new imagefile %s\n",imagefile);
+                    
+                    WriteIRPCs_Planet(RPCfile, sim_RPCs);
+                    WriteEOs(EOfile, simulated_eo, proinfo->frameinfo.m_Camera);
+                    
+                    FILE *pmetafile = fopen(proinfo->Imagemetafile[ti],"r");
+                    FILE *pNewmetafile = fopen(metatile,"w");
+                    char c = fgetc(pmetafile);
+                    while(c!=EOF)
+                    {
+                        fputc(c,pNewmetafile);
+                        c = fgetc(pmetafile);
+                    }
+                    fclose(pmetafile);
+                    fclose(pNewmetafile);
+                    
+                    
+                    RPCsFree(sim_RPCs);
+                    
+                    SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
+                    
+                }
+                
+                free(seeddem);
+                free(oriimage);
             }
         }
     }
@@ -2397,8 +2593,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             VCPslatlong.clear();
                             IPs.clear();
                         }
-                        
-                        
                     }
                 }
                 

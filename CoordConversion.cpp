@@ -875,7 +875,7 @@ double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, co
                 
                 D2DPOINT IP = GetObjectToImageRPC_single_mpp(rpc,numofparam,imageparam,GP);
                 
-                if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
+                //if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
                 {
                     VCPs.push_back(GP);
                     IPs.push_back(IP);
@@ -887,11 +887,11 @@ double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, co
     return mid_H;
 }
 
-double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
+double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, TransParam param, CSize imagesize, EO eo, CAMERA_INFO camera, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
 {
     double mid_H;
     
-    double VCP_interval = 20;
+    double VCP_interval = 10;
     double VCP_intervla_Z = 6;
     
     double minLon = (double) (-1.0 * rpc[1][2] + rpc[0][2]);
@@ -931,7 +931,7 @@ double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numo
     double Z_interval = Z_dist/VCP_intervla_Z;
     
     //printf("inverval %f\t%f\t%f\n",X_interval,Y_interval,Z_interval);
-    //for(int i=0;i<VCP_intervla_Z;i++) //Z
+    for(int i=0;i<VCP_intervla_Z;i++) //Z
     {
         for(int j=0;j<VCP_interval;j++) //Y
         {
@@ -940,11 +940,13 @@ double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numo
                 D3DPOINT GP;
                 GP.m_X = minLon + k*X_interval;
                 GP.m_Y = minLat + j*Y_interval;
-                GP.m_Z = (rand() % ((int)maxH - (int)minH + 1)) + minH;
+                GP.m_Z = minH + i*Z_interval;
                 
-                D2DPOINT IP = GetObjectToImageRPC_single_mpp(rpc,numofparam,imageparam,GP);
+                D3DPOINT temppt = wgs2ps_single_3D(param,GP);
                 
-                if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
+                D2DPOINT IP_photo = GetPhotoCoordinate_single(temppt, eo, camera, eo.m_Rm);
+                D2DPOINT IP = PhotoToImage_single(IP_photo, camera.m_CCDSize, imagesize);
+                //if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
                 {
                     VCPs.push_back(GP);
                     IPs.push_back(IP);
@@ -954,6 +956,332 @@ double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numo
     }
     
     return mid_H;
+}
+
+double ** GetRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
+{
+    double ** IRPCs = (double**)calloc(7, sizeof(double*));
+    IRPCs[0] = (double*)calloc(5, sizeof(double)); //lineoffset, sampleoffset, longoffset, latoffset, heightoffset
+    IRPCs[1] = (double*)calloc(5, sizeof(double)); //linescale, samplescale, longscale, latscale, heightscale
+    IRPCs[2] = (double*)calloc(20, sizeof(double)); //linenumcoef
+    IRPCs[3] = (double*)calloc(20, sizeof(double)); //linedencoef
+    IRPCs[4] = (double*)calloc(20, sizeof(double)); //samplenumcoef
+    IRPCs[5] = (double*)calloc(20, sizeof(double)); //sampledencoef
+    IRPCs[6] = (double*)calloc(2, sizeof(double)); //errbias, errand for worldview
+    
+    for(int i=0;i<5;i++)
+    {
+        IRPCs[0][i] = rpc[0][i];
+        IRPCs[1][i] = rpc[1][i];
+    }
+
+    for(int i=0;i<2;i++)
+        IRPCs[6][i] = rpc[6][i];
+    
+    IRPCs[3][0] = 1.0;
+    IRPCs[5][0] = 1.0;
+    
+    int count_GCPs = VCPs.size();
+    
+    for(int whole_iter = 0 ; whole_iter < 2 ; whole_iter++)
+    {
+        GMA_double *M_matrix = GMA_double_create(count_GCPs,39);
+        GMA_double *MT_matrix = GMA_double_create(39,count_GCPs);
+        GMA_double *MTM_matrix = GMA_double_create(39,39);
+        GMA_double *MTMI_matrix = GMA_double_create(39,39);
+        
+        GMA_double *R_matrix = GMA_double_create(count_GCPs,1);
+        GMA_double *MTR_matrix = GMA_double_create(39,1);
+        GMA_double *J_matrix = GMA_double_create(39,1);
+        
+        //printf("done matrix create 1\n");
+        
+        //L => X(c), P => Y(r), H => Z
+        double L,P,H,r,c;
+        for(int i=0;i<count_GCPs;i++)
+        {
+            L       = (VCPs[i].m_X - rpc[0][2])/rpc[1][2];
+            P       = (VCPs[i].m_Y - rpc[0][3])/rpc[1][3];
+            H       = (VCPs[i].m_Z - rpc[0][4])/rpc[1][4];
+            
+            r       = (IPs[i].m_Y - imageparam[0] - rpc[0][0])/rpc[1][0]; //Line
+            c       = (IPs[i].m_X - imageparam[1] - rpc[0][1])/rpc[1][1]; //sample
+            
+            
+            double temp = r;
+            if(whole_iter == 1)
+                temp = c;
+            
+            r       = P;
+            c       = L;
+            P       = temp;
+            
+            /*
+            if(whole_iter == 1)
+                P = temp;
+            */
+            M_matrix->val[i][0] = 1.0;
+            M_matrix->val[i][1] = c;
+            M_matrix->val[i][2] = r;
+            
+            M_matrix->val[i][3] = H;
+            M_matrix->val[i][4] = c*r;
+            M_matrix->val[i][5] = c*H;
+            
+            M_matrix->val[i][6] = r*H;
+            M_matrix->val[i][7] = c*c;
+            M_matrix->val[i][8] = r*r;
+            
+            M_matrix->val[i][9] = H*H;
+            M_matrix->val[i][10] = c*r*H;
+            M_matrix->val[i][11] = c*c*c;
+            
+            M_matrix->val[i][12] = c*r*r;
+            M_matrix->val[i][13] = c*H*H;
+            M_matrix->val[i][14] = c*c*r;
+            
+            M_matrix->val[i][15] = r*r*r;
+            M_matrix->val[i][16] = r*H*H;
+            M_matrix->val[i][17] = c*c*H;
+            
+            M_matrix->val[i][18] = r*r*H;
+            M_matrix->val[i][19] = H*H*H;
+            
+            
+            M_matrix->val[i][20] = -P*c;
+            M_matrix->val[i][21] = -P*r;
+            
+            M_matrix->val[i][22] = -P*H;
+            M_matrix->val[i][23] = -P*c*r;
+            M_matrix->val[i][24] = -P*c*H;
+            
+            M_matrix->val[i][25] = -P*r*H;
+            M_matrix->val[i][26] = -P*c*c;
+            M_matrix->val[i][27] = -P*r*r;
+            
+            M_matrix->val[i][28] = -P*H*H;
+            M_matrix->val[i][29] = -P*c*r*H;
+            M_matrix->val[i][30] = -P*c*c*c;
+            
+            M_matrix->val[i][31] = -P*c*r*r;
+            M_matrix->val[i][32] = -P*c*H*H;
+            M_matrix->val[i][33] = -P*c*c*r;
+            
+            M_matrix->val[i][34] = -P*r*r*r;
+            M_matrix->val[i][35] = -P*r*H*H;
+            M_matrix->val[i][36] = -P*c*c*H;
+            
+            M_matrix->val[i][37] = -P*r*r*H;
+            M_matrix->val[i][38] = -P*H*H*H;
+            
+            
+            R_matrix->val[i][0] = P;
+        }
+        
+        //GMA_double_printf(M_matrix);
+        //GMA_double_printf(R_matrix);
+        
+        //printf("done matrix M R assign\n");
+        
+        GMA_double_Tran(M_matrix,MT_matrix);
+        GMA_double_mul(MT_matrix,M_matrix,MTM_matrix);
+        GMA_double_inv(MTM_matrix,MTMI_matrix);
+        GMA_double_mul(MT_matrix,R_matrix,MTR_matrix);
+        GMA_double_mul(MTMI_matrix,MTR_matrix,J_matrix);
+        
+        //printf("done matrix cal 1\n");
+        
+        GMA_double_destroy(MTM_matrix);
+        GMA_double_destroy(MTMI_matrix);
+        GMA_double_destroy(MTR_matrix);
+        
+        double sigma_pre = 100000;
+        double sigma_ratio = 100000;
+        int max_iter = 10;
+        int iteration = 0;
+        
+        while(iteration < max_iter && sigma_ratio > 0.1)
+        {
+            GMA_double *DEN_matrix = GMA_double_create(20,1);
+            GMA_double *W_matrix = GMA_double_create(count_GCPs,count_GCPs);
+            
+            DEN_matrix->val[0][0] = 1.0;
+            for(int i=1;i<20;i++)
+            {
+                DEN_matrix->val[i][0] = J_matrix->val[i+19][0];
+                //printf("coef %d\t %Lf\n",i,DEN_matrix->val[i][0] );
+            }
+            
+            //GMA_double_printf(DEN_matrix);
+            //GMA_double_printf(J_matrix);
+            
+            //GMA_double_destroy(J_matrix);
+            
+            //printf("done matrix create 2\n");
+            
+            //weight matrix
+            for(int i=0;i<count_GCPs;i++)
+            {
+                GMA_double *B_matrix = GMA_double_create(1,20);
+                GMA_double *BDEN_matrix = GMA_double_create(1,1);
+          
+                L       = (VCPs[i].m_X - rpc[0][2])/rpc[1][2];
+                P       = (VCPs[i].m_Y - rpc[0][3])/rpc[1][3];
+                H       = (VCPs[i].m_Z - rpc[0][4])/rpc[1][4];
+                
+                r       = (IPs[i].m_Y - imageparam[0] - rpc[0][0])/rpc[1][0]; //Line
+                c       = (IPs[i].m_X - imageparam[1] - rpc[0][1])/rpc[1][1]; //sample
+               
+                
+                r       = P;
+                c       = L;
+                
+                
+                B_matrix->val[0][0] = 1.0;
+                B_matrix->val[0][1] = c;
+                B_matrix->val[0][2] = r;
+                
+                B_matrix->val[0][3] = H;
+                B_matrix->val[0][4] = c*r;
+                B_matrix->val[0][5] = c*H;
+                
+                B_matrix->val[0][6] = r*H;
+                B_matrix->val[0][7] = c*c;
+                B_matrix->val[0][8] = r*r;
+                
+                B_matrix->val[0][9] = H*H;
+                B_matrix->val[0][10] = c*r*H;
+                B_matrix->val[0][11] = c*c*c;
+                
+                B_matrix->val[0][12] = c*r*r;
+                B_matrix->val[0][13] = c*H*H;
+                B_matrix->val[0][14] = c*c*r;
+                
+                B_matrix->val[0][15] = r*r*r;
+                B_matrix->val[0][16] = r*H*H;
+                B_matrix->val[0][17] = c*c*H;
+                
+                B_matrix->val[0][18] = r*r*H;
+                B_matrix->val[0][19] = H*H*H;
+                
+                GMA_double_mul(B_matrix,DEN_matrix,BDEN_matrix);
+                double B = BDEN_matrix->val[0][0];
+                
+                W_matrix->val[i][i] = (double)(1.0/(B*B));
+                
+                GMA_double_destroy(B_matrix);
+                GMA_double_destroy(BDEN_matrix);
+            }
+            
+            //printf("done matrix W assign\n");
+            //GMA_double_printf(W_matrix);
+            
+            GMA_double_destroy(DEN_matrix);
+            
+            GMA_double *MTW_matrix = GMA_double_create(39,count_GCPs);
+            GMA_double *MTWM_matrix = GMA_double_create(39,39);
+            GMA_double *MTWMI_matrix = GMA_double_create(39,39);
+            GMA_double *MTWR_matrix = GMA_double_create(39,1);
+            //GMA_double *JJ_matrix = GMA_double_create(39,1);
+            
+            GMA_double *WM_matrix = GMA_double_create(count_GCPs,39);
+            GMA_double *WMJ_matrix = GMA_double_create(count_GCPs,1);
+            GMA_double *WR_matrix = GMA_double_create(count_GCPs,1);
+            GMA_double *V_matrix = GMA_double_create(count_GCPs,1);
+            
+            //printf("done matrix create 3\n");
+            
+            GMA_double_mul(MT_matrix,W_matrix,MTW_matrix);
+            //printf("MTW_matrix\n");
+            GMA_double_mul(MTW_matrix,M_matrix,MTWM_matrix);
+            //printf("MTWM_matrix\n");
+            GMA_double_inv(MTWM_matrix,MTWMI_matrix);
+            //printf("MTWMI_matrix\n");
+            GMA_double_mul(MTW_matrix,R_matrix,MTWR_matrix);
+            //printf("MTWR_matrix\n");
+            GMA_double_mul(MTWMI_matrix,MTWR_matrix,J_matrix);
+            
+            //printf("done matrix cal 2 1\n");
+            
+            GMA_double_mul(W_matrix,M_matrix,WM_matrix);
+            GMA_double_mul(W_matrix,R_matrix,WR_matrix);
+            GMA_double_sub(WMJ_matrix,WR_matrix,V_matrix);
+            
+            //printf("done matrix cal 2 2\n");
+            
+            
+            
+            GMA_double_destroy(W_matrix);
+            
+            GMA_double_destroy(MTW_matrix);
+            GMA_double_destroy(MTWM_matrix);
+            GMA_double_destroy(MTWMI_matrix);
+            GMA_double_destroy(MTWR_matrix);
+            
+            GMA_double_destroy(WM_matrix);
+            GMA_double_destroy(WMJ_matrix);
+            GMA_double_destroy(WR_matrix);
+            
+            double sum=0;
+            for(int i=0;i<count_GCPs;i++)
+                sum += (V_matrix->val[i][0])*(V_matrix->val[i][0]);
+            
+            GMA_double_destroy(V_matrix);
+            
+            double sigma = sqrt(sum/(count_GCPs-39));
+            
+            sigma_ratio = fabs(sigma_pre - sigma)/sigma_pre;
+            sigma_pre = sigma;
+            
+            //printf("iteration %d\tsigma %f\t%f\n", iteration, sigma,sigma_ratio);
+            
+            //GMA_double_printf(J_matrix);
+            
+            iteration++;
+            
+        }
+        
+        if(whole_iter == 1)
+        {
+            for(int i=0;i<20;i++)
+            {
+                IRPCs[4][i] = J_matrix->val[i][0];
+                //printf("rpc %d\t%e\n",i+1,IRPCs[4][i]);
+            }
+            
+            IRPCs[5][0] = 1.0;
+            //printf("rpc 21\t%e\n",IRPCs[5][0]);
+            for(int i=1;i<20;i++)
+            {
+                IRPCs[5][i] = J_matrix->val[i+19][0];
+                //printf("rpc %d\t%e\n",i+21,IRPCs[5][i]);
+            }
+        }
+        else
+        {
+            for(int i=0;i<20;i++)
+            {
+                IRPCs[2][i] = J_matrix->val[i][0];
+                //printf("rpc %d\t%e\n",i+1,IRPCs[2][i]);
+            }
+            
+            IRPCs[3][0] = 1.0;
+            //printf("rpc 21\t%e\n",IRPCs[3][0]);
+            for(int i=1;i<20;i++)
+            {
+                IRPCs[3][i] = J_matrix->val[i+19][0];
+                //printf("rpc %d\t%e\n",i+21,IRPCs[3][i]);
+            }
+        }
+        
+        GMA_double_destroy(M_matrix);
+        GMA_double_destroy(MT_matrix);
+        GMA_double_destroy(R_matrix);
+        
+        GMA_double_destroy(J_matrix);
+    }
+    
+    return IRPCs;
 }
 
 double ** GetIRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
