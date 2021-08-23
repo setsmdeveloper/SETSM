@@ -2530,9 +2530,9 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 sprintf(proinfo->Imagemetafile[selected_count],"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
                 
                 Iinfo[selected_count] = temp_info;
-                //Iinfo[selected_count].Offnadir_angle = temp_info.Offnadir_angle;
-                //Iinfo[selected_count].Mean_sat_azimuth_angle = temp_info.Mean_sat_azimuth_angle;
-                //Iinfo[selected_count].GSD.pro_GSD = temp_info.GSD.pro_GSD;
+                Iinfo[selected_count].Offnadir_angle = temp_info.Offnadir_angle;
+                Iinfo[selected_count].Mean_sat_azimuth_angle = temp_info.Mean_sat_azimuth_angle;
+                Iinfo[selected_count].GSD.pro_GSD = temp_info.GSD.pro_GSD;
                 
                 printf("selected_count %d\tpath %s\n%s\n%s\noffnadir %f\tazimuth %f\tGSD %f\t%f\n\n",selected_count,proinfo->Imagefilename[selected_count],proinfo->RPCfilename[selected_count],proinfo->Imagemetafile[selected_count],Iinfo[selected_count].Offnadir_angle,Iinfo[selected_count].Mean_sat_azimuth_angle,Iinfo[selected_count].GSD.pro_GSD,Iinfo[selected_count].cloud);
                 
@@ -2541,6 +2541,7 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 Iinfo[selected_count].date = atoi(temp_day);
                 sprintf(Iinfo[selected_count].filename,"%s",temp_str);
                 sprintf(Iinfo[selected_count].fullpath,"%s/%s/%s/%s/%d",default_path,temp_year,temp_month,temp_day,strip_ID);
+                Iinfo[selected_count].strip_ID = strip_ID;
                 
                 selected_count++;
             }
@@ -2624,6 +2625,177 @@ void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca)
     //eo = t_eo;
     fscanf(pfile,"%lf\t%lf\t%lf\n",&ca.m_focalLength,&ca.m_ppx,&ca.m_ppy);
     fclose(pfile);
+}
+
+void SimulatedImageGeneration(char *demfile, char *oriimagefile, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
+{
+    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
+    
+    CSize imagesize;
+    CSize seeddem_size;
+    
+    uint16 *outimage = NULL;
+    
+    GetImageSize(oriimagefile,&imagesize);
+    seeddem_size = ReadGeotiff_info(demfile, &minX, &maxY, &grid_size);
+    
+    maxX    = minX + grid_size*((double)seeddem_size.width);
+    minY    = maxY - grid_size*((double)seeddem_size.height);
+
+    printf("%d\n",seeddem_size.width);
+    printf("%d\n",seeddem_size.height);
+    printf("%f\n",minX);
+    printf("%f\n",minY);
+    printf("%f\n",maxX);
+    printf("%f\n",maxY);
+    printf("%f\n",grid_size);
+    
+    long int cols[2];
+    long int rows[2];
+    CSize data_size;
+
+    cols[0] = 0;
+    cols[1] = seeddem_size.width;
+
+    rows[0] = 0;
+    rows[1] = seeddem_size.height;
+
+    float type(0);
+    float *seeddem = Readtiff_T(demfile,&seeddem_size,cols,rows,&data_size, type);
+    
+    printf("seeddem size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",seeddem_size.width,seeddem_size.height,cols[0],cols[1],rows[0],rows[1]);
+    
+    uint16 type16(0);
+    cols[0] = 0;
+    cols[1] = imagesize.width;
+
+    rows[0] = 0;
+    rows[1] = imagesize.height;
+    uint16 *oriimage = Readtiff_T(oriimagefile,&imagesize,cols,rows,&data_size, type16);
+    
+    long total_pixel_count = (long)imagesize.width*(long)imagesize.height;
+    outimage = (uint16*)calloc(sizeof(uint16),total_pixel_count);
+    
+    double min_H = 10000000;
+    double max_H = -10000000;
+    for(long row = 0 ; row < seeddem_size.height ; row++)
+    {
+        for(long col = 0 ; col < seeddem_size.width ; col++)
+        {
+            long pos = row*(long)seeddem_size.width + col;
+            float value = seeddem[pos];
+            if(value > -100)
+            {
+                if(min_H > value)
+                    min_H = value;
+                if(max_H < value)
+                    max_H = value;
+            }
+        }
+    }
+    
+    printf("minmax H %f\t%f\timagesize %d\t%d\n",min_H,max_H,imagesize.width,imagesize.height);
+    RM M = MakeRotationMatrix(eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    RM ori_M = MakeRotationMatrix(ori_eo.m_Wl,ori_eo.m_Pl,ori_eo.m_Kl);
+    CSize new_imagesize(imagesize.width,imagesize.height);
+    
+    //exit(1);
+    for(long pos = 0 ; pos <  total_pixel_count; pos++)
+    {
+        long row = (long)floor(pos/imagesize.width);
+        long col = (long)(pos%imagesize.width);
+        
+        D2DPOINT image(col,row);
+        D2DPOINT photo = ImageToPhoto_single(image, camera.m_CCDSize, new_imagesize);
+        D3DPOINT object;
+        //printf("pos col row photo %d\t%d\t%d\t%f\t%f\n",pos,col,row,photo.m_X,photo.m_Y);
+        double height;
+        double diff_h = 1000000;
+        bool check_h = false;
+        
+        height = min_H;
+        while(height >= min_H && height <= max_H && !check_h)
+        {
+            int max_iteration = 100;
+            int iter = 0;
+            bool check_stop = false;
+            
+            while(!check_stop && iter < max_iteration)
+            {
+                iter++;
+                
+                object = GetObjectCoordinate_single(photo, height, eo, camera, M);
+                //printf("object start %f\t%f\t%f\n",object.m_X,object.m_Y,object.m_Z);
+                D3DPOINT dem_pos;
+                dem_pos.m_X = (object.m_X - minX)/grid_size;
+                dem_pos.m_Y = (maxY - object.m_Y)/grid_size;
+                //printf("dem pos %f\t%f\n",dem_pos.m_X,dem_pos.m_Y);
+                long dem_index = (long)dem_pos.m_Y * (long)seeddem_size.width + (long)dem_pos.m_X;
+                if(dem_pos.m_X >= 0 && dem_pos.m_X < seeddem_size.width && dem_pos.m_Y >= 0 && dem_pos.m_Y < seeddem_size.height)
+                {
+                    dem_pos.m_Z = seeddem[dem_index];
+                    object.m_Z = dem_pos.m_Z;
+                    diff_h = fabs(height - dem_pos.m_Z);
+                    if(diff_h < 0.1)
+                    {
+                        check_stop = true;
+                    }
+                    else
+                        height = dem_pos.m_Z;
+                    
+                    check_h = true;
+                }
+                else
+                {
+                    check_stop = true;
+                }
+            }
+            height += 10;
+        }
+        
+        //printf("detected object pos %d\t%d\t%f\t%f\t%f\t%f\n",col,row,object.m_X,object.m_Y,object.m_Z,diff_h);
+        //find ori image points from the object intersection of ray
+        //printf("object final %f\t%f\t%f\n",object.m_X,object.m_Y,object.m_Z);
+        photo  = GetPhotoCoordinate_single(object,ori_eo,camera,ori_M);
+        image = PhotoToImage_single(photo, camera.m_CCDSize, new_imagesize);
+        //printf("coord %f\t%f\t%f\t%f\n",photo.m_X,photo.m_Y,image.m_X,image.m_Y);
+        
+        if(image.m_X >= 0 && image.m_X < imagesize.width && image.m_Y >= 0 && image.m_Y < imagesize.height)
+        {
+            double t_col       = image.m_X;
+            double t_row       = image.m_Y;
+            
+            long t_col_int   = (long int)(t_col + 0.01);
+            long t_row_int   = (long int)(t_row + 0.01);
+            
+            double dcol        = t_col - t_col_int;
+            double drow        = t_row - t_row_int;
+            
+            if(t_col_int >= 0 && t_col_int +1 < imagesize.width && t_row_int >= 0 && t_row_int +1 < imagesize.height
+               && (t_col_int +1) + (t_row_int +1)*(long)imagesize.width < total_pixel_count)
+            {
+                double value1, value2, value3, value4;
+                long index1  = (t_col_int   ) + (t_row_int   )*(long)imagesize.width;
+                long index2  = (t_col_int +1) + (t_row_int   )*(long)imagesize.width;
+                long index3  = (t_col_int   ) + (t_row_int +1)*(long)imagesize.width;
+                long index4  = (t_col_int +1) + (t_row_int +1)*(long)imagesize.width;
+                
+                value1      = oriimage[index1];
+                value2      = oriimage[index2];
+                value3      = oriimage[index3];
+                value4      = oriimage[index4];
+                //printf("values %f\t%f\t%f\t%f\n",value1,value2,value3,value4);
+                double value       = value1*(1-dcol)*(1-drow) + value2*dcol*(1-drow) + value3*(1-dcol)*drow + value4*dcol*drow;
+                //printf("value %ld\t%f\n",(uint16)value,value);
+                outimage[pos] = (uint16)value;
+                //exit(1);
+            }
+        }
+    }
+    
+    WriteGeotiff(imagefile,outimage,imagesize.width,imagesize.height,1,0,imagesize.height,param.projection,param.utm_zone,param.bHemisphere,12);
+    
+    
 }
 
 float median(int n, float* x,float min, float max)

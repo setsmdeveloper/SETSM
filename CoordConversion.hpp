@@ -25,10 +25,13 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps);
 D3DPOINT *ps2wgs_3D_vector(TransParam _param, int _numofpts, vector<D3DPOINT> &_ps);
 
 double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
+double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
 double ** GetIRPCsfromVCPsIPs(const double * const *rpc, const uint8 numofparam, const double *imageparam, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs);
 //RPC conversion : image to object
 D2DPOINT* GetObjectToImageRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, const uint16 _numofpts, D3DPOINT *_GP);
 D3DPOINT* GetImageHToObjectIRPC(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, vector<D3DPOINT> &_GP, vector<D2DPOINT> &_IPs);
+D2DPOINT GetObjectToImageRPC_single2(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP);
+D3DPOINT GetImageHToObjectIRPC_single(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, double GP_H, D2DPOINT _IPs);
 void GetRayVectorFromIRPC(const double * const *IRPCs, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize, D3DPOINT &ray_vector);
 void GetRayVectorFromEOBRcenter(const EO eo, CAMERA_INFO camera, CSize imagesize, double *boundary, double *minmaxH, D3DPOINT &ray_vector);
 void GetAZELFromRay(const D3DPOINT ray_vector, float &AZ, float &EL);

@@ -441,7 +441,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                                     index           = t_col_int + t_row_int*(long)Orthoimagesize.width;
                                     
                                     if(t_col_int >= 0 && t_col_int < Orthoimagesize.width && t_row_int >= 0 && t_row_int < Orthoimagesize.height && index >= 0 && index < data_length_ortho)
-                                        result_ortho[index] = value1;
+                                        result_ortho[index] = value;
                                 }
                             }
                         }

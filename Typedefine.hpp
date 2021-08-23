@@ -57,6 +57,19 @@ enum PyImageSelect {OR, BD, NX};
 
 using std::vector;
 
+typedef struct tagCLB
+{
+    double b11,b12,b13,b14,b15,b16;
+    double b21,b22,b23,b24,b25,b26;
+    double J, K;
+    /*void printf()
+    {
+        printf("CLB\n%f\t%f\t%f\t%f\t%f\t%f\n",b11,b12,b13,b14,b15,b16);
+        printf("%f\t%f\t%f\t%f\t%f\t%f\n",b21,b22,b23,b24,b25,b26);
+        printf("%f\t%f\n",J, K);
+    }*/
+} CLB;
+
 typedef struct tagUParams
 {
     double f;//focal length
@@ -77,7 +90,7 @@ typedef struct tagPDCs
 {
     double a[2][2];//image point term
     double b[2][6];//EO parameters and Ground Coordinates term
-    double c[2][3];//Calibration data term
+    double c[2][10];//Calibration data term
     double Fo, Go;//initial approximation of F, G
 } PDCS;
 
@@ -707,6 +720,11 @@ typedef struct tagCameraInfo
     double m_CCDSize;
     double m_ppx;
     double m_ppy;
+    
+    double k1, k2, k3;//ratdial distortion
+    double p1, p2;//tangential distortion
+    double a1, a2;//affinity
+    
 } CAMERA_INFO;
 
 typedef struct tagRotationMatrix
@@ -908,7 +926,7 @@ typedef struct ArgumentInfo{
     bool check_fl;
     bool check_ccd;
     bool check_full_cal;
-
+    bool check_simulate;
     int check_txt_input;
     int check_coreg;
     int check_sdm_ortho;
@@ -971,6 +989,7 @@ typedef struct tagImageInfo
     int date;
     int year;
     int scandirection;
+    int strip_ID;
     
     char filename[500];
     char fullpath[500];

@@ -36,6 +36,8 @@
 
 void DownSample(ARGINFO &args);
 
+void ImageSimulation(char* _filename, ARGINFO args);
+
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
 
 void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const double * const * const *IRPCs, const TransParam param, double **Imageparams, ImageInfo *image_info, CSize *Imagesize, const D3DPOINT* ray_vector, const vector<int> OI, vector<int> &selected_image);

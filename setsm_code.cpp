@@ -93,7 +93,8 @@ int main(int argc,char *argv[])
     args.check_fl = false;
     args.check_ccd = false;
     args.check_full_cal = false;
-
+    args.check_simulate = false;
+    
     args.check_coreg = 0;     //image coreg = 1, DEM coreg = 2, image + DEM = 3
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
@@ -303,6 +304,19 @@ int main(int argc,char *argv[])
         
         for (i=0; i<argc; i++)
         {
+            if (strcmp("-Sim",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input '1' for Yes or '0' for No\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_simulate = atoi(argv[i+1]);
+                    printf("Simulate image %d\n",args.check_simulate);
+                }
+            }
+            
             if (strcmp("-LSFDEM",argv[i]) == 0)
             {
                 if (argc == i+1) {
@@ -1599,6 +1613,7 @@ int main(int argc,char *argv[])
                     {
                         args.utm_zone = atoi(argv[i+1]);
                         printf("%d\n",args.utm_zone);
+                        args.param.utm_zone = args.utm_zone;
                     }
                 }
                 
@@ -1629,11 +1644,26 @@ int main(int argc,char *argv[])
                 
                 bool check_frame_info = true;
                 
-                if(args.check_txt_input == 0 || args.check_txt_input == 2 || args.check_txt_input == 3)
+                if(args.check_txt_input == 0 || args.check_txt_input == 2 || args.check_txt_input == 3) //DEM processing
                 {
                     if(args.check_downsample)
                     {
                         DownSample(args);
+                    }
+                    else if(args.check_simulate)
+                    {
+                        args.number_of_images = image_count;
+                        
+                        char *Outputpath_name  = SetOutpathName(args.Outputpath);
+                        sprintf(args.Outputpath_name,"%s",Outputpath_name);
+                        printf("after pathname %s\n",args.Outputpath_name);
+                        
+                        printf("%s\n",args.Outputpath);
+                        printf("%s\n", args.Outputpath_name);
+
+                        free(Outputpath_name);
+                        
+                        ImageSimulation(projectfilename,args);
                     }
                     else if(image_count > 1 || args.check_ortho)
                     {
@@ -1736,7 +1766,7 @@ int main(int argc,char *argv[])
                         printf("Plese check input images\n");
                     }
                 }
-                else if(args.check_txt_input == 1 )
+                else if(args.check_txt_input == 1 ) //DEM coregistration
                 {
                     char *Outputpath_name  = SetOutpathName(args.Outputpath);
                     sprintf(args.Outputpath_name,"%s",Outputpath_name);
@@ -1847,6 +1877,182 @@ void DownSample(ARGINFO &args)
 
         free(outimg);
          
+    }
+}
+
+void ImageSimulation(char* _filename, ARGINFO args)
+{
+    ProInfo *proinfo = new ProInfo;
+    proinfo->number_of_images = args.number_of_images;
+    proinfo->sensor_type = args.sensor_type;
+    proinfo->sensor_provider = args.sensor_provider;
+    sprintf(proinfo->save_filepath,"%s",args.Outputpath);
+    
+    if(OpenProject(_filename,proinfo,args))
+    {
+        if(Maketmpfolders(proinfo))
+        {
+            TransParam param = {};
+            param.bHemisphere = args.param.bHemisphere; //no assigned
+            param.projection = args.param.projection;
+            param.utm_zone   = args.param.utm_zone;
+            param.pm = args.param.pm;
+            
+            SetTransParam_param(&param,param.bHemisphere);
+            
+            printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
+            
+            ImageInfo *image_info = (ImageInfo*)calloc(sizeof(ImageInfo),proinfo->number_of_images);
+            CSize *Limagesize = (CSize*)malloc(sizeof(CSize)*proinfo->number_of_images); //original imagesize
+            double ***RPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+            double ***IRPCs = (double***)calloc(proinfo->number_of_images, sizeof(double**));
+            D3DPOINT *ray_vector = (D3DPOINT*)calloc(proinfo->number_of_images*2, sizeof(D3DPOINT));
+            
+            proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->number_of_images);
+            
+            if(args.sensor_provider == PT)
+            {
+                proinfo->frameinfo.m_Camera.m_CCDSize = 5.5;
+                proinfo->frameinfo.m_Camera.m_focalLength = 770; //skysat 3.6m
+                proinfo->frameinfo.m_Camera.k1 = 0;
+                proinfo->frameinfo.m_Camera.k2 = 0;
+                proinfo->frameinfo.m_Camera.k3 = 0;
+                proinfo->frameinfo.m_Camera.p1 = 0;
+                proinfo->frameinfo.m_Camera.p2 = 0;
+                proinfo->frameinfo.m_Camera.a1 = 0;
+                proinfo->frameinfo.m_Camera.a2 = 0;
+                
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    RPCs[ti]       = OpenXMLFile_Planet(proinfo->RPCfilename[ti]);
+                    GetImageSize(args.Image[ti],&Limagesize[ti]);
+                    
+                    OpenXMLFile_orientation_planet(proinfo->Imagemetafile[ti],&image_info[ti]);
+                }
+            }
+            else
+            {
+                /*
+                for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                {
+                    if(args.sensor_provider == DG)
+                    {
+                        //altitude WV1 = 496km, WV2 = 770 km, WV3 = 617km
+                        proinfo->frameinfo.m_Camera.m_CCDSize = 8; //WV1,2,3 8 um     WV1 = WorldView-60 camera, WV2 and 3 = WorldView-100 camera
+                        proinfo->frameinfo.m_Camera.m_focalLength = 8.8*1000; //WV1 8.8m , WV2,3 13.3m
+                        RPCs[ti]       = OpenXMLFile(proinfo,ti,&Image_gsd_r[ti],&Image_gsd_c[ti],&Image_gsd[ti],&leftright_band[ti]);
+                        
+                        GetImageSize(proinfo->Imagefilename[ti],&Limagesize[ti]);
+                        
+                        OpenXMLFile_orientation(proinfo->RPCfilename[ti],&image_info[ti]);
+                        
+                    }
+                    else if(args.sensor_provider == PL)
+                    {
+                        RPCs[ti]       = OpenXMLFile_Pleiades(proinfo->RPCfilename[ti]);
+                        GetImageSize(proinfo->Imagefilename[ti],&Limagesize[ti]);
+                    }
+                }
+                 */
+            }
+            
+            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+            {
+                char *tmp_chr = remove_ext(args.Image[ti]);
+                D2DPOINT average_XY;
+                char eofile[500];
+                sprintf(eofile,"%s_EO.TXT",tmp_chr);
+                FILE *pfile = fopen(eofile,"r");
+                /*if(pfile)
+                {
+                    printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
+                    ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                }
+                else*/
+                {
+                    printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
+                    
+                    vector<D3DPOINT> VCPslatlong;
+                    vector<D2DPOINT> IPs;
+                    double Imageparams[2] = {0};
+                    double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams,Limagesize[ti],VCPslatlong,IPs);
+                    
+                    vector<D3DPOINT> VCPsXY;
+                    vector<D2DPOINT> IPsPhoto;
+                    int numofpts = VCPslatlong.size();
+                    CSize new_imagesize(Limagesize[ti].width,Limagesize[ti].height);
+                    
+                    double minX,maxX,minY,maxY,minZ,maxZ;
+                    double maxXp = (new_imagesize.width/2.0)*proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM;
+                    double minXp = -maxXp;
+                    double maxYp = (new_imagesize.height/2.0)*proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM;
+                    double minYp = -maxYp;
+                    
+                    for(int i=0;i<numofpts;i++)
+                    {
+                        D2DPOINT tempIP;
+                        D3DPOINT temppt;
+                        
+                        tempIP = ImageToPhoto_single(IPs[i],proinfo->frameinfo.m_Camera.m_CCDSize,new_imagesize);
+                        
+                        IPsPhoto.push_back(tempIP);
+                        temppt = wgs2ps_single_3D(param,VCPslatlong[i]);
+                        VCPsXY.push_back(temppt);
+                        
+                        printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
+                    }
+                    
+                    CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    
+                    printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                           proinfo->frameinfo.Photoinfo[ti].m_Xl,
+                           proinfo->frameinfo.Photoinfo[ti].m_Yl,
+                           proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                           proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                    printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
+                    
+                    proinfo->frameinfo.Photoinfo[ti].m_Rm = MakeRotationMatrix(proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                    
+                    for(int i=0;i<numofpts;i++)
+                    {
+                        D2DPOINT t_img = GetPhotoCoordinate_single(VCPsXY[i], proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                        printf("diff image %f\t%f\t%f\t%f\t%f\t%f\n",IPsPhoto[i].m_X,IPsPhoto[i].m_Y,t_img.m_X,t_img.m_Y,
+                               (IPsPhoto[i].m_X-t_img.m_X)/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM),
+                               (IPsPhoto[i].m_Y-t_img.m_Y)/(proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM));
+                        D3DPOINT t_obj = GetObjectCoordinate_single(IPsPhoto[i], VCPsXY[i].m_Z,proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm);
+                        
+                        printf("diff object %f\t%f\t%f\t%f\t%f\t%f\t%f\n",
+                               VCPsXY[i].m_X,
+                               VCPsXY[i].m_Y,
+                               t_obj.m_X,
+                               t_obj.m_Y,
+                               (VCPsXY[i].m_X)-(t_obj.m_X),
+                               (VCPsXY[i].m_Y)-(t_obj.m_Y),
+                               (VCPsXY[i].m_Z)-(t_obj.m_Z));
+                        
+                    }
+                }
+                
+                printf("file name %s\n",proinfo->Imagefilename[ti]);
+                printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                       proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                       proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
+                
+                char imagefile[500];
+                char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
+                char *tmp_no_ext = remove_ext(Ifilename);
+                sprintf(imagefile, "%s/%s_sim_p2.tif", proinfo->save_filepath, tmp_no_ext);
+                printf("new imagefile %s\n",imagefile);
+                EO sim_eo;
+                sim_eo = proinfo->frameinfo.Photoinfo[ti];
+                sim_eo.m_Kl += 10;
+                //sim_eo.m_Pl += 1;
+                SimulatedImageGeneration(args.seedDEMfilename, proinfo->Imagefilename[ti], imagefile, proinfo->frameinfo.Photoinfo[ti], sim_eo, proinfo->frameinfo.m_Camera,param);
+            
+            }
+        }
     }
 }
 
@@ -2109,7 +2315,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             OpenXMLFile_orientation_planet(proinfo->Imagemetafile[ti],&image_info[ti]);
                             image_info[ti].GSD.pro_GSD = (image_info[ti].GSD.row_GSD + image_info[ti].GSD.col_GSD)/2.0;
-                            if(args.check_txt_input != 2 || args.check_txt_input != 3)
+                            if(args.check_txt_input != 2 && args.check_txt_input != 3)
                             {
                                 if(ti != 1) //manual setup offnadir direction
                                     image_info[ti].Offnadir_angle = -(image_info[ti].Offnadir_angle_xml);
@@ -2167,7 +2373,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     //Inverse RPCs estimate
                     printf("Inverse RPCs estimate\n");
                     
-    #pragma omp parallel for schedule(guided)
+    //#pragma omp parallel for schedule(guided)
                     for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                     {
                         char irpcfile[500];
@@ -2175,21 +2381,24 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         FILE *pfile = fopen(irpcfile,"r");
                         if(pfile)
                         {
-                            printf("%d/%d read existing irpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                            //printf("%d/%d read existing irpcs %s\n",ti,proinfo->number_of_images,irpcfile);
                             IRPCs[ti] = OpenXMLFile_Planet(irpcfile);
                             //remove(irpcfile);
                         }
                         else
                         {
-                            printf("%d/%d generating irpcs from rpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                            //printf("%d/%d generating irpcs from rpcs %s\n",ti,proinfo->number_of_images,irpcfile);
                             vector<D3DPOINT> VCPslatlong;
                             vector<D2DPOINT> IPs;
                             double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
                             IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
                             WriteIRPCs_Planet(irpcfile, IRPCs[ti]);
+                            
                             VCPslatlong.clear();
                             IPs.clear();
                         }
+                        
+                        
                     }
                 }
                 
@@ -2510,6 +2719,30 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     vector<D3DPOINT> VCPsXY;
                     vector<D2DPOINT> IPsPhoto;
                     int numofpts = VCPslatlong.size();
+                    
+                    /*
+                    for(int j = 0 ; j < IPs.size() ; j++)
+                    {
+                        double tt_imageparam[2] = {0};
+                        D3DPOINT obj = GetImageHToObjectIRPC_single(IRPCs[ti],2,tt_imageparam,VCPslatlong[j].m_Z,IPs[j]);
+                        D3DPOINT temppt = wgs2ps_single_3D(param,obj);
+                        D3DPOINT diff = obj - VCPslatlong[j];
+                        printf("diff obj %10.9e\t%10.9e\t%10.9e\n",diff.m_X,diff.m_Y,diff.m_Z);
+                        
+                        
+                        D2DPOINT obj_xy(temppt.m_X,temppt.m_Y);
+                        D2DPOINT tempp = ps2wgs_single(param,obj_xy);
+                        obj.m_X = tempp.m_X;
+                        obj.m_Y = tempp.m_Y;
+                        
+                        D2DPOINT img = GetObjectToImageRPC_single(RPCs[ti], 2,tt_imageparam, obj);
+                        D2DPOINT diff_img = img - IPs[j];
+                        printf("diff img %10.9e\t%10.9e\n",diff_img.m_X,diff_img.m_Y);
+                                                      
+                    }
+                    exit(1);
+                    */
+                    
                     for(int i=0;i<numofpts;i++)
                     {
                         D2DPOINT tempIP;
@@ -2535,21 +2768,22 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         FILE *pfile = fopen(eofile,"r");
                         if(pfile)
                         {
-                            printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
+                            //printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
                             ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                         }
                         else
                         {
-                            printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
+                            //printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
                             CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                             WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                         }
+                        /*
                         printf("file name %s\n",proinfo->Imagefilename[ti]);
                         printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
                                proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
                                proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
                         printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
-                    
+                    */
                         
                         GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
                         GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
@@ -2559,7 +2793,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                     
                 }
-                //exit(1);
+                
                 if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
                 {
                     vector<int> result;
@@ -2575,8 +2809,15 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     for(int ti = 0 ; ti < final_result.size() ; ti++)
                     {
                         int ID = final_result[ti];
-                        printf("selected file %s\n",proinfo->Imagefilename[ID]);
-                        fprintf(plistfile,"%s\n",proinfo->Imagefilename[ID]);
+                        /*
+                        if(image_info[ID].AZ_ray[0] < 0)
+                            image_info[ID].Offnadir_angle = -image_info[ID].Offnadir_angle_xml;
+                        else
+                            image_info[ID].Offnadir_angle = image_info[ID].Offnadir_angle_xml;
+                        image_info[ID].Mean_sat_azimuth_angle = image_info[ID].AZ_ray[0];
+                        */
+                        printf("%s\t%d\t%f\t%f\t%f\n",image_info[ID].filename,image_info[ID].strip_ID, image_info[ID].Offnadir_angle,image_info[ID].Mean_sat_azimuth_angle,image_info[ID].GSD.pro_GSD);
+                        fprintf(plistfile,"%s\t%d\t%f\t%f\t%f\n",image_info[ID].filename,image_info[ID].strip_ID, image_info[ID].Offnadir_angle,image_info[ID].Mean_sat_azimuth_angle,image_info[ID].GSD.pro_GSD);
                     }
                     fclose(plistfile);
                     

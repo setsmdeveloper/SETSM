@@ -73,6 +73,7 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo);
 void Open_planetmultiinfo_args(ARGINFO *args);
 void WriteEOs(char* filename, EO eo, CAMERA_INFO ca);
 void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca);
+void SimulatedImageGeneration(char *demfile, char *oriimagefile, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param);
 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);

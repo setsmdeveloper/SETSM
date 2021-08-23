@@ -875,7 +875,76 @@ double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, co
                 
                 D2DPOINT IP = GetObjectToImageRPC_single_mpp(rpc,numofparam,imageparam,GP);
                 
-                //if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
+                if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
+                {
+                    VCPs.push_back(GP);
+                    IPs.push_back(IP);
+                }
+            }
+        }
+    }
+    
+    return mid_H;
+}
+
+double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, const uint8 numofparam, const double *imageparam, CSize imagesize, vector<D3DPOINT> &VCPs, vector<D2DPOINT> &IPs)
+{
+    double mid_H;
+    
+    double VCP_interval = 20;
+    double VCP_intervla_Z = 6;
+    
+    double minLon = (double) (-1.0 * rpc[1][2] + rpc[0][2]);
+    double maxLon = (double) (1.0 * rpc[1][2] + rpc[0][2]);
+    double minLat = (double) (-1.0 * rpc[1][3] + rpc[0][3]);
+    double maxLat = (double) (1.0 * rpc[1][3] + rpc[0][3]);
+    double minH = (double) (-1.0 * rpc[1][4] + rpc[0][4]);
+    double maxH = (double) (1.0 * rpc[1][4] + rpc[0][4]);
+    
+    mid_H = minH + (maxH - minH)/2.0;
+    
+    double temp;
+    if(minLon > maxLon)
+    {
+        temp = minLon;
+        minLon = maxLon;
+        maxLon = temp;
+    }
+    
+    if(minLat > maxLat)
+    {
+        temp = minLat;
+        minLat = maxLat;
+        maxLat = temp;
+    }
+    
+    //printf("minmax Lon %f\t%f\t%f\n",minLon,maxLon,rpc[0][2]);
+    //printf("minmax Lat %f\t%f\t%f\n",minLat,maxLat,rpc[0][3]);
+    //printf("minmax H %f\t%f\t%f\n",minH,maxH,rpc[0][4]);
+    
+    double X_dist = maxLon - minLon;
+    double Y_dist = maxLat - minLat;
+    double dist = (X_dist > Y_dist) ? Y_dist : X_dist;
+    double Z_dist = maxH - minH;
+    double X_interval = X_dist/VCP_interval;
+    double Y_interval = Y_dist/VCP_interval;
+    double Z_interval = Z_dist/VCP_intervla_Z;
+    
+    //printf("inverval %f\t%f\t%f\n",X_interval,Y_interval,Z_interval);
+    //for(int i=0;i<VCP_intervla_Z;i++) //Z
+    {
+        for(int j=0;j<VCP_interval;j++) //Y
+        {
+            for(int k=0;k<VCP_interval;k++) //X
+            {
+                D3DPOINT GP;
+                GP.m_X = minLon + k*X_interval;
+                GP.m_Y = minLat + j*Y_interval;
+                GP.m_Z = (rand() % ((int)maxH - (int)minH + 1)) + minH;
+                
+                D2DPOINT IP = GetObjectToImageRPC_single_mpp(rpc,numofparam,imageparam,GP);
+                
+                if(IP.m_X > 0 && IP.m_X < imagesize.width && IP.m_Y > 0 && IP.m_Y < imagesize.height)
                 {
                     VCPs.push_back(GP);
                     IPs.push_back(IP);
@@ -1353,6 +1422,125 @@ D3DPOINT* GetImageHToObjectIRPC(const double * const *_rpc, const uint8 _numofpa
     return Object;
 }
 
+D2DPOINT GetObjectToImageRPC_single2(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, D3DPOINT _GP)
+{
+    D2DPOINT IP;
+    
+    {
+        double L, P, H, Line, Samp, deltaP, deltaR;
+        double Coeff[4];
+
+        L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+        P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+        H       = (_GP.m_Z - _rpc[0][4])/_rpc[1][4];
+        
+        //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        
+        if(L < -10.0 || L > 10.0)
+        {
+            if(_GP.m_X > 0)
+                _GP.m_X = _GP.m_X - 360;
+            else
+                _GP.m_X = _GP.m_X + 360;
+            
+            L       = (_GP.m_X - _rpc[0][2])/_rpc[1][2];
+            
+            //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+            
+        }
+        if(P < -10.0 || P > 10.0)
+        {
+            if(_GP.m_Y > 0)
+                _GP.m_Y = _GP.m_Y - 360;
+            else
+                _GP.m_Y = _GP.m_Y + 360;
+            
+            P       = (_GP.m_Y - _rpc[0][3])/_rpc[1][3];
+            
+            //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        }
+        
+        //printf("L P H %f\t%f\t%f\n",L,P,H);
+        
+        for(int j=0;j<4;j++)
+        {
+            Coeff[j]    = _rpc[j+2][0]*1.0          + _rpc[j+2][1]*L            + _rpc[j+2][2]*P
+                + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
+                + _rpc[j+2][6]*P*H          + _rpc[j+2][7]*L*L          + _rpc[j+2][8]*P*P
+                + _rpc[j+2][9]*H*H          + _rpc[j+2][10]*(P*L)*H     + _rpc[j+2][11]*(L*L)*L
+                + _rpc[j+2][12]*(L*P)*P     + _rpc[j+2][13]*(L*H)*H     + _rpc[j+2][14]*(L*L)*P
+                + _rpc[j+2][15]*(P*P)*P     + _rpc[j+2][16]*(P*H)*H     + _rpc[j+2][17]*(L*L)*H
+                + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
+        }
+
+        Line     = ((Coeff[0]/Coeff[1])*_rpc[1][0] + _rpc[0][0]); //Line
+        Samp     = ((Coeff[2]/Coeff[3])*_rpc[1][1] + _rpc[0][1]); //Sample
+        deltaP      = _imageparam[0];
+        deltaR      = _imageparam[1];
+
+        IP.m_Y       = deltaP + Line;
+        IP.m_X       = deltaR + Samp;
+        
+    }
+
+    return IP;
+}
+
+D3DPOINT GetImageHToObjectIRPC_single(const double * const *_rpc, const uint8 _numofparam, const double *_imageparam, double GP_H, D2DPOINT _IPs)
+{
+    D3DPOINT Object;
+    
+    {
+        double L, P, H, r, c;
+        double Coeff[4];
+
+        r       = (_IPs.m_Y - _imageparam[0] - _rpc[0][0])/_rpc[1][0]; //Line
+        c       = (_IPs.m_X - _imageparam[1] - _rpc[0][1])/_rpc[1][1]; //sample
+        H       = (GP_H - _rpc[0][4])/_rpc[1][4];
+        
+        P       = r;
+        L       = c;
+        //printf("original %f\t%f\t%f\tL P H %f\t%f\t%f\n",_GP[i].m_X,_GP[i].m_Y,_GP[i].m_Z,L,P,H);
+        
+        for(int j=0;j<4;j++)
+        {
+            Coeff[j]    = _rpc[j+2][0]*1.0          + _rpc[j+2][1]*L            + _rpc[j+2][2]*P
+                + _rpc[j+2][3]*H            + _rpc[j+2][4]*L*P          + _rpc[j+2][5]*L*H
+                + _rpc[j+2][6]*P*H          + _rpc[j+2][7]*L*L          + _rpc[j+2][8]*P*P
+                + _rpc[j+2][9]*H*H          + _rpc[j+2][10]*(P*L)*H     + _rpc[j+2][11]*(L*L)*L
+                + _rpc[j+2][12]*(L*P)*P     + _rpc[j+2][13]*(L*H)*H     + _rpc[j+2][14]*(L*L)*P
+                + _rpc[j+2][15]*(P*P)*P     + _rpc[j+2][16]*(P*H)*H     + _rpc[j+2][17]*(L*L)*H
+                + _rpc[j+2][18]*(P*P)*H     + _rpc[j+2][19]*(H*H)*H;
+        }
+
+        P       = Coeff[0]/Coeff[1];
+        L       = Coeff[2]/Coeff[3];
+        
+        Object.m_Y = P*_rpc[1][3] + _rpc[0][3]; //Y
+        Object.m_X = L*_rpc[1][2] + _rpc[0][2]; //X
+        Object.m_Z = GP_H;//Z
+        
+        if(L < -10.0 || L > 10.0)
+        {
+            if(Object.m_X > 0)
+                Object.m_X = Object.m_X - 360;
+            else
+                Object.m_X = Object.m_X + 360;
+        }
+        
+        if(P < -10.0 || P > 10.0)
+        {
+            if(Object.m_Y > 0)
+                Object.m_Y = Object.m_Y - 360;
+            else
+                Object.m_Y = Object.m_Y + 360;
+            
+        }
+    }
+
+    return Object;
+}
+
 void GetRayVectorFromIRPC(const double * const *IRPCs, TransParam param, const uint8 numofparam, double *imageparam, CSize imagesize, D3DPOINT &ray_vector)
 {
     double minH = (double) (-1.0 * IRPCs[1][4] + IRPCs[0][4]);
@@ -1809,7 +1997,7 @@ D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAM
         A[i].m_Z = z;
         A[i].m_X =  (A[i].m_Z - Photo.m_Zl)*(M.m11*(a[i].m_X - Camera.m_ppx) + M.m21*(a[i].m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
         /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
-        A[i].m_Y =  (A[i].m_Z - Photo.m_Zl)*(M.m12*(a[i].m_X - Camera.m_ppx) + M.m22*(a[i].m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
+        A[i].m_Y =  (A[i].m_Z - Photo.m_Zl)*(M.m12*(a[i].m_X - Camera.m_ppx) + M.m22*(a[i].m_Y - Camera.m_ppy) + M.m32*(-Camera.m_focalLength))
         /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
     }
     
@@ -1853,10 +2041,27 @@ D2DPOINT GetPhotoCoordinate_single(const D3DPOINT A, const EO Photo, const CAMER
     double q = M.m31*(A.m_X - Photo.m_Xl) + M.m32*(A.m_Y - Photo.m_Yl) + M.m33*(A.m_Z - Photo.m_Zl);
     double r = M.m11*(A.m_X - Photo.m_Xl) + M.m12*(A.m_Y - Photo.m_Yl) + M.m13*(A.m_Z - Photo.m_Zl);
     double s = M.m21*(A.m_X - Photo.m_Xl) + M.m22*(A.m_Y - Photo.m_Yl) + M.m23*(A.m_Z - Photo.m_Zl);
-        
+    
     IP.m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
     IP.m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
-
+    
+    double RR;
+    double x_, y_;
+    x_ = IP.m_X - Camera.m_ppx;
+    y_ = IP.m_Y - Camera.m_ppy;
+    RR = (x_*x_)+(y_*y_);
+    
+    double dxR, dxT;
+    double dyR, dyT;
+    double dR_R;
+    dR_R = Camera.k1*RR + Camera.k2*RR*RR + Camera.k3*RR*RR*RR;
+    dxR = x_*dR_R;
+    dyR = y_*dR_R;
+    dxT = Camera.p1*(RR + 2*x_*x_) + 2*Camera.p2*x_*y_;
+    dyT = Camera.p2*(RR + 2*y_*y_) + 2*Camera.p1*x_*y_;
+    
+    IP.m_X = IP.m_X - dxR - dxT;
+    IP.m_Y = IP.m_Y - dyR - dyT - Camera.a1*x_ - Camera.a2*y_;
     
     return IP;
 }
@@ -1864,14 +2069,38 @@ D2DPOINT GetPhotoCoordinate_single(const D3DPOINT A, const EO Photo, const CAMER
 D3DPOINT GetObjectCoordinate_single(D2DPOINT a, double z,EO Photo, CAMERA_INFO Camera, RM M)
 {
     D3DPOINT A;
+    D2DPOINT corr_pt;
+    
+    double RR;
+    double x_, y_;
+    x_ = a.m_X - Camera.m_ppx;
+    y_ = a.m_Y - Camera.m_ppy;
+    RR = (x_*x_)+(y_*y_);
+    
+    double dxR, dxT;
+    double dyR, dyT;
+    double dR_R;
+    dR_R = Camera.k1*RR + Camera.k2*RR*RR + Camera.k3*RR*RR*RR;
+    dxR = x_*dR_R;
+    dyR = y_*dR_R;
+    dxT = Camera.p1*(RR + 2*x_*x_) + 2*Camera.p2*x_*y_;
+    dyT = Camera.p2*(RR + 2*y_*y_) + 2*Camera.p1*x_*y_;
+    
+    corr_pt.m_X = x_ + dxR + dxT;
+    corr_pt.m_Y = y_ + dyR + dyT + Camera.a1*x_ + Camera.a2*y_;
     
     A.m_Z = z;
+    A.m_X =  (A.m_Z - Photo.m_Zl)*(M.m11*(corr_pt.m_X) + M.m21*(corr_pt.m_Y) + M.m31*(-Camera.m_focalLength))
+    /(M.m13*(corr_pt.m_X) + M.m23*(corr_pt.m_Y) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
+    A.m_Y =  (A.m_Z - Photo.m_Zl)*(M.m12*(corr_pt.m_X) + M.m22*(corr_pt.m_Y) + M.m32*(-Camera.m_focalLength))
+    /(M.m13*(corr_pt.m_X) + M.m23*(corr_pt.m_Y) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
+    
+    /*
     A.m_X =  (A.m_Z - Photo.m_Zl)*(M.m11*(a.m_X - Camera.m_ppx) + M.m21*(a.m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
     /(M.m13*(a.m_X - Camera.m_ppx) + M.m23*(a.m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
     A.m_Y =  (A.m_Z - Photo.m_Zl)*(M.m12*(a.m_X - Camera.m_ppx) + M.m22*(a.m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
     /(M.m13*(a.m_X - Camera.m_ppx) + M.m23*(a.m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
-
-    
+     */
     return A;
 }
 
