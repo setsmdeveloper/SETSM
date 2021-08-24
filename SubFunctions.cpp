@@ -2649,13 +2649,20 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     EO out_eo;
     
     D3DPOINT shifted_XYZ;
-    double FL = input_eo.m_Zl - XYZ_center.m_Z;
-    double scale = FL/camera.m_focalLength;
     
+    D3DPOINT dist;
+    dist.m_X = input_eo.m_Xl - XYZ_center.m_X;
+    dist.m_Y = input_eo.m_Yl - XYZ_center.m_Y;
+    dist.m_Z = input_eo.m_Zl - XYZ_center.m_Z;
+    
+    double ori_distance = sqrt(dist.m_X*dist.m_X + dist.m_Y*dist.m_Y + dist.m_Z*dist.m_Z);
+    double scale = ori_distance/camera.m_focalLength;
+    //printf("scale ori %f\n",scale);
     D2DPOINT ori_img = GetPhotoCoordinate_single(XYZ_center, input_eo, camera, input_eo.m_Rm);
+    //printf("ori_img %f\t%f\n",ori_img.m_X,ori_img.m_Y);
     
-    shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*FL;
-    shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*FL;
+    shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*ori_distance;
+    shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*ori_distance;
     
     out_eo = input_eo;
     out_eo.m_Xl += shifted_XYZ.m_X;
@@ -2665,17 +2672,27 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     
     RM M = MakeRotationMatrix(out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
     
+    D3DPOINT ray_vector;
+    ray_vector.m_X = XYZ_center.m_X - out_eo.m_Xl;
+    ray_vector.m_Y = XYZ_center.m_Y - out_eo.m_Yl;
+    ray_vector.m_Z = XYZ_center.m_Z - out_eo.m_Zl;
+    
+    double mag = SQRT(ray_vector);
+    ray_vector.m_X /= mag;
+    ray_vector.m_Y /= mag;
+    ray_vector.m_Z /= mag;
+    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+    
     bool check_stop = false;
-    int max_iteration = 10;
+    int max_iteration = 50;
     int iter = 0;
     double max_correction = camera.m_CCDSize*UMToMM;
     while(!check_stop && iter < max_iteration)
     {
         iter++;
     
+        //Xl, Yl adjustment
         D2DPOINT img_center = GetPhotoCoordinate_single(XYZ_center, out_eo, camera, M);
-        
-        
         
         D2DPOINT img_diff;
         img_diff.m_X = ori_img.m_X - img_center.m_X;
@@ -2683,11 +2700,12 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
         /*
         printf("iter %d\timg center %f\t%f\t eo %f\t%f\t%f\t%f\t%f\t%f\n",iter,img_center.m_X,img_center.m_Y,
                out_eo.m_Xl,out_eo.m_Yl,out_eo.m_Zl,out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
-        printf("img diff %f\t%f\n",img_diff.m_X,img_diff.m_Y);
+        printf("img diff %f\t%f\t%f\n",img_diff.m_X,img_diff.m_Y,max_correction);
         */
         if(fabs(img_diff.m_X) < max_correction && fabs(img_diff.m_Y) < max_correction)
         {
             check_stop = true;
+   
         }
         else
         {
@@ -2697,6 +2715,75 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
             out_eo.m_Yl -= shifted_XYZ.m_Y;
         }
     }
+    
+    dist.m_X = out_eo.m_Xl - XYZ_center.m_X;
+    dist.m_Y = out_eo.m_Yl - XYZ_center.m_Y;
+    dist.m_Z = out_eo.m_Zl - XYZ_center.m_Z;
+    
+    double shifted_distance = sqrt(dist.m_X*dist.m_X + dist.m_Y*dist.m_Y + dist.m_Z*dist.m_Z);
+    double diff_dist = ori_distance - shifted_distance;
+    //printf("scale aft %f\n",shifted_distance/camera.m_focalLength);
+    
+    
+    ray_vector.m_X = XYZ_center.m_X - out_eo.m_Xl;
+    ray_vector.m_Y = XYZ_center.m_Y - out_eo.m_Yl;
+    ray_vector.m_Z = XYZ_center.m_Z - out_eo.m_Zl;
+    
+    mag = SQRT(ray_vector);
+    ray_vector.m_X /= mag;
+    ray_vector.m_Y /= mag;
+    ray_vector.m_Z /= mag;
+    
+    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+    
+    
+    //Zl adjustment
+    if(fabs(diff_dist) > 1 )
+    {
+        bool bcheck = false;
+        int max_iter = 50;
+        int t_iter = 0 ;
+        double adjust_H;
+        while(!bcheck && t_iter < max_iter)
+        {
+            t_iter++;
+            
+            shifted_distance = sqrt(dist.m_X*dist.m_X + dist.m_Y*dist.m_Y + dist.m_Z*dist.m_Z);
+            diff_dist = ori_distance - shifted_distance;
+            
+            if(fabs(diff_dist) < 1)
+                bcheck = true;
+            else
+            {
+                adjust_H = cos(out_eo.m_Pl*DegToRad)*diff_dist;
+                
+                out_eo.m_Zl += adjust_H;
+                double t = (out_eo.m_Zl - XYZ_center.m_Z)/ray_vector.m_Z;
+                out_eo.m_Xl = XYZ_center.m_X + t*ray_vector.m_X;
+                out_eo.m_Yl = XYZ_center.m_Y + t*ray_vector.m_Y;
+                
+                dist.m_X = out_eo.m_Xl - XYZ_center.m_X;
+                dist.m_Y = out_eo.m_Yl - XYZ_center.m_Y;
+                dist.m_Z = out_eo.m_Zl - XYZ_center.m_Z;
+            }
+            /*
+            printf("ray %f\t%f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z,adjust_H);
+            printf("t_iter %d\tdiff_dist %f\tXYZ %f\t%f\t%f\n",t_iter,diff_dist, out_eo.m_Xl,out_eo.m_Yl,out_eo.m_Zl);
+            printf("scale aft %f\n",shifted_distance/camera.m_focalLength);
+             */
+        }
+    }
+    
+    ray_vector.m_X = XYZ_center.m_X - out_eo.m_Xl;
+    ray_vector.m_Y = XYZ_center.m_Y - out_eo.m_Yl;
+    ray_vector.m_Z = XYZ_center.m_Z - out_eo.m_Zl;
+    
+    mag = SQRT(ray_vector);
+    ray_vector.m_X /= mag;
+    ray_vector.m_Y /= mag;
+    ray_vector.m_Z /= mag;
+    
+    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
     return out_eo;
 }

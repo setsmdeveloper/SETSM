@@ -26,8 +26,8 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
            camera.k1,camera.k2,camera.k3,
            camera.p1,camera.p2,
            camera.a1,camera.a2);
-    /*exit(1);
     
+    /*
     EOEstimatefromInitial(IPs, GCPs, eo, camera);
     printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
     printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
@@ -84,7 +84,7 @@ void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, 
     
     for(int i=0;i<numofpts;i++)
     {
-        printf("ID %d\tIP %f\t%f\tVCP %f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,GCPs[i].m_X,GCPs[i].m_Y,GCPs[i].m_Z);
+        //printf("ID %d\tIP %f\t%f\tVCP %f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,GCPs[i].m_X,GCPs[i].m_Y,GCPs[i].m_Z);
         
         A_matrix->val[i*2][0] = GCPs[i].m_X;
         A_matrix->val[i*2][1] = GCPs[i].m_Y;
@@ -1058,6 +1058,176 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         camera.p2 += X_matrix->val[13][0];
         camera.a1 += X_matrix->val[14][0];
         camera.a2 += X_matrix->val[15][0];
+        /*
+        printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
+        printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
+               sigma,max_V);
+        */
+        //printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
+        
+        max_correct = fabs(X_matrix->val[0][0]);
+        for(int i=1;i<16;i++)
+        {
+            if(max_correct < fabs(X_matrix->val[i][0]))
+                max_correct = fabs(X_matrix->val[i][0]);
+        }
+        
+        //printf("iter %d\tMax_correct %f\n",iteration,max_correct);
+        
+            
+    }
+    
+    GMA_double_destroy(J_matrix);
+    GMA_double_destroy(K_matrix);
+    
+    GMA_double_destroy(JT_matrix);
+    GMA_double_destroy(JTJ_matrix);
+    GMA_double_destroy(JTJI_matrix);
+    GMA_double_destroy(JTK_matrix);
+    GMA_double_destroy(X_matrix);
+    GMA_double_destroy(JX_matrix);
+    GMA_double_destroy(V_matrix);
+    
+}
+
+void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+{
+    int numofpts = IPs.size();
+    
+    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+    
+    int iteration = 0;
+    int max_iter = 100;
+    double max_correct = 10000000;
+    
+    //camera.m_ppx = 0;
+    //camera.m_ppy = 0;
+    //camera.m_focalLength = 8800.0;
+    int unknowns = 13;
+    GMA_double *J_matrix = GMA_double_create(numofpts*2,unknowns);
+    GMA_double *K_matrix = GMA_double_create(numofpts*2,1);
+    GMA_double *JT_matrix = GMA_double_create(unknowns,numofpts*2);
+    GMA_double *JTJ_matrix = GMA_double_create(unknowns,unknowns);
+    GMA_double *JTJI_matrix = GMA_double_create(unknowns,unknowns);
+    GMA_double *JTK_matrix = GMA_double_create(unknowns,1);
+    GMA_double *X_matrix = GMA_double_create(unknowns,1);
+    
+    GMA_double *JX_matrix = GMA_double_create(numofpts*2,1);
+    GMA_double *V_matrix = GMA_double_create(numofpts*2,1);
+    
+    while(iteration < max_iter && max_correct > 0.0000001)
+    {
+        iteration++;
+        
+        UPARAMS uparam;
+        PDCS pdcs;
+        
+        for(int i = 0 ; i < numofpts ; i++)
+        {
+            uparam.f  = camera.m_focalLength;
+            uparam.k1 = camera.k1;
+            uparam.k2 = camera.k2;
+            uparam.k3 = camera.k3;
+            uparam.p1 = camera.p1;
+            uparam.p2 = camera.p2;
+            uparam.xp = camera.m_ppx;
+            uparam.yp = camera.m_ppy;
+            uparam.a1 = camera.a1;
+            uparam.a2 = camera.a2;
+            
+            uparam.omega    = eo.m_Wl;
+            uparam.phi      = eo.m_Pl;
+            uparam.kappa    = eo.m_Kl;
+            uparam.X        = eo.m_Xl;
+            uparam.Y        = eo.m_Yl;
+            uparam.Z        = eo.m_Zl;
+            
+            uparam.xa = IPs[i].m_X;
+            uparam.ya = IPs[i].m_Y;
+            uparam.XA = GCPs[i].m_X;
+            uparam.YA = GCPs[i].m_Y;
+            uparam.ZA = GCPs[i].m_Z;
+            
+            //printf("uparam %f\t%f\t%f\t%f\t%f\t%f\t%f\n",uparam.f,uparam.X,uparam.Y,uparam.Z,uparam.omega,uparam.phi,uparam.kappa);
+            
+            
+            //printf("IP XA %f\t%f\t%f\t%f\t%f\t%f\t%f\n",uparam.xa,uparam.ya,uparam.xp,uparam.yp,uparam.XA,uparam.YA,uparam.ZA);
+            GetPDCs(uparam,pdcs);
+            
+            for(int j=0;j<6;j++)
+            {
+                double sign;
+                if(j>2)
+                    sign = -1.0;
+                else
+                    sign = 1.0;
+                
+                J_matrix->val[i*2  ][j] = sign*pdcs.b[0][j];
+                J_matrix->val[i*2+1][j] = sign*pdcs.b[1][j];
+            }
+            
+            for(int j=0; j<2; j++)
+            {
+                J_matrix->val[i*2+j][6 + 0] = pdcs.c[j][3];
+                J_matrix->val[i*2+j][6 + 1] = pdcs.c[j][4];
+                J_matrix->val[i*2+j][6 + 2] = pdcs.c[j][5];
+                J_matrix->val[i*2+j][6 + 3] = pdcs.c[j][6];
+                J_matrix->val[i*2+j][6 + 4] = pdcs.c[j][7];
+                J_matrix->val[i*2+j][6 + 5] = pdcs.c[j][8];
+                J_matrix->val[i*2+j][6 + 6] = pdcs.c[j][9];
+            }
+            
+            
+                    
+            K_matrix->val[i*2  ][0] = -pdcs.Fo;
+            K_matrix->val[i*2+1][0] = -pdcs.Go;
+            
+            //if(i > 4)
+            //    exit(1);
+        }
+        //GMA_double_printf(K_matrix);
+        
+        
+        
+        GMA_double_Tran(J_matrix,JT_matrix);
+        GMA_double_mul(JT_matrix,J_matrix,JTJ_matrix);
+        GMA_double_inv(JTJ_matrix,JTJI_matrix);
+        GMA_double_mul(JT_matrix,K_matrix,JTK_matrix);
+        GMA_double_mul(JTJI_matrix,JTK_matrix,X_matrix);
+        GMA_double_sub(JX_matrix,K_matrix,V_matrix);
+        
+        
+        double var_sum = 0;
+        double max_V = -1000;
+        for(int i=0;i<numofpts*2;i++)
+        {
+            var_sum += (V_matrix->val[i][0])*(V_matrix->val[i][0]);
+            if(max_V < fabs(V_matrix->val[i][0]))
+                max_V = fabs(V_matrix->val[i][0]);
+        }
+        
+        double sigma = sqrt(var_sum/(numofpts*2 - unknowns));
+        //GMA_double_printf(X_matrix);
+        
+        //exit(1);
+        
+        eo.m_Wl += X_matrix->val[0][0];
+        eo.m_Pl += X_matrix->val[1][0];
+        eo.m_Kl += X_matrix->val[2][0];
+        eo.m_Xl += X_matrix->val[3][0];
+        eo.m_Yl += X_matrix->val[4][0];
+        eo.m_Zl += X_matrix->val[5][0];
+        
+        //camera.m_ppx += X_matrix->val[6][0];
+        //camera.m_ppy += X_matrix->val[7][0];
+        camera.k1 += X_matrix->val[6][0];
+        camera.k2 += X_matrix->val[7][0];
+        camera.k3 += X_matrix->val[8][0];
+        camera.p1 += X_matrix->val[9][0];
+        camera.p2 += X_matrix->val[10][0];
+        camera.a1 += X_matrix->val[11][0];
+        camera.a2 += X_matrix->val[12][0];
         
         printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
         printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
@@ -1067,7 +1237,7 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         //printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
         
         max_correct = fabs(X_matrix->val[0][0]);
-        for(int i=1;i<16;i++)
+        for(int i=1;i<unknowns;i++)
         {
             if(max_correct < fabs(X_matrix->val[i][0]))
                 max_correct = fabs(X_matrix->val[i][0]);

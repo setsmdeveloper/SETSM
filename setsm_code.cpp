@@ -2020,6 +2020,9 @@ void ImageSimulation(char* _filename, ARGINFO args)
                            proinfo->frameinfo.Photoinfo[ti].m_Yl,
                            proinfo->frameinfo.Photoinfo[ti].m_Zl,
                            proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                    
+                    proinfo->frameinfo.m_Camera.m_ImageSize = Limagesize[ti];
+                    
                     printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
                     
                     proinfo->frameinfo.Photoinfo[ti].m_Rm = MakeRotationMatrix(proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
@@ -2175,6 +2178,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 {
                     rotate.m_Pl = 10*k;
                     EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
+                    //exit(1);
                     simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
                     
                     double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
