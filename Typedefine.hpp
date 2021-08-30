@@ -725,6 +725,20 @@ typedef struct tagCameraInfo
     double p1, p2;//tangential distortion
     double a1, a2;//affinity
     
+    tagCameraInfo()
+    {
+        m_focalLength = 0;
+        m_ImageSize.width = 0;
+        m_ImageSize.height = 0;
+        m_CCDSize = 0;
+        m_ppx = 0;
+        m_ppy = 0;
+        
+        k1 = k2 = k3 = 0;//ratdial distortion
+        p1 = p2 = 0;//tangential distortion
+        a1 = a2 = 0;//affinity
+    };
+    
 } CAMERA_INFO;
 
 typedef struct tagRotationMatrix

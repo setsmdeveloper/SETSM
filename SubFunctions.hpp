@@ -47,6 +47,7 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
 bool GetImageSize(char *filename, CSize *Imagesize);
 
 bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesize, double *subBoundary, long *cols,long *rows);
+bool GetsubareaImage_GeoTiff_tile(ProInfo proinfo, char *ImageFilename, CSize Imagesize, double *ImgBoundary, double *subBoundary, long *cols,long *rows);
 
 float* GetDEMValue(char *GIMP_path,CSize seeddem_size);
 

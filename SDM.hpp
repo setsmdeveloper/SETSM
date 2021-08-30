@@ -13,7 +13,7 @@
 //SDM ortho
 bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param);
 
-void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, double *Rimageparam, const CSize Limagesize, const CSize Rimagesize, const double *Boundary, const ImageGSD gsd_image1, const ImageGSD gsd_image2, int *matching_number);
+void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, double *Rimageparam, const CSize Limagesize, const CSize Rimagesize, const double *Boundary, const ImageGSD gsd_image1, const ImageGSD gsd_image2, long *matching_number, UI2DPOINT &iter_row, UI2DPOINT &iter_col, double &buffer_area, int tile_size);
 
 bool subsetImage_SDM(ProInfo proinfo, double *subBoundary, D2DPOINT *startpos, CSize* subsetsize, uint16 **Sourceimage);
 
@@ -46,6 +46,6 @@ void echo_print_nccresults_SDM(char *save_path,int row,int col,int level, int it
 
 bool average_filter_colrowshift(CSize Size_Grid2D, UGRIDSDM *GridPT3,uint8 Pyramid_step);
 
-double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param, uint8 pyramid_step);
+double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, double buffer,int final_iteration,TransParam _param, uint8 pyramid_step);
 
 #endif /* SDM_hpp */

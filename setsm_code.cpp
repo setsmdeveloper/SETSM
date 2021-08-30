@@ -2176,14 +2176,17 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 EO rotate;
                 for( int k = -4 ; k <= 4 ; k++)
                 {
+                    printf("start SEO\n");
                     rotate.m_Pl = 10*k;
                     EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
                     //exit(1);
+                    printf("End SEO\n");
                     simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
                     
                     double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
+                    printf("End VCPs\n");
                     double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
-                    
+                    printf("End sim_RPCs\n");
                     
                     /*
                     vector<D3DPOINT> VCPs;
@@ -2245,7 +2248,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     
                     RPCsFree(sim_RPCs);
                     
-                    SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
+                    //SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
                     
                 }
                 
