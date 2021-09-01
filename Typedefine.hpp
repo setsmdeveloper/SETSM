@@ -819,6 +819,9 @@ typedef struct ProjectInfo{
 	char tmpdir[500];
 	char tile_info[500];
 	char priori_DEM_tif[500];
+    char pre_shiftX[500];
+    char pre_shiftY[500];
+    char pre_roh[500];
 	char metafilename[500];
 	
 	bool check_minH;
@@ -831,7 +834,7 @@ typedef struct ProjectInfo{
 	bool check_boundary;
 	bool check_checktiff;
     bool check_ortho;
-	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array;
+	bool IsRA, IsSP, IsRR, IsSaveStep, Overall_DEM, Affine_RA, pre_DEMtif, check_tile_array, pre_SDM;
     bool check_Matchtag;
     bool check_selected_image[MaxImages];
     bool check_full_cal;

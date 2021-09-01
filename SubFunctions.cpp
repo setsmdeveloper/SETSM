@@ -2635,6 +2635,53 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
     //exit(1);
 }
 
+void SetImageFileInfo(char* _filename, ImageInfo &Iinfo)
+{
+    char* temp_ext = SetOutpathName(_filename);
+    char* temp_str = remove_ext(temp_ext);
+    //printf("input str %s\n",temp_str);
+    
+    char temp_year[5];
+    char temp_month[3];
+    char temp_day[3];
+    char temp_stripID[7];
+    
+    for (int k = 0; k < 4; k++)
+        temp_year[k] = temp_str[k];
+    temp_year[4] = '\0';
+    
+    for(int k=0 ; k < 2 ; k++)
+        temp_month[k] = temp_str[k+4];
+    temp_month[2] = '\0';
+    
+    for(int k=0 ; k < 2 ; k++)
+        temp_day[k] = temp_str[k+6];
+    temp_day[2] = '\0';
+    
+    for(int k=0 ; k < 6 ; k++)
+        temp_stripID[k] = temp_str[k+9];
+    temp_stripID[2] = '\0';
+    
+    //printf("fileinfo %s\t%s\t%s\t%s\n",temp_year,temp_month,temp_day,temp_stripID);
+    
+    Iinfo.year = atoi(temp_year);
+    Iinfo.month = atoi(temp_month);
+    Iinfo.date = atoi(temp_day);
+    Iinfo.strip_ID = atoi(temp_stripID);
+    sprintf(Iinfo.filename,"%s",temp_str);
+    
+    int filesize;
+    char t_str[500];
+    memset(t_str,'\0',sizeof(t_str));
+    strcpy(t_str,_filename);
+    char *fullpath = dirname(t_str);
+    sprintf(Iinfo.fullpath,"%s",fullpath);
+    
+    printf("fileinfo %d\t%d\t%d\t%d\t%s\t%s\n",Iinfo.year,Iinfo.month,Iinfo.date,Iinfo.strip_ID,Iinfo.filename,Iinfo.fullpath);
+    //printf("input str %s\n",_filename);
+    //exit(1);
+}
+
 void Open_planetmultiinfo_args(ARGINFO *args)
 {
     FILE *pFile;
@@ -2704,7 +2751,7 @@ void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca)
     //EO t_eo;
     fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&eo.m_Xl,&eo.m_Yl,&eo.m_Zl,&eo.m_Wl,&eo.m_Pl,&eo.m_Kl);
     //eo = t_eo;
-    fscanf(pfile,"%lf\t%lf\t%lf\n",&ca.m_focalLength,&ca.m_ppx,&ca.m_ppy);
+    fscanf(pfile,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&ca.m_focalLength,&ca.m_ppx,&ca.m_ppy,&ca.k1,&ca.k2,&ca.k3,&ca.p1,&ca.p2,&ca.a1,&ca.a2);
     fclose(pfile);
 }
 

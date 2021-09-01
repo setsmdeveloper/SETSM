@@ -6,6 +6,7 @@
 //
 
 #include "SDM.hpp"
+#include "readtiff.hpp"
 
 const char setsm_version[] = "4.2.0";
 
@@ -112,30 +113,101 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 
                 printf("image resolution %f\t%f\n",proinfo.resolution,proinfo.DEM_resolution);
                 
+                
+                UI2DPOINT iter_row, iter_col,tile_count;
+                
+                int tile_size;
+                if(args.check_tilesize)
+                    tile_size       = args.tilesize;
+                else
+                    tile_size       = 10000;
+                printf("SDM tilesize %d\n",tile_size);
+                
+                
+                //subBoundary setup
+                int Max_SDM_size = tile_size;
+                
+                int lengthOfX = Boundary[2] - Boundary[0];
+                int lengthOfY = Boundary[3] - Boundary[1];
+                
+                CSize SDM_size(lengthOfX/proinfo.DEM_resolution,lengthOfY/proinfo.DEM_resolution);
+                
+                double buffer_area = 0;
+                double subX = lengthOfX;
+                double subY = lengthOfY;
+                printf("SDM_size %d\t%d\n",SDM_size.width,SDM_size.height);
+                if(SDM_size.width > Max_SDM_size/proinfo.DEM_resolution || SDM_size.height > Max_SDM_size/proinfo.DEM_resolution)
+                {
+                    int division_X = (int) (ceil(lengthOfX / (double)(Max_SDM_size)));
+                    int division_Y = (int) (ceil(lengthOfY / (double)(Max_SDM_size)));
+                    subX = floor((ceil(ceil(lengthOfX / division_X) / proinfo.DEM_resolution) * proinfo.DEM_resolution) / 2) * 2;
+                    subY = floor((ceil(ceil(lengthOfY / division_Y) / proinfo.DEM_resolution) * proinfo.DEM_resolution) / 2) * 2;
+                    
+                    printf("dx = %d\tdy = %d\t%f\t%f\n", division_X, division_Y, subX, subY);
+                    
+                    iter_row.m_X = 1;
+                    iter_row.m_Y = division_Y+1;
+                    
+                    iter_col.m_X = 1;
+                    iter_col.m_Y = division_X+1;
+                    
+                    if(iter_row.m_X == iter_row.m_Y)
+                        iter_row.m_Y += 1;
+                    if(iter_col.m_X == iter_col.m_Y)
+                        iter_col.m_Y += 1;
+                    
+                    buffer_area = (double)(Max_SDM_size)*0.05;
+                }
+                else
+                {
+                    iter_row.m_X = 1;
+                    iter_row.m_Y = 2;
+                    iter_col.m_X = 1;
+                    iter_col.m_Y = 2;
+                }
+                
+                if (args.check_tiles_SR)
+                    iter_row.m_X    = args.start_row;
+                
+                if (args.check_tiles_ER)
+                    iter_row.m_Y      = args.end_row;
+                
+                if (args.check_tiles_SC)
+                    iter_col.m_X       = args.start_col;
+                
+                if (args.check_tiles_EC)
+                    iter_col.m_Y         = args.end_col;
+                
+                tile_count.m_X = iter_col.m_Y - iter_col.m_X;
+                tile_count.m_Y = iter_row.m_Y - iter_row.m_X;
+                
+                
                 int end_level = floor(log10(proinfo.DEM_resolution/(proinfo.resolution*15))/log10(2));
-                int th_grid = proinfo.resolution*pwrtwo(end_level);
+                
                 
                 if(end_level < 0)
                     end_level = 0;
                 if(end_level > 4)
                     end_level = 4;
                 
+                double th_grid = proinfo.resolution*pwrtwo(end_level);
                 proinfo.end_level = end_level;
                 proinfo.pyramid_level = args.pyramid_level;
                 proinfo.number_of_images = 2;
                 
-                printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
+                printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%f\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
                 
                 int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
-            printf("sdm_kernel size %f\t%f\t%f\t%f\t%d\n",sdm_kernal_size,proinfo.SDM_AS,proinfo.SDM_days,proinfo.resolution,proinfo.pyramid_level);
-                if(proinfo.pre_DEMtif)
+                printf("sdm_kernel size %d\t%f\t%f\t%f\t%d\n",sdm_kernal_size,proinfo.SDM_AS,proinfo.SDM_days,proinfo.resolution,proinfo.pyramid_level);
+                
+                /*if(proinfo.pre_DEMtif)
                 {
                     sdm_kernal_size = 3;
                     proinfo.SDM_SS = sdm_kernal_size;
                     proinfo.pyramid_level = args.pyramid_level;
                     proinfo.end_level = 0;
                 }
-                else
+                else*/
                 {
                     if(sdm_kernal_size > 3)
                         proinfo.SDM_SS = sdm_kernal_size;
@@ -197,27 +269,77 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 proinfo.pyramid_level = pyramid_step;
                 printf("proinfo res %f\n",proinfo.resolution);
                 long matching_number = 0;
-                UI2DPOINT iter_row, iter_col;
+                double ori_subX = subX;
+                double ori_subY = subY;
+                double ori_DEM_resolution = proinfo.DEM_resolution;
+                /*
                 iter_row.m_X = 1;
                 iter_row.m_Y = 5;
                 iter_col.m_X = 1;
                 iter_col.m_Y = 2;
-                double buffer_tile = 0;
-                int tile_size;
-                if(args.check_tilesize)
-                    tile_size       = args.tilesize;
+                */
+                printf("tile row col %d\t%d\t%d\t%d\t%f\n",iter_row.m_X,iter_row.m_Y,iter_col.m_X,iter_col.m_Y,proinfo.DEM_resolution);
+                
+                if(tile_count.m_X > 2 || tile_count.m_Y > 2)
+                {
+                    /*
+                    UI2DPOINT t_iter_row,t_iter_col;
+                    t_iter_row.m_X = 1;
+                    t_iter_row.m_Y = 2;
+                    t_iter_col.m_X = 1;
+                    t_iter_col.m_Y = 2;
+                    
+                    subX = lengthOfX;
+                    subY = lengthOfY;
+                    proinfo.DEM_resolution = 100;
+                    printf("tile row col %d\t%d\t%d\t%d\t%f\n",t_iter_row.m_X,t_iter_row.m_Y,t_iter_col.m_X,t_iter_col.m_Y,proinfo.DEM_resolution);
+                    
+                    Matching_SETSM_SDM(proinfo, param, Template_size, Rimageparam, Limagesize, Rimagesize, Boundary, GSD_image1, GSD_image2, &matching_number,t_iter_row,t_iter_col,buffer_area,subX,subY);
+                    
+                    int final_iteration = 3;
+                    if(matching_number > 10)
+                    {
+                        printf("Tile merging start final iteration %d!!\n",final_iteration);
+                        
+                        double mt_grid_size = MergeTiles_SDM(proinfo,iter_row.m_Y,iter_col.m_Y,buffer_area,final_iteration,param,pyramid_step);
+                    }
+                    
+                    printf("seed processin done\n");
+                    proinfo.pre_SDM = true;
+                    
+                    sprintf(proinfo.pre_shiftX, "%s/%s_dx.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+                    sprintf(proinfo.pre_shiftY, "%s/%s_dy.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+                    sprintf(proinfo.pre_roh, "%s/%s_roh.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+                    
+                    printf("%s\n%s\n%s\n",proinfo.pre_shiftX,proinfo.pre_shiftY,proinfo.pre_roh);
+                    
+                    proinfo.pyramid_level = 2;
+                    proinfo.end_level = 0;
+                    proinfo.DEM_resolution = ori_DEM_resolution;
+                    subX = ori_subX;
+                    subY = ori_subY;
+                    printf("full computation with seed\n");
+                    
+                    printf("tile row col %d\t%d\t%d\t%d\t%f\n",iter_row.m_X,iter_row.m_Y,iter_col.m_X,iter_col.m_Y,proinfo.DEM_resolution);
+                    */
+                    /*iter_row.m_X = 2;
+                    iter_row.m_Y = 3;
+                    iter_col.m_X = 1;
+                    iter_col.m_Y = 5;
+                    */
+                    Matching_SETSM_SDM(proinfo, param, Template_size, Rimageparam, Limagesize, Rimagesize, Boundary, GSD_image1, GSD_image2, &matching_number,iter_row,iter_col,buffer_area,subX,subY);
+                }
                 else
-                    tile_size       = 10000;
-                printf("SDM tilesize %d\n",tile_size);
-                
-                Matching_SETSM_SDM(proinfo, param, Template_size, Rimageparam, Limagesize, Rimagesize, Boundary, GSD_image1, GSD_image2, &matching_number,iter_row,iter_col,buffer_tile,tile_size);
-                
+                {
+                    Matching_SETSM_SDM(proinfo, param, Template_size, Rimageparam, Limagesize, Rimagesize, Boundary, GSD_image1, GSD_image2, &matching_number,iter_row,iter_col,buffer_area,subX,subY);
+                }
+               
                 int final_iteration = 3;
                 if(matching_number > 10)
                 {
                     printf("Tile merging start final iteration %d!!\n",final_iteration);
                     
-                    double mt_grid_size = MergeTiles_SDM(proinfo,iter_row.m_Y,iter_col.m_Y,buffer_tile,final_iteration,param,pyramid_step);
+                    double mt_grid_size = MergeTiles_SDM(proinfo,iter_row.m_Y,iter_col.m_Y,buffer_area,final_iteration,param,pyramid_step);
                 }
                 fclose(pMetafile);
             }
@@ -231,7 +353,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
     return 0;
 }
 
-void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, double *Rimageparam, const CSize Limagesize, const CSize Rimagesize, const double *Boundary, const ImageGSD gsd_image1, const ImageGSD gsd_image2, long *matching_number, UI2DPOINT &iter_row, UI2DPOINT &iter_col, double &buffer_area, int tile_size)
+void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, double *Rimageparam, const CSize Limagesize, const CSize Rimagesize, const double *Boundary, const ImageGSD gsd_image1, const ImageGSD gsd_image2, long *matching_number, UI2DPOINT &iter_row, UI2DPOINT &iter_col, double buffer_area, double subX, double subY)
 {
     double LeftBoundary[4], RightBoundary[4];
     for(int i = 0 ; i < 4 ; i++)
@@ -244,61 +366,6 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
     {
         printf("start cal tile\n");
         
-        double subBoundary[4];
-        subBoundary[0] =  (int)(floor(Boundary[0]));
-        subBoundary[1] =  (int)(floor(Boundary[1]));
-        subBoundary[2] =  (int)(floor(Boundary[2]));
-        subBoundary[3] =  (int)(floor(Boundary[3]));
-        
-        //subBoundary setup
-        
-        int Max_SDM_size = tile_size;
-        
-        int lengthOfX = Boundary[2] - Boundary[0];
-        int lengthOfY = Boundary[3] - Boundary[1];
-        
-        CSize SDM_size(lengthOfX/proinfo.DEM_resolution,lengthOfY/proinfo.DEM_resolution);
-        
-        buffer_area = 0;
-        double subX = lengthOfX;
-        double subY = lengthOfY;
-        printf("SDM_size %d\t%d\n",SDM_size.width,SDM_size.height);
-        if(SDM_size.width > Max_SDM_size/proinfo.DEM_resolution || SDM_size.height > Max_SDM_size/proinfo.DEM_resolution)
-        {
-            int division_X = (int) (ceil(lengthOfX / (double)(Max_SDM_size)));
-            int division_Y = (int) (ceil(lengthOfY / (double)(Max_SDM_size)));
-            subX = floor((ceil(ceil(lengthOfX / division_X) / proinfo.DEM_resolution) * proinfo.DEM_resolution) / 2) * 2;
-            subY = floor((ceil(ceil(lengthOfY / division_Y) / proinfo.DEM_resolution) * proinfo.DEM_resolution) / 2) * 2;
-            
-            printf("dx = %d\tdy = %d\t%f\t%f\n", division_X, division_Y, subX, subY);
-            
-            iter_row.m_X = 1;
-            iter_row.m_Y = division_Y+1;
-            
-            iter_col.m_X = 1;
-            iter_col.m_Y = division_X+1;
-            
-            if(iter_row.m_X == iter_row.m_Y)
-                iter_row.m_Y += 1;
-            if(iter_col.m_X == iter_col.m_Y)
-                iter_col.m_Y += 1;
-            
-            buffer_area = (double)(Max_SDM_size)*0.1;
-        }
-        else
-        {
-            iter_row.m_X = 1;
-            iter_row.m_Y = 2;
-            iter_col.m_X = 1;
-            iter_col.m_Y = 2;
-        }
-        /*
-        iter_row.m_X = 1;
-        iter_row.m_Y = 5;
-        iter_col.m_X = 1;
-        iter_col.m_Y = 2;
-        */
-        printf("tile row col %d\t%d\t%d\t%d\t%f\n",iter_row.m_X,iter_row.m_Y,iter_col.m_X,iter_col.m_Y,proinfo.DEM_resolution);
         //exit(1);
         for(int tile_iter_row = iter_row.m_X ; tile_iter_row < iter_row.m_Y ; tile_iter_row++)
         {
@@ -313,8 +380,10 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                 if(!pcheckFile)
                     check_cal = true;
                 
-                if(check_cal)
+                //if(check_cal)
                 {
+                    double subBoundary[4];
+                    
                     for(int i = 0 ; i < 4 ; i++)
                     {
                         proinfo.LBoundary[i] = LeftBoundary[i];
@@ -499,7 +568,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 if(!flag_start)
                                 {
                                     printf("GridPT3 start\t seed flag %d\t filename %s\timage_resolution %f \n",proinfo.pre_DEMtif,proinfo.priori_DEM_tif,proinfo.resolution);
-                                    GridPT3 = SetGrid3PT_SDM(Size_Grid2D, Th_roh);
+                                    GridPT3 = SetGrid3PT_SDM(proinfo,levelinfo, Size_Grid2D, Th_roh);
                                 }
                                 
                                 if(flag_start)
@@ -560,6 +629,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         check_smooth = true;
                                     else if(level < 2 && grid_resolution < 300)
                                         check_smooth = true;
+                                    else if(grid_resolution < 20) // high resolution less than 1 meter
+                                        check_smooth = true;
                                     
                                     if(check_smooth)
                                     {
@@ -572,9 +643,17 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                             check_size = 4;
                                         else if(grid_resolution >= 100)
                                             check_size = 5;
-                                        else
+                                        else if(grid_resolution >= 50)
                                             check_size = 7;
-                                            
+                                        else if(grid_resolution >= 25)
+                                            check_size = 11;
+                                        else if(grid_resolution >= 10)
+                                            check_size = 13;
+                                        else if(grid_resolution >= 5)
+                                            check_size = 15;
+                                        else
+                                            check_size = 17;
+                                        
                                         if(check_size < 3)
                                             check_size = 3;
                                         
@@ -674,7 +753,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         count_null_cell ++;
                                                     }
                                                     
-                                                    if (null_count_cell >= total_size*0.4 && level == 0 && final_level_iteration == 3)
+                                                    if (null_count_cell >= total_size*0.9 && level == 0 && final_level_iteration == 3)
                                                     {
                                                         temp_col_shift[search_index] = 0;
                                                         temp_row_shift[search_index] = 0;
@@ -689,7 +768,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                             
                                             if(count_null_cell == 0)
                                                 check_last_iter = true;
-                                            //printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
+                                            
+                                            printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
                                             
                                             Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
                                         }
@@ -710,6 +790,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                     
                                     if(count_MPs > 100)
                                         lower_level_match = true;
+                                    else
+                                        lower_level_match = false;
                                     
                                     if(lower_level_match)
                                     {
@@ -974,14 +1056,14 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                     level = -1;
                                 
                                 
-                                if(!lower_level_match && level > 1)
+                                if(!lower_level_match && level >= pyramid_step)
                                 {
                                     lower_level_match    = true;
                                     flag_start            = false;
                                 }
                                 free(GridPT);
                                 
-                                printf("release Grid_wgs, nccresult\n");
+                                printf("release Grid_wgs, nccresult lower_level_match %d\t%d\t%d\n",lower_level_match,pyramid_step,level);
                                 free(nccresult);
                             }
                             printf("relese data size\n");
@@ -1078,6 +1160,133 @@ bool subsetImage_SDM(ProInfo proinfo, double *subBoundary, D2DPOINT *startpos, C
     }
     
     return ret;
+}
+
+void SetSDMWithSeed(const ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *Grid, int option)
+{
+    char GIMP_path[500];
+    
+    if(option == 1) //shiftX
+        sprintf(GIMP_path, "%s/%s_dx.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    else if(option == 2) //shiftY
+        sprintf(GIMP_path, "%s/%s_dy.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    else if(option == 3) //roh
+        sprintf(GIMP_path, "%s/%s_roh.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+ 
+    printf("seed sdm %s\n",GIMP_path);
+    
+    double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
+    CSize seeddem_size;
+    seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, &grid_size);
+ 
+    maxX    = minX + grid_size*((double)seeddem_size.width);
+    minY    = maxY - grid_size*((double)seeddem_size.height);
+
+    printf("%d\n",seeddem_size.width);
+    printf("%d\n",seeddem_size.height);
+    printf("%f\n",minX);
+    printf("%f\n",minY);
+    printf("%f\n",maxX);
+    printf("%f\n",maxY);
+    printf("%f\n",grid_size);
+
+    double a_minX = 0, a_maxX = 0, a_minY = 0, a_maxY = 0;
+    if(minX > rlevelinfo.Boundary[0])
+        a_minX = minX;
+    else
+        a_minX = rlevelinfo.Boundary[0];
+
+    if (maxX < rlevelinfo.Boundary[2])
+        a_maxX = maxX;
+    else
+        a_maxX = rlevelinfo.Boundary[2];
+
+    if(minY > rlevelinfo.Boundary[1])
+        a_minY = minY;
+    else
+        a_minY = rlevelinfo.Boundary[1];
+
+    if (maxY < rlevelinfo.Boundary[3])
+        a_maxY = maxY;
+    else
+        a_maxY = rlevelinfo.Boundary[3];
+
+    double total_minH = 999999;
+    double total_maxH = -999999;
+    printf("%f %f %f %f\n",rlevelinfo.Boundary[0],rlevelinfo.Boundary[1],rlevelinfo.Boundary[2],rlevelinfo.Boundary[3]);
+    printf("%f %f %f %f\n",a_minX, a_maxX, a_minY, a_maxY);
+    if ( (a_minX < a_maxX) && (a_minY < a_maxY))
+    {
+        long int cols[2];
+        long int rows[2];
+        CSize data_size;
+
+        CSize *LImagesize = (CSize*)malloc(sizeof(CSize));
+        LImagesize->width = seeddem_size.width;
+        LImagesize->height = seeddem_size.height;
+
+        cols[0] = 0;
+        cols[1] = seeddem_size.width;
+
+        rows[0] = 0;
+        rows[1] = seeddem_size.height;
+
+        float type(0);
+        float *seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size, type);
+        printf("Grid size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
+
+        SetGridHeightFromSeed(proinfo, rlevelinfo, Grid, seeddem, seeddem_size, grid_size, minX, maxY, option);
+        
+        free(seeddem);
+
+        printf("seeddem end\n");
+    }
+}
+
+void SetGridHeightFromSeed(const ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *Grid, float *seeddem, CSize seeddem_size, double seed_grid, double minX, double maxY, int option)
+{
+    double total_minH = 999999;
+    double total_maxH = -999999;
+    
+    for (long row = 0; row < rlevelinfo.Size_Grid2D->height; row ++)
+    {
+        for (long col = 0; col < rlevelinfo.Size_Grid2D->width; col ++)
+        {
+            long int index_grid = row*(long int)rlevelinfo.Size_Grid2D->width + col;
+            double t_x = rlevelinfo.Boundary[0] + col*(*rlevelinfo.grid_resolution);
+            double t_y = rlevelinfo.Boundary[1] + row*(*rlevelinfo.grid_resolution);
+            
+            long int col_seed = floor((t_x - minX)/seed_grid);
+            long int row_seed = floor((maxY - t_y)/seed_grid);
+            long int index_seeddem = row_seed*(long)seeddem_size.width + col_seed;
+            if(index_seeddem >= 0 && index_seeddem < (long int)seeddem_size.width*(long int)seeddem_size.height)
+            {
+                if(total_minH > seeddem[index_seeddem])
+                {
+                    total_minH = seeddem[index_seeddem];
+                }
+                if(total_maxH < seeddem[index_seeddem])
+                {
+                    total_maxH = seeddem[index_seeddem];
+                }
+                
+                if(option == 1) //shiftX
+                {
+                    Grid[index_grid].col_shift = seeddem[index_seeddem]/proinfo.resolution*proinfo.SDM_days;
+                }
+                else if(option == 2) //shiftY
+                {
+                    Grid[index_grid].row_shift = -seeddem[index_seeddem]/proinfo.resolution*proinfo.SDM_days;
+                }
+                else if(option == 3) //roh
+                {
+                    Grid[index_grid].ortho_ncc = seeddem[index_seeddem];
+                }
+            }
+        }
+    }
+    
+    printf("minmax value %f\t%f\n",total_minH,total_maxH);
 }
 
 void SetThs_SDM(int level, int final_level_iteration, double *Th_roh, double *Th_roh_min, double *Th_roh_next, double *Th_roh_start, uint8 pyramid_step)
@@ -1213,7 +1422,7 @@ D2DPOINT *SetGrids_SDM(ProInfo proinfo, const int prc_level, const int level, co
     return GridPT;
 }
 
-UGRIDSDM *SetGrid3PT_SDM(const CSize Size_Grid2D, const double Th_roh)
+UGRIDSDM *SetGrid3PT_SDM(const ProInfo proinfo, LevelInfo &rlevelinfo, const CSize Size_Grid2D, const double Th_roh)
 {
     UGRIDSDM *GridPT3 = NULL;
     long total_grid_counts = (long)Size_Grid2D.height*(long)Size_Grid2D.width;
@@ -1229,6 +1438,14 @@ UGRIDSDM *SetGrid3PT_SDM(const CSize Size_Grid2D, const double Th_roh)
         GridPT3[i].row_shift        = 0.0;
     }
 
+    if(proinfo.pre_SDM)
+    {
+        printf("seed SDM load\n");
+        for(int i = 1 ; i < 4 ; i++)
+            SetSDMWithSeed(proinfo, rlevelinfo, GridPT3, i);
+    }
+    
+    
     return GridPT3;
 }
 
@@ -1299,18 +1516,6 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
 #pragma omp parallel
     {
         SetKernel rsetkernel(reference_id,target_id,Half_template_size);
-
-
-
-
-
-
-
-
-
-
-
-
 
 #pragma omp for schedule(guided)
         for(long iter_count = 0 ; iter_count < numofpts ; iter_count++)
@@ -1424,13 +1629,6 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
                 }
             }
         }
-        
-        
-        
-        
-        
-        
-        
     }
     
     return true;
@@ -1625,15 +1823,16 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     fclose(outfile_Xshift);
     fclose(outfile_Yshift);
     fclose(outfile_mag);
-    /*
+    
     char DEM_str[500];
-    sprintf(DEM_str, "%s/%s_dx2.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    
+    sprintf(DEM_str, "%s/%s_%d_%d_dx2.tif", proinfo.save_filepath, proinfo.Outputpath_name,row,col);
     WriteGeotiff(DEM_str, VxShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    sprintf(DEM_str, "%s/%s_dy2.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    sprintf(DEM_str, "%s/%s_%d_%d_dy2.tif", proinfo.save_filepath, proinfo.Outputpath_name,row,col);
     WriteGeotiff(DEM_str, VyShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    sprintf(DEM_str, "%s/%s_dmag2.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+    sprintf(DEM_str, "%s/%s_%d_%d_dmag2.tif", proinfo.save_filepath, proinfo.Outputpath_name,row,col);
     WriteGeotiff(DEM_str, Mag, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    */
+    
     free(VxShift);
     free(VyShift);
     free(Mag);
@@ -2637,9 +2836,9 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                             iter_row = row_size - 1 - floor(index_total/col_size);
                             iter_col = index_total%col_size;
                             
-                            double t_col = ( (double)(t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
-                            double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
-                            long index = (long)(t_row*(long)DEM_size.width + t_col + 0.01);
+                            long t_col = (long)((t_boundary[0] + grid_size*iter_col - boundary[0])  /grid_size);
+                            long t_row = (long)((boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
+                            long index = (long)(t_row*(long)DEM_size.width + t_col);
                             
                             double DEM_value;
                             double Col_value, Row_value, Vx_value, Vy_value, Roh_value;
