@@ -928,51 +928,69 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     printf("%d\t%d\t%d\n",args.sensor_type,args.check_fl,args.check_ccd);
     if(args.sensor_type == AB) // Collinear Equation, Frame sensor
     {
-        if(args.check_fl && args.check_ccd)
+        info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
+        
+        if(args.sensor_provider == PT)
         {
-            info->frameinfo.m_Camera.m_focalLength = args.focal_length;
-            info->frameinfo.m_Camera.m_CCDSize = args.CCD_size;
-            info->frameinfo.m_Camera.m_ppx = 0.0;
-            info->frameinfo.m_Camera.m_ppy = 0.0;
-            
-//            printf("%f\t%d\t%d\t%f\n",info->frameinfo.m_Camera.m_focalLength,info->frameinfo.m_Camera.m_ImageSize.width,
-//                   info->frameinfo.m_Camera.m_ImageSize.height,info->frameinfo.m_Camera.m_CCDSize);
-            
-            info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
-            /*
-            for(int ti = 0 ; ti < info->number_of_images ; ti++)
+            if(args.check_ccd)
             {
-                FILE *p_xml;
-                p_xml = fopen(info->RPCfilename[ti],"r");
-                fscanf(p_xml,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&info->frameinfo.Photoinfo[ti].m_Xl,
-                       &info->frameinfo.Photoinfo[ti].m_Yl,
-                       &info->frameinfo.Photoinfo[ti].m_Zl,
-                       &info->frameinfo.Photoinfo[ti].m_Wl,
-                       &info->frameinfo.Photoinfo[ti].m_Pl,
-                       &info->frameinfo.Photoinfo[ti].m_Kl);
-                fclose(p_xml);
-
-                sprintf(info->frameinfo.Photoinfo[ti].path,"%s",info->Imagefilename[ti]);
-                printf("%s\n",info->Imagefilename[ti]);
-                printf("%s\n",info->frameinfo.Photoinfo[ti].path);
-
-                printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-                       info->frameinfo.Photoinfo[ti].path,
-                       info->frameinfo.Photoinfo[ti].m_Xl,info->frameinfo.Photoinfo[ti].m_Yl,info->frameinfo.Photoinfo[ti].m_Zl,
-                       info->frameinfo.Photoinfo[ti].m_Wl,info->frameinfo.Photoinfo[ti].m_Pl,info->frameinfo.Photoinfo[ti].m_Kl);
-
-
+                info->frameinfo.m_Camera.m_CCDSize = args.CCD_size;
+                bopened = true;
             }
-*/
-            bopened = true;
+            else
+            {
+                bopened = false;
+                printf("Please input CCD size!!\n");
+                exit(1);
+            }
         }
         else
         {
-            bopened = false;
-            printf("Please input focal length and CCD size!!\n");
-            exit(1);
+            if(args.check_fl && args.check_ccd)
+            {
+                info->frameinfo.m_Camera.m_focalLength = args.focal_length;
+                info->frameinfo.m_Camera.m_CCDSize = args.CCD_size;
+                info->frameinfo.m_Camera.m_ppx = 0.0;
+                info->frameinfo.m_Camera.m_ppy = 0.0;
+                
+    //            printf("%f\t%d\t%d\t%f\n",info->frameinfo.m_Camera.m_focalLength,info->frameinfo.m_Camera.m_ImageSize.width,
+    //                   info->frameinfo.m_Camera.m_ImageSize.height,info->frameinfo.m_Camera.m_CCDSize);
+                
+                //info->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),info->number_of_images);
+                /*
+                for(int ti = 0 ; ti < info->number_of_images ; ti++)
+                {
+                    FILE *p_xml;
+                    p_xml = fopen(info->RPCfilename[ti],"r");
+                    fscanf(p_xml,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",&info->frameinfo.Photoinfo[ti].m_Xl,
+                           &info->frameinfo.Photoinfo[ti].m_Yl,
+                           &info->frameinfo.Photoinfo[ti].m_Zl,
+                           &info->frameinfo.Photoinfo[ti].m_Wl,
+                           &info->frameinfo.Photoinfo[ti].m_Pl,
+                           &info->frameinfo.Photoinfo[ti].m_Kl);
+                    fclose(p_xml);
+
+                    sprintf(info->frameinfo.Photoinfo[ti].path,"%s",info->Imagefilename[ti]);
+                    printf("%s\n",info->Imagefilename[ti]);
+                    printf("%s\n",info->frameinfo.Photoinfo[ti].path);
+
+                    printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                           info->frameinfo.Photoinfo[ti].path,
+                           info->frameinfo.Photoinfo[ti].m_Xl,info->frameinfo.Photoinfo[ti].m_Yl,info->frameinfo.Photoinfo[ti].m_Zl,
+                           info->frameinfo.Photoinfo[ti].m_Wl,info->frameinfo.Photoinfo[ti].m_Pl,info->frameinfo.Photoinfo[ti].m_Kl);
+
+
+                }
+    */
+                bopened = true;
+            }
+            else
+            {
+                bopened = false;
+                printf("Please input focal length and CCD size!!\n");
+                exit(1);
+            }
         }
-        
     }
     //exit(1);
     return bopened;
@@ -1724,26 +1742,57 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
         }
         else //Exterior orientation
         {
-            fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-                   &proinfo->frameinfo.Photoinfo[ImageID].m_Xl,&proinfo->frameinfo.Photoinfo[ImageID].m_Yl,&proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
-                   &proinfo->frameinfo.Photoinfo[ImageID].m_Wl,&proinfo->frameinfo.Photoinfo[ImageID].m_Pl,&proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
-            
-            //printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-            //       proinfo->frameinfo.Photoinfo[ImageID].path,
-            //       proinfo->frameinfo.Photoinfo[ImageID].m_Xl,proinfo->frameinfo.Photoinfo[ImageID].m_Yl,proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
-            //       proinfo->frameinfo.Photoinfo[ImageID].m_Wl,proinfo->frameinfo.Photoinfo[ImageID].m_Pl,proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+            if(proinfo->sensor_provider == PT)
+            {
+                printf("eofile\n");
+                char eofile[500];
+                char* t_str = remove_ext(proinfo->Imagefilename[ImageID]);
+                
+                sprintf(eofile,"%s_EO.TXT",t_str);
+                printf("eofile %s\n",eofile);
+                FILE *pfile = fopen(eofile,"r");
+                if(pfile)
+                {
+                    //printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
+                    ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ImageID],proinfo->frameinfo.m_Camera);
+                    
+                    printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                           proinfo->frameinfo.Photoinfo[ImageID].m_Xl,proinfo->frameinfo.Photoinfo[ImageID].m_Yl,proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
+                           proinfo->frameinfo.Photoinfo[ImageID].m_Wl,proinfo->frameinfo.Photoinfo[ImageID].m_Pl,proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+                    
+                    printf("Camera %5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                           proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy,
+                           proinfo->frameinfo.m_Camera.k1,proinfo->frameinfo.m_Camera.k2,proinfo->frameinfo.m_Camera.k3,
+                           proinfo->frameinfo.m_Camera.p1,proinfo->frameinfo.m_Camera.p2,
+                           proinfo->frameinfo.m_Camera.a1,proinfo->frameinfo.m_Camera.a2);
+                    fclose(pfile);
+                }
+                
+            }
+            else
+            {
+                fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                       &proinfo->frameinfo.Photoinfo[ImageID].m_Xl,&proinfo->frameinfo.Photoinfo[ImageID].m_Yl,&proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
+                       &proinfo->frameinfo.Photoinfo[ImageID].m_Wl,&proinfo->frameinfo.Photoinfo[ImageID].m_Pl,&proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+                
+                //printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                //       proinfo->frameinfo.Photoinfo[ImageID].path,
+                //       proinfo->frameinfo.Photoinfo[ImageID].m_Xl,proinfo->frameinfo.Photoinfo[ImageID].m_Yl,proinfo->frameinfo.Photoinfo[ImageID].m_Zl,
+                //       proinfo->frameinfo.Photoinfo[ImageID].m_Wl,proinfo->frameinfo.Photoinfo[ImageID].m_Pl,proinfo->frameinfo.Photoinfo[ImageID].m_Kl);
+            }
+        
             double o = proinfo->frameinfo.Photoinfo[ImageID].m_Wl;
             double p = proinfo->frameinfo.Photoinfo[ImageID].m_Pl;
             double k = proinfo->frameinfo.Photoinfo[ImageID].m_Kl;
-            
+        
             proinfo->frameinfo.Photoinfo[ImageID].m_Rm = MakeRotationMatrix(o, p, k);
             
             *gsd_r = proinfo->frameinfo.m_Camera.m_CCDSize*UMToMM/(proinfo->frameinfo.m_Camera.m_focalLength/proinfo->frameinfo.Photoinfo[ImageID].m_Zl);
             *gsd_c = *gsd_r;
             *gsd = *gsd_r;
-            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m11,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m12,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m13);
-            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m21,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m22,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m23);
-            //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m31,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m32,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m33);
+                //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m11,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m12,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m13);
+                //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m21,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m22,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m23);
+                //printf("Rotation %f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m31,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m32,proinfo->frameinfo.Photoinfo[ImageID].m_Rm.m33);
         }
     }
     return out;
@@ -2765,10 +2814,10 @@ void CompareRPCs(double **RPCs, double **comRPCs)
     
     for(int i = 0 ; i < 20 ; i++)
     {
-        printf("linenumcoef %5.4e\t",RPCs[2][i] - comRPCs[2][i]);
-        printf("linedencoef %5.4e\t",RPCs[3][i] - comRPCs[3][i]);
-        printf("samplenumcoef %5.4e\t",RPCs[4][i] - comRPCs[4][i]);
-        printf("sampledencoef %5.4e\n",RPCs[5][i] - comRPCs[5][i]);
+        printf("linenumcoef %5.4e\t%5.4e\t%5.4e\t",RPCs[2][i],comRPCs[2][i],RPCs[2][i] - comRPCs[2][i]);
+        printf("linedencoef %5.4e\t%5.4e\t%5.4e\t",RPCs[3][i],comRPCs[3][i],RPCs[3][i] - comRPCs[3][i]);
+        printf("samplenumcoef %5.4e\t%5.4e\t%5.4e\t",RPCs[4][i],comRPCs[4][i],RPCs[4][i] - comRPCs[4][i]);
+        printf("sampledencoef %5.4e\t%5.4e\t%5.4e\n",RPCs[5][i],comRPCs[5][i],RPCs[5][i] - comRPCs[5][i]);
     }
 }
 

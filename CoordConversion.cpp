@@ -2309,6 +2309,33 @@ D2DPOINT *GetPhotoCoordinate(D3DPOINT *A, EO Photo, int _numofpts, CAMERA_INFO C
         
         IP[i].m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
         IP[i].m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
+        
+        double RR;
+        double x_, y_;
+        x_ = IP[i].m_X - Camera.m_ppx;
+        y_ = IP[i].m_Y - Camera.m_ppy;
+        RR = (x_*x_)+(y_*y_);
+        
+        double dxR, dxT;
+        double dyR, dyT;
+        double dR_R;
+        dR_R = Camera.k1*RR + Camera.k2*RR*RR + Camera.k3*RR*RR*RR;
+        dxR = x_*dR_R;
+        dyR = y_*dR_R;
+        dxT = Camera.p1*(RR + 2*x_*x_) + 2*Camera.p2*x_*y_;
+        dyT = Camera.p2*(RR + 2*y_*y_) + 2*Camera.p1*x_*y_;
+        
+        IP[i].m_X = IP[i].m_X - dxR - dxT;
+        IP[i].m_Y = IP[i].m_Y - dyR - dyT - Camera.a1*x_ - Camera.a2*y_;
+        
+        /*
+        double q = M.m31*(A[i].m_X - Photo.m_Xl) + M.m32*(A[i].m_Y - Photo.m_Yl) + M.m33*(A[i].m_Z - Photo.m_Zl);
+        double r = M.m11*(A[i].m_X - Photo.m_Xl) + M.m12*(A[i].m_Y - Photo.m_Yl) + M.m13*(A[i].m_Z - Photo.m_Zl);
+        double s = M.m21*(A[i].m_X - Photo.m_Xl) + M.m22*(A[i].m_Y - Photo.m_Yl) + M.m23*(A[i].m_Z - Photo.m_Zl);
+        
+        IP[i].m_X = Camera.m_ppx - Camera.m_focalLength*(r/q);
+        IP[i].m_Y = Camera.m_ppy - Camera.m_focalLength*(s/q);
+         */
     }
     
     return IP;
@@ -2322,11 +2349,40 @@ D3DPOINT *GetObjectCoordinate(D2DPOINT *a, double z,EO Photo, int _numofpts, CAM
 #pragma omp parallel for schedule(guided)
     for(int i=0;i<_numofpts;i++)
     {
+        D2DPOINT corr_pt;
+        
+        double RR;
+        double x_, y_;
+        x_ = a[i].m_X - Camera.m_ppx;
+        y_ = a[i].m_Y - Camera.m_ppy;
+        RR = (x_*x_)+(y_*y_);
+        
+        double dxR, dxT;
+        double dyR, dyT;
+        double dR_R;
+        dR_R = Camera.k1*RR + Camera.k2*RR*RR + Camera.k3*RR*RR*RR;
+        dxR = x_*dR_R;
+        dyR = y_*dR_R;
+        dxT = Camera.p1*(RR + 2*x_*x_) + 2*Camera.p2*x_*y_;
+        dyT = Camera.p2*(RR + 2*y_*y_) + 2*Camera.p1*x_*y_;
+        
+        corr_pt.m_X = x_ + dxR + dxT;
+        corr_pt.m_Y = y_ + dyR + dyT + Camera.a1*x_ + Camera.a2*y_;
+        
+        A[i].m_Z = z;
+        A[i].m_X =  (A[i].m_Z - Photo.m_Zl)*(M.m11*(corr_pt.m_X) + M.m21*(corr_pt.m_Y) + M.m31*(-Camera.m_focalLength))
+        /(M.m13*(corr_pt.m_X) + M.m23*(corr_pt.m_Y) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
+        A[i].m_Y =  (A[i].m_Z - Photo.m_Zl)*(M.m12*(corr_pt.m_X) + M.m22*(corr_pt.m_Y) + M.m32*(-Camera.m_focalLength))
+        /(M.m13*(corr_pt.m_X) + M.m23*(corr_pt.m_Y) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
+        
+        
+        /*
         A[i].m_Z = z;
         A[i].m_X =  (A[i].m_Z - Photo.m_Zl)*(M.m11*(a[i].m_X - Camera.m_ppx) + M.m21*(a[i].m_Y - Camera.m_ppy) + M.m31*(-Camera.m_focalLength))
         /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Xl;
         A[i].m_Y =  (A[i].m_Z - Photo.m_Zl)*(M.m12*(a[i].m_X - Camera.m_ppx) + M.m22*(a[i].m_Y - Camera.m_ppy) + M.m32*(-Camera.m_focalLength))
         /(M.m13*(a[i].m_X - Camera.m_ppx) + M.m23*(a[i].m_Y - Camera.m_ppy) + M.m33*(-Camera.m_focalLength)) + Photo.m_Yl;
+         */
     }
     
     return A;

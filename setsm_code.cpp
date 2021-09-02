@@ -2188,7 +2188,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
                     printf("End sim_RPCs\n");
                     
-                    /*
+                    
                     vector<D3DPOINT> VCPs;
                     vector<D2DPOINT> IPs2;
                     midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
@@ -2197,7 +2197,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     double maxY = -100000;
                     for(int i=0;i<VCPslatlong.size();i++)
                     {
-                        printf("image %f\t%f\n",IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
+                        printf("image %f\t%f\t%f\t%f\t%f\t%f\n",IPs2[i].m_X,IPs1[i].m_X,IPs2[i].m_Y,IPs1[i].m_Y,IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
                         printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
                         
                         if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
@@ -2207,7 +2207,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     }
                     printf("maxXY %f\t%f\n",maxX,maxY);
                     exit(1);
-                     */
+                    
                     char imagefile[500];
                     char RPCfile[500];
                     char metatile[500];
@@ -2579,33 +2579,36 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     }
                     sum_product_res = sum_product_res/proinfo->number_of_images;
                     
-                    //Inverse RPCs estimate
-                    printf("Inverse RPCs estimate\n");
-                    
-    //#pragma omp parallel for schedule(guided)
-                    for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                    if(args.sensor_type == SB)
                     {
-                        char irpcfile[500];
-                        sprintf(irpcfile,"%s/%s_IRPC.TXT",image_info[ti].fullpath,image_info[ti].filename);
-                        FILE *pfile = fopen(irpcfile,"r");
-                        if(pfile)
+                        //Inverse RPCs estimate
+                        printf("Inverse RPCs estimate\n");
+                        
+        //#pragma omp parallel for schedule(guided)
+                        for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                         {
-                            //printf("%d/%d read existing irpcs %s\n",ti,proinfo->number_of_images,irpcfile);
-                            IRPCs[ti] = OpenXMLFile_Planet(irpcfile);
-                            //remove(irpcfile);
-                        }
-                        else
-                        {
-                            printf("%d/%d generating irpcs from rpcs %s\n",ti,proinfo->number_of_images,irpcfile);
-                            vector<D3DPOINT> VCPslatlong;
-                            vector<D2DPOINT> IPs;
-                            double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
-                            IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
-                            printf("done IRPCS\n");
-                            WriteIRPCs_Planet(irpcfile, IRPCs[ti]);
-                            
-                            VCPslatlong.clear();
-                            IPs.clear();
+                            char irpcfile[500];
+                            sprintf(irpcfile,"%s/%s_IRPC.TXT",image_info[ti].fullpath,image_info[ti].filename);
+                            FILE *pfile = fopen(irpcfile,"r");
+                            if(pfile)
+                            {
+                                //printf("%d/%d read existing irpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                                IRPCs[ti] = OpenXMLFile_Planet(irpcfile);
+                                //remove(irpcfile);
+                            }
+                            else
+                            {
+                                printf("%d/%d generating irpcs from rpcs %s\n",ti,proinfo->number_of_images,irpcfile);
+                                vector<D3DPOINT> VCPslatlong;
+                                vector<D2DPOINT> IPs;
+                                double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
+                                IRPCs[ti] = GetIRPCsfromVCPsIPs(RPCs[ti],2,Imageparams[ti],VCPslatlong,IPs);
+                                printf("done IRPCS\n");
+                                WriteIRPCs_Planet(irpcfile, IRPCs[ti]);
+                                
+                                VCPslatlong.clear();
+                                IPs.clear();
+                            }
                         }
                     }
                 }
@@ -2747,7 +2750,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(proinfo->sensor_type == SB)
                             SetDEMBoundary(proinfo,RPCs[ti],Image_res,param,LBoundary,LminmaxHeight,&LHinterval);
                         else
+                        {
                             SetDEMBoundary_photo(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, proinfo->frameinfo.Photoinfo[ti].m_Rm, LBoundary,LminmaxHeight,&LHinterval);
+                        }
                         
                         if(ti == 0)
                         {
@@ -2920,92 +2925,100 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                 //ray_vector setting
                 for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
                 {
-                    vector<D3DPOINT> VCPslatlong;
-                    vector<D2DPOINT> IPs;
-                    double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
-                    
-                    vector<D3DPOINT> VCPsXY;
-                    vector<D2DPOINT> IPsPhoto;
-                    int numofpts = VCPslatlong.size();
-                    
-                    /*
-                    for(int j = 0 ; j < IPs.size() ; j++)
+                    if(args.sensor_type == SB)
                     {
-                        double tt_imageparam[2] = {0};
-                        D3DPOINT obj = GetImageHToObjectIRPC_single(IRPCs[ti],2,tt_imageparam,VCPslatlong[j].m_Z,IPs[j]);
-                        D3DPOINT temppt = wgs2ps_single_3D(param,obj);
-                        D3DPOINT diff = obj - VCPslatlong[j];
-                        printf("diff obj %10.9e\t%10.9e\t%10.9e\n",diff.m_X,diff.m_Y,diff.m_Z);
+                        vector<D3DPOINT> VCPslatlong;
+                        vector<D2DPOINT> IPs;
+                        double midH = GetVCPsIPsfromFRPCc(RPCs[ti],2,Imageparams[ti],Limagesize[ti],VCPslatlong,IPs);
                         
+                        vector<D3DPOINT> VCPsXY;
+                        vector<D2DPOINT> IPsPhoto;
+                        int numofpts = VCPslatlong.size();
                         
-                        D2DPOINT obj_xy(temppt.m_X,temppt.m_Y);
-                        D2DPOINT tempp = ps2wgs_single(param,obj_xy);
-                        obj.m_X = tempp.m_X;
-                        obj.m_Y = tempp.m_Y;
-                        
-                        D2DPOINT img = GetObjectToImageRPC_single(RPCs[ti], 2,tt_imageparam, obj);
-                        D2DPOINT diff_img = img - IPs[j];
-                        printf("diff img %10.9e\t%10.9e\n",diff_img.m_X,diff_img.m_Y);
-                                                      
-                    }
-                    exit(1);
-                    */
-                    
-                    for(int i=0;i<numofpts;i++)
-                    {
-                        D2DPOINT tempIP;
-                        D3DPOINT temppt;
-                        tempIP = ImageToPhoto_single(IPs[i],proinfo->frameinfo.m_Camera.m_CCDSize,Limagesize[ti]);
-                        IPsPhoto.push_back(tempIP);
-                        temppt = wgs2ps_single_3D(param,VCPslatlong[i]);
-                        VCPsXY.push_back(temppt);
-                        
-                        //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
-                    }
-                    
-                    /*
-                    if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
-                    {
-                        GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
-                        GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
-                    }
-                    else*/
-                    {
-                        char eofile[500];
-                        sprintf(eofile,"%s/%s_EO.TXT",image_info[ti].fullpath,image_info[ti].filename);
-                        FILE *pfile = fopen(eofile,"r");
-                        if(pfile)
-                        {
-                            //printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
-                            ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
-                        }
-                        else
-                        {
-                            //printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
-                            CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
-                            //CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
-                            WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
-                        }
-                        printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
-                               proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
-                               proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
-                        
-                        printf("Camera %5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-                               proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy,
-                               proinfo->frameinfo.m_Camera.k1,proinfo->frameinfo.m_Camera.k2,proinfo->frameinfo.m_Camera.k3,
-                               proinfo->frameinfo.m_Camera.p1,proinfo->frameinfo.m_Camera.p2,
-                               proinfo->frameinfo.m_Camera.a1,proinfo->frameinfo.m_Camera.a2);
                         /*
-                        printf("file name %s\n",proinfo->Imagefilename[ti]);
-                        printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
-                               proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
-                               proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
-                        printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
-                    */
+                        for(int j = 0 ; j < IPs.size() ; j++)
+                        {
+                            double tt_imageparam[2] = {0};
+                            D3DPOINT obj = GetImageHToObjectIRPC_single(IRPCs[ti],2,tt_imageparam,VCPslatlong[j].m_Z,IPs[j]);
+                            D3DPOINT temppt = wgs2ps_single_3D(param,obj);
+                            D3DPOINT diff = obj - VCPslatlong[j];
+                            printf("diff obj %10.9e\t%10.9e\t%10.9e\n",diff.m_X,diff.m_Y,diff.m_Z);
+                            
+                            
+                            D2DPOINT obj_xy(temppt.m_X,temppt.m_Y);
+                            D2DPOINT tempp = ps2wgs_single(param,obj_xy);
+                            obj.m_X = tempp.m_X;
+                            obj.m_Y = tempp.m_Y;
+                            
+                            D2DPOINT img = GetObjectToImageRPC_single(RPCs[ti], 2,tt_imageparam, obj);
+                            D2DPOINT diff_img = img - IPs[j];
+                            printf("diff img %10.9e\t%10.9e\n",diff_img.m_X,diff_img.m_Y);
+                                                          
+                        }
+                        exit(1);
+                        */
                         
-                        GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
-                        GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                        for(int i=0;i<numofpts;i++)
+                        {
+                            D2DPOINT tempIP;
+                            D3DPOINT temppt;
+                            tempIP = ImageToPhoto_single(IPs[i],proinfo->frameinfo.m_Camera.m_CCDSize,Limagesize[ti]);
+                            IPsPhoto.push_back(tempIP);
+                            temppt = wgs2ps_single_3D(param,VCPslatlong[i]);
+                            VCPsXY.push_back(temppt);
+                            
+                            //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
+                        }
                         
+                        /*
+                        if(args.check_txt_input == 3 && proinfo->sensor_provider == PT)
+                        {
+                            GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
+                            GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                        }
+                        else*/
+                        {
+                            char eofile[500];
+                            sprintf(eofile,"%s/%s_EO.TXT",image_info[ti].fullpath,image_info[ti].filename);
+                            FILE *pfile = fopen(eofile,"r");
+                            if(pfile)
+                            {
+                                //printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
+                                ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                            }
+                            else
+                            {
+                                //printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
+                                CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                                //CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                                WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                            }
+                            printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                                   proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                                   proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                            
+                            printf("Camera %5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                                   proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy,
+                                   proinfo->frameinfo.m_Camera.k1,proinfo->frameinfo.m_Camera.k2,proinfo->frameinfo.m_Camera.k3,
+                                   proinfo->frameinfo.m_Camera.p1,proinfo->frameinfo.m_Camera.p2,
+                                   proinfo->frameinfo.m_Camera.a1,proinfo->frameinfo.m_Camera.a2);
+                            /*
+                            printf("file name %s\n",proinfo->Imagefilename[ti]);
+                            printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
+                                   proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,
+                                   proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                            printf("Camera %f\t%f\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ppx,proinfo->frameinfo.m_Camera.m_ppy);
+                        */
+                            
+                            GetRayVectorFromIRPC(IRPCs[ti], param, 2, Imageparams[ti], Limagesize[ti], ray_vector[ti]);
+                            GetAZELFromRay(ray_vector[ti],image_info[ti].AZ_ray[0],image_info[ti].EL_ray[0]);
+                            
+                            GetRayVectorFromEOBRcenter(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, Limagesize[ti], Boundary, ori_minmaxHeight, ray_vector[proinfo->number_of_images + ti]);
+                            GetAZELFromRay(ray_vector[proinfo->number_of_images + ti],image_info[ti].AZ_ray[1],image_info[ti].EL_ray[1]);
+                        }
+                    }
+                    else
+                    {
                         GetRayVectorFromEOBRcenter(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, Limagesize[ti], Boundary, ori_minmaxHeight, ray_vector[proinfo->number_of_images + ti]);
                         GetAZELFromRay(ray_vector[proinfo->number_of_images + ti],image_info[ti].AZ_ray[1],image_info[ti].EL_ray[1]);
                     }
@@ -8107,6 +8120,10 @@ void SetDEMBoundary_photo(EO Photo, CAMERA_INFO m_Camera, RM M, double* _boundar
     double MSL = 0;
     _minmaxheight[0] =  0;
     _minmaxheight[1] =  200;
+    
+    
+    _minmaxheight[0] =  2000;
+    _minmaxheight[1] =  3500;
     
     int oriminmaxH[2];
     oriminmaxH[0] = 0;
