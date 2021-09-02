@@ -2376,6 +2376,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     {
         D2DPOINT *adjust_sdt = (D2DPOINT*)calloc(sizeof(D2DPOINT),proinfo->number_of_images);
         double **Coreg_param = ImageCoregistration(return_param, _filename, args, _save_filepath, 1,adjust_sdt,&cal_check);
+        
         printf("cal_check %d\n",cal_check);
         if(cal_check)
         {

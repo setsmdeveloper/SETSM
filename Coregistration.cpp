@@ -178,43 +178,15 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 GridSize_height[i] = Boundary[i][3] - Boundary[i][1];
                 
                 printf("ID %d\tboundary = %f\t%f\t%f\t%f\t%f\t%f\n",i,Boundary[i][0],Boundary[i][1],Boundary[i][2],Boundary[i][3],GridSize_width[i],GridSize_height[i]);
+                printf("OriImagesizes %d\t%d\n",OriImagesizes[i].width,OriImagesizes[i].height);
                 
-                cols[0] = 0;
-                cols[1] = OriImagesizes[i].width;
-                
-                rows[0] = 0;
-                rows[1] = OriImagesizes[i].height;
+                GetsubareaImage_GeoTiff_ortho(ortho_dx[i],OriImagesizes[i],ImageBoundary[i],Boundary[i],cols,rows);
                 
                 OriImages[i] = SubsetImageFrombitsToUint16(image_bits[i], args.Image[i], cols, rows, &OriImagesizes[i]);
-                /*
-                switch(image_bits[i])
-                {
-                    case 8:
-                    {
-                        uint8 type(0);
-                        uint8* data8 = Readtiff_T(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],type);
-                        long int data_size8 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
-                        OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size8);
-                        #pragma omp parallel for schedule(guided)
-                        for(long int index = 0 ; index < data_size8 ; index++)
-                            OriImages[i][index] = data8[index];
-                        free(data8);
-                    }
-                        break;
-                    case 12:
-                    {
-                        uint16 type(0);
-                        uint16* data16 = Readtiff_T(args.Image[i], &OriImagesizes[i], cols, rows, &OriImagesizes[i],type);
-                        long int data_size16 = (long int)OriImagesizes[i].width*(long int)OriImagesizes[i].height;
-                        OriImages[i] = (uint16*)malloc(sizeof(uint16)*data_size16);
-                        #pragma omp parallel for schedule(guided)
-                        for(long int index = 0 ; index < data_size16 ; index++)
-                            OriImages[i][index] = data16[index];
-                        free(data16);
-                    }
-                        break;
-                }
-                 */
+                
+                for(int k=0;k<4;k++)
+                    ImageBoundary[i][k] =  Boundary[i][k];
+                
                 printf("ID %d\t %s\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",i,args.Image[i],OriImagesizes[i].width,OriImagesizes[i].height,ortho_minX[i],ortho_maxY[i],ortho_dx[i],ortho_dy[i],ImageBoundary[i][0],ImageBoundary[i][1],ImageBoundary[i][2],ImageBoundary[i][3]);
             }
             
@@ -226,7 +198,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     Grid_space[i] = proinfo->GCP_spacing;
                 printf("image coregistration gridspace %d\t%d\n",i,Grid_space[i]);
             }
-        
+            
             char **Subsetfilename;
             CSize **data_size_lr;
             char save_file[500];
@@ -256,6 +228,10 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             total_ST = time(0);
             
             Preprocessing_Coreg(proinfo,proinfo->tmpdir,OriImages,Subsetfilename,py_level,OriImagesizes,data_size_lr);
+            
+            for(int i=0;i<proinfo->number_of_images;i++)
+                free(OriImages[i]);
+            free(OriImages);
             
             total_ET = time(0);
             total_gap = difftime(total_ET,total_ST);
@@ -385,7 +361,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                 
                 matched_MPs_ref.clear();
                 matched_MPs.clear();
-                free(OriImages[ti]);
+                
                 free(ImageBoundary[ti]);
             }
             fclose(fid_out);
@@ -398,7 +374,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
             free(Grid_space);
             free(ortho_dx);
             free(ortho_dy);
-            free(OriImages);
+            
             free(OriImagesizes);
             
             free(ortho_minX);

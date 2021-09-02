@@ -1823,7 +1823,7 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     fclose(outfile_Xshift);
     fclose(outfile_Yshift);
     fclose(outfile_mag);
-    
+    /*
     char DEM_str[500];
     
     sprintf(DEM_str, "%s/%s_%d_%d_dx2.tif", proinfo.save_filepath, proinfo.Outputpath_name,row,col);
@@ -1832,7 +1832,7 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     WriteGeotiff(DEM_str, VyShift, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
     sprintf(DEM_str, "%s/%s_%d_%d_dmag2.tif", proinfo.save_filepath, proinfo.Outputpath_name,row,col);
     WriteGeotiff(DEM_str, Mag, rlevelinfo.Size_Grid2D->width, rlevelinfo.Size_Grid2D->height, proinfo.DEM_resolution, rlevelinfo.Boundary[0], rlevelinfo.Boundary[3], rlevelinfo.param->projection, rlevelinfo.param->utm_zone, rlevelinfo.param->bHemisphere, 4);
-    
+    */
     free(VxShift);
     free(VyShift);
     free(Mag);

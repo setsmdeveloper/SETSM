@@ -546,6 +546,86 @@ bool GetsubareaImage_GeoTiff_tile(ProInfo proinfo, char *ImageFilename, CSize Im
     return ret;
 }
 
+bool GetsubareaImage_GeoTiff_ortho(double grid_size, CSize Imagesize, double *ImgBoundary, double *subBoundary, long *cols,long *rows)
+{
+    bool ret = false;
+    
+    D2DPOINT t_pts[8];
+    t_pts[0].m_X    = subBoundary[0];
+    t_pts[1].m_X    = subBoundary[2];
+    t_pts[2].m_X    = subBoundary[0];
+    t_pts[3].m_X    = subBoundary[2];
+    t_pts[4].m_X    = subBoundary[0];
+    t_pts[5].m_X    = subBoundary[2];
+    t_pts[6].m_X    = subBoundary[0];
+    t_pts[7].m_X    = subBoundary[2];
+    
+    t_pts[0].m_Y    = subBoundary[1];
+    t_pts[1].m_Y    = subBoundary[3];
+    t_pts[2].m_Y    = subBoundary[1];
+    t_pts[3].m_Y    = subBoundary[3];
+    t_pts[4].m_Y    = subBoundary[3];
+    t_pts[5].m_Y    = subBoundary[1];
+    t_pts[6].m_Y    = subBoundary[3];
+    t_pts[7].m_Y    = subBoundary[1];
+    
+    D2DPOINT *ImageCoord        = GetObjectToImage(8, t_pts,ImgBoundary,grid_size);
+    
+    //printf("subBoundary = %f\t%f\t%f\t%f\n", subBoundary[0], subBoundary[1], subBoundary[2], subBoundary[3]);
+    //printf("ImgBoundary = %f\t%f\t%f\t%f\n", ImgBoundary[0], ImgBoundary[1], ImgBoundary[2], ImgBoundary[3]);
+    
+    double minX =  1000000;
+    double maxX = -1000000;
+    double minY =  1000000;
+    double maxY = -1000000;
+    
+    for(int i=0;i<8;i++)
+    {
+        if(minX > ImageCoord[i].m_X)
+            minX    = ImageCoord[i].m_X;
+        if(maxX < ImageCoord[i].m_X)
+            maxX    = ImageCoord[i].m_X;
+        if(minY > ImageCoord[i].m_Y)
+            minY    = ImageCoord[i].m_Y;
+        if(maxY < ImageCoord[i].m_Y)
+            maxY    = ImageCoord[i].m_Y;
+    }
+    
+    const int buffer                = 0;
+    cols[0]                = (int)(ceil(minX)-buffer);
+    cols[1]                = (int)(ceil(maxX)+buffer);
+    rows[0]                = (int)(ceil(minY)-buffer);
+    rows[1]                = (int)(ceil(maxY)+buffer);
+    
+    const int null_buffer            = 0;
+    // Null pixel value remove
+    if(cols[0]            <= null_buffer)
+        cols[0]            = null_buffer;
+    if(rows[0]            <= null_buffer)
+        rows[0]            = null_buffer;
+    if(cols[0]            > Imagesize.width - null_buffer)
+        cols[0]            = Imagesize.width - null_buffer;
+    if(rows[0]            > Imagesize.height - null_buffer)
+        rows[0]            = Imagesize.height - null_buffer;
+    
+    if(cols[1]            <= null_buffer)
+        cols[1]            = null_buffer;
+    if(rows[1]            <= null_buffer)
+        rows[1]            = null_buffer;
+    if(cols[1]            > Imagesize.width - null_buffer)
+        cols[1]            = Imagesize.width - null_buffer;
+    if(rows[1]            > Imagesize.height - null_buffer)
+        rows[1]            = Imagesize.height - null_buffer;
+    
+    //printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
+    
+    free(ImageCoord);
+    
+    ret    = true;
+    
+    return ret;
+}
+
 float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
 {
     double minX, maxX, minY,maxY,a_minX,a_maxX,a_minY,a_maxY;
