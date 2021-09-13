@@ -1095,6 +1095,11 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             
                         }
                     }
+
+                    // The images inside SourceImages do not need to be
+                    // freed; they were freed as part of the SubImages
+                    free(SourceImages);
+
                     fclose(fid);
                     fclose(fid_header);
                 }
