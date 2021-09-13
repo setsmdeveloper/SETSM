@@ -479,6 +479,13 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             uint16 ***SubImages     = (uint16***)malloc(sizeof(uint16**)*(level+1));
                             uint16 ***SubMagImages  = (uint16***)malloc(sizeof(uint16**)*(level+1));
                             uint8 ***SubOriImages   = (uint8***)malloc(sizeof(uint8**)*(level+1));
+
+                            // set up data_size_lr
+                            for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
+                            {
+                                data_size_lr[image_index] = (CSize*)malloc(sizeof(CSize)*(pyramid_step+1));
+                                SetPySizes(data_size_lr[image_index], subsetsize[image_index], pyramid_step);
+                            }
                             
                             for(int iter_level = 0 ; iter_level < pyramid_step + 1; iter_level++)
                             {
@@ -488,8 +495,6 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 
                                 for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
                                 {
-                                    data_size_lr[image_index] = (CSize*)malloc(sizeof(CSize)*(level+1));
-                                    SetPySizes(data_size_lr[image_index], subsetsize[image_index], level);
                                     
                                     
                                     long data_length = (long)data_size_lr[image_index][iter_level].height*(long)data_size_lr[image_index][iter_level].width;
