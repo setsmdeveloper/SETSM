@@ -480,7 +480,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             uint16 ***SubMagImages  = (uint16***)malloc(sizeof(uint16**)*(level+1));
                             uint8 ***SubOriImages   = (uint8***)malloc(sizeof(uint8**)*(level+1));
                             
-                            for(int iter_level = 0 ; iter_level < level + 1; iter_level++)
+                            for(int iter_level = 0 ; iter_level < pyramid_step + 1; iter_level++)
                             {
                                 SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo.number_of_images);
                                 SubOriImages[iter_level] = (uint8**)malloc(sizeof(uint8*)*proinfo.number_of_images);
@@ -1068,7 +1068,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             }
                             printf("relese data size\n");
                             
-                            for(int iter_level = 0 ; iter_level < level + 1; iter_level++)
+                            for(int iter_level = 0 ; iter_level < pyramid_step + 1; iter_level++)
                             {
                                 for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
                                 {
