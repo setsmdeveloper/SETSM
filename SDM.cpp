@@ -1100,6 +1100,12 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                     // freed; they were freed as part of the SubImages
                     free(SourceImages);
 
+
+                    for(int ti = 0 ; ti < proinfo.number_of_images ; ti++) {
+                        free(ImageAdjust[ti]);
+                    }
+                    free(ImageAdjust);
+
                     fclose(fid);
                     fclose(fid_header);
                 }
