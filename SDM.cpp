@@ -2866,6 +2866,10 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                         }
                         
                         fclose(p_hfile);
+
+                        free(temp_vx);
+                        free(temp_vy);
+                        free(temp_roh);
                     }
                 }
                 fclose(pfile);
