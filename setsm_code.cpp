@@ -120,7 +120,7 @@ int main(int argc,char *argv[])
     args.GCP_spacing = -9;
     args.Cloud_th = CLD_COV;
     args.CA_th = 3;
-    args.CA_max_th = 50;
+    args.CA_max_th = 100;
     args.pair_max_th = 10;
     args.pair_options = 1;
     args.awnccmp = 2;
@@ -2174,10 +2174,10 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 ////
                 
                 EO rotate;
-                for( int k = -4 ; k <= 4 ; k++)
+                for( int k = -5 ; k <= 5 ; k++)
                 {
                     printf("start SEO\n");
-                    rotate.m_Pl = 10*k;
+                    rotate.m_Pl = 1*k;
                     EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
                     //exit(1);
                     printf("End SEO\n");
@@ -2188,7 +2188,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
                     printf("End sim_RPCs\n");
                     
-                    
+                    /*
                     vector<D3DPOINT> VCPs;
                     vector<D2DPOINT> IPs2;
                     midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
@@ -2207,7 +2207,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     }
                     printf("maxXY %f\t%f\n",maxX,maxY);
                     exit(1);
-                    
+                    */
                     char imagefile[500];
                     char RPCfile[500];
                     char metatile[500];
@@ -2216,17 +2216,17 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     char *tmp_no_ext = remove_ext(Ifilename);
                     if(k < 0)
                     {
-                        sprintf(imagefile, "%s/%s_sim_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(RPCfile, "%s/%s_sim_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(EOfile, "%s/%s_sim_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(metatile, "%s/%s_sim_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(imagefile, "%s/%s_sim_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(RPCfile, "%s/%s_sim_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(EOfile, "%s/%s_sim_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(metatile, "%s/%s_sim_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
                     }
                     else
                     {
-                        sprintf(imagefile, "%s/%s_sim_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(RPCfile, "%s/%s_sim_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(EOfile, "%s/%s_sim_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(10*k));
-                        sprintf(metatile, "%s/%s_sim_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(10*k));
+                        sprintf(imagefile, "%s/%s_sim_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(RPCfile, "%s/%s_sim_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(EOfile, "%s/%s_sim_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(metatile, "%s/%s_sim_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
                     }
                     
                     printf("new imagefile %s\n",imagefile);
@@ -2248,7 +2248,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     
                     RPCsFree(sim_RPCs);
                     
-                    //SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
+                    SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
                     
                 }
                 
@@ -5544,7 +5544,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             
                             if(levelinfo.pairinfo->SelectNumberOfPairs() > 0)
                             {
-                                if( (levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA) && proinfo->sensor_provider != PT)
+                                if( (levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA) /*&& proinfo->sensor_provider != PT*/)
                                 {
                                     if(!check_matching_rate)
                                     {
