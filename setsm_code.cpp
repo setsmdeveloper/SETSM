@@ -2370,6 +2370,9 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         Coreg_param[0] = (double*)calloc(sizeof(double),2);
         Coreg_param[1] = (double*)calloc(sizeof(double),2);
         SDM_ortho(_filename, args, Coreg_param);
+
+        free(Coreg_param[0]);
+        free(Coreg_param[1]);
         free(Coreg_param);
     }
     else if(args.check_sdm_ortho == 2)
