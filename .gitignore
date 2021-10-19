@@ -37,3 +37,9 @@ setsm
 setsm_mpi
 git_description
 git_description.h
+
+#cmake build dir
+build/
+
+#cmake created directories
+csv/

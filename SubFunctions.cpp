@@ -145,6 +145,31 @@ double getSystemMemory()
     }
 }
 
+/** Print maximum memory usage so far in human readable units */
+void printMaxMemUsage() {
+    // rusage.ru_maxrss in KB
+    struct rusage ru;
+    if(getrusage(RUSAGE_SELF, &ru)) {
+        printf("WARNING: failed to get maximum memory usage\n");
+        return;
+    }
+
+    auto max_rss = ru.ru_maxrss;
+    double scaled = 0;
+    const char *unit = NULL;
+
+    if(max_rss < 1024) {
+        scaled = max_rss / 1.0;
+        unit = "KB";
+    } else if(max_rss < 1024 * 1024) {
+        scaled = max_rss / 1024.0;
+        unit = "MB";
+    } else {
+        scaled = max_rss / (1024.0 * 1024.0);
+        unit = "GB";
+    }
+    printf("Maximum memory usage: %.2f %s\n", scaled, unit);
+}
 
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams)
 {

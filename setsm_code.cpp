@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.9";
+const char setsm_version[] = "4.3.10";
 
 int main(int argc,char *argv[])
 {
@@ -1603,6 +1603,8 @@ int main(int argc,char *argv[])
         }
     }
     free(Imageparams);
+
+    printMaxMemUsage();
 
 #ifdef BUILDMPI
     // Make sure to finalize
