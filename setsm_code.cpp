@@ -121,7 +121,7 @@ int main(int argc,char *argv[])
     args.Cloud_th = CLD_COV;
     args.CA_th = 3;
     args.CA_max_th = 100;
-    args.pair_max_th = 10;
+    args.pair_max_th = 50;
     args.pair_options = 1;
     args.awnccmp = 2;
     
@@ -2625,6 +2625,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     if(proinfo->sensor_type == AB)
                     {
                         proinfo->resolution = (int)((mean_product_res)*10 + 0.5)/10.0;
+                        if(args.sensor_provider == PT)
+                        {
+                            proinfo->resolution = ceil(mean_product_res);
+                        }
                     }
                     else if(args.sensor_provider == DG)
                     {
@@ -3578,6 +3582,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 
                                 fprintf(pMetafile, "Number of stereo pairs=%d\n",pairinfo.SelectNumberOfPairs());
                             }
+                            
+                            int numberofpairs = pairinfo.SelectNumberOfPairs();
 #ifdef BUILDMPI
                             MPI_Barrier(MPI_COMM_WORLD);
                             if(rank == 0) {
@@ -3773,10 +3779,16 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     
                                     DEM_values = (float*)malloc(sizeof(float)*tile_Final_DEMsize.width*tile_Final_DEMsize.height);
                                     
-                                    if(proinfo->sensor_provider == PT)
+                                    if(proinfo->sensor_provider == PT && numberofpairs > 1)
+                                    {
+                                        printf("MergeTiles_forMulti!!\n");
                                         MergeTiles_forMulti(proinfo,param,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,tile_Final_DEMsize,FinalDEM_boundary);
+                                    }
                                     else
+                                    {
+                                        printf("MergeTiles_single!!\n");
                                         MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,tile_Final_DEMsize,FinalDEM_boundary);
+                                    }
                                     
                                     printf("Interpolation start!!\n");
                                     printf("%f %f\n",proinfo->DEM_resolution,proinfo->DEM_resolution);
@@ -3858,10 +3870,16 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 printf("Tile merging start final iteration %d!!\n",final_iteration);
                                 
                                 DEM_values = (float*)malloc(sizeof(float)*Final_DEMsize.width*Final_DEMsize.height);
-                                if(proinfo->sensor_provider == PT)
+                                if(proinfo->sensor_provider == PT && numberofpairs > 1)
+                                {
+                                    printf("MergeTiles_forMulti!!\n");
                                     MergeTiles_forMulti(proinfo,param,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Final_DEMsize,FinalDEM_boundary);
+                                }
                                 else
+                                {
+                                    printf("MergeTiles_single!!\n");
                                     MergeTiles(proinfo,iter_row_start,t_col_start,iter_row_end,t_col_end,buffer_tile,final_iteration,DEM_values,Final_DEMsize,FinalDEM_boundary);
+                                }
                                 printf("%f\t",DEM_values[10]);
                                 
                                 printf("Interpolation start!!\n");
@@ -4467,6 +4485,22 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
              */
         }
         
+        /*plevelinfo.pairinfo->initialize();
+        
+        printf("initialize all pairinfo count %d/n",plevelinfo.pairinfo->SelectNumberOfPairs(),plevelinfo.pairinfo->NumberOfPairs());
+        
+        plevelinfo.pairinfo->SetNumberOfPairs(actual_pair_save.size());
+        plevelinfo.pairinfo->SetMinOffImage(pairinfo.MinOffImageID());
+        plevelinfo.pairinfo->SetHeightStep(pairinfo.HeightStep());
+        for(int count = 0 ; count < actual_pair_save.size() ; count++)
+        {
+            plevelinfo.pairinfo->SetPairs(count, temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y);
+            plevelinfo.pairinfo->SetBHratio(count, temp_pairs.BHratio(count));
+            plevelinfo.pairinfo->SetCenterDist(count, temp_pairs.CenterDist(count));
+            plevelinfo.pairinfo->SetConvergenceAngle(count, temp_pairs.ConvergenceAngle(count));
+            plevelinfo.pairinfo->SetSigmaZ(count, temp_pairs.SigmaZ(count));
+            plevelinfo.pairinfo->SetAzimuth(count, temp_pairs.Azimuth(count));
+        }*/
         *plevelinfo.pairinfo = temp_pairs;
         pairinfo = temp_pairs;
     } 
@@ -4743,7 +4777,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
         {
             printf("start cal tile\n");
             
-            bool temp_asc_fprint = false;
+            bool temp_asc_fprint = true;
             
             FILE *fid = NULL;
             FILE *fid_header = NULL;
@@ -5310,7 +5344,17 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         }
                         
                         double max_stereo_angle = -100;
-                        if(proinfo->sensor_type == SB)
+                        
+                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                        {
+                            MPP_simgle_image = proinfo->resolution*1.5;
+                            MPP_stereo_angle = MPP_simgle_image;
+                            
+                            MPP = MPP_stereo_angle;
+                            
+                            *stereo_angle_accuracy = MPP_stereo_angle;
+                        }
+                        else
                         {
                             double sum_MPP_simgle_image = 0;
                             double sum_MPP_stereo_angle = 0;
@@ -5380,15 +5424,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             //    MPP = 50;
                             //printf("DG max_stereo_angle %f\n",MPP_stereo_angle);
                         }
-                        else
-                        {
-                            MPP_simgle_image = proinfo->resolution*1.5;
-                            MPP_stereo_angle = MPP_simgle_image;
-                            
-                            MPP = MPP_stereo_angle;
-                            
-                            *stereo_angle_accuracy = MPP_stereo_angle;
-                        }
+                        
                         
                         levelinfo.MPP = MPP;
                         
@@ -5598,6 +5634,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     float max_pair_H = -9999;
                                     int pair_count = 0;
                                     //if(!levelinfo.check_SGM) //no SGM
+                                    
                                     {
                                         AWNCC_AWNCC(proinfo,grid_voxel,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight);
                                         
@@ -7629,12 +7666,16 @@ D2DPOINT *SetGrids(const ProInfo *info, const int level, const int final_level_i
     *grid_resolution = *py_resolution;
     
     printf("pre resolution %f\t level %d\t final_level_iteration %d\n",*py_resolution,level,final_level_iteration);
-    
-    /*if(info->sensor_provider == PT)
+    /*
+    if(info->sensor_provider == PT)
     {
+        
         if(level > 0)
             *py_resolution = *py_resolution/2.0;
         else
+            *py_resolution = DEM_resolution;
+        
+        if(*py_resolution < DEM_resolution)
             *py_resolution = DEM_resolution;
     }
     else*/
@@ -8226,9 +8267,10 @@ void CalMPP_pair(double CA,double mean_product_res, double im_resolution, double
 
 void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight, double CA,const double mean_product_res, double *MPP_simgle_image, double *MPP_stereo_angle, const int pair_number)
 {
+    
     const int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
     const int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-    
+    /*
     D2DPOINT temp_p1, temp_p2;
     double temp_LIA[2] = {0.0, 0.0};
     
@@ -8250,7 +8292,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
     
     const double right_mpp = (minmaxHeight[1] - minmaxHeight[0]) / sqrt( pow(temp_p1.m_X - temp_p2.m_X,2.0) + pow(temp_p1.m_Y - temp_p2.m_Y,2.0));
     
-    //printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
+    printf("left right mpp %f\t%f\n",left_mpp,right_mpp);
     
     if(left_mpp > 5*proinfo->resolution)
         *MPP_simgle_image = right_mpp;
@@ -8263,7 +8305,7 @@ void CalMPP(ProInfo *proinfo, LevelInfo &rlevelinfo, const double* minmaxHeight,
         else
             *MPP_simgle_image = right_mpp;
     }
-    
+    */
     CA = rlevelinfo.pairinfo->ConvergenceAngle(pair_number);
     
     double GSD = (rlevelinfo.imageinfo[reference_id].GSD.pro_GSD + rlevelinfo.imageinfo[ti].GSD.pro_GSD)/2.0;
@@ -9150,7 +9192,7 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                     if(check_compute)
                                     {
                                         bool check_select_pair = true;
-                                        if(proinfo->sensor_type == AB)
+                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                             check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                                         if(check_select_pair)
                                         {
@@ -10035,7 +10077,7 @@ void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVox
                 int ti = rlevelinfo.pairinfo->pairs(count).m_Y;
                 
                 bool check_select_pair = true;
-                if(proinfo->sensor_type == AB)
+                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                     check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                 
                 if(check_select_pair /*&& GridPT3.ncc_seleceted_pair(pt_index) == count*/)
@@ -10081,7 +10123,7 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                 int ti = rlevelinfo.pairinfo->pairs(count).m_Y;
                 
                 bool check_select_pair = true;
-                if(proinfo->sensor_type == AB)
+                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                     check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                 
                 if(check_select_pair /*&& GridPT3.ncc_seleceted_pair(pt_index) == count*/)
@@ -10448,7 +10490,7 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
                 int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                 
                 bool check_select_pair = true;
-                if(proinfo->sensor_type == AB)
+                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                     check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                 
                 if(check_select_pair)
@@ -10525,12 +10567,15 @@ void AWNCC_single(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,
             exit(1);
         }
         
-        /*if(iter_count == (long)((long)Size_Grid2D.height*(long)Size_Grid2D.width/2.0))
+        if(iter_count == 3129)
         {
+            printf("%d\t%d\t%f\t%f\n",nccresult[pt_index].result0,nccresult[pt_index].result1,nccresult[pt_index].result2,nccresult[pt_index].result3);
+
+            /*
             fprintf(fid_peak,"%f\t%f\t%f\t%f\t%d\n",nccresult[pt_index].result2,temp_nccresult,nccresult[pt_index].result3,temp_nccresult_sec,nccresult[pt_index].NumOfHeight);
             fclose(fid);
-            fclose(fid_peak);
-        }*/
+            fclose(fid_peak);*/
+        }
         
         //printf("nccresult %d\t%d\t%f\t%f\t%d\n",nccresult[pt_index].result0,nccresult[pt_index].result1,nccresult[pt_index].result2,nccresult[pt_index].result3,nccresult[pt_index].result4);
     }
@@ -10604,7 +10649,7 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
                     int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair)
@@ -10726,6 +10771,16 @@ void AWNCC_AWNCC(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,C
             nccresult[pt_index].result3 = Nodata;
             nccresult[pt_index].result4 = 0;
         }
+        
+        if(iter_count == 3129)
+        {
+            printf("%d\t%d\t%f\t%f\n",nccresult[pt_index].result0,nccresult[pt_index].result1,nccresult[pt_index].result2,nccresult[pt_index].result3);
+
+            /*
+            fprintf(fid_peak,"%f\t%f\t%f\t%f\t%d\n",nccresult[pt_index].result2,temp_nccresult,nccresult[pt_index].result3,temp_nccresult_sec,nccresult[pt_index].NumOfHeight);
+            fclose(fid);
+            fclose(fid_peak);*/
+        }
     }
 }
 
@@ -10787,6 +10842,11 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
 
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<uint8>> &PairArray)
 {
+    //char filename_pair[500];
+    //sprintf(filename_pair,"%s/txt/mps_pts.txt",proinfo->save_filepath);
+    //FILE* pfile_pair = fopen(filename_pair,"w");
+    
+    
     double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
     int NR_level = 1;
     
@@ -10819,7 +10879,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pt_index = iter_count;
         
         bool check_sigmaZ = false;
-        
+        /*
         if(proinfo->pair_options == 1 || proinfo->pair_options == 3)
         {
             if(PairArray[pt_index].size() > 1)
@@ -10848,7 +10908,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             else if(SigmaZArray[pt_index] > 75)
                 check_sigmaZ = true;
         }
-        
+        */
         if(proinfo->awnccmp == 1)
         {
             if(pts_col >= 0 && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_row < Size_Grid2D.height && pt_index >= 0 && pt_index < *rlevelinfo.Grid_length && !check_sigmaZ)
@@ -10878,7 +10938,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair)
@@ -10928,7 +10988,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair)
@@ -10965,7 +11025,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                         
                         bool check_select_pair = true;
-                        if(proinfo->sensor_type == AB)
+                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                             check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                         
                         if(check_select_pair)
@@ -11071,7 +11131,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
                                                     
                                                     bool check_select_pair = true;
-                                                    if(proinfo->sensor_type == AB)
+                                                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                         check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                     
                                                     check_query_pair = check_select_pair;
@@ -11087,7 +11147,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                         
                                                         bool check_select_pair = true;
-                                                        if(proinfo->sensor_type == AB)
+                                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                             check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                         
                                                         if(check_select_pair)
@@ -11120,7 +11180,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                 int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                                 
                                                                 bool check_select_pair = true;
-                                                                if(proinfo->sensor_type == AB)
+                                                                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                                     check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                                 
                                                                 if(check_select_pair)
@@ -11369,7 +11429,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair)
@@ -11422,7 +11482,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair)
@@ -11448,20 +11508,23 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     min_ortho = pair_ortho_roh;
                                 }
                             }
-                            //printf("pair_number %d\tpair_peak_roh %f\n",pair_number,pair_peak_roh);
+                            
                         }
+                        //printf("pair_number %d\tcheck %d\tpair_peak_roh %f\t%f\n",pair_number,multimps(pt_index, pair_number).check_matched,pair_peak_roh,pair_ortho_roh);
                     }
                 }
+                //printf("selected_pair %d\n",selected_pair);
+                //AWNCC selected pair
                 
-                if(selected_pair < 0)
+                if(selected_pair < 0 && Pyramid_step > 1)
                 {
                     for(int pair_number = 0 ; pair_number <= rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                     {
                         int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
                         int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                        
+                        //printf("reference_id ti %d\t%d\n",reference_id,ti);
                         bool check_select_pair = true;
-                        if(proinfo->sensor_type == AB)
+                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                             check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                         
                         if(check_select_pair)
@@ -11487,9 +11550,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     }
                                 }
                             }
+                            
                         }
                     }
                 }
+                
+                //printf("selected_pair %d\n",selected_pair);
                 
                 if(max_wncc < SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh))
                     max_wncc = SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh);
@@ -11556,7 +11622,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
                                         
                                         bool check_select_pair = true;
-                                        if(proinfo->sensor_type == AB)
+                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                             check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                         
                                         check_query_pair = check_select_pair;
@@ -11572,7 +11638,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                             
                                             bool check_select_pair = true;
-                                            if(proinfo->sensor_type == AB)
+                                            if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                 check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                             
                                             //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
@@ -11612,7 +11678,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                         int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                         
                                                         bool check_select_pair = true;
-                                                        if(proinfo->sensor_type == AB)
+                                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                             check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                         
                                                         if(check_select_pair)
@@ -11774,12 +11840,11 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         if(sum_weight > 0)
                             final_height = sum_weight_height/sum_weight;
                         
-                        
                         // kernal processing
                         wncc_interval = 10.0;
                         min_wncc = peak_roh_min;
                         double kernel_noise_th = 25;
-                        if(Pyramid_step <= 1 )//((Pyramid_step == 1 && iteration == 1) || (Pyramid_step == 0 && iteration >= 2) /*&& proinfo->sensor_provider == PT*/)
+                        if(Pyramid_step <= NR_level )//((Pyramid_step == 1 && iteration == 1) || (Pyramid_step == 0 && iteration >= 2) /*&& proinfo->sensor_provider == PT*/)
                         {
                             double ref_height = final_height;
                             
@@ -11846,7 +11911,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                             int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
                                                             
                                                             bool check_select_pair = true;
-                                                            if(proinfo->sensor_type == AB)
+                                                            if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                                 check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                             
                                                             check_query_pair = check_select_pair;
@@ -11862,7 +11927,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                 int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                                 
                                                                 bool check_select_pair = true;
-                                                                if(proinfo->sensor_type == AB)
+                                                                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                                     check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                                 
                                                                 //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
@@ -11902,7 +11967,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                             int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                                                             
                                                                             bool check_select_pair = true;
-                                                                            if(proinfo->sensor_type == AB)
+                                                                            if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                                                                                 check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
                                                                             
                                                                             if(check_select_pair)
@@ -12058,7 +12123,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                     double var = sqrt(sum_var/save_kenel_height.size());
                                     double ratio_L = (double)count_L/(double)save_kenel_height.size();
-                                    if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5 || ratio_L < 0.3)
+                                    if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
                                         q_kenel_size++;
                                     else
                                         check_kernel_iter = false;
@@ -12109,7 +12174,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             check_kenel_cal.clear();
                             save_kernal_height_all.clear();
                             save_kernal_weight_all.clear();
-                        }
+                        } //NR_level
+                        
                         
                         /*
                         if(sum_weight > 0)
@@ -12138,7 +12204,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
                             
                             //check_kernel_count = true;
-                            //printf("selected_pair %d\t",selected_pair);
+                            
+                            
+                            //fprintf(pfile_pair,"%d\t%f\t%f\t%f\t%d\n",iter_count,point.m_X,point.m_Y,point.m_Z,point.m_roh);
                         }
                     }
                     /*else
@@ -12168,6 +12236,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         point.flag = false;
                         
                         temp_points[pt_index] = point;
+                        
+                        //printf("Id %d\tselected_pair %d\theight %f\n",iter_count,selected_pair,final_height);
                     }
                     
                     GridPT3.ncc_seleceted_pair(pt_index) = AWNCC_id;
@@ -12184,6 +12254,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         if(!temp_points[pt_index].flag && temp_points[pt_index].m_Z > Nodata)
             MatchedPts_list_mps.push_back(temp_points[pt_index]);
     }
+    //fclose(pfile_pair);
+    //exit(1);
 }
 
 void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, const int pairnumber)
@@ -12731,7 +12803,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
                 int ti = rlevelinfo.pairinfo->pairs(pairnumber).m_Y;
                 
                 bool check_select_pair = true;
-                if(proinfo->sensor_type == AB)
+                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                     check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                 
                 if(check_select_pair)
@@ -13297,7 +13369,7 @@ bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelin
                     const int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair /*&& GridPT3.ncc_seleceted_pair(pt_index) == pair_number*/)
@@ -13535,7 +13607,7 @@ bool VerticalLineLocus_blunder(const ProInfo *proinfo,LevelInfo &rlevelinfo, flo
                     const int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
                     bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB)
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                         check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                     
                     if(check_select_pair /*&& GridPT3.ncc_seleceted_pair(pt_index) == pair_number*/)
@@ -14202,7 +14274,7 @@ int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double *F_H
                 const int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                 
                 bool check_select_pair = true;
-                if(proinfo->sensor_type == AB)
+                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
                     check_select_pair = reference_id == GridPT3.selected_pair(target_index) || ti == GridPT3.selected_pair(target_index);
                 
                 if(check_select_pair && GridPT3.ncc_seleceted_pair(target_index) == pair_number)
@@ -14786,7 +14858,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
             index_3         = false;
             roh_index       = false;
      
-            if(proinfo->sensor_type == AB)
+            if(proinfo->sensor_type == AB && proinfo->sensor_provider == !PT)
             {
                 if(SignedCharToDouble_grid(GridPT3.roh(grid_index)) > minGrid_th)
                     GridPT3.roh(grid_index) = DoubleToSignedChar_grid(minGrid_th);
@@ -15007,6 +15079,9 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
                     {
                         if(temp_mp.m_Z > -100 && temp_mp.m_Z < 10000)
                         {
+                            //if(iter_index == 3129)
+                            //    printf("count_MPs %d\tXYZ %f\t%f\t%f\n",count_MPs,temp_mp.m_X,temp_mp.m_Y,temp_mp.m_Z);
+                            
                             count_MPs++;
                             
                             temp_mp.flag = 0;
@@ -15079,7 +15154,7 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
     }
     else //blunder points
     {
-        if(proinfo->sensor_type == AB)
+        if(proinfo->sensor_type == AB && proinfo->sensor_provider == !PT)
         {
             if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
                 max_count  = 40;
@@ -15094,10 +15169,10 @@ void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const boo
             {
                 if(*rlevelinfo.Pyramid_step >= proinfo->pyramid_level)
                     max_count  = 40;
-                else if(*rlevelinfo.Pyramid_step >= 1)
-                    max_count  = 30;
+                else if(*rlevelinfo.Pyramid_step >= 2)
+                    max_count  = 20;
                 else
-                    max_count = 20;
+                    max_count = 10;
             }
             else
             {
@@ -15548,10 +15623,12 @@ bool blunder_detection_TIN_vector2(const ProInfo *proinfo, LevelInfo &rlevelinfo
         const double oncc_mean    =  sum_oncc/total_oncc_count;
         const double oncc_std =   sqrt(fabs(sum2_oncc - (sum_oncc)*(sum_oncc)/total_oncc_count)/total_oncc_count);
         
+        //printf("blunder stat %f\t%f\n",oncc_mean,oncc_std);
+        
         double ortho_ncc_th;// = 0.7 + (iteration-1)*0.02;
         double ortho_ancc_th;
         double th_ref_ncc;
-        if(proinfo->sensor_type == AB)
+        if(proinfo->sensor_type == AB && proinfo->sensor_provider == !PT)
         {
             //set ortho_ncc
             if(pyramid_step >= proinfo->pyramid_level )
@@ -15605,7 +15682,7 @@ bool blunder_detection_TIN_vector2(const ProInfo *proinfo, LevelInfo &rlevelinfo
                 if(temp_oncc_th < ortho_ncc_th)
                     ortho_ncc_th = temp_oncc_th;
             }
-            
+            /* original
             if(proinfo->sensor_provider == PT)
             {
                 if(pyramid_step >= proinfo->pyramid_level )
@@ -15633,6 +15710,66 @@ bool blunder_detection_TIN_vector2(const ProInfo *proinfo, LevelInfo &rlevelinfo
             th_ref_ncc = 0.1 + (iteration-1)*0.05;
             if(th_ref_ncc > ortho_ncc_th)
                 th_ref_ncc = ortho_ncc_th;
+            */
+            if(proinfo->sensor_provider == PT)
+            {
+                //set ortho_ncc
+                if(pyramid_step >= proinfo->pyramid_level )
+                    ortho_ncc_th = 0.6;// - (iteration - 1)*0.01;
+                else if(pyramid_step >= 3)
+                    ortho_ncc_th = 0.5;// - (iteration - 1)*0.01;
+                else if(pyramid_step == 2)
+                    ortho_ncc_th = 0.4;// - (iteration - 1)*0.01;
+                else if(pyramid_step == 1)
+                    ortho_ncc_th = 0.3 ;
+                else
+                    ortho_ncc_th = 0.2 ;
+                
+                double temp_oncc_th = oncc_mean - 1.5*oncc_std;
+                if(temp_oncc_th < 0)
+                    temp_oncc_th = oncc_mean;
+                if(temp_oncc_th > 0)
+                {
+                    if(temp_oncc_th < ortho_ncc_th)
+                        ortho_ncc_th = temp_oncc_th;
+                    else
+                    {
+                        temp_oncc_th = oncc_mean - 3*oncc_std;
+                        if(temp_oncc_th < 0)
+                            temp_oncc_th = oncc_mean;
+                        if(temp_oncc_th < ortho_ncc_th)
+                            ortho_ncc_th = temp_oncc_th;
+                    }
+                }
+                if(ortho_ncc_th < 0.2)
+                    ortho_ncc_th = 0.2;
+                 
+                 ortho_ancc_th = oncc_mean + 1.0*oncc_std;//0.9 - 0.1*(4-pyramid_step);//100.;
+                 if(ortho_ancc_th > 0.95)
+                     ortho_ancc_th = 0.95;
+                 
+                 th_ref_ncc = 0.1;// + (iteration-1)*0.05;
+                 if(th_ref_ncc > ortho_ncc_th)
+                     th_ref_ncc = ortho_ncc_th;
+            }
+            else
+            {
+                if(pyramid_step == proinfo->pyramid_level )
+                    ortho_ncc_th = 0.6 - (iteration - 1)*0.01;
+                else if(pyramid_step >= 3)
+                    ortho_ncc_th = 0.5 - (iteration - 1)*0.01;
+                else if(pyramid_step == 2)
+                    ortho_ncc_th = 0.4 - (iteration - 1)*0.01;
+                else if(pyramid_step == 1)
+                    ortho_ncc_th = 0.3 ;
+                else
+                    ortho_ncc_th = 0.2 ;
+                
+                ortho_ancc_th = 100.;
+                th_ref_ncc = 0.1 + (iteration-1)*0.05;
+                if(th_ref_ncc > ortho_ncc_th)
+                    th_ref_ncc = ortho_ncc_th;
+            }
         }
         
         //set height_th
@@ -15721,8 +15858,13 @@ bool blunder_detection_TIN_vector2(const ProInfo *proinfo, LevelInfo &rlevelinfo
             
             if(proinfo->sensor_provider == PT)
             {
+                
                 if(height_th > 100)
                     height_th = 100;
+                /*
+                if(height_th > 50)
+                    height_th = 50;
+                */
             }
         }
         else
@@ -17816,14 +17958,15 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCre
     char t_str[500];
     int k,j;
     FILE **outfile_roh;
-    FILE *outfile_sp, *outfile_tp, * outfile_ttp;
+    FILE *outfile_sp, *outfile_tp, *outfile_ttp, *outfile_h;
     
     outfile_roh = (FILE**)malloc(sizeof(FILE*)*rlevelinfo.pairinfo->SelectNumberOfPairs());
     sprintf(t_str,"%s/txt/selected_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
     outfile_sp = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/total_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
     outfile_tp = fopen(t_str,"w");
-    
+    sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s_asc.txt",proinfo->save_filepath,row,col,level,iteration);
+    outfile_h   = fopen(t_str,"w");
 //    sprintf(t_str,"%s/txt/bin_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
 //    outfile_ttp = fopen(t_str,"w");
     for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs(); ti++)
@@ -17843,6 +17986,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCre
 
             fprintf(outfile_sp,"%d\t",GridPT3.ncc_seleceted_pair(matlab_index));
             fprintf(outfile_tp,"%d\t",GridPT3.total_images(matlab_index));
+            fprintf(outfile_h,"%f\t",GridPT3.Height(matlab_index));
  //           fprintf(outfile_ttp,"%3.2f\t",GridPT3.height_counts(matlab_index));
             
             for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
@@ -17852,6 +17996,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCre
         }
         fprintf(outfile_sp,"\n");
         fprintf(outfile_tp,"\n");
+        fprintf(outfile_h,"\n");
  //       fprintf(outfile_ttp,"\n");
         for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs(); ti++)
             fprintf(outfile_roh[ti],"\n");
@@ -17859,6 +18004,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCre
 
     fclose(outfile_sp);
     fclose(outfile_tp);
+    fclose(outfile_h);
 //    fclose(outfile_ttp);
     for(int ti = 0 ; ti < rlevelinfo.pairinfo->SelectNumberOfPairs(); ti++)
         fclose(outfile_roh[ti]);

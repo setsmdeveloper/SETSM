@@ -479,6 +479,8 @@ private:
         printf("allocate pairinfo array\n");
     }
     
+    
+    
 public:
     CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0)
     {
@@ -488,6 +490,62 @@ public:
     {
         m_SelectNumberOfPairs = m_NumberOfPairs;
         allocate(m_NumberOfPairs);
+    }
+    
+    void initialize()
+    {
+        m_NumberOfPairs = 0;
+        m_SelectNumberOfPairs = 0;
+        m_MinOffImage = -1;
+        m_HeightStep = 0;
+        
+        m_pairs.clear();
+        vector<UI2DPOINT>().swap(m_pairs);
+        
+        m_BHratio.clear();
+        vector<float>().swap(m_BHratio);
+        
+        m_ConvergenceAngle.clear();
+        vector<float>().swap(m_ConvergenceAngle);
+        
+        m_ConvergenceAngle_given.clear();
+        vector<float>().swap(m_ConvergenceAngle_given);
+        
+        m_CenterDist.clear();
+        vector<float>().swap(m_CenterDist);
+        
+        m_SigmaZ.clear();
+        vector<float>().swap(m_SigmaZ);
+        
+        m_AzimuthDiff.clear();
+        vector<float>().swap(m_AzimuthDiff);
+        
+        m_AE.clear();
+        vector<float>().swap(m_AE);
+        
+        m_BIE.clear();
+        vector<float>().swap(m_BIE);
+        
+        m_BaseRay.clear();
+        vector<D3DPOINT>().swap(m_BaseRay);
+        
+        m_ConvergenceAngle_IRPC.clear();
+        vector<float>().swap(m_ConvergenceAngle_IRPC);
+        
+        m_AE_IRPC.clear();
+        vector<float>().swap(m_AE_IRPC);
+        
+        m_BIE_IRPC.clear();
+        vector<float>().swap(m_BIE_IRPC);
+        
+        m_BaseRay_IRPC.clear();
+        vector<D3DPOINT>().swap(m_BaseRay_IRPC);
+        
+        m_ConvergenceAngle_EQ.clear();
+        vector<float>().swap(m_ConvergenceAngle_EQ);
+        
+        m_ConvergenceAngle_EQ_IRPC.clear();
+        vector<float>().swap(m_ConvergenceAngle_EQ_IRPC);
     }
     
     void SetNumberOfPairs(int numberofpairs)
