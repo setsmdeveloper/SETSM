@@ -955,6 +955,7 @@ typedef struct ArgumentInfo{
     int RA_only;
     int number_of_images; // 2 is for stereo (default), n is for multi more than 3
     uint8 pyramid_level;
+    uint8 Coreg_PL; // 2 is default.
     uint8 SDM_SS;
     int DS_kernel;
     int RA_line_count;

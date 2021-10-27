@@ -60,6 +60,7 @@ int main(int argc,char *argv[])
     
     args.sensor_type = SB; //1 = satellite, 2 = Aerial Photo
     args.pyramid_level = 4;
+    args.Coreg_PL = 2;
     args.SDM_SS = 3;
     args.SDM_AS = 20.0;
     args.SDM_days = 1;
@@ -867,6 +868,19 @@ int main(int argc,char *argv[])
                     {
                         args.pyramid_level = atoi(argv[i+1]);
                         printf("Steps of pyramid level %d\n",args.pyramid_level);
+                    }
+                }
+                
+                if (strcmp("-PL_Coreg",argv[i]) == 0 || strcmp("-pl_coreg",argv[i]) == 0)
+                {
+                    if (argc == i+1) {
+                        printf("Please input coregistration pyramid level steps (default is 2)\n");
+                        cal_flag = false;
+                    }
+                    else
+                    {
+                        args.Coreg_PL = atoi(argv[i+1]);
+                        printf("Steps of coregistration pyramid level %d\n",args.Coreg_PL);
                     }
                 }
                 
@@ -2370,9 +2384,6 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
         Coreg_param[0] = (double*)calloc(sizeof(double),2);
         Coreg_param[1] = (double*)calloc(sizeof(double),2);
         SDM_ortho(_filename, args, Coreg_param);
-
-        free(Coreg_param[0]);
-        free(Coreg_param[1]);
         free(Coreg_param);
     }
     else if(args.check_sdm_ortho == 2)
@@ -17968,7 +17979,7 @@ void echoprint_Gridinfo_asc(ProInfo *proinfo,LevelInfo &rlevelinfo, vector<NCCre
     outfile_sp = fopen(t_str,"w");
     sprintf(t_str,"%s/txt/total_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
     outfile_tp = fopen(t_str,"w");
-    sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_%s_asc.txt",proinfo->save_filepath,row,col,level,iteration);
+    sprintf(t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_asc.txt",proinfo->save_filepath,row,col,level,iteration);
     outfile_h   = fopen(t_str,"w");
 //    sprintf(t_str,"%s/txt/bin_pair_level_%d_%d_%d_iter_%d.txt",proinfo->save_filepath,row,col,level,iteration);
 //    outfile_ttp = fopen(t_str,"w");

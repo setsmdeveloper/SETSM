@@ -106,6 +106,10 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
                     py_level = 2;
             }
             
+            py_level = args.Coreg_PL;
+            
+            printf("Coregistration Pyramid Level %d\n",py_level);
+            
             for(int i=0;i<proinfo->number_of_images;i++)
             {
                 Boundary[i] = (double*)calloc(sizeof(double),4);
