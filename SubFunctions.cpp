@@ -1326,6 +1326,8 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
             sscanf(citation,"%s %s / %s %s %d%s",ttt,ttt,ttt,ttt,&param->utm_zone,hem);
             printf("hemzone %s %d\n",hem,param->utm_zone);
         }
+        
+        free(citation);
     }
     
     //printf("111 citation %d\t%s\n",param.zone,hem);
@@ -1383,6 +1385,8 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
                 param->bHemisphere = true;
             else
                 param->bHemisphere = false;
+            
+            free(citation);
         }
     }
     GTIFFree(gtif);

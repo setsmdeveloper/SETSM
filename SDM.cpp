@@ -480,7 +480,14 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             uint16 ***SubMagImages  = (uint16***)malloc(sizeof(uint16**)*(level+1));
                             uint8 ***SubOriImages   = (uint8***)malloc(sizeof(uint8**)*(level+1));
                             
-                            for(int iter_level = 0 ; iter_level < level + 1; iter_level++)
+                            // set up data_size_lr
+                            for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
+                            {
+                                data_size_lr[image_index] = (CSize*)malloc(sizeof(CSize)*(pyramid_step+1));
+                                SetPySizes(data_size_lr[image_index], subsetsize[image_index], pyramid_step);
+                            }
+
+                            for(int iter_level = 0 ; iter_level < pyramid_step + 1; iter_level++)
                             {
                                 SubImages[iter_level] = (uint16**)malloc(sizeof(uint16*)*proinfo.number_of_images);
                                 SubOriImages[iter_level] = (uint8**)malloc(sizeof(uint8*)*proinfo.number_of_images);
@@ -488,10 +495,6 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 
                                 for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
                                 {
-                                    data_size_lr[image_index] = (CSize*)malloc(sizeof(CSize)*(level+1));
-                                    SetPySizes(data_size_lr[image_index], subsetsize[image_index], level);
-                                    
-                                    
                                     long data_length = (long)data_size_lr[image_index][iter_level].height*(long)data_size_lr[image_index][iter_level].width;
                                     
                                     if(iter_level == 0)
@@ -654,6 +657,16 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         else
                                             check_size = 17;
                                         
+                                        /*
+                                         if(grid_resolution >= 300)
+                                             check_size = 3;
+                                         else if(grid_resolution >= 200)
+                                             check_size = 4;
+                                         else if(grid_resolution >= 100)
+                                             check_size = 5;
+                                         else
+                                             check_size = 7;
+                                         */
                                         if(check_size < 3)
                                             check_size = 3;
                                         
@@ -758,6 +771,14 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         temp_col_shift[search_index] = 0;
                                                         temp_row_shift[search_index] = 0;
                                                     }
+                                                    
+                                                    /* old version
+                                                     if (null_count_cell >= total_size*0.4 && level == 0 && final_level_iteration == 3)
+                                                     {
+                                                         temp_col_shift[search_index] = 0;
+                                                         temp_row_shift[search_index] = 0;
+                                                     }
+                                                     */
                                                 }
                                                 else
                                                 {
@@ -1068,7 +1089,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             }
                             printf("relese data size\n");
                             
-                            for(int iter_level = 0 ; iter_level < level + 1; iter_level++)
+                            for(int iter_level = 0 ; iter_level < pyramid_step + 1; iter_level++)
                             {
                                 for(int image_index = 0 ; image_index < proinfo.number_of_images ; image_index++)
                                 {
@@ -1095,6 +1116,17 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             
                         }
                     }
+                    
+                    // The images inside SourceImages do not need to be
+                    // freed; they were freed as part of the SubImages
+                    free(SourceImages);
+
+
+                    for(int ti = 0 ; ti < proinfo.number_of_images ; ti++) {
+                        free(ImageAdjust[ti]);
+                    }
+                    free(ImageAdjust);
+
                     fclose(fid);
                     fclose(fid_header);
                 }
@@ -2855,6 +2887,11 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                         }
                         
                         fclose(p_hfile);
+                        
+                        free(temp_vx);
+                        free(temp_vy);
+                        free(temp_roh);
+
                     }
                 }
                 fclose(pfile);
