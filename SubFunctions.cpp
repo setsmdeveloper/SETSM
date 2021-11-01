@@ -1326,8 +1326,6 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
             sscanf(citation,"%s %s / %s %s %d%s",ttt,ttt,ttt,ttt,&param->utm_zone,hem);
             printf("hemzone %s %d\n",hem,param->utm_zone);
         }
-
-        free(citation);
     }
     
     //printf("111 citation %d\t%s\n",param.zone,hem);
@@ -1385,8 +1383,6 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
                 param->bHemisphere = true;
             else
                 param->bHemisphere = false;
-
-            free(citation);
         }
     }
     GTIFFree(gtif);
@@ -2930,6 +2926,7 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     out_eo.m_Yl += shifted_XYZ.m_Y;
     out_eo.m_Wl += rotate.m_Wl;
     out_eo.m_Pl += rotate.m_Pl;
+    out_eo.m_Kl += rotate.m_Kl;
     
     RM M = MakeRotationMatrix(out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
     

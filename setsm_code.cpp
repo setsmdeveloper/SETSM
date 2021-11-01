@@ -99,7 +99,7 @@ int main(int argc,char *argv[])
     args.check_coreg = 0;     //image coreg = 1, DEM coreg = 2, image + DEM = 3
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
-    args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1, multiimage txt input = 2;
+    args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1, multiimage txt input = 2, find overlapped image lists = 3;
     args.check_downsample = false;
     args.check_DS_txy = false;
     
@@ -2188,10 +2188,11 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 ////
                 
                 EO rotate;
-                for( int k = -5 ; k <= 5 ; k++)
+                for( int k = -50 ; k <= 50 ; k+=10)
                 {
                     printf("start SEO\n");
-                    rotate.m_Pl = 1*k;
+                    rotate.m_Kl = 1*k;
+                    rotate.m_Pl = 5;
                     EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
                     //exit(1);
                     printf("End SEO\n");
@@ -2230,17 +2231,17 @@ void ImageSimulation(char* _filename, ARGINFO args)
                     char *tmp_no_ext = remove_ext(Ifilename);
                     if(k < 0)
                     {
-                        sprintf(imagefile, "%s/%s_sim_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(RPCfile, "%s/%s_sim_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(EOfile, "%s/%s_sim_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(metatile, "%s/%s_sim_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(imagefile, "%s/%s_sim_5P_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(RPCfile, "%s/%s_sim_5P_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(EOfile, "%s/%s_sim_5P_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(metatile, "%s/%s_sim_5P_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
                     }
                     else
                     {
-                        sprintf(imagefile, "%s/%s_sim_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(RPCfile, "%s/%s_sim_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(EOfile, "%s/%s_sim_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(metatile, "%s/%s_sim_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(imagefile, "%s/%s_sim_5P_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(RPCfile, "%s/%s_sim_5P_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(EOfile, "%s/%s_sim_5P_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
+                        sprintf(metatile, "%s/%s_sim_5P_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
                     }
                     
                     printf("new imagefile %s\n",imagefile);
