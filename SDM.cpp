@@ -8,7 +8,7 @@
 #include "SDM.hpp"
 #include "readtiff.hpp"
 
-const char setsm_version[] = "4.2.0";
+const char setsm_version[] = "5.0.0";
 
 //SDM ortho
 bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
