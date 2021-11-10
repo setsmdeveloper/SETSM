@@ -79,7 +79,8 @@ void ReadEOs(char* filename, EO &eo, CAMERA_INFO &ca);
 
 void CompareRPCs(double **RPCs, double **comRPCs);
 EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate);
-void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param);
+CSize SetSimulatedImageSize(ImageInfo image_info, double min_H, double max_H, EO &eo, D3DPOINT ori_center, CAMERA_INFO camera, TransParam param, double *objectBR);
+void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, CSize new_imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param);
 
 float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);

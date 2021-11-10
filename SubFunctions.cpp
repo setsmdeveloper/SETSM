@@ -2925,9 +2925,11 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*ori_distance;
     shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*ori_distance;
     
+    printf("shifted_XYZ %f\t%f\n",shifted_XYZ.m_X,shifted_XYZ.m_Y);
+    
     out_eo = input_eo;
     out_eo.m_Xl += shifted_XYZ.m_X;
-    out_eo.m_Yl += shifted_XYZ.m_Y;
+    out_eo.m_Yl -= shifted_XYZ.m_Y;
     out_eo.m_Wl += rotate.m_Wl;
     out_eo.m_Pl += rotate.m_Pl;
     out_eo.m_Kl += rotate.m_Kl;
@@ -2943,7 +2945,7 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     ray_vector.m_X /= mag;
     ray_vector.m_Y /= mag;
     ray_vector.m_Z /= mag;
-    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+    printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
     bool check_stop = false;
     int max_iteration = 50;
@@ -2959,11 +2961,12 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
         D2DPOINT img_diff;
         img_diff.m_X = ori_img.m_X - img_center.m_X;
         img_diff.m_Y = ori_img.m_Y - img_center.m_Y;
-        /*
+        
+        
         printf("iter %d\timg center %f\t%f\t eo %f\t%f\t%f\t%f\t%f\t%f\n",iter,img_center.m_X,img_center.m_Y,
                out_eo.m_Xl,out_eo.m_Yl,out_eo.m_Zl,out_eo.m_Wl,out_eo.m_Pl,out_eo.m_Kl);
         printf("img diff %f\t%f\t%f\n",img_diff.m_X,img_diff.m_Y,max_correction);
-        */
+        
         if(fabs(img_diff.m_X) < max_correction && fabs(img_diff.m_Y) < max_correction)
         {
             check_stop = true;
@@ -2996,7 +2999,7 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     ray_vector.m_Y /= mag;
     ray_vector.m_Z /= mag;
     
-    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+    printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
     
     //Zl adjustment
@@ -3045,28 +3048,150 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     ray_vector.m_Y /= mag;
     ray_vector.m_Z /= mag;
     
-    //printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
+    printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
     return out_eo;
 }
 
-void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
+CSize SetSimulatedImageSize(ImageInfo image_info, double min_H, double max_H, EO &eo, D3DPOINT ori_center, CAMERA_INFO camera, TransParam param, double *objectBR)
+{
+    CSize SImagesize;
+    
+    D3DPOINT minXY, maxXY;
+    D2DPOINT temp_latlong[4];
+    temp_latlong[0].m_X = image_info.UL[0];
+    temp_latlong[0].m_Y = image_info.UL[1];
+    
+    temp_latlong[1].m_X = image_info.UR[0];
+    temp_latlong[1].m_Y = image_info.UR[1];
+    
+    temp_latlong[2].m_X = image_info.LR[0];
+    temp_latlong[2].m_Y = image_info.LR[1];
+    
+    temp_latlong[3].m_X = image_info.LL[0];
+    temp_latlong[3].m_Y = image_info.LL[1];
+    
+    for(int i=0;i<4;i++)
+    {
+        D2DPOINT temp_XYZ = wgs2ps_single(param,temp_latlong[i]);
+        if(i == 0)
+        {
+            minXY = temp_XYZ;
+            maxXY = temp_XYZ;
+        }
+        else
+        {
+            if(minXY.m_X > temp_XYZ.m_X)
+                minXY.m_X = temp_XYZ.m_X;
+            if(minXY.m_Y > temp_XYZ.m_Y)
+                minXY.m_Y = temp_XYZ.m_Y;
+            
+            if(maxXY.m_X < temp_XYZ.m_X)
+                maxXY.m_X = temp_XYZ.m_X;
+            if(maxXY.m_Y < temp_XYZ.m_Y)
+                maxXY.m_Y = temp_XYZ.m_Y;
+        }
+    }
+    
+    objectBR[0] = minXY.m_X;
+    objectBR[1] = minXY.m_Y;// + Limagesize[ti].height*image_info[ti].GSD.col_GSD;
+    objectBR[2] = maxXY.m_X;
+    objectBR[3] = maxXY.m_Y;
+    
+    D3DPOINT PTs[8];
+    PTs[0].m_X = objectBR[0];
+    PTs[0].m_Y = objectBR[1];
+    PTs[0].m_Z = ori_center.m_Z;
+    PTs[1].m_X = objectBR[0];
+    PTs[1].m_Y = objectBR[3];
+    PTs[1].m_Z = ori_center.m_Z;
+    PTs[2].m_X = objectBR[2];
+    PTs[2].m_Y = objectBR[1];
+    PTs[2].m_Z = ori_center.m_Z;
+    PTs[3].m_X = objectBR[2];
+    PTs[3].m_Y = objectBR[3];
+    PTs[3].m_Z = ori_center.m_Z;
+    
+    /*
+    PTs[4].m_X = objectBR[0];
+    PTs[4].m_Y = objectBR[1];
+    PTs[4].m_Z = max_H;
+    PTs[5].m_X = objectBR[0];
+    PTs[5].m_Y = objectBR[3];
+    PTs[5].m_Z = max_H;
+    PTs[6].m_X = objectBR[2];
+    PTs[6].m_Y = objectBR[1];
+    PTs[6].m_Z = max_H;
+    PTs[7].m_X = objectBR[2];
+    PTs[7].m_Y = objectBR[3];
+    PTs[7].m_Z = max_H;
+    */
+    RM M = MakeRotationMatrix(eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    
+    D2DPOINT min_photo, max_photo;
+    for(int i=0;i<4;i++)
+    {
+        D2DPOINT photo  = GetPhotoCoordinate_single(PTs[i],eo,camera,M);
+        if(i == 0)
+        {
+            min_photo = photo;
+            max_photo = photo;
+        }
+        else
+        {
+            if(min_photo.m_X > photo.m_X)
+                min_photo.m_X = photo.m_X;
+            if(min_photo.m_Y > photo.m_Y)
+                min_photo.m_Y = photo.m_Y;
+            
+            if(max_photo.m_X < photo.m_X)
+                max_photo.m_X = photo.m_X;
+            if(max_photo.m_Y < photo.m_Y)
+                max_photo.m_Y = photo.m_Y;
+        }
+    }
+    
+    /*
+    D2DPOINT img_center = GetPhotoCoordinate_single(ori_center, eo, camera, M);
+    printf("img center %f\t%f\t eo %f\t%f\t%f\t%f\t%f\t%f\n",img_center.m_X,img_center.m_Y,
+           eo.m_Xl,eo.m_Yl,eo.m_Zl,eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    
+    D2DPOINT XY_center( ori_center.m_X, ori_center.m_Y);
+    printf("XY_center %f\t%f\t eo %f\t%f\t%f\t%f\t%f\t%f\n",XY_center.m_X,XY_center.m_Y,
+           eo.m_Xl,eo.m_Yl,eo.m_Zl,eo.m_Wl,eo.m_Pl,eo.m_Kl);
+    */
+    double width = max_photo.m_X - min_photo.m_X;
+    double height = max_photo.m_Y - min_photo.m_Y;
+    
+    SImagesize.width = ceil(width/(camera.m_CCDSize*UMToMM)/2.0)*2;
+    SImagesize.height = ceil(height/(camera.m_CCDSize*UMToMM)/2.0)*2;
+    /*
+    D2DPOINT image(SImagesize.width/2.0, SImagesize.height/2.0);
+    D2DPOINT photo = ImageToPhoto_single(image, camera.m_CCDSize, SImagesize);
+    printf("photo %f\t%f\n",photo.m_X,photo.m_Y);
+    D3DPOINT object = GetObjectCoordinate_single(img_center, ori_center.m_Z, eo, camera, M);
+    printf("object %f\t%f\t%f\n",object.m_X,object.m_Y,object.m_Z);
+    exit(1);
+     */
+    return SImagesize;
+}
+
+void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, CSize new_imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
 {
     uint16 *outimage = NULL;
     
-    long total_pixel_count = (long)imagesize.width*(long)imagesize.height;
+    long total_pixel_count = (long)new_imagesize.width*(long)new_imagesize.height;
     outimage = (uint16*)calloc(sizeof(uint16),total_pixel_count);
     
-    printf("minmaxXY %f\t%f\tgrid_size %f\tminmax H %f\t%f\timagesize %d\t%d\n",minX,maxY,grid_size,min_H,max_H,imagesize.width,imagesize.height);
+    printf("minmaxXY %f\t%f\tgrid_size %f\tminmax H %f\t%f\timagesize %d\t%d\n",minX,maxY,grid_size,min_H,max_H,new_imagesize.width,new_imagesize.height);
     RM M = MakeRotationMatrix(eo.m_Wl,eo.m_Pl,eo.m_Kl);
     RM ori_M = MakeRotationMatrix(ori_eo.m_Wl,ori_eo.m_Pl,ori_eo.m_Kl);
-    CSize new_imagesize(imagesize.width,imagesize.height);
     
 #pragma omp parallel for schedule(guided)
     for(long pos = 0 ; pos <  total_pixel_count; pos++)
     {
-        long row = (long)floor(pos/imagesize.width);
-        long col = (long)(pos%imagesize.width);
+        long row = (long)floor(pos/new_imagesize.width);
+        long col = (long)(pos%new_imagesize.width);
         
         D2DPOINT image(col,row);
         D2DPOINT photo = ImageToPhoto_single(image, camera.m_CCDSize, new_imagesize);
@@ -3120,7 +3245,7 @@ void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, d
         //find ori image points from the object intersection of ray
         //printf("object final %f\t%f\t%f\n",object.m_X,object.m_Y,object.m_Z);
         photo  = GetPhotoCoordinate_single(object,ori_eo,camera,ori_M);
-        image = PhotoToImage_single(photo, camera.m_CCDSize, new_imagesize);
+        image = PhotoToImage_single(photo, camera.m_CCDSize, imagesize);
         //printf("coord %f\t%f\t%f\t%f\n",photo.m_X,photo.m_Y,image.m_X,image.m_Y);
         
         if(image.m_X >= 0 && image.m_X < imagesize.width && image.m_Y >= 0 && image.m_Y < imagesize.height)
@@ -3156,7 +3281,7 @@ void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, d
         }
     }
     
-    WriteGeotiff(imagefile,outimage,imagesize.width,imagesize.height,1,0,imagesize.height,param.projection,param.utm_zone,param.bHemisphere,12);
+    WriteGeotiff(imagefile,outimage,new_imagesize.width,new_imagesize.height,1,0,0,param.projection,param.utm_zone,param.bHemisphere,12);
     
     free(outimage);
 }

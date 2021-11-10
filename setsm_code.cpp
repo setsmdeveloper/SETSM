@@ -2133,7 +2133,6 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 
                 center_XYZ = wgs2ps_single_3D(param,center_latlong);
                 
-                
                 //Loading DEM and oriimage data
                 CSize seeddem_size;
                 double minX = 0, maxX = 0, minY = 0, maxY = 0, grid_size = 0;
@@ -2188,83 +2187,106 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 ////
                 
                 EO rotate;
-                for( int k = -50 ; k <= 50 ; k+=10)
+                int degree = 1;
+                for( int k = 0 ; k < 2  ; k++)
                 {
                     printf("start SEO\n");
-                    rotate.m_Kl = 1*k;
-                    rotate.m_Pl = 5;
-                    EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
-                    //exit(1);
-                    printf("End SEO\n");
-                    simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
-                    
-                    double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
-                    printf("End VCPs\n");
-                    double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
-                    printf("End sim_RPCs\n");
-                    
-                    /*
-                    vector<D3DPOINT> VCPs;
-                    vector<D2DPOINT> IPs2;
-                    midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
-                    
-                    double maxX = -100000;
-                    double maxY = -100000;
-                    for(int i=0;i<VCPslatlong.size();i++)
+                    //int k = -3;
+                    rotate.m_Pl = 2*degree*k;
+                    int ref_a = (int)rotate.m_Pl;
+                    int tar_a;
+                    for(int kk = -3 ; kk <= 2 ;kk++)
                     {
-                        printf("image %f\t%f\t%f\t%f\t%f\t%f\n",IPs2[i].m_X,IPs1[i].m_X,IPs2[i].m_Y,IPs1[i].m_Y,IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
-                        printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
+                        rotate.m_Wl =2*degree*kk+1;
+                        tar_a = (int)rotate.m_Wl;
+
+                        printf("input eo %f\t%f\t%f\t%f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
                         
-                        if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
-                            maxX = fabs(IPs2[i].m_X - IPs1[i].m_X);
-                        if(maxY < fabs(IPs2[i].m_Y - IPs1[i].m_Y))
-                            maxY = fabs(IPs2[i].m_Y - IPs1[i].m_Y);
+                        EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
+                        
+                        printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                        
+                        //exit(1);
+                        printf("End SEO\n");
+                        simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                        
+                        double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
+                        printf("End VCPs\n");
+                        double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
+                        printf("End sim_RPCs\n");
+                        
+                        /*
+                        vector<D3DPOINT> VCPs;
+                        vector<D2DPOINT> IPs2;
+                        midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
+                        
+                        double maxX = -100000;
+                        double maxY = -100000;
+                        for(int i=0;i<VCPslatlong.size();i++)
+                        {
+                            printf("image %f\t%f\t%f\t%f\t%f\t%f\n",IPs2[i].m_X,IPs1[i].m_X,IPs2[i].m_Y,IPs1[i].m_Y,IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
+                            printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
+                            
+                            if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
+                                maxX = fabs(IPs2[i].m_X - IPs1[i].m_X);
+                            if(maxY < fabs(IPs2[i].m_Y - IPs1[i].m_Y))
+                                maxY = fabs(IPs2[i].m_Y - IPs1[i].m_Y);
+                        }
+                        printf("maxXY %f\t%f\n",maxX,maxY);
+                        exit(1);
+                        */
+                        char imagefile[500];
+                        char RPCfile[500];
+                        char metatile[500];
+                        char EOfile[500];
+                        char temp_str[500];
+                        sprintf(temp_str,"PW");
+                        
+                        char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
+                        char *tmp_no_ext = remove_ext(Ifilename);
+                        //if(k < 0)
+                        {
+                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
+                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
+                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
+                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
+                        }
+                        /*else
+                        {
+                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
+                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
+                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
+                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
+                        }
+                        */
+                        printf("new imagefile %s\n",imagefile);
+                        
+                        WriteIRPCs_Planet(RPCfile, sim_RPCs);
+                        WriteEOs(EOfile, simulated_eo, proinfo->frameinfo.m_Camera);
+                        
+                        FILE *pmetafile = fopen(proinfo->Imagemetafile[ti],"r");
+                        FILE *pNewmetafile = fopen(metatile,"w");
+                        char c = fgetc(pmetafile);
+                        while(c!=EOF)
+                        {
+                            fputc(c,pNewmetafile);
+                            c = fgetc(pmetafile);
+                        }
+                        fclose(pmetafile);
+                        fclose(pNewmetafile);
+                        
+                        
+                        RPCsFree(sim_RPCs);
+                        
+                        double objectBR[4];
+                        CSize new_imagesize = SetSimulatedImageSize(image_info[ti], minH, maxH, simulated_eo, center_XYZ, proinfo->frameinfo.m_Camera, param, objectBR);
+                        printf("BR %f\t%f\t%f\t%f\tSize %d\t%d\t SSize %d\t%d\n",objectBR[0],objectBR[1],objectBR[2],objectBR[3],imagesize_ori.width,imagesize_ori.height,new_imagesize.width,new_imagesize.height);
+                        
+                        new_imagesize = imagesize_ori;
+                        printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                        
+                        SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, new_imagesize, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
                     }
-                    printf("maxXY %f\t%f\n",maxX,maxY);
-                    exit(1);
-                    */
-                    char imagefile[500];
-                    char RPCfile[500];
-                    char metatile[500];
-                    char EOfile[500];
-                    char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
-                    char *tmp_no_ext = remove_ext(Ifilename);
-                    if(k < 0)
-                    {
-                        sprintf(imagefile, "%s/%s_sim_5P_N%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(RPCfile, "%s/%s_sim_5P_N%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(EOfile, "%s/%s_sim_5P_N%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(metatile, "%s/%s_sim_5P_N%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
-                    }
-                    else
-                    {
-                        sprintf(imagefile, "%s/%s_sim_5P_P%d.tif", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(RPCfile, "%s/%s_sim_5P_P%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(EOfile, "%s/%s_sim_5P_P%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,abs(k));
-                        sprintf(metatile, "%s/%s_sim_5P_P%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,abs(k));
-                    }
-                    
-                    printf("new imagefile %s\n",imagefile);
-                    
-                    WriteIRPCs_Planet(RPCfile, sim_RPCs);
-                    WriteEOs(EOfile, simulated_eo, proinfo->frameinfo.m_Camera);
-                    
-                    FILE *pmetafile = fopen(proinfo->Imagemetafile[ti],"r");
-                    FILE *pNewmetafile = fopen(metatile,"w");
-                    char c = fgetc(pmetafile);
-                    while(c!=EOF)
-                    {
-                        fputc(c,pNewmetafile);
-                        c = fgetc(pmetafile);
-                    }
-                    fclose(pmetafile);
-                    fclose(pNewmetafile);
-                    
-                    
-                    RPCsFree(sim_RPCs);
-                    
-                    SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
-                    
                 }
                 
                 free(seeddem);
