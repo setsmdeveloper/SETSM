@@ -32,7 +32,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 100
-#define MaxNCC 700
+#define MaxNCC 1000
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
@@ -936,6 +936,8 @@ typedef struct ArgumentInfo{
     double CA_max_th;
     double pair_max_th;
     double Cloud_th;
+    double sim_shiftX;
+    double sim_shiftY;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -960,6 +962,14 @@ typedef struct ArgumentInfo{
     int DS_kernel;
     int RA_line_count;
     int RA_sample_count;
+    
+    int Phi_start;
+    int Phi_end;
+    int Phi_interval;
+    int Kappa_start;
+    int Kappa_end;
+    int Kappa_interval;
+    
     
     char Image[MaxImages][500];
     char Outputpath[500];
@@ -1064,6 +1074,8 @@ typedef struct tagImageInfo
 	int month;
     int date;
     int year;
+    int hour;
+    int min;
     int scandirection;
     int strip_ID;
     

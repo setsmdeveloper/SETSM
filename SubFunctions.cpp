@@ -56,7 +56,7 @@ char* GetFileDir(char file_path[],int *size)
         else
         {
             file_name = file_path+1;
-            printf("str %s\n",file_name);
+            //printf("str %s\n",file_name);
         }
         
         file_path++;
@@ -2714,6 +2714,9 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
             char temp_year[5];
             char temp_month[3];
             char temp_day[3];
+            char temp_hour[3];
+            char temp_min[3];
+            
             for (int k = 0; k < 4; k++)
                 temp_year[k] = temp_str[k];
             temp_year[4] = '\0';
@@ -2723,9 +2726,14 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
             for(int k=0 ; k < 2 ; k++)
                 temp_day[k] = temp_str[k+6];
             temp_day[2] = '\0';
-            
+            for(int k=0 ; k < 2 ; k++)
+                temp_hour[k] = temp_str[k+9];
+            temp_hour[2] = '\0';
+            for(int k=0 ; k < 2 ; k++)
+                temp_min[k] = temp_str[k+11];
+            temp_min[2] = '\0';
             //printf("file name %s\t%d\t%f\t%f\t%f\n",temp_str,strip_ID,Iinfo[i].Offnadir_angle,Iinfo[i].Mean_sat_azimuth_angle,Iinfo[i].GSD.pro_GSD);
-            //printf("temp %s\t%s\t%s\n",temp_year,temp_month,temp_day);
+            printf("temp %s\t%s\t%s\t%s\t%s\n",temp_year,temp_month,temp_day,temp_hour,temp_min);
             sprintf(temp_meta,"%s/%s/%s/%s/%d/%s_metadata.xml",default_path,temp_year,temp_month,temp_day,strip_ID,temp_str);
             printf("temp_meta %s\n",temp_meta);
             
@@ -2752,6 +2760,9 @@ void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
                 Iinfo[selected_count].year = atoi(temp_year);
                 Iinfo[selected_count].month = atoi(temp_month);
                 Iinfo[selected_count].date = atoi(temp_day);
+                Iinfo[selected_count].hour = atoi(temp_hour);
+                Iinfo[selected_count].min = atoi(temp_min);
+                
                 sprintf(Iinfo[selected_count].filename,"%s",temp_str);
                 sprintf(Iinfo[selected_count].fullpath,"%s/%s/%s/%s/%d",default_path,temp_year,temp_month,temp_day,strip_ID);
                 Iinfo[selected_count].strip_ID = strip_ID;
@@ -2922,6 +2933,9 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     D2DPOINT ori_img = GetPhotoCoordinate_single(XYZ_center, input_eo, camera, input_eo.m_Rm);
     //printf("ori_img %f\t%f\n",ori_img.m_X,ori_img.m_Y);
     
+    //shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*ori_distance + rotate.m_Xl;
+    //shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*ori_distance + rotate.m_Yl;
+    
     shifted_XYZ.m_X = tan(rotate.m_Pl*DegToRad)*ori_distance;
     shifted_XYZ.m_Y = tan(rotate.m_Wl*DegToRad)*ori_distance;
     
@@ -2948,6 +2962,9 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
     bool check_stop = false;
+    //if(rotate.m_Wl == 0 && rotate.m_Pl == 0)
+    //    check_stop = true;
+    
     int max_iteration = 50;
     int iter = 0;
     double max_correction = camera.m_CCDSize*UMToMM;

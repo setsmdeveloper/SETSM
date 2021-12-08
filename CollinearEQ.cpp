@@ -18,7 +18,7 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
            camera.k1,camera.k2,camera.k3,
            camera.p1,camera.p2,
            camera.a1,camera.a2);
-    
+    /*
     CalibrationBundle1(IPs, GCPs, eo, camera);
     printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
     printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
@@ -27,7 +27,7 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
            camera.p1,camera.p2,
            camera.a1,camera.a2);
     
-    /*
+    */
     EOEstimatefromInitial(IPs, GCPs, eo, camera);
     printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
     printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
@@ -68,8 +68,8 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
            camera.p1,camera.p2,
            camera.a1,camera.a2);
     
-    exit(1);
-     */
+    //exit(1);
+    // */
     eo.m_Wl *= RadToDeg;
     eo.m_Pl *= RadToDeg;
     eo.m_Kl *= RadToDeg;
@@ -942,6 +942,9 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     GMA_double *JX_matrix = GMA_double_create(numofpts*2,1);
     GMA_double *V_matrix = GMA_double_create(numofpts*2,1);
     
+    printf("input camera %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+           camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
+    
     while(iteration < max_iter && max_correct > 0.0000001)
     {
         iteration++;
@@ -1037,7 +1040,8 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         }
         
         double sigma = sqrt(var_sum/(numofpts*2 - 16));
-        //GMA_double_printf(X_matrix);
+        printf("adjust sigma %f\n", sigma);
+        GMA_double_printf(X_matrix);
         
         //exit(1);
         
@@ -1058,13 +1062,13 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         camera.p2 += X_matrix->val[13][0];
         camera.a1 += X_matrix->val[14][0];
         camera.a2 += X_matrix->val[15][0];
-        /*
+        
         printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
         printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
                camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
                sigma,max_V);
-        */
-        //printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
+        
+        printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
         
         max_correct = fabs(X_matrix->val[0][0]);
         for(int i=1;i<16;i++)
@@ -1073,9 +1077,9 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
                 max_correct = fabs(X_matrix->val[i][0]);
         }
         
-        //printf("iter %d\tMax_correct %f\n",iteration,max_correct);
+        printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
-            
+        //exit(1);
     }
     
     GMA_double_destroy(J_matrix);
@@ -1552,7 +1556,7 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
         printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
     }
-    printf("delete 1\n");
+    //printf("delete 1\n");
     GMA_double_destroy(J_matrix);
     GMA_double_destroy(K_matrix);
     
@@ -1564,7 +1568,7 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
-    printf("initialize 1\n");
+    //printf("initialize 1\n");
     J_matrix = GMA_double_create(numofpts*2,7);
     K_matrix = GMA_double_create(numofpts*2,1);
     JT_matrix = GMA_double_create(7,numofpts*2);
@@ -1585,7 +1589,7 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
         iteration++;
         UPARAMS uparam;
         PDCS pdcs;
-        /*
+        
         for(int i = 0 ; i < numofpts ; i++)
         {
             uparam.f  = camera.m_focalLength;
@@ -1612,10 +1616,10 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
             uparam.YA = GCPs[i].m_Y;
             uparam.ZA = GCPs[i].m_Z;
             
-            printf("initialize \n");
+            //printf("initialize \n");
             
             GetPDCs(uparam,pdcs);
-            printf("GetPDCs \n");
+            //printf("GetPDCs \n");
             for(int j=0;j<2;j++)
             {
                 J_matrix->val[i*2 + j][0] = pdcs.c[j][3];
@@ -1628,13 +1632,13 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
                 J_matrix->val[i*2 + j][5] = pdcs.c[j][8];
                 J_matrix->val[i*2 + j][6] = pdcs.c[j][9];
             }
-            printf("J_matrix\n");
+            //printf("J_matrix\n");
             K_matrix->val[i*2  ][0] = -pdcs.Fo;
             K_matrix->val[i*2+1][0] = -pdcs.Go;
-            printf("K_matrix\n");
+            //printf("K_matrix\n");
         }
-        printf("matrix computation\n");
-        exit(1);
+        //printf("matrix computation\n");
+        //exit(1);
         GMA_double_Tran(J_matrix,JT_matrix);
         GMA_double_mul(JT_matrix,J_matrix,JTJ_matrix);
         GMA_double_inv(JTJ_matrix,JTJI_matrix);
@@ -1668,7 +1672,7 @@ void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CA
             if(max_correct < fabs(X_matrix->val[i][0]))
                 max_correct = fabs(X_matrix->val[i][0]);
         }
-        */
+        
         //printf("iter %d\t sigma %f\t param %f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,sigma,camera.k1,camera.k2,camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
          
          

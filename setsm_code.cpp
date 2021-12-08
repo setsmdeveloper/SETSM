@@ -126,6 +126,13 @@ int main(int argc,char *argv[])
     args.pair_options = 1;
     args.awnccmp = 2;
     
+    args.Phi_start = 0;
+    args.Phi_end = 0;
+    args.Phi_interval = 0;
+    args.Kappa_start = 0;
+    args.Kappa_end = 0;
+    args.Kappa_interval = 0;
+    
     TransParam param;
     param.bHemisphere = 1;
     
@@ -544,6 +551,110 @@ int main(int argc,char *argv[])
                 {
                     args.CA_th = atof(argv[i+1]);
                     printf("Convergence angle threshold %f\n",args.CA_th);
+                }
+            }
+            
+            if (strcmp("-Sim_X",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input shift X for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.sim_shiftX = atof(argv[i+1]);
+                    printf("simulated shift X %f\n",args.sim_shiftX);
+                }
+            }
+            
+            if (strcmp("-Sim_Y",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input shift Y for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.sim_shiftY = atof(argv[i+1]);
+                    printf("simulated shift Y %f\n",args.sim_shiftY);
+                }
+            }
+            
+            if (strcmp("-P_start",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Phi angle start value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Phi_start = atoi(argv[i+1]);
+                    printf("Phi start %d\n",args.Phi_start);
+                }
+            }
+            
+            if (strcmp("-P_end",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Phi angle end value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Phi_end = atoi(argv[i+1]);
+                    printf("Phi end %d\n",args.Phi_end);
+                }
+            }
+            
+            if (strcmp("-P_int",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Phi angle interval for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Phi_interval = atoi(argv[i+1]);
+                    printf("Phi interval %d\n",args.Phi_interval);
+                }
+            }
+            
+            if (strcmp("-K_start",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Kappa angle start value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Kappa_start = atoi(argv[i+1]);
+                    printf("Kappa start %d\n",args.Kappa_start);
+                }
+            }
+            
+            if (strcmp("-K_end",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Kappa angle end value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Kappa_end = atoi(argv[i+1]);
+                    printf("Kappa end %d\n",args.Kappa_end);
+                }
+            }
+            
+            if (strcmp("-K_int",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input Kappa angle interval for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Kappa_interval = atoi(argv[i+1]);
+                    printf("Kappa interval %d\n",args.Kappa_interval);
                 }
             }
             
@@ -2188,19 +2299,26 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 
                 EO rotate;
                 int degree = 1;
-                for( int k = 0 ; k < 2  ; k++)
+                char temp_str[500];
+                sprintf(temp_str,"PK");
+                for( int k = args.Phi_start ; k <= args.Phi_end ; k+=args.Phi_interval)
                 {
                     printf("start SEO\n");
-                    //int k = -3;
-                    rotate.m_Pl = 2*degree*k;
+                    //int k = -1;
+                    rotate.m_Pl = k;
                     int ref_a = (int)rotate.m_Pl;
                     int tar_a;
-                    for(int kk = -3 ; kk <= 2 ;kk++)
+                    for(int kk = args.Kappa_start; kk <= args.Kappa_end ;kk+=args.Kappa_interval)
                     {
-                        rotate.m_Wl =2*degree*kk+1;
-                        tar_a = (int)rotate.m_Wl;
-
+                        rotate.m_Kl = kk;
+                        tar_a = (int)rotate.m_Kl;
+                        
                         printf("input eo %f\t%f\t%f\t%f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                        
+                        //rotate.m_Xl = args.sim_shiftX;
+                        //rotate.m_Yl = args.sim_shiftY;
+                        
+                        //printf("input shift %f\t%f\n",rotate.m_Xl,rotate.m_Yl);
                         
                         EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
                         
@@ -2239,17 +2357,16 @@ void ImageSimulation(char* _filename, ARGINFO args)
                         char RPCfile[500];
                         char metatile[500];
                         char EOfile[500];
-                        char temp_str[500];
-                        sprintf(temp_str,"PW");
+                        
                         
                         char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
                         char *tmp_no_ext = remove_ext(Ifilename);
                         //if(k < 0)
                         {
-                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
-                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
-                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
-                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,ref_a,tar_a);
+                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
+                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
+                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
+                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
                         }
                         /*else
                         {
@@ -2593,6 +2710,14 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 image_info[ti].GSD.row_GSD = Image_gsd_r[ti];
                                 image_info[ti].GSD.col_GSD = Image_gsd_c[ti];
                                 image_info[ti].GSD.pro_GSD = Image_gsd[ti];
+                                
+                                int str_size;
+                                char *temp_str = strdup(proinfo->Imagefilename[ti]);
+                                char *temp_str2 = strdup(proinfo->Imagefilename[ti]);
+                                sprintf(image_info[ti].filename,"%s",remove_ext(basename(temp_str2)));
+                                sprintf(image_info[ti].fullpath,"%s",dirname(temp_str));
+                                
+                                printf("%s\t%s\t%s\t%s\n",temp_str,temp_str2,image_info[ti].filename,image_info[ti].fullpath);
                                 
                                 GSD_image1.row_GSD += Image_gsd_r[ti];
                                 GSD_image1.col_GSD += Image_gsd_c[ti];
@@ -3367,8 +3492,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                         if(!proinfo->check_checktiff)
                         {
                             // Possibly OOB read here
-                            for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
-                                fprintf(pMetafile,"RA Params=%d\t%d\t%f\t%f\t%f\n",pairinfo.pairs(ti).m_X,pairinfo.pairs(ti).m_Y,Imageparams[ti][0],Imageparams[ti][1],pairinfo.BHratio(ti));
+                            //for(int ti = 0; ti < pairinfo.SelectNumberOfPairs() ; ti++)
+                            //    fprintf(pMetafile,"RA Params=%d\t%d\t%f\t%f\t%f\n",pairinfo.pairs(ti).m_X,pairinfo.pairs(ti).m_Y,Imageparams[ti][0],Imageparams[ti][1],pairinfo.BHratio(ti));
                    
                             fprintf(pMetafile,"RA tilesize=%d\n",tile_size);
                         }
@@ -3621,6 +3746,17 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs,IRPCs, ray_vector, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
                                 
                                 fprintf(pMetafile, "Number of stereo pairs=%d\n",pairinfo.SelectNumberOfPairs());
+                                
+                                for(int pair_number = 0 ; pair_number < pairinfo.SelectNumberOfPairs() ; pair_number++)
+                                {
+                                    char t_str[500];
+                                    sprintf(t_str,"Image_ID %d\tImage_ID %d\tCA_geo %f\tCA_cal %f\tBH %f\tAE %f\tBIE %f\n",
+                                            pairinfo.pairs(pair_number).m_X, pairinfo.pairs(pair_number).m_Y,
+                                            pairinfo.ConvergenceAngle(pair_number),pairinfo.ConvergenceAngle_EQ(pair_number),
+                                            pairinfo.BHratio(pair_number),pairinfo.AE(pair_number),pairinfo.BIE(pair_number));
+                                    printf(t_str);
+                                    fprintf(pMetafile,t_str);
+                                }
                             }
                             
                             int numberofpairs = pairinfo.SelectNumberOfPairs();
@@ -4219,13 +4355,24 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                 
                 pairinfo.SetConvergenceAngle_EQ_IRPC(pair_number,convergence_angle_cal);
                 
+                D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
+                D3DPOINT image2_PL(proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl);
+                double PC_distance = SQRT(image1_PL,image2_PL,3);
+                pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
+                pairinfo.SetCenterDist(pair_number, PC_distance);
+                //pairinfo.SetConvergenceAngle(pair_number, 0);
+                pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                
+                
+                pairinfo.SetAzimuth(pair_number, fabs(proinfo->frameinfo.Photoinfo[ref_ti].m_Kl - proinfo->frameinfo.Photoinfo[ti].m_Kl));
+                
                 if(proinfo->sensor_type == AB)
                 {
                     D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
                     D3DPOINT image2_PL(proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl);
                     double PC_distance = SQRT(image1_PL,image2_PL,3);
                     pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
-                    pairinfo.SetCenterDist(pair_number, 0.0);
+                    pairinfo.SetCenterDist(pair_number, PC_distance);
                     //pairinfo.SetConvergenceAngle(pair_number, 0);
                     pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                 }
@@ -4293,11 +4440,11 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                         //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
                         //pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
                         
-                        D2DPOINT center_dist;
-                        center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
-                        center_dist.m_Y = fabs(image_info[ref_ti].Center[1] - image_info[ti].Center[1]);
-                        //printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
-                        pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
+//                        D2DPOINT center_dist;
+//                        center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
+//                        center_dist.m_Y = fabs(image_info[ref_ti].Center[1] - image_info[ti].Center[1]);
+//                        //printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
+//                        pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
                         //pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                         pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
                         //pairinfo.BHratio[pair_number] = 0.5;
@@ -4349,7 +4496,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
 
         vector<short> pairs;
         
-        vector<vector<short>> sigma_pairs(60); //32,34,36,...,68
+        vector<vector<short>> sigma_pairs(600); //32,34,36,...,68
         
         const int start_H     = minmaxHeight[0];
         const int end_H       = minmaxHeight[1];
@@ -4372,7 +4519,14 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool check_CA = false;
             if(proinfo->sensor_provider == PT)
             {
-                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th)
+                //time separation
+                double ref_time = (double)image_info[reference_id].hour*60 + (double)image_info[reference_id].min;
+                double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
+                double diff_time = fabs(ref_time - tar_time)/60.0;
+                
+                //printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,tar_time,diff_time);
+                
+                if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < 10 && diff_time < 1)
                     check_CA = true;
             }
             else
@@ -4385,12 +4539,12 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     
                     if(proinfo->sensor_provider == PT)
                     {
-                        double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number);
-                        int sigma_pairs_index = ceil((sigmaZ-30));
+                        double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number)*10;
+                        int sigma_pairs_index = ceil((sigmaZ-300));
                         if(sigma_pairs_index < 0)
                             sigma_pairs_index = 0;
-                        if(sigma_pairs_index > 59)
-                            sigma_pairs_index = 59;
+                        if(sigma_pairs_index > 599)
+                            sigma_pairs_index = 599;
                         //printf("sigmaZ %f\t index %d\t%d\n",sigmaZ,sigma_pairs_index,pair_number);
                         
                         //if(fabs(plevelinfo.pairinfo->Azimuth(pair_number)) < 10)
@@ -4418,7 +4572,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             int t_count = 0;
             int total_pair_count = 0;
             
-            while(!stop_condition && t_count < 60)
+            while(!stop_condition && t_count < 600)
             {
                 //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
                 total_pair_count += sigma_pairs[t_count].size();
@@ -4437,10 +4591,13 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 if(total_pair_count > max_stereo_pair)
                 {
                     stop_condition = true;
-                    /*for(int j = 0 ; j < pairs.size() ; j++)
+                    /*
+                    for(int j = 0 ; j < pairs.size() ; j++)
                     {
                         printf("%d\tfinal pair num %d\t%d\n",pairs.size(),pairs[j],actual_pair_save[j]);
-                    }*/
+                        exit(1);
+                    }
+                     */
                 }
                 t_count++;
             }
@@ -4512,6 +4669,11 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
             temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
             temp_pairs.SetAzimuth(count, plevelinfo.pairinfo->Azimuth(pair_number));
+            
+            temp_pairs.SetAE(count,plevelinfo.pairinfo->AE(pair_number));
+            temp_pairs.SetBIE(count,plevelinfo.pairinfo->BIE(pair_number));
+            temp_pairs.SetBaseRay(count,plevelinfo.pairinfo->BaseRay(pair_number));
+            temp_pairs.SetConvergenceAngle_EQ(count,plevelinfo.pairinfo->ConvergenceAngle_EQ(pair_number));
             /*
             printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
@@ -5370,7 +5532,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
-                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count));
+                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count));
                             
                             if(proinfo->sensor_provider == PT)
                             {
@@ -5812,6 +5974,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         {
                                             long int pt_index = trow*Size_Grid2D.width + tcol;
                                             fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
+                                            
+//                                            if(levelinfo.pairinfo->SelectNumberOfPairs() < PairArray[pt_index].size())
+//                                            {
+//                                                printf("out of num pairs %d/%d\n",PairArray[pt_index].size(),levelinfo.pairinfo->SelectNumberOfPairs());
+//                                                exit(1);
+//                                            }
                                             
                                             double sum_SigmaZ = 0;
                                             double count_gp = 0;
@@ -10919,7 +11087,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         long pt_index = iter_count;
         
         bool check_sigmaZ = false;
-        /*
+        
         if(proinfo->pair_options == 1 || proinfo->pair_options == 3)
         {
             if(PairArray[pt_index].size() > 1)
@@ -10945,10 +11113,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         check_sigmaZ = true;
                 }
             }
-            else if(SigmaZArray[pt_index] > 75)
+            else //if(SigmaZArray[pt_index] > 75)
                 check_sigmaZ = true;
         }
-        */
+        
         if(proinfo->awnccmp == 1)
         {
             if(pts_col >= 0 && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_row < Size_Grid2D.height && pt_index >= 0 && pt_index < *rlevelinfo.Grid_length && !check_sigmaZ)
@@ -18992,7 +19160,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                     fscanf(p_hvpair,"%d\t",&tt1);
                                     fscanf(p_hvsigma,"%f\t",&tt2);
                                     fscanf(p_hvgpratio,"%f\t",&tt3);
-                                    if(tt1 > 0)
+                                    //if(tt1 > 0)
                                         temp_pairs[index] = tt1;
                                     temp_sigma[index] = tt2;
                                     temp_gpratio[index] = tt3;
