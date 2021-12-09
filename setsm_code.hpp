@@ -195,6 +195,10 @@ bool check_image_boundary(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2
 
 bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
 
+uint32_t calc_code_line(D2DPOINT p, D2DPOINT LL, D2DPOINT LR, D2DPOINT UR, D2DPOINT UL);
+
+uint32_t calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right);
+
 bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
 
 bool check_image_boundary_height(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double Height, const int H_template_size, const int pair_number);

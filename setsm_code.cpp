@@ -4532,12 +4532,54 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             else
                 check_CA = true;
             //printf("total pair %d\tpair_number %d\n",plevelinfo.pairinfo->NumberOfPairs(),pair_number);
+            
             if(check_stop && check_CA)
             {
-                if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
+                if(proinfo->sensor_provider != PT)
+                {
+                    if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
+                    {
+                        pairs.push_back(pair_number);
+                    }
+                    
+                    if(!contains(actual_pair_save, pair_number))
+                    {
+                        actual_pair_save.push_back(pair_number);
+                    }
+                }
+                else
                 {
                     
-                    if(proinfo->sensor_provider == PT)
+                    D2DPOINT bottom_left = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
+                    D2DPOINT upper_right = {image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
+                    D2DPOINT min_pt = {plevelinfo.Grid_wgs[pt_index]};
+                    //printf("image br_ref %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
+                    
+                    uint32_t p_code_ref = calc_code(min_pt, bottom_left, upper_right);
+                    
+                    bottom_left = {image_info[ti].LL[0], image_info[ti].LL[1]};
+                    upper_right = {image_info[ti].UR[0], image_info[ti].UR[1]};
+                    //printf("image br_ti %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
+                    //printf("target pt %f\t%f\n",min_pt.m_X,min_pt.m_Y);
+                    uint32_t p_code_ti = calc_code(min_pt, bottom_left, upper_right);
+                    
+                    //printf("inside %d\t%d\t%d\n",p_code_ref,p_code_ti,!p_code_ref && !p_code_ti);
+                    /*
+                    D2DPOINT LL = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
+                    D2DPOINT UR = {image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
+                    D2DPOINT LR = {image_info[reference_id].LR[0], image_info[reference_id].LR[1]};
+                    D2DPOINT UL = {image_info[reference_id].UL[0], image_info[reference_id].UL[1]};
+                    
+                    uint32_t p_code_ref = calc_code_line(plevelinfo.Grid_wgs[pt_index],LL, LR, UR, UL);
+                    
+                    LL = {image_info[ti].LL[0], image_info[ti].LL[1]};
+                    UR = {image_info[ti].UR[0], image_info[ti].UR[1]};
+                    LR = {image_info[ti].LR[0], image_info[ti].LR[1]};
+                    UL = {image_info[ti].UL[0], image_info[ti].UL[1]};
+                    
+                    uint32_t p_code_ti = calc_code_line(plevelinfo.Grid_wgs[pt_index],LL, LR, UR, UL);
+                    */
+                    if(!p_code_ref && !p_code_ti)
                     {
                         double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number)*10;
                         int sigma_pairs_index = ceil((sigmaZ-300));
@@ -4549,19 +4591,10 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         
                         //if(fabs(plevelinfo.pairinfo->Azimuth(pair_number)) < 10)
                             sigma_pairs[sigma_pairs_index].push_back(pair_number);
+                        
+                        //exit(1);
                     }
-                    else
-                    {
-                        pairs.push_back(pair_number);
-                    }
-                }
                 
-                if(proinfo->sensor_provider != PT)
-                {
-                    if(!contains(actual_pair_save, pair_number))
-                    {
-                        actual_pair_save.push_back(pair_number);
-                    }
                 }
             }
         }
@@ -18795,6 +18828,37 @@ constexpr uint32_t BOTTOM = 1 << 2;
 constexpr uint32_t RIGHT  = 1 << 3;
 constexpr uint32_t LEFT   = 1 << 4;
 
+
+uint32_t calc_code_line(D2DPOINT p, D2DPOINT LL, D2DPOINT LR, D2DPOINT UR, D2DPOINT UL) {
+    uint32_t code = 0;
+    
+    double slope_top = (UL.m_Y - UR.m_Y)/(UL.m_X - UR.m_X);
+    double intercept_top = UR.m_Y - slope_top*UR.m_X;
+    
+    double slope_bottom= (LL.m_Y - LR.m_Y)/(LL.m_X - LR.m_X);
+    double intercept_bottom = LR.m_Y - slope_bottom*LR.m_X;
+    
+    double slope_left = (LL.m_Y - UL.m_Y)/(LL.m_X - UL.m_X);
+    double intercept_left = UL.m_Y - slope_left*UL.m_X;
+    
+    double slope_right = (LR.m_Y - UR.m_Y)/(LR.m_X - UR.m_X);
+    double intercept_right = UR.m_Y - slope_right*UR.m_X;
+    
+    if(p.m_X < (p.m_Y - intercept_left)/slope_left )
+        code |= LEFT;
+    
+    if(p.m_X > (p.m_Y - intercept_right)/slope_right )
+        code |= RIGHT;
+    
+    if(p.m_Y > slope_top*p.m_X + intercept_top)
+        code |= TOP;
+ 
+    if(p.m_Y < slope_bottom*p.m_X + intercept_bottom)
+        code |= BOTTOM;
+    
+    return code;
+}
+
 uint32_t calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right) {
     uint32_t code = 0;
     if(p.m_X < bottom_left.m_X)
@@ -18854,6 +18918,7 @@ bool line_intersects_box(D2DPOINT p1,D2DPOINT p2,D2DPOINT bottom_left,D2DPOINT t
  *  check_ref - whether or not to use ImageAdjust (true = don't use)
  *
  */
+
 bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref)
 {
     const int buff_pixel = 1;
