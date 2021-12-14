@@ -4659,7 +4659,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     {
         printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
     }
-    //exit(1);
+    exit(1);
     if(actual_pair_save.size() > 0)
     {
         /*
@@ -19255,11 +19255,11 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
                                             int DEM_pv = temp_pairs[iter_row*col_size + iter_col];
                                             float DEM_s = temp_sigma[iter_row*col_size + iter_col];
                                             float DEM_gpr = temp_gpratio[iter_row*col_size + iter_col];
-                                            if(DEM_value > Nodata )
+                                            if(DEM_value > Nodata)
                                             {
-                                                if(DEM[index] == Nodata)
+                                                if(DEM[index] == Nodata && DEM_pv > 1 && DEM_s > 0)
                                                     DEM[index] = DEM_value;
-                                                DEM_count[index].update(DEM_value);
+                                                //DEM_count[index].update(DEM_value);
                                                 
                                                 DEM_pairs[index] = DEM_pv;
                                                 DEM_sigma[index] = DEM_s;
@@ -19285,7 +19285,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
             }
         }
     }
-    
+/*
 #pragma omp parallel for schedule(guided)
     for(long index = 0 ; index < DEM_data_size ; index++)
     {
@@ -19293,7 +19293,7 @@ void MergeTiles_forMulti(const ProInfo *proinfo, const TransParam _param, const 
             DEM[index] = DEM_count[index].average();
         }
     }
-    
+*/
     char DEM_str[500];
     sprintf(DEM_str, "%s/%s_dem_header_tin.txt", proinfo->save_filepath, proinfo->Outputpath_name);
     
