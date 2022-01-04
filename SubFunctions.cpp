@@ -56,7 +56,7 @@ char* GetFileDir(char file_path[],int *size)
         else
         {
             file_name = file_path+1;
-            //printf("str %s\n",file_name);
+            printf("str %s\n",file_name);
         }
         
         file_path++;
@@ -3614,6 +3614,81 @@ double quickselect(vector<double> &arr, int n, int k)
             if (j <= k) l=i;
         }
     }
+}
+
+float quickselect(vector<PairCA> &arr, int n, int k)
+{
+    int i, j;
+    for (i = 0; i < n-1; i++)
+    {
+        // Last i elements are already in place
+        for (j = 0; j < n-i-1; j++)
+        {
+           if (arr[j].CA < arr[j+1].CA)
+           {
+              //swap(&arr[j], &arr[j+1]);
+               
+               PairCA temp = arr[j];
+               arr[j] = arr[j+1];
+               arr[j+1] = temp;
+           }
+        }
+    }
+    return 0;
+    /*
+    unsigned long i,ir,j,l,mid;
+    double a;
+    PairCA temp(0,0);
+    l=0;
+    ir=n-1;
+    for(;;) {
+        if (ir <= l+1) {
+            if (ir == l+1 && arr[ir].CA < arr[l].CA) {
+                temp = arr[l];
+                arr[l] = arr[ir];
+                arr[ir] = temp;
+            }
+            return arr[k].CA;
+        }
+        else {
+            mid=(l+ir) >> 1;
+            temp = arr[mid];
+            arr[mid] = arr[l+1];
+            arr[l+1] = temp;
+            
+            if (arr[l].CA > arr[ir].CA) {
+                temp = arr[l];
+                arr[l] = arr[ir];
+                arr[ir] = temp;
+            }
+            if (arr[l+1].CA > arr[ir].CA) {
+                temp = arr[l+1];
+                arr[l+1] = arr[ir];
+                arr[ir] = temp;
+            }
+            if (arr[l].CA > arr[l+1].CA) {
+                temp = arr[l];
+                arr[l] = arr[l+1];
+                arr[l+1] = temp;
+            }
+            i=l+1;
+            j=ir;
+            a=arr[l+1].CA;
+            for (;;) {
+                do i++; while (arr[i].CA < a);
+                do j--; while (arr[j].CA > a);
+                if (j < i) break;
+                temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+            arr[l+1].CA=arr[j].CA;
+            arr[j].CA=a;
+            if (j >= k) ir=j-1;
+            if (j <= k) l=i;
+        }
+    }
+     */
 }
 
 double cal_var(vector<double> &arr)

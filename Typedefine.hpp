@@ -434,6 +434,7 @@ private:
     int m_MinOffImage;
     float m_HeightStep;
     
+    std::vector<short> m_cal;
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
     std::vector<float> m_ConvergenceAngle;
@@ -456,6 +457,7 @@ private:
     
     void allocate(int numberofpairs)
     {
+        m_cal = std::vector<short>(numberofpairs,1);
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
@@ -498,6 +500,9 @@ public:
         m_SelectNumberOfPairs = 0;
         m_MinOffImage = -1;
         m_HeightStep = 0;
+        
+        m_cal.clear();
+        vector<short>().swap(m_cal);
         
         m_pairs.clear();
         vector<UI2DPOINT>().swap(m_pairs);
@@ -569,6 +574,11 @@ public:
     void SetHeightStep(int heightStep)
     {
         m_HeightStep = heightStep;
+    }
+    
+    void SetCal(int pos, short value)
+    {
+        m_cal[pos] = value;
     }
     
     void SetPairs(int pos, UI2DPOINT value)
@@ -676,6 +686,11 @@ public:
     float& HeightStep()
     {
         return m_HeightStep;
+    }
+    
+    short& cal(int pos)
+    {
+        return m_cal[pos];
     }
     
     UI2DPOINT& pairs(int pos)
@@ -842,7 +857,7 @@ typedef struct ProjectInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
-    double pair_max_th;
+    int pair_max_th;
     double Cloud_th;
     
 	double minHeight;
@@ -934,7 +949,7 @@ typedef struct ArgumentInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
-    double pair_max_th;
+    int pair_max_th;
     double Cloud_th;
     double sim_shiftX;
     double sim_shiftY;
@@ -1177,6 +1192,18 @@ typedef struct taglevelinfo
     double MPP;
 } LevelInfo;
 
+typedef struct PairCA
+{
+    short pair_ID;
+    float CA;
+public:
+    PairCA(int pairid, float ca)
+    {
+        pair_ID = pairid;
+        CA = ca;
+    }
+} PairCA;
+
 template <typename T>
 class Matrix {
 public:
@@ -1299,8 +1326,22 @@ typedef MixedHeight3DGrid<short> SumCostContainer;
 
 class GridPairs {
 public:
-    GridPairs(long length) : pair_ids(length, -1), next_id(0) {}
+    vector<short> grid_sigmaZ;
+    vector<short> grid_max_sigmaZ;
+    
+    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0) {}
 
+    GridPairs()
+    {
+    }
+    
+    void Setlength(long length)
+    {
+        for(size_t i = 0 ; i < length ; i++)
+            pair_ids.push_back(-1);
+        next_id = 0;
+    }
+    
     void add_pairs(long index, const vector<short> &pairs) {
         short id = find_pair_id(pairs);
         if(id != -1) {

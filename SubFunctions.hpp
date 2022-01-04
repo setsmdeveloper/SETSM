@@ -86,6 +86,7 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 double quickselect(double *arr, int n, int k);
 double quickselect(vector<double> &arr, int n, int k);
+float quickselect(vector<PairCA> &arr, int n, int k);
 double cal_var(vector<double> &arr);
 
 void GetOverlappedImages_LatLong(const double *tile_boundary, const int total_images_count, const ImageInfo *imageinfo, vector<int> &selected_ID);
