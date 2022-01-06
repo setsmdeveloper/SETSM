@@ -857,6 +857,7 @@ typedef struct ProjectInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
+    double Max_daygap;
     int pair_max_th;
     double Cloud_th;
     
@@ -949,6 +950,7 @@ typedef struct ArgumentInfo{
     double GCP_spacing;
     double CA_th;
     double CA_max_th;
+    double Max_daygap;
     int pair_max_th;
     double Cloud_th;
     double sim_shiftX;

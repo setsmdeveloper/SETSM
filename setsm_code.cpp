@@ -122,6 +122,7 @@ int main(int argc,char *argv[])
     args.Cloud_th = CLD_COV;
     args.CA_th = 3;
     args.CA_max_th = 100;
+    args.Max_daygap = 30;
     args.pair_max_th = 50;
     args.pair_options = 1;
     args.awnccmp = 2;
@@ -668,6 +669,19 @@ int main(int argc,char *argv[])
                 {
                     args.CA_max_th = atof(argv[i+1]);
                     printf("Maximum convergence angle threshold %f\n",args.CA_max_th);
+                }
+            }
+            
+            if (strcmp("-max_daygap",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input maximum temporal basesline for stereo pair configuration\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.Max_daygap = atof(argv[i+1]);
+                    printf("Maximum temporal baseline %f\n",args.Max_daygap);
                 }
             }
             
@@ -2445,6 +2459,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
     proinfo->CA_th = args.CA_th;
     proinfo->CA_max_th = args.CA_max_th;
+    proinfo->Max_daygap = args.Max_daygap;
     proinfo->Cloud_th = args.Cloud_th;
     proinfo->pair_max_th = args.pair_max_th;
     proinfo->pair_options = args.pair_options;
@@ -4468,7 +4483,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                 if(maxBH < pairinfo.BHratio(pair_number))
                     maxBH = pairinfo.BHratio(pair_number);
                 
-                printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\tAzimuth %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number),pairinfo.Azimuth(pair_number));
+                //printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\tAzimuth %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number),pairinfo.Azimuth(pair_number));
                 
                 pair_number++;
             }
@@ -4490,59 +4505,32 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     vector<PairCA> actual_pair_CA;
     
     int max_stereo_pair = 20;//proinfo->pair_max_th;
-    printf("max_stereo_pair %d\t pair option %d\n",max_stereo_pair,proinfo->pair_options);
+    printf("max_stereo_pair %d\t pair option %d\t pair temporal baseline %f\n",max_stereo_pair,proinfo->pair_options,proinfo->Max_daygap);
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
         long int pt_index = iter_count;
 
         vector<short> pairs;
         
-        vector<vector<short>> sigma_pairs(600); //32,34,36,...,68
-        
-        const int start_H     = minmaxHeight[0];
-        const int end_H       = minmaxHeight[1];
-        int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, ori_minmaxHeight[0], ori_minmaxHeight[1]);
-
-        for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
+        if(proinfo->sensor_provider != PT)
         {
-            if(pairinfo.cal(pair_number) > 0)
+            const int start_H     = minmaxHeight[0];
+            const int end_H       = minmaxHeight[1];
+            int select_pair = select_referenceimage(pt_index, proinfo, plevelinfo, ori_minmaxHeight[0], ori_minmaxHeight[1]);
+
+            for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
             {
-                const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
-                const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-                
-                bool check_stop = false;
-                if(proinfo->sensor_provider != PT)
+                if(pairinfo.cal(pair_number) > 0)
                 {
+                    const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+                    const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+            
                     if(reference_id == select_pair || ti == select_pair)
-                        check_stop = true;
-                }
-                else
-                    check_stop = true;
-                
-                bool check_CA = false;
-                if(proinfo->sensor_provider == PT)
-                {
-                    //time separation
-                    double ref_time = (double)image_info[reference_id].hour*60 + (double)image_info[reference_id].min;
-                    double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
-                    double diff_time = fabs(ref_time - tar_time)/60.0;
-                    
-                    //printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,tar_time,diff_time);
-                    
-                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < 10 && diff_time < 1)
-                        check_CA = true;
-                }
-                else
-                    check_CA = true;
-                //printf("total pair %d\tpair_number %d\n",plevelinfo.pairinfo->NumberOfPairs(),pair_number);
-                
-                if(check_stop && check_CA)
-                {
-                    if(proinfo->sensor_provider != PT)
                     {
                         if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
                         {
-                            pairs.push_back(pair_number);
+                            if(!contains(pairs, pair_number))
+                                pairs.push_back(pair_number);
                         }
                         
                         if(!contains(actual_pair_save, pair_number))
@@ -4552,9 +4540,53 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                             actual_pair_CA.push_back(temp_pca);
                         }
                     }
-                    else
+                }
+            }
+            
+            if(pairs.size() > 0)
+            {
+                grid_pair.add_pairs(iter_count, pairs);
+                
+                double sum_MPP_single_pairs = 0;
+                double max_sigma_Z = -10000;
+                for(int pair_number = 0 ; pair_number < pairs.size() ; pair_number++)
+                {
+                    double sigma_Z = plevelinfo.pairinfo->SigmaZ(pairs[pair_number]);
+                    sum_MPP_single_pairs += sigma_Z*sigma_Z;
+                    
+                    if(max_sigma_Z < sigma_Z)
+                        max_sigma_Z = sigma_Z;
+                    //printf("ID %d\tmax_sigma_Z %f\t%f\n",pairs[pair_number],max_sigma_Z,sigma_Z);
+                }
+                grid_pair.grid_sigmaZ[iter_count] = short(sqrt(sum_MPP_single_pairs)/pairs.size());
+                grid_pair.grid_max_sigmaZ[iter_count] = short(max_sigma_Z+1);
+                
+                //printf("sigmaZ %d\t max_sigmaZ %d\n",grid_pair.grid_sigmaZ[iter_count], grid_pair.grid_max_sigmaZ[iter_count]);
+                //exit(1);
+            }
+        }
+        else //PlanetDEM
+        {
+            vector<vector<short>> sigma_pairs(600); //32,34,36,...,68
+            
+            for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
+            {
+                if(pairinfo.cal(pair_number) > 0)
+                {
+                    const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+                    const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+                    
+                    //time separation for shadow
+                    double ref_time = (double)image_info[reference_id].hour*60 + (double)image_info[reference_id].min;
+                    double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
+                    double diff_time = fabs(ref_time - tar_time)/60.0;
+                    double ref_day = (double)image_info[reference_id].month*30 + (double)image_info[reference_id].date;
+                    double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
+                    double diff_day = fabs(ref_day - tar_day);
+                    //printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,tar_time,diff_time);
+                    
+                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < 10 && diff_time < 1)
                     {
-                        
                         D2DPOINT bottom_left = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
                         D2DPOINT upper_right = {image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
                         D2DPOINT min_pt = {plevelinfo.Grid_wgs[pt_index]};
@@ -4594,55 +4626,72 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                 sigma_pairs_index = 599;
                             //printf("sigmaZ %f\t index %d\t%d\n",sigmaZ,sigma_pairs_index,pair_number);
                             
-                            //if(fabs(plevelinfo.pairinfo->Azimuth(pair_number)) < 10)
+                            if(!contains(sigma_pairs[sigma_pairs_index],pair_number))
                                 sigma_pairs[sigma_pairs_index].push_back(pair_number);
                             
                             //exit(1);
                         }
-                    
                     }
                 }
             }
-        }
-        
-        if(proinfo->sensor_provider == PT)
-        {
+                
             bool stop_condition = false;
             int t_count = 0;
             int total_pair_count = 0;
-            
             while(!stop_condition && t_count < 600)
             {
-                //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
-                total_pair_count += sigma_pairs[t_count].size();
-                
-                for(int k = 0 ; k < sigma_pairs[t_count].size() ; k++)
+                short daygap = 1;
+                bool check_daystop = false;
+                while(daygap <= proinfo->Max_daygap && !check_daystop)
                 {
-                    int t_pair_num = sigma_pairs[t_count][k];
-                    pairs.push_back(t_pair_num);
-                    //printf("t_count %d\tt_pair_num %d\tsigmaZ %f\n",t_count,t_pair_num,plevelinfo.pairinfo->SigmaZ(t_pair_num));
-                    if(!contains(actual_pair_save, t_pair_num))
+                    //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
+                    //total_pair_count += sigma_pairs[t_count].size();
+                    
+                    for(int k = 0 ; k < sigma_pairs[t_count].size() ; k++)
                     {
-                        actual_pair_save.push_back(t_pair_num);
-                        PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num));
-                        actual_pair_CA.push_back(temp_pca);
+                        int t_pair_num = sigma_pairs[t_count][k];
+                        
+                        const int reference_id = plevelinfo.pairinfo->pairs(t_pair_num).m_X;
+                        const int ti = plevelinfo.pairinfo->pairs(t_pair_num).m_Y;
+                        
+                        //time separation for temporal change
+                        double ref_day = (double)image_info[reference_id].month*30 + (double)image_info[reference_id].date;
+                        double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
+                        double diff_day = fabs(ref_day - tar_day);
+                        
+                        if(!contains(pairs, t_pair_num) && diff_day <= daygap)
+                        {
+                            pairs.push_back(t_pair_num);
+                            total_pair_count++;
+                        }
+                        //printf("t_count %d\tt_pair_num %d\tsigmaZ %f\tdiff_day %f\n",t_count,t_pair_num,plevelinfo.pairinfo->SigmaZ(t_pair_num),diff_day);
+                        //exit(1);
+                        if(!contains(actual_pair_save, t_pair_num) && diff_day <= daygap)
+                        {
+                            actual_pair_save.push_back(t_pair_num);
+                            PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num));
+                            actual_pair_CA.push_back(temp_pca);
+                        }
                     }
-                }
-                
-                if(total_pair_count > max_stereo_pair)
-                {
-                    stop_condition = true;
-                    /*
-                    for(int j = 0 ; j < pairs.size() ; j++)
+                    
+                    if(total_pair_count > max_stereo_pair)
                     {
-                        printf("%d\tfinal pair num %d\t%d\n",pairs.size(),pairs[j],actual_pair_save[j]);
-                        exit(1);
+                        stop_condition = true;
+                        check_daystop = true;
+                        /*
+                        for(int j = 0 ; j < pairs.size() ; j++)
+                        {
+                            printf("%d\tfinal pair num %d\t%d\n",pairs.size(),pairs[j],actual_pair_save[j]);
+                            
+                        }
+                        exit(1);*/
+                        
                     }
-                     */
+                    daygap++;
                 }
                 t_count++;
             }
-            
+            /*
             if(proinfo->pair_options == 2 || proinfo->pair_options == 3)
             {
                 if(pairs.size() < 2)
@@ -4650,36 +4699,29 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     pairs.clear();
                 }
             }
-        }
-        
-        if(pairs.size() > 0)
-        {
-            grid_pair.add_pairs(iter_count, pairs);
-            
-            double sum_MPP_single_pairs = 0;
-            double max_sigma_Z = -10000;
-            for(int pair_number = 0 ; pair_number < pairs.size() ; pair_number++)
+             */
+            if(pairs.size() > 0)
             {
-                double sigma_Z = plevelinfo.pairinfo->SigmaZ(pairs[pair_number]);
-                sum_MPP_single_pairs += sigma_Z*sigma_Z;
+                grid_pair.add_pairs(iter_count, pairs);
                 
-                if(max_sigma_Z < sigma_Z)
-                    max_sigma_Z = sigma_Z;
-                //printf("ID %d\tmax_sigma_Z %f\t%f\n",pairs[pair_number],max_sigma_Z,sigma_Z);
+                double sum_MPP_single_pairs = 0;
+                double max_sigma_Z = -10000;
+                for(int pair_number = 0 ; pair_number < pairs.size() ; pair_number++)
+                {
+                    double sigma_Z = plevelinfo.pairinfo->SigmaZ(pairs[pair_number]);
+                    sum_MPP_single_pairs += sigma_Z*sigma_Z;
+                    
+                    if(max_sigma_Z < sigma_Z)
+                        max_sigma_Z = sigma_Z;
+                    //printf("ID %d\tmax_sigma_Z %f\t%f\n",pairs[pair_number],max_sigma_Z,sigma_Z);
+                }
+                grid_pair.grid_sigmaZ[iter_count] = short(sqrt(sum_MPP_single_pairs)/pairs.size());
+                grid_pair.grid_max_sigmaZ[iter_count] = short(max_sigma_Z+1);
+                
+                //printf("sigmaZ %d\t max_sigmaZ %d\n",grid_pair.grid_sigmaZ[iter_count], grid_pair.grid_max_sigmaZ[iter_count]);
+                //exit(1);
             }
-            grid_pair.grid_sigmaZ[iter_count] = short(sqrt(sum_MPP_single_pairs)/pairs.size());
-            grid_pair.grid_max_sigmaZ[iter_count] = short(max_sigma_Z+1);
-            
-            //printf("sigmaZ %d\t max_sigmaZ %d\n",grid_pair.grid_sigmaZ[iter_count], grid_pair.grid_max_sigmaZ[iter_count]);
-            //exit(1);
         }
-        /*
-        for(int j = 0 ; j < actual_pair_save.size() ; j++)
-        {
-            printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
-        }
-        
-        exit(1);*/
     }
     
     float last = quickselect(actual_pair_CA,actual_pair_CA.size(),actual_pair_CA.size());
@@ -5607,7 +5649,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
+                            int ref_id = levelinfo.pairinfo->pairs(count).m_X;
+                            int tar_id = levelinfo.pairinfo->pairs(count).m_Y;
+                            
                             printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count));
+                            printf("pair file count %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count,image_info[ref_id].month,image_info[ref_id].date,image_info[ref_id].hour,image_info[ref_id].min,
+                                   image_info[tar_id].month,image_info[tar_id].date,image_info[tar_id].hour,image_info[tar_id].min);
                             
                             if(proinfo->sensor_provider == PT)
                             {
@@ -6126,34 +6173,59 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     FILE* fid_sigma         = fopen(fname_sigma,"w");
                                     FILE* fid_gpratio         = fopen(fname_gpratio,"w");
                                     
-                                    for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                                    //Grid_pair and grid_voxel update
+                                    printf("grid length %d\n",(*levelinfo.Grid_length));
+                                    //#pragma omp parallel for schedule(guided)
+                                    for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
                                     {
-                                        for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                                        auto &pairs = Grid_pair.get_pairs(pt_index);
+                                        Grid_pair.remove_pairs(pt_index,pairs);
+                                        Grid_pair.add_pairs(pt_index,PairArray[pt_index]);
+                                        
+                                        for(int k = 0 ; k < pairs.size() ; k++)
                                         {
-                                            long int pt_index = trow*Size_Grid2D.width + tcol;
-                                            //fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
-                                            
-                                            auto &pairs = Grid_pair.get_pairs(pt_index);
-                                            Grid_pair.remove_pairs(pt_index,pairs);
-                                            Grid_pair.add_pairs(pt_index,PairArray[pt_index]);
-                                            
-                                            auto &pairs2 = Grid_pair.get_pairs(pt_index);
-                                            fprintf(fid_grid,"%d\t",pairs2.size());
-                                            
+                                            if(!contains(PairArray[pt_index],pairs[k]))
+                                            {
+                                                grid_voxel.remove_pair(pt_index,pairs[k]);
+                                            }
+                                        }
+                                        /*
+                                        auto &pairs2 = Grid_pair.get_pairs(pt_index);
+                                        for(int k = 0 ; k < pairs2.size() ; k++)
+                                        {
+                                            printf("selected index %d\tpair ID %d\n",k,pairs2[k]);
+                                        }
+                                        
+                                        for(int k = 0 ; k < pairs.size() ; k++)
+                                        {
+                                            if(grid_voxel.has_pair(pt_index, pairs[k]))
+                                                printf("grid voxel index %d\tpair ID %d\n",k,pairs[k]);
+                                        }
+                                        exit(1);
+                                        */
 //                                            if(levelinfo.pairinfo->SelectNumberOfPairs() < PairArray[pt_index].size())
 //                                            {
 //                                                printf("out of num pairs %d/%d\n",PairArray[pt_index].size(),levelinfo.pairinfo->SelectNumberOfPairs());
 //                                                exit(1);
 //                                            }
+                                    }
+                                    printf("end pair setting\n");
+                                    //file genration for pair counts, sigmaZ, GP_ratio
+                                    for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                                    {
+                                        for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                                        {
+                                            long int pt_index = trow*Size_Grid2D.width + tcol;
+                                            fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
                                             
-                                            if(pairs2.size() > 0)
+                                            if(PairArray[pt_index].size() > 0)
                                             {
                                                 double sum_SigmaZ = 0;
                                                 double count_gp = 0;
                                                 double max_sigmaZ = -100;
-                                                for(int count = 0 ; count < pairs2.size() ; count++)
+                                                for(int count = 0 ; count < PairArray[pt_index].size() ; count++)
                                                 {
-                                                    int pair_number = pairs2[count];
+                                                    int pair_number = PairArray[pt_index][count];
                                                     
                                                     double sigmaZ = levelinfo.pairinfo->SigmaZ(pair_number);
                                                     sum_SigmaZ += (sigmaZ*sigmaZ);
@@ -6167,11 +6239,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                         count_gp++;
                                                 }
                                                 
-                                                double PSigmaZ = sqrt(sum_SigmaZ)/pairs2.size();
+                                                double PSigmaZ = sqrt(sum_SigmaZ)/PairArray[pt_index].size();
                                                 Grid_pair.grid_sigmaZ[pt_index] = short(PSigmaZ);
                                                 Grid_pair.grid_max_sigmaZ[pt_index] = short(max_sigmaZ+1);
                                                 
-                                                if(pairs2.size() > proinfo->pair_max_th)
+                                                if(PairArray[pt_index].size() > proinfo->pair_max_th)
                                                 {
                                                     if(Grid_pair.grid_max_sigmaZ[pt_index] > start_sigmaZ - (3-level)*10)
                                                         Grid_pair.grid_max_sigmaZ[pt_index] = start_sigmaZ - (3-level)*10;
@@ -6184,7 +6256,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                                 fprintf(fid_sigma,"%f\t",SigmaZArray[pt_index]);
                                                 
-                                                float ratio = count_gp/(double)pairs2.size();
+                                                float ratio = count_gp/(double)PairArray[pt_index].size();
                                                 //printf("count_gp %f\t%d\t%f\n",count_gp,PairArray[pt_index].size(),ratio);
                                                 fprintf(fid_gpratio,"%f\t",ratio);
                                             }
@@ -6200,6 +6272,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         fprintf(fid_sigma,"\n");
                                         fprintf(fid_gpratio,"\n");
                                     }
+                                    
                                     fclose(fid_grid);
                                     fclose(fid_sigma);
                                     fclose(fid_gpratio);

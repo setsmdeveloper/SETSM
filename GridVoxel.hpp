@@ -43,13 +43,16 @@ class GridVoxel {
 public:
 
     // Constructor
-    GridVoxel(size_t length, const GridPairs &Gridpairs) 
+    GridVoxel()
+            : incc_grid(0), Gridpairs(0) {}
+
+    GridVoxel(size_t length, const GridPairs &Gridpairs)
             : incc_grid(length), Gridpairs(Gridpairs) {}
 
     // Const and nonconst accessors for INCC
     short& INCC(size_t grid_index, size_t h_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
-        int pair_index = pair_id_to_index(grid_index, pairs, pair_id);
+        int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
             dbg_crash(grid_index, pairs, pair_id);
         size_t num_pairs = pairs.size();
@@ -59,7 +62,7 @@ public:
     // const versions of the above
     const short& INCC(size_t grid_index, size_t h_index, size_t pair_id) const {
         auto &pairs = Gridpairs.get_pairs(grid_index);
-        int pair_index = pair_id_to_index(grid_index, pairs, pair_id);
+        int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
             dbg_crash(grid_index, pairs, pair_id);
         size_t num_pairs = pairs.size();
@@ -68,7 +71,7 @@ public:
 
     bool is_cal(size_t grid_index, size_t h_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
-        int pair_index = pair_id_to_index(grid_index, pairs, pair_id);
+        int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
             return false;
         size_t num_pairs = pairs.size();
@@ -77,7 +80,7 @@ public:
 
     bool has_pair(size_t grid_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
-        return pair_id_to_index(grid_index, pairs, pair_id) >= 0;
+        return pair_id_to_index(pairs, pair_id) >= 0;
     }
 
     /** Set size to zero and clear memory */
@@ -94,13 +97,52 @@ public:
         incc_grid[grid_index] = std::vector<short>(n * num_pairs, INCC_UNSET);
     }
 
+    /** Remove pair_id from grid_index
+     *
+     * Removes the pair specified by pair_id
+     */
+   void remove_pair(size_t grid_index, size_t pair_id) {
+
+        // save these in case we need to update incc values
+        std::vector<short> old_pairs(Gridpairs.get_pairs(grid_index));
+        std::vector<short> old_incc(incc_grid[grid_index]);
+        size_t old_num_pairs = old_pairs.size();
+        size_t n = old_incc.size() / old_num_pairs; // height range
+
+        Gridpairs.remove_pairs(grid_index, {static_cast<short>(pair_id)});
+        const auto &new_pairs = Gridpairs.get_pairs(grid_index);
+        size_t new_num_pairs = new_pairs.size();
+
+        // if not already allocated, nothing we need to do
+        if(!n) {
+            return;
+        }
+
+        // otherwise, need to rebuild the data
+        allocate(grid_index, n);
+
+        for(size_t p : new_pairs) {
+            size_t old_pair_index = pair_id_to_index(old_pairs, p);
+            if(old_pair_index < 0) {
+                continue;
+            }
+            size_t new_pair_index = pair_id_to_index(new_pairs, p);
+
+            for(int h_index = 0; h_index < n; h_index ++) {
+                auto incc = old_incc[h_index * old_num_pairs + old_pair_index];
+                incc_grid[grid_index][h_index * new_num_pairs + new_pair_index] = incc;
+            }
+        }
+   }
+
+
 private:
-    std::vector<vector<short>> incc_grid;
+    std::vector<std::vector<short>> incc_grid;
     GridPairs Gridpairs;
 
     static constexpr short INCC_UNSET = _DoubleToSignedChar_voxel(-1);
 
-    int pair_id_to_index(size_t grid_index, const vector<short> &pairs, size_t pair_id) const {
+    int pair_id_to_index(const std::vector<short> &pairs, size_t pair_id) const {
         auto it = std::find(pairs.begin(), pairs.end(), pair_id);
         if(it == pairs.end()) {
             return -1;
@@ -108,7 +150,7 @@ private:
         return std::distance(pairs.begin(), it);
     }
 
-    void dbg_crash(size_t grid_index, const vector<short> &pairs, size_t pair_id) const {
+    void dbg_crash(size_t grid_index, const std::vector<short> &pairs, size_t pair_id) const {
         LOG("Failed to find pair id %lu for grid index %lu\n", pair_id, grid_index);
         LOG("number of pairs: %d\n", pairs.size());
 
