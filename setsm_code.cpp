@@ -6176,7 +6176,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     //Grid_pair and grid_voxel update
                                     printf("grid length %d\n",(*levelinfo.Grid_length));
                                     //#pragma omp parallel for schedule(guided)
-                                    for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+                                    /*for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
                                     {
                                         auto &pairs = Grid_pair.get_pairs(pt_index);
                                         Grid_pair.remove_pairs(pt_index,pairs);
@@ -6208,7 +6208,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 //                                                printf("out of num pairs %d/%d\n",PairArray[pt_index].size(),levelinfo.pairinfo->SelectNumberOfPairs());
 //                                                exit(1);
 //                                            }
-                                    }
+                                    //}
                                     printf("end pair setting\n");
                                     //file genration for pair counts, sigmaZ, GP_ratio
                                     for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
@@ -6217,6 +6217,10 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         {
                                             long int pt_index = trow*Size_Grid2D.width + tcol;
                                             fprintf(fid_grid,"%d\t",PairArray[pt_index].size());
+                                            
+                                            auto &pairs = Grid_pair.get_pairs(pt_index);
+                                            Grid_pair.remove_pairs(pt_index,pairs);
+                                            Grid_pair.add_pairs(pt_index,PairArray[pt_index]);
                                             
                                             if(PairArray[pt_index].size() > 0)
                                             {
