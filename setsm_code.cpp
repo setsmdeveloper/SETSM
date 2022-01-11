@@ -4642,6 +4642,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             {
                 short daygap = 1;
                 bool check_daystop = false;
+                //double Max_daygap = proinfo->Max_daygap - (3-(*plevelinfo.Pyramid_step))
                 while(daygap <= proinfo->Max_daygap && !check_daystop)
                 {
                     //printf("t_count %d\tSize %d\n",t_count,sigma_pairs[t_count].size());
@@ -5096,7 +5097,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
         {
             printf("start cal tile\n");
             
-            bool temp_asc_fprint = true;
+            bool temp_asc_fprint = false;
             
             FILE *fid = NULL;
             FILE *fid_header = NULL;
@@ -6022,91 +6023,103 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, final_level_iteration, MPP_stereo_angle, &MatchedPts_list, Grid_pair);
                                             
-                                            vector<short> ortho_ncc(*levelinfo.Grid_length,0);
+                                            double matching_ratio_pair = (double)count_MPs/(double)(*levelinfo.Grid_length)*100;
+                                            printf("pair_number %d\tmatching_ratio_pair %f\n",pair_number,matching_ratio_pair);
                                             
-                                            //if(level >= 2)
-                                            /*levelinfo.py_BImages = SubImages[level];
-                                            levelinfo.py_BMagImages = SubMagImages[level];
-                                            levelinfo.py_BStartpos = &Startpos;
-                                            levelinfo.blunder_selected_level = &level;
-                                            */
-                                            Cal_ortho_ncc(proinfo, levelinfo, count_MPs,GridPT3, iteration, MatchedPts_list, pair_number,ortho_ncc);
-                                            /*
-                                            levelinfo.py_BImages = SubImages[blunder_selected_level];
-                                            levelinfo.py_BMagImages = SubMagImages[blunder_selected_level];
-                                            levelinfo.py_BStartpos = &BStartpos;
-                                            levelinfo.blunder_selected_level = &blunder_selected_level;
-                                            */
-                                            if(max_count_MPs < count_MPs)
-                                                max_count_MPs = count_MPs;
-                                            
-                                            if(temp_asc_fprint)
+                                            if(matching_ratio_pair > 1)
                                             {
-                                                sprintf(filename_pair,"%s/txt/matched_pts_%d_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration,pair_number);
-                                                pfile_pair = fopen(filename_pair,"w");
-                                            }
-                                            for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
-                                            {
-                                                long t_col         = (long)((MatchedPts_list[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
-                                                long t_row         = (long)((MatchedPts_list[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
-                                                const long ref_index((long)Size_Grid2D.width*t_row + t_col);
+                                                vector<short> ortho_ncc(*levelinfo.Grid_length,0);
                                                 
-                                                if(PairArray[ref_index].size() < proinfo->pair_max_th)
+                                                //if(level >= 2)
+                                                /*levelinfo.py_BImages = SubImages[level];
+                                                levelinfo.py_BMagImages = SubMagImages[level];
+                                                levelinfo.py_BStartpos = &Startpos;
+                                                levelinfo.blunder_selected_level = &level;
+                                                */
+                                                Cal_ortho_ncc(proinfo, levelinfo, count_MPs,GridPT3, iteration, MatchedPts_list, pair_number,ortho_ncc);
+                                                /*
+                                                levelinfo.py_BImages = SubImages[blunder_selected_level];
+                                                levelinfo.py_BMagImages = SubMagImages[blunder_selected_level];
+                                                levelinfo.py_BStartpos = &BStartpos;
+                                                levelinfo.blunder_selected_level = &blunder_selected_level;
+                                                */
+                                                if(max_count_MPs < count_MPs)
+                                                    max_count_MPs = count_MPs;
+                                                
+                                                if(temp_asc_fprint)
                                                 {
-                                                    if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
-                                                    {
-                                                        multimps(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
-                                                        multimps(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
-                                                        multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;
-                                                        multimps(ref_index, pair_number).check_matched = true;
-                                                        
-                                                        total_count_MPs++;
-                                                        //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps(ref_index, pair_number).peak_roh,multimps(ref_index, pair_number).peak_height);
-                                                        if(temp_asc_fprint)
-                                                            fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
-                                                        
-                                                        if(min_pair_H > multimps(ref_index, pair_number).peak_height)
-                                                            min_pair_H = multimps(ref_index, pair_number).peak_height;
-                                                        if(max_pair_H < multimps(ref_index, pair_number).peak_height)
-                                                            max_pair_H = multimps(ref_index, pair_number).peak_height;
-                                                        
-                                                        PairArray[ref_index].push_back(pair_number);
-                                                        /*
-                                                        vector<short> ad_pair;
-                                                        ad_pair.push_back(pair_number);
-                                                        Grid_pair.add_pairs(ref_index,ad_pair);
-                                                        */
-                                                        if(!contains(save_cal_pairs, pair_number))
-                                                            save_cal_pairs.push_back(pair_number);
-                                                         
-                                                    }
+                                                    sprintf(filename_pair,"%s/txt/matched_pts_%d_%d_%d_%d_%d.txt",proinfo->save_filepath,row,col,level,iteration,pair_number);
+                                                    pfile_pair = fopen(filename_pair,"w");
                                                 }
-                                                /*else
+                                                for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
                                                 {
-                                                    auto &pairs = Grid_pair.get_pairs(ref_index);
-                                                    //for(int k = 0 ; k < pairs.size() ; k++)
-                                                    //    printf("pre pairs %d\n",pairs[k]);
-                                                    Grid_pair.remove_pairs(ref_index,pairs);
-                                                    //auto &pairs1 = Grid_pair.get_pairs(ref_index);
-                                                    //for(int k = 0 ; k < pairs1.size() ; k++)
-                                                    //    printf("rm pairs %d\n",pairs1[k]);
+                                                    long t_col         = (long)((MatchedPts_list[tcnt].m_X - subBoundary[0])/grid_resolution + 0.5);
+                                                    long t_row         = (long)((MatchedPts_list[tcnt].m_Y - subBoundary[1])/grid_resolution + 0.5);
+                                                    const long ref_index((long)Size_Grid2D.width*t_row + t_col);
                                                     
-                                                    //for(int k = 0 ; k < PairArray[ref_index].size() ; k++)
-                                                    //    printf("new pairs %d\n",PairArray[ref_index][k]);
-                                                    Grid_pair.add_pairs(ref_index,PairArray[ref_index]);
-                                                    //auto &pairs2 = Grid_pair.get_pairs(ref_index);
-                                                    //for(int k = 0 ; k < pairs2.size() ; k++)
-                                                    //    printf("new pairs %d\n",pairs2[k]);
-                                                    //exit(1);
-                                                }*/
-                                            }
-                                            
-                                            ortho_ncc.clear();
-                                            
-                                            printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
-                                            
-                                            if(count_MPs > 1)
+                                                    bool check_pair_th = false;
+                                                    //check_pair_th = (PairArray[ref_index].size() < proinfo->pair_max_th && level > 0) || (PairArray[ref_index].size() < proinfo->pair_max_th && level == 0 && iteration < 2) || (level == 0 && iteration >= 2);
+                                                    check_pair_th = (PairArray[ref_index].size() < proinfo->pair_max_th);// && iteration == 1) || iteration > 1 ;
+                                                    if(check_pair_th)
+                                                    {
+                                                        if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
+                                                        {
+                                                            multimps(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                            multimps(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
+                                                            multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;
+                                                            multimps(ref_index, pair_number).check_matched = true;
+                                                            
+                                                            total_count_MPs++;
+                                                            //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps(ref_index, pair_number).peak_roh,multimps(ref_index, pair_number).peak_height);
+                                                            if(temp_asc_fprint)
+                                                                fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
+                                                            
+                                                            if(min_pair_H > multimps(ref_index, pair_number).peak_height)
+                                                                min_pair_H = multimps(ref_index, pair_number).peak_height;
+                                                            if(max_pair_H < multimps(ref_index, pair_number).peak_height)
+                                                                max_pair_H = multimps(ref_index, pair_number).peak_height;
+                                                            
+                                                            PairArray[ref_index].push_back(pair_number);
+                                                            /*
+                                                            vector<short> ad_pair;
+                                                            ad_pair.push_back(pair_number);
+                                                            Grid_pair.add_pairs(ref_index,ad_pair);
+                                                            */
+                                                            if(!contains(save_cal_pairs, pair_number))
+                                                                save_cal_pairs.push_back(pair_number);
+                                                             
+                                                        }
+                                                    }
+                                                    /*else
+                                                    {
+                                                        auto &pairs = Grid_pair.get_pairs(ref_index);
+                                                        //for(int k = 0 ; k < pairs.size() ; k++)
+                                                        //    printf("pre pairs %d\n",pairs[k]);
+                                                        Grid_pair.remove_pairs(ref_index,pairs);
+                                                        //auto &pairs1 = Grid_pair.get_pairs(ref_index);
+                                                        //for(int k = 0 ; k < pairs1.size() ; k++)
+                                                        //    printf("rm pairs %d\n",pairs1[k]);
+                                                        
+                                                        //for(int k = 0 ; k < PairArray[ref_index].size() ; k++)
+                                                        //    printf("new pairs %d\n",PairArray[ref_index][k]);
+                                                        Grid_pair.add_pairs(ref_index,PairArray[ref_index]);
+                                                        //auto &pairs2 = Grid_pair.get_pairs(ref_index);
+                                                        //for(int k = 0 ; k < pairs2.size() ; k++)
+                                                        //    printf("new pairs %d\n",pairs2[k]);
+                                                        //exit(1);
+                                                    }*/
+                                                }
+                                                
+                                                ortho_ncc.clear();
+                                                
+                                                
+                                                printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
+                                                
                                                 pair_count++;
+                                                
+                                                if(temp_asc_fprint)
+                                                    fclose(pfile_pair);
+                                            }
                                             else
                                             {
                                                 levelinfo.pairinfo->cal(pair_number) = 0;
@@ -6115,9 +6128,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             MatchedPts_list.clear();
                                             vector<D3DPOINT>().swap(MatchedPts_list);
-                                            
-                                            if(temp_asc_fprint)
-                                                fclose(pfile_pair);
                                         }
                                     }
                                     
@@ -6152,8 +6162,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         }
                                     }
                                     
-                                    //for(int pair_number = 0 ; pair_number < t_cal_pair.size() ; pair_number++)
-                                    //    printf("final cal pairs ID %d\t%d/%d\n",pair_number,t_cal_pair[pair_number],t_cal_pair.size());
+                                    for(int pair_number = 0 ; pair_number < t_cal_pair.size() ; pair_number++)
+                                        printf("final cal pairs ID %d\t%d/%d\n",pair_number,t_cal_pair[pair_number],t_cal_pair.size());
                                     
                                     save_cal_pairs.clear();
                                     t_cal_pair.clear();
@@ -6988,6 +6998,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                         if(level == 0 && final_level_iteration == 4)
                             level = -1;
 
+                        //proinfo->pair_max_th = proinfo->pair_max_th - 2;
+                        //if(proinfo->pair_max_th < 5)
+                        //    proinfo->pair_max_th = 5;
                     }
                     printf("relese data size\n");
                     
