@@ -354,13 +354,16 @@ typedef struct tagMultiMPs
 
 typedef struct UpdateGrid{
     UpdateGrid(long len, long num_pairs) : len(len), num_pairs(num_pairs),
-        _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
+        _angle(len,0), _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
         /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
         _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
         _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0)
         {}
     UpdateGrid() : UpdateGrid(0, 0) {}
 
+    float &Angle(long i) { return _angle[i]; }
+    const float &Angle(long i) const { return _angle[i]; }
+    
     float &Height(long i) { return _Height[i]; }
     const float &Height(long i) const { return _Height[i]; }
     short &minHeight(long i) { return _minHeight[i]; }
@@ -394,6 +397,7 @@ typedef struct UpdateGrid{
 private:
     long len;
     long num_pairs;
+    vector<float> _angle;
     vector<float> _Height; //after blunder detection
     vector<short> _minHeight;
     vector<short> _maxHeight;
@@ -1030,9 +1034,11 @@ typedef struct ArgumentInfo{
     bool check_ccd;
     bool check_full_cal;
     bool check_simulate;
+    bool check_sdm_file;
     int check_txt_input;
     int check_coreg;
     int check_sdm_ortho;
+    bool check_sdm_seed;
     int check_DEM_coreg_output;
     int pair_options;
     int awnccmp;
@@ -1330,8 +1336,9 @@ class GridPairs {
 public:
     vector<short> grid_sigmaZ;
     vector<short> grid_max_sigmaZ;
+    vector<float> grid_height_step;
     
-    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0) {}
+    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0), grid_height_step(length, 0) {}
 
     GridPairs()
     {

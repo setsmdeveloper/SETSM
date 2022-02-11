@@ -3755,6 +3755,334 @@ bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT b
     return true;
 }
 
+double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA)
+{
+    double ncc_alpha;
+    
+    if(Pyramid_step >= 4)
+    {
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.8)
+            ncc_alpha = 0.8;
+    }
+    else if(Pyramid_step >= 3)
+    {
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.6)
+            ncc_alpha = 0.6;
+    }
+    else if(Pyramid_step == 2)
+    {
+        ncc_alpha = 1.0 - (0.4 + (iteration-1)*0.05);
+        if(ncc_alpha < 0.4)
+            ncc_alpha = 0.4;
+    }
+    else
+        ncc_alpha = 1.0 - ((4-Pyramid_step)*0.2 + (iteration-1)*0.05);
+    
+    if(ncc_alpha < 0.1)
+        ncc_alpha = 0.1;
+    
+    if(IsRA == 1)
+        ncc_alpha = 1.0;
+    
+    return ncc_alpha;
+    
+}
+
+void ContrastMask(const LevelInfo &plevelinfo, const long pt_index, const double height, const int Mask_size, const int pair_number, UI2DPOINT &min_val, UI2DPOINT &max_val, float &ent1, float &ent2, vector<short> &oncc, float &out_INCC)
+{
+    const double temp_LIA[2] = {0.0, 0.0};
+    D2DPOINT Ref_Imagecoord[1], Ref_Imagecoord_py[1];
+    D2DPOINT Tar_Imagecoord[1], Tar_Imagecoord_py[1];
+    D3DPOINT temp_GP[1];
+    
+    const int Pyramid_step = *(plevelinfo.Pyramid_step);
+    const int iteration = *(plevelinfo.iteration);
+    const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+    const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+    
+    const CSize LImagesize(plevelinfo.py_Sizes[reference_id][Pyramid_step]);
+    const CSize RImagesize(plevelinfo.py_Sizes[ti][Pyramid_step]);
+    
+    const double ncc_alpha = SetNCC_alpha(Pyramid_step,iteration, false);
+    const double ncc_beta = 1.0 - ncc_alpha;
+    const double ortho_th = 0.7 - (4 - Pyramid_step)*0.10;
+    
+    SetKernel rsetkernel(0,1,Mask_size);
+    rsetkernel.reference_id = reference_id;
+    rsetkernel.ti = ti;
+    
+    KernelPatchArg patch{
+        rsetkernel,
+        plevelinfo.py_Sizes[rsetkernel.reference_id][Pyramid_step],
+        plevelinfo.py_Sizes[rsetkernel.ti][Pyramid_step],
+        plevelinfo.py_Images[rsetkernel.reference_id],
+        plevelinfo.py_MagImages[rsetkernel.reference_id],
+        plevelinfo.py_Images[rsetkernel.ti],
+        plevelinfo.py_MagImages[rsetkernel.ti]};
+    
+    temp_GP[0] = plevelinfo.Grid_wgs[pt_index];
+    temp_GP[0].m_Z = height;
+    
+    Ref_Imagecoord[0] = GetObjectToImageRPC_single(plevelinfo.RPCs[reference_id],*plevelinfo.NumOfIAparam,temp_LIA,temp_GP[0]);
+    Tar_Imagecoord[0] = GetObjectToImageRPC_single(plevelinfo.RPCs[ti],*plevelinfo.NumOfIAparam,plevelinfo.ImageAdjust[pair_number],temp_GP[0]);
+    
+    Ref_Imagecoord_py[0]   = OriginalToPyramid_single(Ref_Imagecoord[0],plevelinfo.py_Startpos->at(reference_id),Pyramid_step);
+    Tar_Imagecoord_py[0]  = OriginalToPyramid_single(Tar_Imagecoord[0],plevelinfo.py_Startpos->at(ti),Pyramid_step);
+    
+    //orientation diff setting
+    long ori_ref_pos = (long)Ref_Imagecoord_py[0].m_Y*(long)LImagesize.width + (long)Ref_Imagecoord_py[0].m_X;
+    long ori_tar_pos = (long)Tar_Imagecoord_py[0].m_Y*(long)RImagesize.width + (long)Tar_Imagecoord_py[0].m_X;
+    const int ori_diff = plevelinfo.py_OriImages[reference_id][ori_ref_pos] - plevelinfo.py_OriImages[ti][ori_tar_pos];
+    double diff_theta  = (double)(ori_diff);
+    const double rot_theta = (double)(diff_theta*(*plevelinfo.bin_angle)*PI/180.0);
+    const double cos0 = cos(-rot_theta);
+    const double sin0 = sin(-rot_theta);
+    
+    vector<double> Histogram_ref(2000,0);
+    vector<double> Histogram_tar(2000,0);
+    double pixel_count_ref = 0;
+    double pixel_count_tar = 0;
+    
+    double step = 10;
+    int Count_N[3] = {0};
+    double sum_INCC_multi = 0;
+    double count_INCC = 0;
+    
+    double ref_gsd = plevelinfo.imageinfo[reference_id].GSD.pro_GSD;
+    double ti_gsd = plevelinfo.imageinfo[ti].GSD.pro_GSD;
+    double gsd_ratio = ref_gsd/ti_gsd;
+    
+    
+    for(int row = -Mask_size ; row <= Mask_size ; row++)
+    {
+        for(int col = -Mask_size ; col <= Mask_size ; col++)
+        {
+            int radius2  =  row*row + col*col;
+            double right_col = col*gsd_ratio;
+            double right_row = row*gsd_ratio;
+            
+            if(radius2 <= (Mask_size + 1)*(Mask_size + 1))
+            {
+                D2DPOINT pos_left(Ref_Imagecoord_py[0].m_X + col,Ref_Imagecoord_py[0].m_Y + row);
+                
+                D2DPOINT temp_pos(cos0*right_col - sin0*right_row, sin0*right_col + cos0*right_row);
+                D2DPOINT pos_right(Tar_Imagecoord_py[0].m_X + temp_pos.m_X,Tar_Imagecoord_py[0].m_Y + temp_pos.m_Y);
+                
+                SetVecKernelValue(patch, row, col, pos_left,pos_right, radius2, Count_N);
+                
+                long img_pos;
+                //reference image
+                img_pos = (long)pos_left.m_Y*(long)LImagesize.width + (long)pos_left.m_X;
+                
+                if(pos_left.m_X >= 0 && pos_left.m_X < LImagesize.width && pos_left.m_Y >= 0 && pos_left.m_Y <= LImagesize.height)
+                {
+                    
+                    if(min_val.m_X > plevelinfo.py_Images[reference_id][img_pos])
+                        min_val.m_X = plevelinfo.py_Images[reference_id][img_pos];
+                    
+                    if(max_val.m_X < plevelinfo.py_Images[reference_id][img_pos])
+                        max_val.m_X = plevelinfo.py_Images[reference_id][img_pos];
+                    
+                    int his_pos = (int)(plevelinfo.py_Images[reference_id][img_pos]/step);
+                    if(his_pos > 1999)
+                        his_pos = 1999;
+                    Histogram_ref[his_pos]++;
+                    pixel_count_ref++;
+                    
+                    //printf("val %d\tpos %d\thisto %f\tcount %f\n",plevelinfo.py_Images[reference_id][img_pos],his_pos,Histogram_ref[his_pos],pixel_count_ref);
+                }
+                
+                //target image
+                img_pos = (long)pos_right.m_Y*(long)RImagesize.width + (long)pos_right.m_X;
+                
+                if(pos_right.m_X >= 0 && pos_right.m_X < RImagesize.width && pos_right.m_Y >= 0 && pos_right.m_Y <= RImagesize.height)
+                {
+                    
+                    if(min_val.m_Y > plevelinfo.py_Images[ti][img_pos])
+                        min_val.m_Y = plevelinfo.py_Images[ti][img_pos];
+                    
+                    if(max_val.m_Y < plevelinfo.py_Images[ti][img_pos])
+                        max_val.m_Y = plevelinfo.py_Images[ti][img_pos];
+                    
+                    int his_pos = (int)(plevelinfo.py_Images[ti][img_pos]/step);
+                    if(his_pos > 1999)
+                        his_pos = 1999;
+                    Histogram_tar[his_pos]++;
+                    pixel_count_tar++;
+                }
+            }
+        }
+    }
+    
+    ComputeMultiNCC(rsetkernel, 0, Count_N, count_INCC,  sum_INCC_multi);
+    if(count_INCC > 0)
+    {
+        double INCC = sum_INCC_multi/count_INCC;
+        double GNCC = SignedCharToDouble_result(oncc[pt_index]);
+        if( GNCC > ortho_th)
+            out_INCC = INCC*ncc_alpha + GNCC*ncc_beta;
+        else
+            out_INCC = INCC;
+    }
+    
+    int start,end;
+    double sum;
+    if(pixel_count_ref > 0)
+    {
+        start = (int)(min_val.m_X/step);
+        if(start > 1999)
+            start = 1999;
+        end = (int)(max_val.m_X/step);
+        if(end > 1999)
+            end = 1999;
+        sum = 0;
+        for(int i= start ; i < end ; i++)
+        {
+            if(Histogram_ref[i] > 0)
+            {
+                Histogram_ref[i] /= pixel_count_ref;
+                sum += Histogram_ref[i]*log(Histogram_ref[i])/log(2);
+                
+                //printf("his_ref %f\t%f\t%f\n",Histogram_ref[i],sum,pixel_count_ref);
+            }
+        }
+        
+        ent1 = -sum;
+    }
+    else
+        ent1 = 0;
+    
+    if(pixel_count_tar > 0)
+    {
+        start = (int)(min_val.m_Y/step);
+        if(start > 1999)
+            start = 1999;
+        end = (int)(max_val.m_Y/step);
+        if(end > 1999)
+            end = 1999;
+        sum = 0;
+        for(int i= start ; i < end ; i++)
+        {
+            if(Histogram_tar[i] > 0)
+            {
+                Histogram_tar[i] /= pixel_count_tar;
+                sum += Histogram_tar[i]*log(Histogram_tar[i])/log(2);
+                
+                //printf("his_tar %f\t%f\t%f\n",Histogram_tar[i],sum,pixel_count_tar);
+            }
+        }
+    
+        ent2 = -sum;
+    }
+    else
+        ent2 = 0;
+}
+
+void MakeSlopeImage(const CSize _img_size, const float* _src_image, float* _slope, double grid_size)
+{
+    int hy[3][3] , hx[3][3];
+    
+    //sobel mask
+    hx[0][0]=-1;               //  -1  0  1
+    hx[0][1]=0;                //  -2  0  2
+    hx[0][2]=1;                //  -1  0  1
+    hx[1][0]=-2;
+    hx[1][1]=0;
+    hx[1][2]=2;
+    hx[2][0]=-1;
+    hx[2][1]=0;
+    hx[2][2]=1;
+
+    hy[0][0]=1;                //  1  2  1
+    hy[0][1]=2;                //  0  0  0
+    hy[0][2]=1;                // -1 -2 -1
+    hy[1][0]=0;
+    hy[1][1]=0;
+    hy[1][2]=0;
+    hy[2][0]=-1;
+    hy[2][1]=-2;
+    hy[2][2]=-1;
+
+#pragma omp parallel for
+    for(long int i=0;i<_img_size.height;i++)
+    {
+        for(long int j=0;j<_img_size.width;j++)
+        {
+            if(j == 0 || j == _img_size.width-1 || i == 0 || i == _img_size.height-1)
+            {
+                _slope[i*_img_size.width + j] = Nodata;
+            }
+            else
+            {
+                double temp_ptr_X=((hx[0][0]*_src_image[(i-1)*_img_size.width + (j-1)]+hx[0][1]*_src_image[(i-1)*_img_size.width + j]+hx[0][2]*_src_image[(i-1)*_img_size.width + (j+1)]+
+                                    hx[1][0]*_src_image[    i*_img_size.width + (j-1)]+hx[1][1]*_src_image[    i*_img_size.width + j]+hx[1][2]*_src_image[    i*_img_size.width + (j+1)]+
+                                    hx[2][0]*_src_image[(i+1)*_img_size.width + (j-1)]+hx[2][1]*_src_image[(i+1)*_img_size.width + j]+hx[2][2]*_src_image[(i+1)*_img_size.width + (j+1)]))/8.0/grid_size;
+
+                double temp_ptr_Y=((hy[0][0]*_src_image[(i-1)*_img_size.width + (j-1)]+hy[0][1]*_src_image[(i-1)*_img_size.width + j]+hy[0][2]*_src_image[(i-1)*_img_size.width + (j+1)]+
+                                    hy[1][0]*_src_image[    i*_img_size.width + (j-1)]+hy[1][1]*_src_image[    i*_img_size.width + j]+hy[1][2]*_src_image[    i*_img_size.width + (j+1)]+
+                                    hy[2][0]*_src_image[(i+1)*_img_size.width + (j-1)]+hy[2][1]*_src_image[(i+1)*_img_size.width + j]+hy[2][2]*_src_image[(i+1)*_img_size.width + (j+1)]))/8.0/grid_size;
+
+                double temp_ptr=sqrt(temp_ptr_X*temp_ptr_X + temp_ptr_Y*temp_ptr_Y);
+
+                _slope[i*_img_size.width + j]= (atan(temp_ptr)*RadToDeg);
+            }
+        }
+    }
+}
+
+void MakeSlopeImage(const CSize _img_size, vector<float> &_src_image, vector<float> &_slope, double grid_size)
+{
+    int hy[3][3] , hx[3][3];
+    
+    //sobel mask
+    hx[0][0]=-1;               //  -1  0  1
+    hx[0][1]=0;                //  -2  0  2
+    hx[0][2]=1;                //  -1  0  1
+    hx[1][0]=-2;
+    hx[1][1]=0;
+    hx[1][2]=2;
+    hx[2][0]=-1;
+    hx[2][1]=0;
+    hx[2][2]=1;
+
+    hy[0][0]=1;                //  1  2  1
+    hy[0][1]=2;                //  0  0  0
+    hy[0][2]=1;                // -1 -2 -1
+    hy[1][0]=0;
+    hy[1][1]=0;
+    hy[1][2]=0;
+    hy[2][0]=-1;
+    hy[2][1]=-2;
+    hy[2][2]=-1;
+
+#pragma omp parallel for
+    for(long int i=0;i<_img_size.height;i++)
+    {
+        for(long int j=0;j<_img_size.width;j++)
+        {
+            if(j == 0 || j == _img_size.width-1 || i == 0 || i == _img_size.height-1)
+            {
+                _slope[i*_img_size.width + j] = Nodata;
+            }
+            else
+            {
+                double temp_ptr_X=((hx[0][0]*_src_image[(i-1)*_img_size.width + (j-1)]+hx[0][1]*_src_image[(i-1)*_img_size.width + j]+hx[0][2]*_src_image[(i-1)*_img_size.width + (j+1)]+
+                                    hx[1][0]*_src_image[    i*_img_size.width + (j-1)]+hx[1][1]*_src_image[    i*_img_size.width + j]+hx[1][2]*_src_image[    i*_img_size.width + (j+1)]+
+                                    hx[2][0]*_src_image[(i+1)*_img_size.width + (j-1)]+hx[2][1]*_src_image[(i+1)*_img_size.width + j]+hx[2][2]*_src_image[(i+1)*_img_size.width + (j+1)]))/8.0/grid_size;
+
+                double temp_ptr_Y=((hy[0][0]*_src_image[(i-1)*_img_size.width + (j-1)]+hy[0][1]*_src_image[(i-1)*_img_size.width + j]+hy[0][2]*_src_image[(i-1)*_img_size.width + (j+1)]+
+                                    hy[1][0]*_src_image[    i*_img_size.width + (j-1)]+hy[1][1]*_src_image[    i*_img_size.width + j]+hy[1][2]*_src_image[    i*_img_size.width + (j+1)]+
+                                    hy[2][0]*_src_image[(i+1)*_img_size.width + (j-1)]+hy[2][1]*_src_image[(i+1)*_img_size.width + j]+hy[2][2]*_src_image[(i+1)*_img_size.width + (j+1)]))/8.0/grid_size;
+
+                double temp_ptr=sqrt(temp_ptr_X*temp_ptr_X + temp_ptr_Y*temp_ptr_Y);
+
+                _slope[i*_img_size.width + j]= (atan(temp_ptr)*RadToDeg);
+            }
+        }
+    }
+}
 
 void MakeSobelMagnitudeImage(const CSize _img_size, const uint16* _src_image, uint16* _dist_mag_image, int16* _dir)
 {

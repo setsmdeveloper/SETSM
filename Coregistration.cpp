@@ -38,6 +38,9 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         if(!pcheckFile)
             check_cal = true;
         
+        if(!args.check_sdm_file)
+            check_cal = true;
+        
         if(!check_cal && args.check_sdm_ortho == 2)
         {
             printf("SDM has been already processed. *_dmag.tif file exists!!\n");

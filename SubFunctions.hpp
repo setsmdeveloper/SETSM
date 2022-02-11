@@ -94,6 +94,12 @@ void GetOverlappedImages_XY(const double *tile_boundary_XY, const TransParam par
 bool CheckOverlap(const D2DPOINT br1_lt, const D2DPOINT br1_rb, const D2DPOINT br2_lt, const D2DPOINT br2_rb);
 
 void Preprocessing(const ProInfo *proinfo, const char *save_path,char **Subsetfile, const uint8 py_level, const CSize * const *data_size_lr, FILE *fid);
+
+double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA);
+void ContrastMask(const LevelInfo &plevelinfo, const long pt_index, const double height, const int Mask_size, const int pair_number, UI2DPOINT &min_val, UI2DPOINT &max_val, float &ent1, float &ent2, vector<short> &oncc, float &out_INCC);
+
+void MakeSlopeImage(const CSize _img_size, const float* _src_image, float* _slope, double grid_size);
+void MakeSlopeImage(const CSize _img_size, vector<float> &_src_image, vector<float> &_slope, double grid_size);
 void MakeSobelMagnitudeImage(const CSize _img_size,const uint16* _src_image, uint16* _dist_mag_image, int16* _dir);
 void Orientation(const CSize imagesize,const uint16* Gmag,const int16* Gdir,const uint8 Template_size, uint8* plhs);
 

@@ -80,7 +80,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo);
 
-double SetNCC_alpha(const int Pyramid_step, const int iteration, bool IsRA);
+double GetHeightStep_Planet_MPP(const ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP);
 
 double SetGnccWeight(int Pyramid_step, double GNCC, double INCC, double matched_height, double tar_height, double step_height);
 
@@ -124,7 +124,7 @@ bool VerticalLineLocus_blunder_vector_singlepair(const ProInfo *proinfo,LevelInf
 
 bool VerticalLineLocus_blunder_vector(const ProInfo *proinfo,LevelInfo &rlevelinfo, vector<float> &nccresult, UGRID &GridPT3, uint8 iteration, bool bblunder, GridPairs &Grid_pair);
 
-int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double *F_Height, D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt, UGRID &GridPT3, int target_index, double *F_sncc);
+int VerticalLineLocus_Ortho(ProInfo *proinfo, LevelInfo &rlevelinfo, double *F_Height, D3DPOINT ref1_pt, D3DPOINT ref2_pt, D3DPOINT target_pt, UGRID &GridPT3, int target_index, double *F_sncc, GridPairs &Grid_pair);
 
 long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCresult> &roh_height, UGRID &GridPT3, const double Th_roh, const double Th_roh_min, const double Th_roh_start, const double Th_roh_next, const int iteration, const int final_level_iteration,const double MPP_stereo_angle, vector<D3DPOINT> *linkedlist, GridPairs &Grid_pair);
 
@@ -133,7 +133,7 @@ UI3DPOINT* TINgeneration(bool last_flag, char *savepath, uint8 level, CSize Size
 						 double *subBoundary, int total_point_count, D3DPOINT *ptslists, int *iter_row, int *iter_col,
 						 int *re_total_tri_counts);
 
-void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input, UGRID &GridPT3, const uint8 iteration, vector<D3DPOINT> &ptslists, int pair_number, vector<short> &ortho_ncc);
+void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input, UGRID &GridPT3, const uint8 iteration, vector<D3DPOINT> &ptslists, int pair_number, vector<short> &ortho_ncc, vector<float> &UHeight, vector<float> &angle);
 
 void DecisionMPs_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo, const bool flag_blunder,const long int count_MPs_input,UGRID &GridPT3, const uint8 iteration, const double Hinterval, long int *count_Results, double *minz_mp, double *maxz_mp, const double *minmaxHeight, vector<D3DPOINT> &ptslists, GridPairs &Grid_pair);
 
@@ -145,7 +145,7 @@ bool blunder_detection_TIN_vector(const ProInfo *proinfo, LevelInfo &rlevelinfo,
 
 bool SetHeightRange_blunder(LevelInfo &rlevelinfo, const D3DPOINT *pts, const long int numPts, UI3DPOINT *tris,const long num_triangles, UGRID &GridPT3);
 
-bool SetHeight_onGrid(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, vector<float> &UHeight);
+bool SetHeight_onGrid(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, vector<float> &UHeight, vector<float> &angle);
 
 bool SetHeightRange_blunder_vector(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, UGRID &GridPT3);
 
@@ -165,7 +165,7 @@ void set_blunder_vector(long int index, uint8_t val, vector<D3DPOINT> &pts, bool
 
 double SetMultiWeight(int pairnumbers, vector<double> &save_roh_positive);
 
-int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, long int numOfPts, vector<UI3DPOINT> &tris,long int numOfTri, UGRID &GridPT3);
+int Ortho_blunder_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, vector<D3DPOINT> &pts, long int numOfPts, vector<UI3DPOINT> &tris,long int numOfTri, UGRID &GridPT3, GridPairs &Grid_pair);
 
 UGRID SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long int numOfPts, const long int num_triangles, UGRID &GridPT3, const int iteration, double *minH_grid, double *maxH_grid, vector<D3DPOINT> &pts, const vector<UI3DPOINT> &tris, const bool level_check_matching_rate, GridPairs &Grid_pair);
 
@@ -179,7 +179,7 @@ void echo_print_nccresults(char *save_path,int row,int col,int level, int iterat
 
 void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize);
 
-void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight);
+void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param);
 
 void CallSigmaZonGrid(const LevelInfo &plevelinfo, const GridPairs &grid_pair, vector<float> &SigmaZArray);
 
@@ -198,6 +198,8 @@ bool check_image_boundary_each(const ProInfo *proinfo,LevelInfo &plevelinfo, con
 uint32_t calc_code_line(D2DPOINT p, D2DPOINT LL, D2DPOINT LR, D2DPOINT UR, D2DPOINT UL);
 
 uint32_t calc_code(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right);
+
+bool calc_code_pair(D2DPOINT p, D2DPOINT bottom_left, D2DPOINT top_right);
 
 bool check_image_boundary_any(const ProInfo *proinfo,LevelInfo &plevelinfo, const D2DPOINT pos_xy_m,const D2DPOINT pos_xy,const double minH,const double maxH,const int H_template_size, const int image_number, const int pair_number, bool check_ref);
 

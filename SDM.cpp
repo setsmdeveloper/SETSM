@@ -19,10 +19,21 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
         bool check_cal = false;
         char check_file[500];
         sprintf(check_file, "%s/%s_dmag.tif", proinfo.save_filepath, proinfo.Outputpath_name);
+        
         FILE *pcheckFile = fopen(check_file,"r");
         if(!pcheckFile)
             check_cal = true;
         
+        if(!args.check_sdm_file)
+            check_cal = true;
+        proinfo.pre_SDM = args.check_sdm_seed;
+        
+        if(!pcheckFile && proinfo.pre_SDM)
+        {
+            printf("No sdm exists!!\n");
+            exit(1);
+        }
+     
         if(check_cal)
         {
             if(Maketmpfolders(&proinfo))
@@ -468,6 +479,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             double pre_grid_resolution = 0;
                             
                             int level              = pyramid_step;
+                            
                             bool lower_level_match    = true;
                             bool flag_start            = false;
                             
@@ -520,11 +532,23 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             int total_matching_candidate_pts = 0;
                             double matching_rate = 0;
                             
+                            if(proinfo.pre_SDM)
+                            {
+                                level = 0;
+                                final_level_iteration = 3;
+                            }
+                            
                             while(lower_level_match && level >= 0)
                             {
                                 int prc_level = level;
+                                    
                                 if(prc_level <= proinfo.end_level)
                                     prc_level = proinfo.end_level;
+                                
+                                if(proinfo.pre_SDM)
+                                {
+                                    prc_level = level;
+                                }
                                 
                                 if(level > 4)
                                 {
@@ -545,9 +569,9 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                     Startpos[image_index].m_Y        = (double)(startpos_ori[image_index].m_Y/pwrtwo(prc_level));
                                 }
                                 
-                                levelinfo.py_Images = SubImages[level];
-                                levelinfo.py_MagImages = SubMagImages[level];
-                                levelinfo.py_OriImages = SubOriImages[level];
+                                levelinfo.py_Images = SubImages[prc_level];
+                                levelinfo.py_MagImages = SubMagImages[prc_level];
+                                levelinfo.py_OriImages = SubOriImages[prc_level];
                                 
                                 levelinfo.py_Startpos = &Startpos;
                                 levelinfo.Pyramid_step = &prc_level;
@@ -684,8 +708,123 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         
                                         double min_ncc_th = 0.3;
                                         if(prc_level < 2 && proinfo.resolution <= 1)
-                                            min_ncc_th = 0.0;
-                                        while(check_while == 0 && sm_iter < 20)
+                                            min_ncc_th = 0.1;
+                                       
+                                        if(!proinfo.pre_SDM)
+                                        {
+                                            while(check_while == 0 && sm_iter < 20)
+                                            {
+                                                #pragma omp parallel for schedule(guided)
+                                                for (long index = 0; index < *levelinfo.Grid_length; index++)
+                                                {
+                                                    long row = (floor(index/Size_Grid2D.width));
+                                                    long col = index%Size_Grid2D.width;
+                                                    long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
+                                                    
+                                                    if(sm_iter > 0)
+                                                    {
+                                                        GridPT3[search_index].row_shift = temp_row_shift[search_index];
+                                                        GridPT3[search_index].col_shift = temp_col_shift[search_index];
+                                                    }
+                                                    
+                                                    if(check_last_iter)
+                                                    {
+                                                        t_ncc_array[search_index] = 1;
+                                                        check_while = 1;
+                                                    }
+                                                    else
+                                                    {
+                                                        if(t_ncc_array[search_index] != 2)
+                                                            t_ncc_array[search_index] = 1;
+                                                    }
+                                                }
+                                                
+                                                int count_null_cell = 0;
+                                                sm_iter++;
+                                                
+                                                #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
+                                                for (long index = 0; index < *levelinfo.Grid_length; index++)
+                                                {
+                                                    long row = (floor(index/Size_Grid2D.width));
+                                                    long col = index%Size_Grid2D.width;
+                                                    long search_index = row*(long)Size_Grid2D.width + col;
+                                                    const double p = 1.5;
+                                                    if (t_ncc_array[search_index] == 1)
+                                                    {
+                                                        double sum_row_shift=0;
+                                                        double sum_col_shift=0;
+                                                        double sum_roh = 0;
+                                                        
+                                                        long null_count_cell = 0;
+                                                        long count_cell = 0;
+                                                        long count_zero_cell = 0;
+                                                        
+                                                        for (long t_i = -check_size; t_i <= check_size;t_i++ )
+                                                        {
+                                                            for (long t_j = -check_size; t_j <= check_size; t_j++)
+                                                            {
+                                                                long index_row = row + t_i;
+                                                                long index_col = col + t_j;
+                                                                long t_index = index_row*(long)Size_Grid2D.width + index_col;
+                                                                
+                                                                if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width && t_i != 0 && t_j != 0)
+                                                                {
+                                                                    if(GridPT3[t_index].ortho_ncc > 0.0)
+                                                                    {
+                                                                        double ncc = 1 + GridPT3[t_index].ortho_ncc;
+                                                                        double weith_n = pow(ncc,10);
+                                                                        sum_row_shift += (GridPT3[t_index].row_shift*weith_n);
+                                                                        sum_col_shift += (GridPT3[t_index].col_shift*weith_n);
+                                                                        sum_roh += weith_n;
+                                                                        count_cell++;
+                                                                    }
+                                                                    
+                                                                    if(GridPT3[t_index].ortho_ncc < min_ncc_th)
+                                                                        null_count_cell ++;
+                                                                }
+                                                            }
+                                                        }
+                                                        
+                                                        if (count_cell >= total_size*0.3)
+                                                        {
+                                                            temp_col_shift[search_index] = sum_col_shift/sum_roh;
+                                                            temp_row_shift[search_index] = sum_row_shift/sum_roh;
+                                                       
+                                                            t_ncc_array[search_index] = 2;
+                                                            count_null_cell ++;
+                                                        }
+                                                        double filter_th = 0.4;
+                                                        
+                                                        if (null_count_cell >= total_size*filter_th && level == 0 && final_level_iteration == 3)
+                                                        {
+                                                            temp_col_shift[search_index] = 0;
+                                                            temp_row_shift[search_index] = 0;
+                                                        }
+                                                        
+                                                        /* old version
+                                                         if (null_count_cell >= total_size*0.4 && level == 0 && final_level_iteration == 3)
+                                                         {
+                                                             temp_col_shift[search_index] = 0;
+                                                             temp_row_shift[search_index] = 0;
+                                                         }
+                                                         */
+                                                    }
+                                                    else
+                                                    {
+                                                        temp_row_shift[search_index] = GridPT3[search_index].row_shift;
+                                                        temp_col_shift[search_index] = GridPT3[search_index].col_shift;
+                                                    }
+                                                }
+                                                
+                                                if(count_null_cell == 0)
+                                                    check_last_iter = true;
+                                                
+                                                printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
+                                                if(!proinfo.pre_SDM)
+                                                    Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
+                                            }
+                                        }
+                                        else
                                         {
                                             #pragma omp parallel for schedule(guided)
                                             for (long index = 0; index < *levelinfo.Grid_length; index++)
@@ -694,106 +833,104 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                 long col = index%Size_Grid2D.width;
                                                 long search_index = (long)row*(long)Size_Grid2D.width + (long)col;
                                                 
-                                                if(sm_iter > 0)
-                                                {
-                                                    GridPT3[search_index].row_shift = temp_row_shift[search_index];
-                                                    GridPT3[search_index].col_shift = temp_col_shift[search_index];
-                                                }
+                                                temp_row_shift[search_index] = GridPT3[search_index].row_shift;
+                                                temp_col_shift[search_index] = GridPT3[search_index].col_shift;
                                                 
-                                                if(check_last_iter)
-                                                {
-                                                    t_ncc_array[search_index] = 1;
-                                                    check_while = 1;
-                                                }
-                                                else
-                                                {
-                                                    if(t_ncc_array[search_index] != 2)
-                                                        t_ncc_array[search_index] = 1;
-                                                }
                                             }
                                             
-                                            int count_null_cell = 0;
-                                            sm_iter++;
-                                            
-                                            #pragma omp parallel for schedule(guided) reduction(+:count_null_cell)
-                                            for (long index = 0; index < *levelinfo.Grid_length; index++)
+                                            while(check_while == 0 && sm_iter < 20)
                                             {
-                                                long row = (floor(index/Size_Grid2D.width));
-                                                long col = index%Size_Grid2D.width;
-                                                long search_index = row*(long)Size_Grid2D.width + col;
-                                                const double p = 1.5;
-                                                if (t_ncc_array[search_index] == 1)
+                                                long count_zero_cell_all = 0;
+                                                
+                                                printf("sm iteration start %d\t%ld\n",sm_iter,count_zero_cell_all);
+                                                if(check_last_iter)
+                                                    check_while = true;
+                                                
+                                                sm_iter++;
+                                                
+                                                #pragma omp parallel for schedule(guided) reduction(+:count_zero_cell_all)
+                                                for (long index = 0; index < *levelinfo.Grid_length; index++)
                                                 {
-                                                    double sum_row_shift=0;
-                                                    double sum_col_shift=0;
-                                                    double sum_roh = 0;
-                                                    
-                                                    long null_count_cell = 0;
-                                                    long count_cell = 0;
-                                                    
-                                                    for (long t_i = -check_size; t_i <= check_size;t_i++ )
+                                                    long row = (floor(index/Size_Grid2D.width));
+                                                    long col = index%Size_Grid2D.width;
+                                                    long search_index = row*(long)Size_Grid2D.width + col;
+                                                    //if (t_ncc_array[search_index] == 1)
                                                     {
-                                                        for (long t_j = -check_size; t_j <= check_size; t_j++)
+                                                        long null_count_cell = 0;
+                                                        long count_cell = 0;
+                                                        long count_zero_cell = 0;
+                                                        double sum_ncc = 0;
+                                                        double sum_count = 0 ;
+                                                        for (long t_i = -check_size; t_i <= check_size;t_i++ )
                                                         {
-                                                            long index_row = row + t_i;
-                                                            long index_col = col + t_j;
-                                                            long t_index = index_row*(long)Size_Grid2D.width + index_col;
-                                                            
-                                                            if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width && t_i != 0 && t_j != 0)
+                                                            for (long t_j = -check_size; t_j <= check_size; t_j++)
                                                             {
-                                                                if(GridPT3[t_index].ortho_ncc > 0.0)
-                                                                {
-                                                                    double ncc = 1 + GridPT3[t_index].ortho_ncc;
-                                                                    double weith_n = pow(ncc,10);
-                                                                    sum_row_shift += (GridPT3[t_index].row_shift*weith_n);
-                                                                    sum_col_shift += (GridPT3[t_index].col_shift*weith_n);
-                                                                    sum_roh += weith_n;
-                                                                    count_cell++;
-                                                                }
+                                                                long index_row = row + t_i;
+                                                                long index_col = col + t_j;
+                                                                long t_index = index_row*(long)Size_Grid2D.width + index_col;
                                                                 
-                                                                if(GridPT3[t_index].ortho_ncc < min_ncc_th)
-                                                                    null_count_cell ++;
+                                                                if(index_row >= 0 && index_row < Size_Grid2D.height && index_col >= 0 && index_col < Size_Grid2D.width && t_i != 0 && t_j != 0)
+                                                                {
+                                                                    if(GridPT3[t_index].ortho_ncc > 0.0)
+                                                                    {
+                                                                        count_cell++;
+                                                                        if((GridPT3[t_index].col_shift != 0 || GridPT3[t_index].row_shift != 0) && ( GridPT3[search_index].col_shift == 0 && GridPT3[search_index].row_shift == 0))
+                                                                            count_zero_cell ++;
+                                                                    }
+                                                                    
+                                                                    sum_ncc += GridPT3[t_index].ortho_ncc;
+                                                                    sum_count++;
+                                                                    //if(GridPT3[t_index].ortho_ncc < min_ncc_th)
+                                                                    //    null_count_cell ++;
+                                                                }
                                                             }
                                                         }
-                                                    }
-                                                    
-                                                    if (count_cell >= total_size*0.3 )
-                                                    {
-                                                        temp_col_shift[search_index] = sum_col_shift/sum_roh;
-                                                        temp_row_shift[search_index] = sum_row_shift/sum_roh;
                                                         
-                                                        t_ncc_array[search_index] = 2;
-                                                        count_null_cell ++;
+                                                        double filter_th = 0.4;
+                                                        filter_th = 0.15;
+                                                        
+                                                        //if (null_count_cell >= total_size*filter_th && level == 0 && final_level_iteration == 3)
+                                                        if (sum_ncc/sum_count <= 0.5 && level == 0 && final_level_iteration == 3)
+                                                        {
+                                                            GridPT3[search_index].col_shift = 0;
+                                                            GridPT3[search_index].row_shift = 0;
+                                                            
+                                                            if(count_zero_cell >= count_cell * 0.7 && (temp_col_shift[search_index] != 0 || temp_row_shift[search_index] != 0))
+                                                            {
+                                                                GridPT3[search_index].col_shift = temp_col_shift[search_index];
+                                                                GridPT3[search_index].row_shift = temp_row_shift[search_index];
+                                                                
+                                                                //printf("count_zero_cell %d\t%d\n",count_zero_cell,count_cell);
+                                                                count_zero_cell_all++;
+                                                            }
+                                                        }
+                                                        
+                                                        /* old version
+                                                         if (null_count_cell >= total_size*0.4 && level == 0 && final_level_iteration == 3)
+                                                         {
+                                                             temp_col_shift[search_index] = 0;
+                                                             temp_row_shift[search_index] = 0;
+                                                         }
+                                                         */
+                                                        
+                                                        
                                                     }
-                                                    
-                                                    if (null_count_cell >= total_size*0.9 && level == 0 && final_level_iteration == 3)
-                                                    {
-                                                        temp_col_shift[search_index] = 0;
-                                                        temp_row_shift[search_index] = 0;
-                                                    }
-                                                    
-                                                    /* old version
-                                                     if (null_count_cell >= total_size*0.4 && level == 0 && final_level_iteration == 3)
-                                                     {
-                                                         temp_col_shift[search_index] = 0;
-                                                         temp_row_shift[search_index] = 0;
-                                                     }
-                                                     */
                                                 }
+                                                
+                                                if(count_zero_cell_all == 0)
+                                                    check_last_iter = true;
                                                 else
                                                 {
-                                                    temp_row_shift[search_index] = GridPT3[search_index].row_shift;
-                                                    temp_col_shift[search_index] = GridPT3[search_index].col_shift;
+                                                    check_last_iter = false;
+                                                    check_while = false;
                                                 }
+                                                
+                                                printf("sm iteration %d\t%ld\n",sm_iter,count_zero_cell_all);
+                                                if(!proinfo.pre_SDM)
+                                                    Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
                                             }
-                                            
-                                            if(count_null_cell == 0)
-                                                check_last_iter = true;
-                                            
-                                            printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
-                                            
-                                            Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
                                         }
+                                        
                                         free(t_ncc_array);
                                         free(temp_col_shift);
                                         free(temp_row_shift);
@@ -803,11 +940,20 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         proinfo.SDM_SS = 3;
                                     printf("kernel size %d\n",proinfo.SDM_SS);
                                     
-                                    VerticalLineLocus_SDM(proinfo, levelinfo, nccresult, GridPT3, gsd_image1, gsd_image2, Rimageparam);
+                                    if(!proinfo.pre_SDM)
+                                        VerticalLineLocus_SDM(proinfo, levelinfo, nccresult, GridPT3, gsd_image1, gsd_image2, Rimageparam);
                                     
                                     vector<D3DPOINT> Matched_pts_col, Matched_pts_row;
-                                    long count_MPs = SelectMPs_SDM(proinfo, levelinfo, nccresult, GridPT3, Matched_pts_col, Matched_pts_row);
+                                    long count_MPs = 0;
+                                    
+                                    if(!proinfo.pre_SDM)
+                                        count_MPs = SelectMPs_SDM(proinfo, levelinfo, nccresult, GridPT3, Matched_pts_col, Matched_pts_row);
                                     printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",tile_iter_row,tile_iter_col,level,iteration,count_MPs, Matched_pts_col.size());
+                                    
+                                    if(proinfo.pre_SDM)
+                                    {
+                                        count_MPs = 10000;
+                                    }
                                     
                                     if(count_MPs > 100)
                                         lower_level_match = true;
@@ -2905,12 +3051,23 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
     WriteGeotiff(DEM_str, Vysigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
      */
     sprintf(DEM_str, "%s/%s_dx.tif", info.save_filepath, info.Outputpath_name);
+    if(info.pre_SDM)
+        sprintf(DEM_str, "%s/%s_dx_filter.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    
     sprintf(DEM_str, "%s/%s_dy.tif", info.save_filepath, info.Outputpath_name);
+    if(info.pre_SDM)
+        sprintf(DEM_str, "%s/%s_dy_filter.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, VyShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    
     sprintf(DEM_str, "%s/%s_dmag.tif", info.save_filepath, info.Outputpath_name);
+    if(info.pre_SDM)
+        sprintf(DEM_str, "%s/%s_dmag_filter.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, Mag, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    
     sprintf(DEM_str, "%s/%s_roh.tif", info.save_filepath, info.Outputpath_name);
+    if(info.pre_SDM)
+        sprintf(DEM_str, "%s/%s_roh_filter.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
     
     /*
