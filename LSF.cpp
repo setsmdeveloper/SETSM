@@ -19,6 +19,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
     char str_smooth_file[500];
     char DEM_header[500];
     char DEM_GEOTIFF_filename[500];
+    char DEM_GEOTIFF_filename_R[500];
     char metafilename[500];
     char str_matchfile[1000];
     char str_matchfile_tif[1000];
@@ -30,6 +31,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         sprintf(str_smooth_file,"%s/%s_smooth.raw",savepath,outputpath);
         sprintf(DEM_header, "%s/%s_smooth.hdr", savepath,outputpath);
         sprintf(DEM_GEOTIFF_filename, "%s/%s_dem_smooth.tif", savepath, outputpath);
+        sprintf(DEM_GEOTIFF_filename_R, "%s/%s_dem_smooth_R.tif", savepath, outputpath);
         sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
         sprintf(str_matchfile,"%s/%s_matchtag.raw",savepath,outputpath);
         sprintf(str_matchfile_tif,"%s/%s_matchtag.tif",savepath,outputpath);
@@ -41,6 +43,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         sprintf(str_smooth_file,"%s/%s_%d_smooth.raw",savepath,outputpath,divide);
         sprintf(DEM_header, "%s/%s_%d_smooth.hdr", savepath,outputpath,divide);
         sprintf(DEM_GEOTIFF_filename, "%s/%s_%d_dem_smooth.tif", savepath, outputpath,divide);
+        sprintf(DEM_GEOTIFF_filename_R, "%s/%s_%d_dem_smooth_R.tif", savepath, outputpath,divide);
         sprintf(metafilename,"%s/%s_meta.txt",savepath,outputpath);
         sprintf(str_matchfile,"%s/%s_%d_matchtag.raw",savepath,outputpath,divide);
         sprintf(str_matchfile_tif,"%s/%s_%d_matchtag.tif",savepath,outputpath,divide);
@@ -134,6 +137,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         free(Grid_info);
         
         WriteGeotiff(DEM_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+        WriteGeotiff_round(DEM_GEOTIFF_filename_R, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
         
         FILE* presult = fopen(result_file,"w");
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);

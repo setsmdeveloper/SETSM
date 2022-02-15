@@ -4,21 +4,21 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATH?=/projects/sciteam/bazu/setsm/lib/tiff-4.0.3-cray
+TIFFPATH?=/home/noh.56/software/tiff-4.0.3
 TIFFINC?=-I$(TIFFPATH)/include
 TIFFLIB?=-L$(TIFFPATH)/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH?=/projects/sciteam/bazu/setsm/lib/geotiff
+GEOTIFFPATH?=/home/noh.56/software/libgeotiff-1.4.2
 GEOTIFFINC?=-I$(GEOTIFFPATH)/include
 GEOTIFFLIB?=-L$(GEOTIFFPATH)/lib
-PROJLIB?=-L/projects/sciteam/bazu/setsm/lib/proj/lib
+PROJLIB?=-L/home/noh.56/software/proj-5.1.0/lib
 
 MPIFLAGS = -DBUILDMPI
 
 INCS = $(TIFFINC) $(GEOTIFFINC)
-LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) $(PROJLIB)
+LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) 
 
 COMMON_OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o
 MPI_OBJS = $(COMMON_OBJS) log_mpi.o
