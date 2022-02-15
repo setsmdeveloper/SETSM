@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.10";
+const char setsm_version[] = "4.3.11";
 
 int main(int argc,char *argv[])
 {
@@ -11655,13 +11655,17 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
         {
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name);
-            WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            sprintf(GEOTIFF_dem_filename, "%s/%s_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name);
+            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
         }
         else
         {
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name,divide);
-            WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name,divide);
+            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
         }
     }
     printf("Done writing DEM tif\n");

@@ -352,6 +352,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
         ret = true;
         
     }
+    printf("filename %s\nsize %d\t%d\n",filename,Imagesize->width,Imagesize->height);
     return ret;
 }
 
