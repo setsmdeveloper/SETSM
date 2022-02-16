@@ -1123,6 +1123,7 @@ typedef struct UpdateGridSDM{
     float ortho_ncc;
     float col_shift;
     float row_shift;
+    uint8 mask;
 }UGRIDSDM;
 
 typedef struct tagNCCresultSDM

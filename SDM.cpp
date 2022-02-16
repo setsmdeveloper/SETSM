@@ -705,6 +705,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         uint8* t_ncc_array = (uint8*)calloc(sizeof(uint8),*levelinfo.Grid_length);
                                         float* temp_col_shift = (float*)calloc(sizeof(float),*levelinfo.Grid_length);
                                         float* temp_row_shift = (float*)calloc(sizeof(float),*levelinfo.Grid_length);
+                                        uint8* temp_mask = (uint8*)calloc(sizeof(uint8),*levelinfo.Grid_length);
                                         
                                         double min_ncc_th = 0.3;
                                         if(prc_level < 2 && proinfo.resolution <= 1)
@@ -725,6 +726,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                     {
                                                         GridPT3[search_index].row_shift = temp_row_shift[search_index];
                                                         GridPT3[search_index].col_shift = temp_col_shift[search_index];
+                                                        GridPT3[search_index].mask = temp_mask[search_index];
                                                     }
                                                     
                                                     if(check_last_iter)
@@ -789,7 +791,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         {
                                                             temp_col_shift[search_index] = sum_col_shift/sum_roh;
                                                             temp_row_shift[search_index] = sum_row_shift/sum_roh;
-                                                       
+                                                            temp_mask[search_index] = 1;
+                                                            
                                                             t_ncc_array[search_index] = 2;
                                                             count_null_cell ++;
                                                         }
@@ -797,8 +800,9 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         
                                                         if (null_count_cell >= total_size*filter_th && level == 0 && final_level_iteration == 3)
                                                         {
-                                                            temp_col_shift[search_index] = 0;
-                                                            temp_row_shift[search_index] = 0;
+                                                            //temp_col_shift[search_index] = 0;
+                                                            //temp_row_shift[search_index] = 0;
+                                                            temp_mask[search_index] = 0;
                                                         }
                                                         
                                                         /* old version
@@ -813,6 +817,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                     {
                                                         temp_row_shift[search_index] = GridPT3[search_index].row_shift;
                                                         temp_col_shift[search_index] = GridPT3[search_index].col_shift;
+                                                        temp_mask[search_index] = GridPT3[search_index].mask;
                                                     }
                                                 }
                                                 
@@ -820,8 +825,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                     check_last_iter = true;
                                                 
                                                 printf("sm iteration %d\t%d\n",sm_iter,count_null_cell);
-                                                if(!proinfo.pre_SDM)
-                                                    Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
+                                                Update_ortho_NCC(proinfo, levelinfo, GridPT3, gsd_image1, gsd_image2, Rimageparam);
                                             }
                                         }
                                         else
@@ -835,7 +839,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                 
                                                 temp_row_shift[search_index] = GridPT3[search_index].row_shift;
                                                 temp_col_shift[search_index] = GridPT3[search_index].col_shift;
-                                                
+                                                temp_mask[search_index] = 1;
                                             }
                                             
                                             while(check_while == 0 && sm_iter < 20)
@@ -874,7 +878,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                                     if(GridPT3[t_index].ortho_ncc > 0.0)
                                                                     {
                                                                         count_cell++;
-                                                                        if((GridPT3[t_index].col_shift != 0 || GridPT3[t_index].row_shift != 0) && ( GridPT3[search_index].col_shift == 0 && GridPT3[search_index].row_shift == 0))
+                                                                        if( GridPT3[t_index].mask != 0 && GridPT3[search_index].mask == 0)
                                                                             count_zero_cell ++;
                                                                     }
                                                                     
@@ -892,14 +896,15 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                                         //if (null_count_cell >= total_size*filter_th && level == 0 && final_level_iteration == 3)
                                                         if (sum_ncc/sum_count <= 0.5 && level == 0 && final_level_iteration == 3)
                                                         {
-                                                            GridPT3[search_index].col_shift = 0;
-                                                            GridPT3[search_index].row_shift = 0;
+                                                            //GridPT3[search_index].col_shift = 0;
+                                                            //GridPT3[search_index].row_shift = 0;
+                                                            GridPT3[search_index].mask = 0;
                                                             
-                                                            if(count_zero_cell >= count_cell * 0.7 && (temp_col_shift[search_index] != 0 || temp_row_shift[search_index] != 0))
+                                                            if(count_zero_cell >= count_cell * 0.7 && (temp_mask[search_index] != 0))
                                                             {
                                                                 GridPT3[search_index].col_shift = temp_col_shift[search_index];
                                                                 GridPT3[search_index].row_shift = temp_row_shift[search_index];
-                                                                
+                                                                GridPT3[search_index].mask = temp_mask[search_index];
                                                                 //printf("count_zero_cell %d\t%d\n",count_zero_cell,count_cell);
                                                                 count_zero_cell_all++;
                                                             }
@@ -934,6 +939,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         free(t_ncc_array);
                                         free(temp_col_shift);
                                         free(temp_row_shift);
+                                        free(temp_mask);
                                     }
                                     
                                     if(level < pyramid_step)
@@ -1459,6 +1465,7 @@ void SetGridHeightFromSeed(const ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSD
                 else if(option == 3) //roh
                 {
                     Grid[index_grid].ortho_ncc = seeddem[index_seeddem];
+                    Grid[index_grid].mask = 1;
                 }
             }
         }
@@ -1614,6 +1621,7 @@ UGRIDSDM *SetGrid3PT_SDM(const ProInfo proinfo, LevelInfo &rlevelinfo, const CSi
         GridPT3[i].ortho_ncc        = 0;
         GridPT3[i].col_shift        = 0.0;
         GridPT3[i].row_shift        = 0.0;
+        GridPT3[i].mask             = 1;
     }
 
     if(proinfo.pre_SDM)
@@ -1648,6 +1656,7 @@ UGRIDSDM* ResizeGirdPT3_SDM(const CSize preSize, const CSize resize_Size, const 
                 resize_GridPT3[index].ortho_ncc        = preGridPT3[pre_index].ortho_ncc;
                 resize_GridPT3[index].col_shift        = preGridPT3[pre_index].col_shift;
                 resize_GridPT3[index].row_shift        = preGridPT3[pre_index].row_shift;
+                resize_GridPT3[index].mask             = preGridPT3[pre_index].mask;
             }
             else
             {
@@ -1655,6 +1664,7 @@ UGRIDSDM* ResizeGirdPT3_SDM(const CSize preSize, const CSize resize_Size, const 
                 resize_GridPT3[index].ortho_ncc        = 0;
                 resize_GridPT3[index].col_shift     = 0;
                 resize_GridPT3[index].row_shift     = 0;
+                resize_GridPT3[index].mask          = 0;
             }
         }
     }
@@ -1924,7 +1934,7 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     CSize LImagesize = rlevelinfo.py_Sizes[0][prc_level];
     CSize RImagesize = rlevelinfo.py_Sizes[1][prc_level];
     
-    FILE *outfile_Xshift, *outfile_Yshift, *outfile_mag;
+    FILE *outfile_Xshift, *outfile_Yshift, *outfile_mag, *outfile_mask;
     char t_str[500];
     sprintf(t_str,"%s/txt/tin_xshift_level_%d_%d_%d_iter_%d.txt",proinfo.save_filepath,row,col,level,iteration);
     outfile_Xshift    = fopen(t_str,"wb");
@@ -1932,6 +1942,8 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     outfile_Yshift    = fopen(t_str,"wb");
     sprintf(t_str,"%s/txt/tin_mag_level_%d_%d_%d_iter_%d.txt",proinfo.save_filepath,row,col,level,iteration);
     outfile_mag    = fopen(t_str,"wb");
+    sprintf(t_str,"%s/txt/tin_mask_level_%d_%d_%d_iter_%d.txt",proinfo.save_filepath,row,col,level,iteration);
+    outfile_mask    = fopen(t_str,"wb");
     
     printf("Size_Grid2D %d\t%d\tres = %f\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,proinfo.resolution);
     printf("1 imagesize %d\t%d\n",LImagesize.width,LImagesize.height);
@@ -1939,6 +1951,7 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     float* Mag = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     float* VxShift = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
     float* VyShift = (float*)calloc(*rlevelinfo.Grid_length,sizeof(float));
+    uint8* Mask = (uint8*)calloc(*rlevelinfo.Grid_length,sizeof(uint8));
     
     for(long k=0;k<rlevelinfo.Size_Grid2D->height;k++)
     {
@@ -1979,6 +1992,7 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
                     VxShift[grid_index] = DX;
                     VyShift[grid_index] = DY;
                     Mag[grid_index] = sqrt(DX*DX + DY*DY);
+                    Mask[grid_index] = GridPT3[matlab_index].mask;
                 }
                 else
                 {
@@ -1997,10 +2011,12 @@ void echoprint_adjustXYZ(ProInfo proinfo, LevelInfo &rlevelinfo, int row, int co
     fwrite(VxShift,sizeof(float),*rlevelinfo.Grid_length,outfile_Xshift);
     fwrite(VyShift,sizeof(float),*rlevelinfo.Grid_length,outfile_Yshift);
     fwrite(Mag,sizeof(float),*rlevelinfo.Grid_length,outfile_mag);
+    fwrite(Mask,sizeof(uint8),*rlevelinfo.Grid_length,outfile_mask);
     
     fclose(outfile_Xshift);
     fclose(outfile_Yshift);
     fclose(outfile_mag);
+    fclose(outfile_mask);
     /*
     char DEM_str[500];
     
@@ -2943,6 +2959,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
     float *VxShift = (float*)calloc(DEM_total_counts,sizeof(float));
     float *VyShift = (float*)calloc(DEM_total_counts,sizeof(float));
     float *Roh = (float*)calloc(DEM_total_counts,sizeof(float));
+    uint8 *Mask = (uint8*)calloc(DEM_total_counts,sizeof(uint8));
     
     printf("dem size %d\t%d\n",DEM_size.width,DEM_size.height);
     
@@ -2966,7 +2983,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                 if(size > 0)
                 {
                     char h_t_str[500];
-                    FILE *p_hfile, *p_hvfile, *p_cshift, *p_rshift, *p_vxshift, *p_vyshift, *p_roh, *p_mag;
+                    FILE *p_hfile, *p_hvfile, *p_cshift, *p_rshift, *p_vxshift, *p_vyshift, *p_roh, *p_mag, *p_mask;
                     
                     sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
                     p_hfile        = fopen(h_t_str,"r");
@@ -2989,6 +3006,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                         float *temp_vx = (float*)malloc(sizeof(float)*tile_data_size);
                         float *temp_vy = (float*)malloc(sizeof(float)*tile_data_size);
                         float *temp_roh = (float*)malloc(sizeof(float)*tile_data_size);
+                        uint8 *temp_mask = (uint8*)malloc(sizeof(uint8)*tile_data_size);
                         
                         sprintf(hv_t_str,"%s/txt/tin_xshift_level_%d_%d_%d_iter_3.txt",info.save_filepath,row,col,find_level);
                         printf("file %s\n",hv_t_str);
@@ -3003,9 +3021,15 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                         p_roh    = fopen(hv_t_str,"rb");
                         fread(temp_roh,sizeof(float),tile_data_size,p_roh);
                         
+                        sprintf(hv_t_str,"%s/txt/tin_mask_level_%d_%d_%d_iter_3.txt",info.save_filepath,row,col,find_level);
+                        printf("file %s\n",hv_t_str);
+                        p_mask    = fopen(hv_t_str,"rb");
+                        fread(temp_mask,sizeof(uint8),tile_data_size,p_mask);
+                        
                         fclose(p_vxshift);
                         fclose(p_vyshift);
                         fclose(p_roh);
+                        fclose(p_mask);
                         
                         int index_total;
                         for(index_total = 0; index_total < row_size*col_size ; index_total++)
@@ -3029,6 +3053,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                                 VyShift[index] = temp_vy[index_total];
                                 Roh[index] = temp_roh[index_total];
                                 Mag[index] = sqrt(VxShift[index]*VxShift[index] + VyShift[index]*VyShift[index]);
+                                Mask[index]= temp_mask[index_total];
                             }
                         }
                         
@@ -3037,6 +3062,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
                         free(temp_vx);
                         free(temp_vy);
                         free(temp_roh);
+                        free(temp_mask);
 
                     }
                 }
@@ -3050,26 +3076,34 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
     sprintf(DEM_str, "%s/%s_dy_sigma.tif", info.save_filepath, info.Outputpath_name);
     WriteGeotiff(DEM_str, Vysigma, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
      */
-    sprintf(DEM_str, "%s/%s_dx.tif", info.save_filepath, info.Outputpath_name);
-    if(info.pre_SDM)
-        sprintf(DEM_str, "%s/%s_dx_filter.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    if(!info.pre_SDM)
+    {
+        sprintf(DEM_str, "%s/%s_dx.tif", info.save_filepath, info.Outputpath_name);
+        //if(info.pre_SDM)
+        //    sprintf(DEM_str, "%s/%s_dx_filter.tif", info.save_filepath, info.Outputpath_name);
+        WriteGeotiff(DEM_str, VxShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+        
+        sprintf(DEM_str, "%s/%s_dy.tif", info.save_filepath, info.Outputpath_name);
+        //if(info.pre_SDM)
+        //    sprintf(DEM_str, "%s/%s_dy_filter.tif", info.save_filepath, info.Outputpath_name);
+        WriteGeotiff(DEM_str, VyShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+        
+        sprintf(DEM_str, "%s/%s_dmag.tif", info.save_filepath, info.Outputpath_name);
+        
+        //if(info.pre_SDM)
+        //    sprintf(DEM_str, "%s/%s_dmag_filter.tif", info.save_filepath, info.Outputpath_name);
+        WriteGeotiff(DEM_str, Mag, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+        
+        sprintf(DEM_str, "%s/%s_roh.tif", info.save_filepath, info.Outputpath_name);
+        //if(info.pre_SDM)
+        //    sprintf(DEM_str, "%s/%s_roh_filter.tif", info.save_filepath, info.Outputpath_name);
+        WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+    }
     
-    sprintf(DEM_str, "%s/%s_dy.tif", info.save_filepath, info.Outputpath_name);
-    if(info.pre_SDM)
-        sprintf(DEM_str, "%s/%s_dy_filter.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, VyShift, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
-    
-    sprintf(DEM_str, "%s/%s_dmag.tif", info.save_filepath, info.Outputpath_name);
-    if(info.pre_SDM)
-        sprintf(DEM_str, "%s/%s_dmag_filter.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Mag, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
-    
-    sprintf(DEM_str, "%s/%s_roh.tif", info.save_filepath, info.Outputpath_name);
-    if(info.pre_SDM)
-        sprintf(DEM_str, "%s/%s_roh_filter.tif", info.save_filepath, info.Outputpath_name);
-    WriteGeotiff(DEM_str, Roh, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 4);
-    
+    sprintf(DEM_str, "%s/%s_mask.tif", info.save_filepath, info.Outputpath_name);
+    //if(info.pre_SDM)
+    //    sprintf(DEM_str, "%s/%s_roh_filter.tif", info.save_filepath, info.Outputpath_name);
+    WriteGeotiff(DEM_str, Mask, DEM_size.width, DEM_size.height, grid_size, boundary[0], boundary[3], _param.projection, _param.utm_zone, _param.bHemisphere, 1);
     /*
     //remove files
     for(long row = 1 ; row < row_end ; row++)
@@ -3093,6 +3127,7 @@ double MergeTiles_SDM(ProInfo info,int row_end,int col_end, double buffer,int fi
     free(VyShift);
     free(Mag);
     free(Roh);
+    free(Mask);
     
     return grid_size;
 }
