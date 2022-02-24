@@ -96,6 +96,7 @@ int main(int argc,char *argv[])
     args.check_coreg = 0;     //image coreg = 1, DEM coreg = 2, image + DEM = 3
     args.check_sdm_ortho = 0; //no coreg = 1 , with coreg = 2
     args.check_DEM_coreg_output = false;
+    args.check_tif_rounding = false;
     args.check_txt_input = 0; //no txt input = 0, DEM coregistration txt input = 1;
     args.check_downsample = false;
     args.check_DS_txy = false;
@@ -318,6 +319,19 @@ int main(int argc,char *argv[])
                     sprintf(args.Outputpath,"%s",argv[i+1]);
                     args.check_LSFDEMpath = true;
                     printf("LSFDEMpath %s\n",args.Outputpath);
+                }
+            }
+            
+            if (strcmp("-round",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input '1' for generating rounded tifs by 128\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_tif_rounding = atoi(argv[i+1]);
+                    printf("Rounded Tiff generation %d\n",args.check_tif_rounding);
                 }
             }
             
@@ -1718,6 +1732,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->pyramid_level = args.pyramid_level;
     proinfo->check_full_cal = args.check_full_cal;
     proinfo->SGM_py = args.SGM_py;
+    proinfo->check_tif_rounding = args.check_tif_rounding;
+    
     sprintf(proinfo->save_filepath,"%s",args.Outputpath);
     printf("sgm level %d\n",proinfo->SGM_py);
     
@@ -2780,7 +2796,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     {
                                         ST = time(0);
                                         
-                                        LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,tile_row);
+                                        LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,tile_row,proinfo->check_tif_rounding);
                                         
                                         ET = time(0);
                                         gap = difftime(ET,ST);
@@ -2881,7 +2897,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 {
                                     ST = time(0);
                                     
-                                    LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,0);
+                                    LSFSmoothing_DEM(proinfo->save_filepath,proinfo->Outputpath_name,MPP_stereo_angle,0,proinfo->check_tif_rounding);
                                     
                                     ET = time(0);
                                     gap = difftime(ET,ST);
@@ -11656,16 +11672,24 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name);
             WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
-            sprintf(GEOTIFF_dem_filename, "%s/%s_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name);
-            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            
+            if(proinfo->check_tif_rounding)
+            {
+                sprintf(GEOTIFF_dem_filename, "%s/%s_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name);
+                WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            }
         }
         else
         {
             char GEOTIFF_dem_filename[500];
             sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem.tif", proinfo->save_filepath, proinfo->Outputpath_name,divide);
             WriteGeotiff(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
-            sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name,divide);
-            WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            
+            if(proinfo->check_tif_rounding)
+            {
+                sprintf(GEOTIFF_dem_filename, "%s/%s_%d_dem_R.tif", proinfo->save_filepath, proinfo->Outputpath_name,divide);
+                WriteGeotiff_round(GEOTIFF_dem_filename, value_sm, col_count, row_count, proinfo->DEM_resolution, minX, maxY, _param.projection, _param.utm_zone, _param.bHemisphere, 4);
+            }
         }
     }
     printf("Done writing DEM tif\n");

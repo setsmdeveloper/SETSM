@@ -9,7 +9,7 @@
 #include <cmath>
 
 //LSF smoothing
-void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double MPP, const int divide)
+void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double MPP, const int divide, const bool check_round)
 {
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
@@ -137,7 +137,9 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         free(Grid_info);
         
         WriteGeotiff(DEM_GEOTIFF_filename, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
-        WriteGeotiff_round(DEM_GEOTIFF_filename_R, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
+        
+        if(check_round)
+            WriteGeotiff_round(DEM_GEOTIFF_filename_R, seeddem, DEM_size.width, DEM_size.height, grid_size, minX, maxY, param.projection, param.utm_zone, param.bHemisphere, 4);
         
         FILE* presult = fopen(result_file,"w");
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
