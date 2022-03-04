@@ -2788,6 +2788,8 @@ void SetImageFileInfo(char* _filename, ImageInfo &Iinfo)
     char temp_year[5];
     char temp_month[3];
     char temp_day[3];
+    char temp_hour[3];
+    char temp_min[3];
     char temp_stripID[7];
     
     for (int k = 0; k < 4; k++)
@@ -2804,7 +2806,14 @@ void SetImageFileInfo(char* _filename, ImageInfo &Iinfo)
     
     for(int k=0 ; k < 6 ; k++)
         temp_stripID[k] = temp_str[k+9];
-    temp_stripID[2] = '\0';
+    temp_stripID[6] = '\0';
+    
+    for(int k=0 ; k < 2 ; k++)
+        temp_hour[k] = temp_str[k+9];
+    temp_hour[2] = '\0';
+    for(int k=0 ; k < 2 ; k++)
+        temp_min[k] = temp_str[k+11];
+    temp_min[2] = '\0';
     
     //printf("fileinfo %s\t%s\t%s\t%s\n",temp_year,temp_month,temp_day,temp_stripID);
     
@@ -2812,6 +2821,10 @@ void SetImageFileInfo(char* _filename, ImageInfo &Iinfo)
     Iinfo.month = atoi(temp_month);
     Iinfo.date = atoi(temp_day);
     Iinfo.strip_ID = atoi(temp_stripID);
+    
+    Iinfo.hour = atoi(temp_hour);
+    Iinfo.min = atoi(temp_min);
+    
     sprintf(Iinfo.filename,"%s",temp_str);
     
     int filesize;
@@ -2821,7 +2834,7 @@ void SetImageFileInfo(char* _filename, ImageInfo &Iinfo)
     char *fullpath = dirname(t_str);
     sprintf(Iinfo.fullpath,"%s",fullpath);
     
-    printf("fileinfo %d\t%d\t%d\t%d\t%s\t%s\n",Iinfo.year,Iinfo.month,Iinfo.date,Iinfo.strip_ID,Iinfo.filename,Iinfo.fullpath);
+    printf("fileinfo %d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\n",Iinfo.year,Iinfo.month,Iinfo.date,Iinfo.hour,Iinfo.min,Iinfo.strip_ID,Iinfo.filename,Iinfo.fullpath);
     //printf("input str %s\n",_filename);
     //exit(1);
 }

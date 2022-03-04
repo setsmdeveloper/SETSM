@@ -878,6 +878,9 @@ typedef struct ProjectInfo{
     int number_of_images;
     int pair_options;
     int awnccmp;
+    int merging_option;
+    int NR_level;
+    bool check_awncc;;
     
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
@@ -1035,6 +1038,7 @@ typedef struct ArgumentInfo{
     bool check_full_cal;
     bool check_simulate;
     bool check_sdm_file;
+    
     int check_txt_input;
     int check_coreg;
     int check_sdm_ortho;
@@ -1042,6 +1046,9 @@ typedef struct ArgumentInfo{
     int check_DEM_coreg_output;
     int pair_options;
     int awnccmp;
+    int merging_option;
+    int NR_level;
+    bool check_awncc;
     
     //SGM test flag
     bool check_SNCC;
