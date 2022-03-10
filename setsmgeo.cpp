@@ -238,7 +238,7 @@ void SetUpTIFFDirectory(TIFF *tif, size_t width, size_t height, double scale, do
             TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, max(1, (STRIP_SIZE_DEFAULT * 8) / (width * 8)));
             break;
         case UINT16:
-            TIFFSetField(tif, TIFFTAG_PREDICTOR, 1);
+            TIFFSetField(tif, TIFFTAG_PREDICTOR, 2);
             TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 16);
             TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_UINT);
             TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1);
