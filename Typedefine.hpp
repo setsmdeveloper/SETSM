@@ -1345,8 +1345,9 @@ public:
     vector<short> grid_sigmaZ;
     vector<short> grid_max_sigmaZ;
     vector<float> grid_height_step;
+    vector<short> grid_mean_sigmaZ;
     
-    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0), grid_height_step(length, 0) {}
+    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0), grid_mean_sigmaZ(length, 0), grid_height_step(length, 0) {}
 
     GridPairs()
     {

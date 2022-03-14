@@ -124,7 +124,7 @@ int main(int argc,char *argv[])
     args.CA_th = 3;
     args.CA_max_th = 100;
     args.Max_daygap = 30;
-    args.pair_max_th = 50;
+    args.pair_max_th = 20;
     args.pair_options = 1; //not using
     args.awnccmp = 2; //Kernel noise removal method (1 and 2 are not same result)
     args.merging_option = 1; //correlation merging method (1 : developed, 2 : median, 3 : averaging)
@@ -4629,7 +4629,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     vector<short> actual_pair_save;
     vector<PairCA> actual_pair_CA;
     
-    int max_stereo_pair = 20;//proinfo->pair_max_th;
+    int max_stereo_pair = proinfo->pair_max_th;
     printf("max_stereo_pair %d\t pair option %d\t pair temporal baseline %f\ttotal pair %d\n",max_stereo_pair,proinfo->pair_options,proinfo->Max_daygap, plevelinfo.pairinfo->NumberOfPairs());
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
@@ -4779,10 +4779,10 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             }
                 
             bool stop_condition = false;
-            int t_count = 599;
+            int t_count = 0;
             int total_pair_count = 0;
             
-            while(!stop_condition && t_count >= 0)
+            while(!stop_condition && t_count < 600)
             {
                 short daygap = 1;
                 bool check_daystop = false;
@@ -4821,7 +4821,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     }
                     daygap++;
                 }
-                t_count--;
+                t_count++;
             }
             
             /*
@@ -4923,7 +4923,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     for(int j = 0 ; j < actual_pair_save.size() ; j++)
     {
-        actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
+        actual_pair_save[j] = actual_pair_CA[j].pair_ID;
+        //actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
         //printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
     }
     /*
@@ -4931,9 +4932,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     {
         printf("sorted final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_CA[j].pair_ID,plevelinfo.pairinfo->ConvergenceAngle(actual_pair_CA[j].pair_ID),plevelinfo.pairinfo->SigmaZ(actual_pair_CA[j].pair_ID),plevelinfo.pairinfo->Azimuth(actual_pair_CA[j].pair_ID));
     }
-    
-    exit(1);
     */
+    //exit(1);
+    
     if(actual_pair_save.size() > 0)
     {
         /*
@@ -4966,7 +4967,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
         temp_pairs.SetHeightStep(pairinfo.HeightStep());
 
-        for(int count = 0 ; count < actual_pair_save.size() ; count++)
+        for(int count = 0 ; count < plevelinfo.pairinfo->SelectNumberOfPairs() /* actual_pair_save.size()*/ ; count++)
         {
             int pair_number = actual_pair_save[count];
             
@@ -4982,14 +4983,14 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetBIE(count,plevelinfo.pairinfo->BIE(pair_number));
             temp_pairs.SetBaseRay(count,plevelinfo.pairinfo->BaseRay(pair_number));
             temp_pairs.SetConvergenceAngle_EQ(count,plevelinfo.pairinfo->ConvergenceAngle_EQ(pair_number));
-            
-            printf("pre pair number %d\tnext pair number %d\n",pair_number,count);
             /*
+            printf("pre pair number %d\tnext pair number %d\n",pair_number,count);
+            
             printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", count,
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
                 temp_pairs.CenterDist(count), temp_pairs.ConvergenceAngle(count),
                 temp_pairs.BHratio(count), temp_pairs.SigmaZ(count));
-
+            /*
             printf("pair id: %d imgs=(%d, %d) cloud(first)=%f cloud(second)=%f\n", count,
                 temp_pairs.pairs(count).m_X, temp_pairs.pairs(count).m_Y,
                 image_info[temp_pairs.pairs(count).m_X].cloud,
@@ -6264,7 +6265,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             double matching_ratio_pair = (double)count_MPs/(double)(*levelinfo.Grid_length)*100;
                                             printf("pair_number %d\tmatching_ratio_pair %f\n",pair_number,matching_ratio_pair);
                                             
-                                            if(matching_ratio_pair > 1)
+                                            if(matching_ratio_pair > 0) //default 1
                                             {
                                                 vector<short> ortho_ncc(Grid_length,-9999);
                                                 vector<float> UHeight(Grid_length,Nodata);
@@ -6765,6 +6766,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             if(PairArray[pt_index].size() > 0)
                                             {
                                                 double sum_SigmaZ = 0;
+                                                double sum_S = 0;
                                                 double count_gp = 0;
                                                 double max_sigmaZ = -100;
                                                 for(int count = 0 ; count < PairArray[pt_index].size() ; count++)
@@ -6773,6 +6775,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                     
                                                     double sigmaZ = levelinfo.pairinfo->SigmaZ(pair_number);
                                                     sum_SigmaZ += (sigmaZ*sigmaZ);
+                                                    sum_S += sigmaZ;
                                                     
                                                     if(max_sigmaZ < sigmaZ)
                                                         max_sigmaZ = sigmaZ;
@@ -6786,6 +6789,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 double PSigmaZ = sqrt(sum_SigmaZ)/PairArray[pt_index].size();
                                                 Grid_pair.grid_sigmaZ[pt_index] = short(PSigmaZ);
                                                 Grid_pair.grid_max_sigmaZ[pt_index] = short(max_sigmaZ+1);
+                                                Grid_pair.grid_mean_sigmaZ[pt_index] = short((sum_S/PairArray[pt_index].size()) + 1);
                                                 
                                                 if(Grid_pair.grid_max_sigmaZ[pt_index] > start_sigmaZ - (3-level)*10)
                                                 {
@@ -9535,6 +9539,7 @@ double GetHeightStep(int Pyramid_step, double im_resolution, LevelInfo &rlevelin
 double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 {
     double h_divide = 4;//7 + (3 - (*rlevelinfo.Pyramid_step));
+    //double h_divide = 7 + (3 - (*rlevelinfo.Pyramid_step));
     /*if(*rlevelinfo.Pyramid_step <= 1)
     {
         if(*rlevelinfo.iteration <= 2)
@@ -12007,7 +12012,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
     {
-        short max_sigmaZ = Grid_pair.grid_max_sigmaZ[iter_count];
+        float max_sigmaZ = (float)Grid_pair.grid_max_sigmaZ[iter_count];
+        float grid_sigmaZ = (float)Grid_pair.grid_sigmaZ[iter_count];
+        float grid_mean_sigmaZ = (float)Grid_pair.grid_mean_sigmaZ[iter_count];
+        
         double height_interval = (*rlevelinfo.grid_resolution)*10;
         //if(proinfo->sensor_provider == PT)
         {
@@ -12054,7 +12062,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             else //if(SigmaZArray[pt_index] > 75)
                 check_sigmaZ = true;
         }
-        
+        check_sigmaZ = false;
+        /*
         if(proinfo->awnccmp == 1)
         {
             if(pts_col >= 0 && pts_col < Size_Grid2D.width && pts_row >= 0 && pts_row < Size_Grid2D.height && pt_index >= 0 && pt_index < *rlevelinfo.Grid_length && !check_sigmaZ)
@@ -12541,7 +12550,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 }
             }
         }
-        else
+        else*/
         {
             long pts_row_cen = (int)(floor(iter_count/Size_Grid2D.width));
             long pts_col_cen = (iter_count % Size_Grid2D.width);
@@ -12929,7 +12938,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                 //w_bhncc = 1.0*weightAWNCC;
                                                 
                                             }
-                         
+                                            //w_bhncc = 1.0;
+                                            
                                             wheight_idw += save_height[query_pair][count]*w_bhncc;
                                             weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
                                             
@@ -12945,6 +12955,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                              */
                                         }
                                         
+                                        //compute height STD. within the interval
                                         double avg_Hdiff = sum_height_diff/save_pair[query_pair].size();
                                         double var_Hdiff = 0;
                                         for(int count = 0 ; count < save_pair[query_pair].size() ; count++)
@@ -12958,6 +12969,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         double WIDW, WBH;
                                         
                                         total_weight = weight_idw*(1.0/std_Hdiff);
+                                        //total_weight = 1.0;
+                                        
                                         weight_height[query_pair] = wheight_idw/weight_idw;
                                         //weight_height[query_pair] = wheight_idw/weight_idw;
                                         
@@ -12968,10 +12981,14 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             selected_pair = query_pair;
                                         }
                                         */
+                                        
+                                        
+                                        
+                                        
                                         if(max_weight < total_weight && query_pair < AWNCC_id)
                                         {
                                             max_weight = weight_idw;
-                                            selected_pair = query_pair;
+                                            //selected_pair = query_pair;
                                         }
                                         //if(query_pair < rlevelinfo.pairinfo->NumberOfPairs)//Single peak
                                         {
@@ -13011,6 +13028,15 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             int q_kenel_size = 2;
                             bool check_kernel_iter = true;
                             int max_kernel_size = 10;
+                            float var_th;
+                            int var_fraction = floor(grid_mean_sigmaZ / 10.0);
+                            if(max_sigmaZ < 20)
+                                var_th = 0.2;
+                            else
+                                var_th = 0.20 + (float)var_fraction*0.10; //simulate 0.10
+                            if(var_th > 1.0)                              
+                                var_th = 1.0;
+							
                             //if(Pyramid_step == 1)
                             //    max_kernel_size = 5;
                             //vector<double> save_kenel_height;
@@ -13021,6 +13047,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             while(check_kernel_iter && q_kenel_size < max_kernel_size)
                             {
                                 vector<double> save_kenel_height;
+                                vector<int> col_array;
+                                vector<int> row_array;
+                                
                                 for(int q_kr = -q_kenel_size ; q_kr <= q_kenel_size ; q_kr++)
                                 {
                                     for(int q_kc = -q_kenel_size ; q_kc <= q_kenel_size ; q_kc++)
@@ -13220,7 +13249,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                                     //w_bhncc = 1.0*weightAWNCC;
                                                                     
                                                                 }
-                                             
+                                                                //w_bhncc = 1.0;
+                                                                
                                                                 wheight_idw += save_height[query_pair][count]*w_bhncc;
                                                                 weight_idw += w_bhncc;//*weightAWNCC*weight_MinOff;
                                                             }
@@ -13238,6 +13268,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                             double WIDW, WBH;
                                                             
                                                             total_weight = weight_idw*(1.0/std_Hdiff);
+                                                            //total_weight = 1.0;
                                                             kenel_total_weight += total_weight;
                                                             weight_height[query_pair] = wheight_idw/weight_idw;
                                                             
@@ -13253,6 +13284,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             if(kenel_sum_weight > 0)
                                             {
                                                 save_kenel_height.push_back(kenel_sum_weight_height/kenel_sum_weight);
+                                                
+                                                col_array.push_back(q_kc);
+                                                row_array.push_back(q_kr);
+                                                
                                                 save_kernal_height_all.push_back(kenel_sum_weight_height/kenel_sum_weight);
                                                 save_kernal_weight_all.push_back(kenel_sum_weight);
                                             }
@@ -13261,7 +13296,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     }
                                 }
                                 
-                                if(save_kenel_height.size() > 1)
+                                if(save_kenel_height.size() > 10)
                                 {
                                     
                                     double sum_var = 0;
@@ -13271,15 +13306,22 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         double diff_h = fabs(ref_height - save_kenel_height[i]);
                                         sum_var += diff_h*diff_h;
                                         //if(diff_h > rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.5)
-                                        if(diff_h > max_sigmaZ*pwrtwo(Pyramid_step)*1.5)
-                                            count_L ++;
+                                        //if(diff_h > grid_sigmaZ*pwrtwo(Pyramid_step)*1.5)
+                                        //    count_L ++;
                                     
                                     }
                                     
-                                    double var = sqrt(sum_var/save_kenel_height.size());
-                                    double ratio_L = (double)count_L/(double)save_kenel_height.size();
+                                    long numpts = 0;
+                                    double fitted_H;
+                                    double var = LocalSurfaceFitting_Kernel(save_kenel_height,col_array,row_array,numpts,&fitted_H,grid_sigmaZ,*rlevelinfo.grid_resolution,0,0);
+                                    
+                                    //printf("LSF sigma %f\tfitted H %f\tref_height %f\tLSF pts %d\n",var,fitted_H,ref_height,numpts);
+                                    //exit(1);
+                                    //double var = sqrt(sum_var/save_kenel_height.size());
+                                    //double ratio_L = (double)count_L/(double)save_kenel_height.size();
                                     //if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
-                                    if(var < max_sigmaZ*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
+                                    if(var < grid_sigmaZ*pwrtwo(Pyramid_step)*var_th)// || ratio_L < 0.1)
+                                    //if(var < max_sigmaZ*pwrtwo(Pyramid_step))// || ratio_L < 0.1)
                                         q_kenel_size++;
                                     else
                                         check_kernel_iter = false;
@@ -13547,7 +13589,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
             else //if(SigmaZArray[pt_index] > 75)
                 check_sigmaZ = true;
         }
-        
+        check_sigmaZ = false;
         {
             long pts_row_cen = (int)(floor(iter_count/Size_Grid2D.width));
             long pts_col_cen = (iter_count % Size_Grid2D.width);
@@ -13571,7 +13613,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                 double height_diff;
                 double final_height;
                 
-                
+                /*
                 //minimum calculation for peak_roh and ortho_roh by std
                 vector<double> save_peak_roh;
                 vector<double> save_ortho_roh;
@@ -13627,7 +13669,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                     if(ortho_roh_min < 0)
                         ortho_roh_min = 0;
                 }
-                
+                */
                 //printf("after minimum %f\t%f\t%d\n",peak_roh_min,ortho_roh_min,save_peak_roh.size());
                 //exit(1);
                 //select max_ncc pair and selected_pair
@@ -13645,12 +13687,12 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                         double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
                         double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
                         
-                        if(pair_peak_roh > 0.0 && multimps(pt_index, pair_number).check_matched)
+                        if(/*pair_peak_roh > 0.0 &&*/ multimps(pt_index, pair_number).check_matched)
                         {
                             //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps(pt_index, pair_number).peak_height);
                             GridPT3.total_images(pt_index)++;
                             
-                            if(pair_ortho_roh > 0.0)
+                            //if(pair_ortho_roh > 0.0)
                             {
                                 if(max_ortho < pair_ortho_roh)
                                 {
@@ -13687,11 +13729,11 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                             double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
                             double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
                             
-                            if(pair_peak_roh > 0.0 && multimps(pt_index, pair_number).check_matched)
+                            if(/*pair_peak_roh > 0.0 &&*/ multimps(pt_index, pair_number).check_matched)
                             {
                                 GridPT3.total_images(pt_index)++;
                                 
-                                if(pair_peak_roh > 0.0)
+                                //if(pair_peak_roh > 0.0)
                                 {
                                     if(max_wncc < pair_peak_roh)
                                     {
@@ -13760,7 +13802,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                             {
                                 double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
                                 double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
-                                if((query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min))
+                                //if((query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min))
                                 {
                                     int count = 0;
                                     bool check_query_pair = false;
@@ -13828,6 +13870,10 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                             int q_kenel_size = 2;
                             bool check_kernel_iter = true;
                             int max_kernel_size = 10;
+                            int var_fraction = floor(max_sigmaZ / 20.0);
+                            float var_th = 0.2 + (float)var_fraction*0.05;
+                            if(var_th > 1.0)
+                                var_th = 1.0;
                             //if(Pyramid_step == 1)
                             //    max_kernel_size = 5;
                             //vector<double> save_kenel_height;
@@ -13939,7 +13985,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                                     double var = sqrt(sum_var/save_kenel_height.size());
                                     double ratio_L = (double)count_L/(double)save_kenel_height.size();
                                     //if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
-                                    if(var < max_sigmaZ*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
+                                    if(var < max_sigmaZ*pwrtwo(Pyramid_step)*var_th)// || ratio_L < 0.1)
                                         q_kenel_size++;
                                     else
                                         check_kernel_iter = false;
@@ -13983,6 +14029,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                 }
                 else
                 {
+                    /*
                     if(multimps(pt_index, AWNCC_id).check_matched)
                     {
                         D3DPOINT point;
@@ -13996,7 +14043,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                         
                         //printf("Id %d\tselected_pair %d\theight %f\n",iter_count,selected_pair,final_height);
                     }
-                    
+                    */
                     GridPT3.ncc_seleceted_pair(pt_index) = AWNCC_id;
                 }
             }
@@ -14357,6 +14404,10 @@ void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D,
                             int q_kenel_size = 2;
                             bool check_kernel_iter = true;
                             int max_kernel_size = 10;
+                            int var_fraction = floor(max_sigmaZ / 20.0);
+                            float var_th = 0.2 + (float)var_fraction*0.05;
+                            if(var_th > 1.0)
+                                var_th = 1.0;
                             //if(Pyramid_step == 1)
                             //    max_kernel_size = 5;
                             //vector<double> save_kenel_height;
@@ -14465,7 +14516,7 @@ void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D,
                                     double var = sqrt(sum_var/save_kenel_height.size());
                                     double ratio_L = (double)count_L/(double)save_kenel_height.size();
                                     //if(var < rlevelinfo.MPP*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
-                                    if(var < max_sigmaZ*pwrtwo(Pyramid_step)*1.0 || ratio_L < 0.1)
+                                    if(var < max_sigmaZ*pwrtwo(Pyramid_step)*var_th)// || ratio_L < 0.1)
                                         q_kenel_size++;
                                     else
                                         check_kernel_iter = false;
@@ -19701,6 +19752,8 @@ UGRID SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long 
     for (long counter = 0; counter < *rlevelinfo.Grid_length; counter++)
     {
         double MPP = (double)Grid_pair.grid_max_sigmaZ[counter];
+        double height_step = Grid_pair.grid_height_step[counter];
+        
         BufferOfHeight[counter] = MPP*4.0*pwrtwo(pyramid_step);
         
         if(proinfo->sensor_provider == PT)
@@ -19717,6 +19770,10 @@ UGRID SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long 
             
             if(BufferOfHeight[counter] > 200)
                 BufferOfHeight[counter] = 200;
+            
+            double interval = 2*BufferOfHeight[counter]/height_step;
+            if(interval  < 6)
+                BufferOfHeight[counter] = height_step*3.0;
         }
         else
         {

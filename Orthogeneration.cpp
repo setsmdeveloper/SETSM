@@ -10,7 +10,7 @@
 
 
 //orthogeneration
-void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFilename, char *DEMFilename, const char *Outputpath, const int pair, const int DEM_divide, const double * const *Imageparams)
+void orthogeneration(const TransParam _param, ARGINFO args, char *ImageFilename, char *DEMFilename, const char *Outputpath, const int pair, const int DEM_divide, const double * const *Imageparams)
 {
     if(args.RA_only) {
         return;
@@ -22,6 +22,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     
     char DEM_header[500];
     char RPCFilename[500];
+    char PL_metafile[500];
+    char PL_eofile[500];
     char OrthoFilename[500];
     char OrthoGEOTIFFFilename[500];
     char Ortho_header[500];
@@ -34,22 +36,12 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     m_frameinfo.m_Camera.m_focalLength  = 0;
     m_frameinfo.m_Camera.m_CCDSize      = 0;
     
-    if(args.sensor_type == AB)
-    {
-        m_frameinfo.m_Camera.m_focalLength  = args.focal_length;
-        m_frameinfo.m_Camera.m_CCDSize      = args.CCD_size;
-        m_frameinfo.m_Camera.m_ppx = 0;
-        m_frameinfo.m_Camera.m_ppy = 0;
-        
-        m_frameinfo.Photoinfo = (EO*)malloc(sizeof(EO));
-        sprintf(m_frameinfo.Photoinfo[0].path,"%s",ImageFilename);
-    }
-    
-    printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
-    
     char *tmp_chr = remove_ext(ImageFilename);
     if(args.sensor_provider == PT)
     {
+        sprintf(PL_metafile,"%s_metadata.xml",tmp_chr);
+        sprintf(PL_eofile,"%s_EO.TXT",tmp_chr);
+        
         sprintf(RPCFilename,"%s_RPC.TXT",tmp_chr);
         sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
         FILE *fid_xml = fopen(RPCFilename,"r");
@@ -93,6 +85,25 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     
     free(tmp_chr);
 
+    if(args.sensor_type == AB || args.sensor_provider == PT)
+    {
+        m_frameinfo.m_Camera.m_focalLength  = args.focal_length;
+        m_frameinfo.m_Camera.m_CCDSize      = args.CCD_size;
+        m_frameinfo.m_Camera.m_ppx = 0;
+        m_frameinfo.m_Camera.m_ppy = 0;
+        
+        if(args.sensor_provider == PT)
+        {
+            m_frameinfo.m_Camera.m_focalLength  = 8000;
+            m_frameinfo.m_Camera.m_CCDSize      = 5.5;
+        }
+        m_frameinfo.Photoinfo = (EO*)malloc(sizeof(EO));
+        sprintf(m_frameinfo.Photoinfo[0].path,"%s",ImageFilename);
+    }
+    
+    printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
+    
+    
     tmp_chr = remove_ext(DEMFilename);
     sprintf(DEM_header,"%s.hdr",tmp_chr);
     char *Ifilename  = SetOutpathName(ImageFilename);
@@ -124,6 +135,9 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     printf("ortho hdr= %s\n",Ortho_header);
     printf("ortho geotiff = %s\n", OrthoGEOTIFFFilename);
     
+    if(args.sensor_provider == PT)
+        printf("PL metafile= %s\n",PL_metafile);
+    
     double Image_resolution = 0.5;
     
     // load RPCs info from xml file
@@ -134,22 +148,36 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     // RPC being uninitialized throws a warning
     RPCs = NULL;
 
+    ImageInfo image_info;
     if(args.sensor_type == SB)
     {
         if(args.sensor_provider == DG)
             RPCs            = OpenXMLFile(proinfo, 0, &row_grid_size, &col_grid_size,&product_grid_size, &band);
         else if(args.sensor_provider == PL)
+        {
             RPCs            = OpenXMLFile_Pleiades(RPCFilename);
+        }
         else if(args.sensor_provider == PT)
+        {
             RPCs            = OpenXMLFile_Planet(RPCFilename);
+            OpenXMLFile_orientation_planet(PL_metafile,&image_info);
+        }
     }
     else
     {
-        FILE *pFile           = fopen(RPCFilename,"r");
-        
-        fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-               &m_frameinfo.Photoinfo[0].m_Xl,&m_frameinfo.Photoinfo[0].m_Yl,&m_frameinfo.Photoinfo[0].m_Zl,
-               &m_frameinfo.Photoinfo[0].m_Wl,&m_frameinfo.Photoinfo[0].m_Pl,&m_frameinfo.Photoinfo[0].m_Kl);
+        if(args.sensor_provider == PT)
+        {
+            ReadEOs(PL_eofile,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera);
+            //OpenXMLFile_orientation_planet(PL_metafile,&image_info);
+        }
+        else
+        {
+            FILE *pFile           = fopen(RPCFilename,"r");
+            
+            fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                   &m_frameinfo.Photoinfo[0].m_Xl,&m_frameinfo.Photoinfo[0].m_Yl,&m_frameinfo.Photoinfo[0].m_Zl,
+                   &m_frameinfo.Photoinfo[0].m_Wl,&m_frameinfo.Photoinfo[0].m_Pl,&m_frameinfo.Photoinfo[0].m_Kl);
+        }
         
         printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
                m_frameinfo.Photoinfo[0].path,
@@ -184,6 +212,10 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                     Image_resolution = 1.0;
                 else
                     Image_resolution = floor(Image_resolution);
+            }
+            else if(args.sensor_provider == PT)
+            {
+                Image_resolution = (image_info.GSD.row_GSD + image_info.GSD.col_GSD)/2.0;
             }
             else
                 Image_resolution = 0.5;
@@ -265,7 +297,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         }
         
         double subfactor                      = pow(4-impyramid_step,2.0);
-        if(subfactor <= 1)
+        if(subfactor <= 1 || args.sensor_provider == PT)
             subfactor                       = 1;
         const int sub_height                  = ceil(Orthoimagesize.height/subfactor);
         const int sub_width                   = ceil(Orthoimagesize.width/subfactor);
@@ -380,7 +412,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                             
                             objectXY.m_X  = col;
                             objectXY.m_Y  = row;
-                            
+                            //printf("DEM value %f\n",value);
                             if(value > -1000)
                             {
                                 D2DPOINT image;
@@ -397,6 +429,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
                                 {
                                     D2DPOINT photo  = GetPhotoCoordinate_single(object,m_frameinfo.Photoinfo[0],m_frameinfo.m_Camera,m_frameinfo.Photoinfo[0].m_Rm);
                                     image = PhotoToImage_single(photo, m_frameinfo.m_Camera.m_CCDSize, m_frameinfo.m_Camera.m_ImageSize);
+                                    
+                                    //printf("image XY %f\t%f\n",image.m_X,image.m_Y);
                                 }
                                 
                                 temp_pt     = OriginalToPyramid_single(image, startpos, impyramid_step);

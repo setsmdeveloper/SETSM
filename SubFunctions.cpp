@@ -2420,7 +2420,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     MSUNAz = Nodata;
     
     
-    //printf("%s\n",_filename);
+    printf("%s\n",_filename);
     
     pFile           = fopen(_filename,"r");
     if(pFile)

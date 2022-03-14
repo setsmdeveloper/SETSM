@@ -833,3 +833,315 @@ double LocalSurfaceFitting_DEM(LSFINFO *Grid_info, float *input, long &numpts, d
 }
 
 
+double LocalSurfaceFitting_Kernel(vector<double> K_height, vector<int> X_array, vector<int> Y_array, long &numpts, double *fitted_Z, const double MPP, const double grid, const long X, const long Y)
+{
+    double sigma = 999999;
+    
+    double maxX_ptslists = -10000000;
+    double maxY_ptslists = -10000000;
+    double minX_ptslists =  10000000;
+    double minY_ptslists =  10000000;
+    double distX_ptslists = 0;
+    double distY_ptslists = 0;
+    const double Scale_ptslists = 1000;
+
+    vector<D3DPOINT> XY_save;
+    XY_save.clear();
+    
+    long count = 0;
+    for(count = 0 ; count < K_height.size() ; count ++)
+    {
+        D3DPOINT temp;
+        temp.m_X = X_array[count]*grid;
+        temp.m_Y = Y_array[count]*grid;
+        temp.m_Z = K_height[count];
+        temp.flag = true;
+
+        XY_save.push_back(temp);
+
+        if(maxX_ptslists < temp.m_X)
+            maxX_ptslists = temp.m_X;
+        if(maxY_ptslists < temp.m_Y)
+            maxY_ptslists = temp.m_Y;
+        if(minX_ptslists > temp.m_X)
+            minX_ptslists = temp.m_X;
+        if(minY_ptslists > temp.m_Y)
+            minY_ptslists = temp.m_Y;
+    }
+    
+
+    distX_ptslists = maxX_ptslists - minX_ptslists;
+    distY_ptslists = maxY_ptslists - minY_ptslists;
+
+    double scale_factor_X = 1.0/distX_ptslists*Scale_ptslists;
+    double scale_factor_Y = 1.0/distY_ptslists*Scale_ptslists;
+    double X_scaled = ((double)X*grid - minX_ptslists)*scale_factor_X;
+    double Y_scaled = ((double)Y*grid - minY_ptslists)*scale_factor_Y;
+    double X_plane = ((double)X*grid - minX_ptslists);
+    double Y_plane = ((double)Y*grid - minY_ptslists);
+    
+    numpts = 0;
+    //if(count > 15)
+    {
+        GMA_double *A_matrix = GMA_double_create(XY_save.size(), 3);
+        GMA_double *L_matrix = GMA_double_create(XY_save.size(), 1);
+        GMA_double *AT_matrix = GMA_double_create(3,XY_save.size());
+        GMA_double *ATA_matrix = GMA_double_create(3,3);
+
+        GMA_double *ATAI_matrix = GMA_double_create(3,3);
+        GMA_double *ATL_matrix = GMA_double_create(3,1);
+
+        GMA_double *X_matrix = GMA_double_create(3,1);
+        GMA_double *AX_matrix = GMA_double_create(XY_save.size(),1);
+        GMA_double *V_matrix = GMA_double_create(XY_save.size(),1);
+
+        //plane fitting
+        vector<D3DPOINT>::iterator it;
+        count = 0;
+        for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+        {
+            A_matrix->val[count][0] = it->m_X-minX_ptslists;
+            A_matrix->val[count][1] = it->m_Y-minY_ptslists;
+            A_matrix->val[count][2] = 1.0;
+
+            L_matrix->val[count][0] = it->m_Z;
+            count++;
+        }
+
+        GMA_double_Tran(A_matrix,AT_matrix);
+        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+        GMA_double_inv(ATA_matrix,ATAI_matrix);
+        GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+        GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+
+        double sum_V = 0;
+        for(int row = 0; row < XY_save.size() ; row++)
+            sum_V += V_matrix->val[row][0];
+
+        if(!std::isnan(sum_V) && !std::isnan(X_matrix->val[0][0]) && !std::isnan(X_matrix->val[1][0]) && !std::isnan(X_matrix->val[2][0]))
+        {
+            double plane_Z = X_plane*X_matrix->val[0][0] + Y_plane*X_matrix->val[1][0] + X_matrix->val[2][0];
+            if(plane_Z > -100 && plane_Z < 15000)
+            {
+                D3DPOINT N(X_matrix->val[0][0], X_matrix->val[1][0], 1.0 , 0);
+                double norm  = SQRT(N);
+                double angle = acos(fabs(N.m_Z)/norm)*RadToDeg;
+                SetAngle(angle);
+
+                int max_H = 25;
+                long hist[25] = {0};
+                for(int row = 0; row < XY_save.size() ; row++)
+                {
+                    int hist_index = (int)(std::abs(V_matrix->val[row][0]));
+                    if(hist_index > max_H-1)
+                        hist_index = max_H-1;
+                    if(hist_index >= 0 && hist_index <= max_H-1)
+                        hist[hist_index]++;
+                }
+
+                double hist_th = 1.0;
+                if(grid >= 8)
+                    hist_th = 0.9;
+                else
+                    hist_th = 0.8;
+                
+                int V_th = max_H;
+                int hist_sum = 0;
+                double hist_rate;
+                bool check_V = true;
+                int row = 0;
+                while(check_V && row < max_H)
+                {
+                    hist_sum += hist[row];
+                    hist_rate = (double)hist_sum/(double)XY_save.size();
+                    if(hist_rate > hist_th)
+                    {
+                        V_th = row;
+                        check_V = false;
+                    }
+                    row++;
+                }
+
+                count = 0;
+                vector<D3DPOINT> XY_selected;
+                for(it = XY_save.begin() ; it != XY_save.end() ; ++it)
+                {
+                    if(std::abs(V_matrix->val[count][0]) < V_th+1)
+                    {
+                        D3DPOINT temp((it->m_X-minX_ptslists)*scale_factor_X, (it->m_Y-minY_ptslists)*scale_factor_Y, it->m_Z, it->flag);
+                        XY_selected.push_back(temp);
+                    }
+                    count++;
+                }
+
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
+
+                long selected_count = XY_selected.size();
+
+                if(selected_count > 10)
+                {
+                    A_matrix = GMA_double_create(selected_count, 6);
+                    L_matrix = GMA_double_create(selected_count, 1);
+                    AT_matrix = GMA_double_create(6,selected_count);
+                    ATA_matrix = GMA_double_create(6,6);
+
+                    ATAI_matrix = GMA_double_create(6,6);
+                    ATL_matrix = GMA_double_create(6,1);
+
+                    X_matrix = GMA_double_create(6,1);
+                    AX_matrix = GMA_double_create(selected_count,1);
+                    V_matrix = GMA_double_create(selected_count,1);
+
+                    count = 0;
+                    for(it = XY_selected.begin() ; it != XY_selected.end() ; ++it)
+                    {
+                        A_matrix->val[count][0] = it->m_X*it->m_X;
+                        A_matrix->val[count][1] = it->m_X*it->m_Y;
+                        A_matrix->val[count][2] = it->m_Y*it->m_Y;
+                        A_matrix->val[count][3] = it->m_X;
+                        A_matrix->val[count][4] = it->m_Y;
+                        A_matrix->val[count][5] = 1.0;
+
+                        L_matrix->val[count][0] = it->m_Z;
+                        count++;
+                    }
+
+                    GMA_double_Tran(A_matrix,AT_matrix);
+                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                    GMA_double_inv(ATA_matrix,ATAI_matrix);
+                    GMA_double_mul(AT_matrix,L_matrix,ATL_matrix);
+                    GMA_double_mul(ATAI_matrix,ATL_matrix,X_matrix);
+                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+
+                    double sum = 0;
+                    count = 0;
+                    vector<D3DPOINT>::iterator it_sel;
+                    for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                    {
+                        sum += V_matrix->val[count][0] * V_matrix->val[count][0];
+
+                        double temp_fitted_Z = X_matrix->val[0][0]*it_sel->m_X*it_sel->m_X + X_matrix->val[1][0]*it_sel->m_X*it_sel->m_Y +
+                            X_matrix->val[2][0]*it_sel->m_Y*it_sel->m_Y + X_matrix->val[3][0]*it_sel->m_X + X_matrix->val[4][0]*it_sel->m_Y + X_matrix->val[5][0];
+
+                        count++;
+                    }
+
+                    const double p = 1.5;
+                    if(!std::isnan(sum) && sum > 0 )
+                    {
+                        sigma = sqrt(sum/(double)selected_count);
+
+                        double A = X_matrix->val[0][0];
+                        double B = X_matrix->val[2][0];
+                        double C = X_matrix->val[3][0];
+                        double D = X_matrix->val[4][0];
+                        double E = X_matrix->val[1][0];
+
+                        double det = 4*A*B - E*E;
+                        double det1 = D*E - 2*C*B;
+                        double det2 = 2*A*D - C*E;
+
+                        bool check_clinder = false;
+                        if(det == 0 && det1 == det2)
+                            check_clinder = true;
+
+                        if(!check_clinder)
+                        {
+                            *fitted_Z = X_matrix->val[0][0]*X_scaled*X_scaled + X_matrix->val[1][0]*X_scaled*Y_scaled + X_matrix->val[2][0]*Y_scaled*Y_scaled +X_matrix->val[3][0]*X_scaled + X_matrix->val[4][0]*Y_scaled + X_matrix->val[5][0];
+                        }
+                        else
+                        {
+                            double sum_weight = 0;
+                            double sum_weigtdist = 0;
+                            for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                            {
+                                double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+                                sum_weight += (1.0/pow(dist,p));
+                                sum_weigtdist += (it_sel->m_Z/pow(dist,p));
+                            }
+
+                            if(sum_weight > 0)
+                            {
+                                *fitted_Z = sum_weigtdist/sum_weight;
+                                sigma = 1;
+                            }
+                            else
+                                sigma = 999;
+                        }
+                    }
+                    else
+                    {
+                        double sum_weight = 0;
+                        double sum_weigtdist = 0;
+                        for(it_sel = XY_selected.begin() ; it_sel != XY_selected.end() ; ++it_sel)
+                        {
+                            double dist = sqrt((it_sel->m_X - X_scaled)*(it_sel->m_X - X_scaled) + (it_sel->m_Y - Y_scaled)*(it_sel->m_Y - Y_scaled));
+                            sum_weight += (1.0/pow(dist,p));
+                            sum_weigtdist += (it_sel->m_Z/pow(dist,p));
+                        }
+
+                        if(sum_weight > 0)
+                        {
+                            *fitted_Z = sum_weigtdist/sum_weight;
+                            sigma = 1;
+                        }
+                        else
+                            sigma = 9999;
+                    }
+
+                    GMA_double_destroy(A_matrix);
+                    GMA_double_destroy(L_matrix);
+                    GMA_double_destroy(AT_matrix);
+                    GMA_double_destroy(ATA_matrix);
+
+                    GMA_double_destroy(ATAI_matrix);
+                    GMA_double_destroy(ATL_matrix);
+
+                    GMA_double_destroy(X_matrix);
+                    GMA_double_destroy(AX_matrix);
+                    GMA_double_destroy(V_matrix);
+
+                    numpts = selected_count;
+                }
+                else
+                {
+                    sigma = 99999;
+                    numpts = 0;
+                }
+                XY_selected.clear();
+                vector<D3DPOINT>().swap(XY_selected);
+            }
+            else
+            {
+                GMA_double_destroy(A_matrix);
+                GMA_double_destroy(L_matrix);
+                GMA_double_destroy(AT_matrix);
+                GMA_double_destroy(ATA_matrix);
+                GMA_double_destroy(ATAI_matrix);
+                GMA_double_destroy(ATL_matrix);
+                GMA_double_destroy(X_matrix);
+                GMA_double_destroy(AX_matrix);
+                GMA_double_destroy(V_matrix);
+
+                sigma = 999999;
+                numpts = 0;
+            }
+        }
+    }
+
+    XY_save.clear();
+    vector<D3DPOINT>().swap(XY_save);
+
+    return sigma;
+}
