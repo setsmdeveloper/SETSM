@@ -2420,7 +2420,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     MSUNAz = Nodata;
     
     
-    printf("%s\n",_filename);
+    //printf("%s\n",_filename);
     
     pFile           = fopen(_filename,"r");
     if(pFile)
@@ -2929,7 +2929,7 @@ void CompareRPCs(double **RPCs, double **comRPCs)
     }
 }
 
-EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
+EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate, double sim_scale)
 {
     EO out_eo;
     
@@ -3031,7 +3031,19 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
     
     printf("ray %f\t%f\t%f\n",ray_vector.m_X,ray_vector.m_Y,ray_vector.m_Z);
     
+    double simulated_scale = shifted_distance/camera.m_focalLength;
+    printf("ori sim scale %f\t%f\n",scale,simulated_scale);
     
+    double GSD = 0.0055*scale;
+    double target_GSD = GSD*sim_scale;
+    double target_scale = target_GSD/0.0055;
+    double target_distance = target_scale * camera.m_focalLength;
+    
+    ori_distance = target_distance;
+    diff_dist = ori_distance - shifted_distance;
+    
+    printf("input scale GSD target_GSD target_scale %f\t%f\t%f\t%f\n",sim_scale,GSD,target_GSD,target_scale);
+    diff_dist = ori_distance - shifted_distance;
     //Zl adjustment
     if(fabs(diff_dist) > 1 )
     {
@@ -3066,8 +3078,11 @@ EO simulatedEO(EO input_eo, CAMERA_INFO camera, D3DPOINT XYZ_center, EO rotate)
             printf("t_iter %d\tdiff_dist %f\tXYZ %f\t%f\t%f\n",t_iter,diff_dist, out_eo.m_Xl,out_eo.m_Yl,out_eo.m_Zl);
             printf("scale aft %f\n",shifted_distance/camera.m_focalLength);
              */
+            simulated_scale = shifted_distance/camera.m_focalLength;
         }
     }
+    
+    printf("ori sim scale %f\t%f\n",scale,simulated_scale);
     
     ray_vector.m_X = XYZ_center.m_X - out_eo.m_Xl;
     ray_vector.m_Y = XYZ_center.m_Y - out_eo.m_Yl;
@@ -3206,7 +3221,7 @@ CSize SetSimulatedImageSize(ImageInfo image_info, double min_H, double max_H, EO
     return SImagesize;
 }
 
-void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, CSize new_imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param)
+void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, double maxY, double grid_size, double min_H, double max_H, uint16 *oriimage, CSize imagesize, CSize new_imagesize, char *imagefile, EO ori_eo, EO eo, CAMERA_INFO camera, TransParam param,D2DPOINT img_shift)
 {
     uint16 *outimage = NULL;
     
@@ -3277,7 +3292,8 @@ void SimulatedImageGeneration(float *seeddem, CSize seeddem_size, double minX, d
         photo  = GetPhotoCoordinate_single(object,ori_eo,camera,ori_M);
         image = PhotoToImage_single(photo, camera.m_CCDSize, imagesize);
         //printf("coord %f\t%f\t%f\t%f\n",photo.m_X,photo.m_Y,image.m_X,image.m_Y);
-        
+        image.m_X += img_shift.m_X;
+        image.m_Y += img_shift.m_Y;
         if(image.m_X >= 0 && image.m_X < imagesize.width && image.m_Y >= 0 && image.m_Y < imagesize.height)
         {
             double t_col       = image.m_X;

@@ -36,6 +36,10 @@
 
 void DownSample(ARGINFO &args);
 
+void ImageGammaAdjust(ARGINFO &args);
+
+void ImageMinMaxStretch(ARGINFO &args);
+
 void ImageSimulation(char* _filename, ARGINFO args);
 
 int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, char *_save_filepath,double **ImageParam);
@@ -191,7 +195,7 @@ void findOverlappArea(ProInfo *proinfo, TransParam param, double*** RPCs, double
 
 void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double Boundary[]);
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo);
+int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo, int *CAHist);
 
 bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize,const int Template_size, const int pyramid_step);
 

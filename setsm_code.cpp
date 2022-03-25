@@ -66,6 +66,11 @@ int main(int argc,char *argv[])
     args.SDM_days = 1;
     args.number_of_images = 2;
     args.check_arg = 0;
+    args.check_minmaxStretch = false;
+    args.check_gamma = false;
+    args.gamma = 1;
+    args.min_S = 0;
+    args.max_S = 0;
     args.check_DEM_space = false;
     args.check_Threads_num = false;
     args.check_seeddem = false;
@@ -125,6 +130,8 @@ int main(int argc,char *argv[])
     args.CA_max_th = 100;
     args.Max_daygap = 30;
     args.pair_max_th = 20;
+    args.pair_Azimuth_th = 10;
+    args.pair_time_dif = 1;
     args.pair_options = 1; //not using
     args.awnccmp = 2; //Kernel noise removal method (1 and 2 are not same result)
     args.merging_option = 1; //correlation merging method (1 : developed, 2 : median, 3 : averaging)
@@ -134,10 +141,16 @@ int main(int argc,char *argv[])
     
     args.Phi_start = 0;
     args.Phi_end = 0;
-    args.Phi_interval = 0;
+    args.Phi_interval = 100.0;
+    args.omega_start = 0;
+    args.omega_end = 0;
+    args.omega_interval = 100.0;
     args.Kappa_start = 0;
     args.Kappa_end = 0;
-    args.Kappa_interval = 0;
+    args.Kappa_interval = 100;
+    args.sim_scale_start = 1.0;
+    args.sim_scale_end = 1.0;
+    args.sim_scale_interval = 100.0;
     
     TransParam param;
     param.bHemisphere = 1;
@@ -318,6 +331,35 @@ int main(int argc,char *argv[])
         
         for (i=0; i<argc; i++)
         {
+            if (strcmp("-Stretch",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please select minmax Strecth for image adjustment\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_minmaxStretch = atoi(argv[i+1]);
+                    args.min_S = atoi(argv[i+2]);
+                    args.max_S = atoi(argv[i+3]);
+                    printf("check_minmaxStretch %d\t%d\t%d\n",args.check_minmaxStretch,args.min_S,args.max_S);
+                }
+            }
+            
+            if (strcmp("-Gamma",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input gamma value for image adjustment\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.gamma = atof(argv[i+1]);
+                    printf("image gamma %f\n",args.gamma);
+                    args.check_gamma = true;
+                }
+            }
+            
             if (strcmp("-Sim",argv[i]) == 0)
             {
                 if (argc == i+1) {
@@ -646,8 +688,47 @@ int main(int argc,char *argv[])
                 }
                 else
                 {
-                    args.Phi_interval = atoi(argv[i+1]);
-                    printf("Phi interval %d\n",args.Phi_interval);
+                    args.Phi_interval = atof(argv[i+1]);
+                    printf("Phi interval %f\n",args.Phi_interval);
+                }
+            }
+            
+            if (strcmp("-O_start",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input omega angle start value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.omega_start = atoi(argv[i+1]);
+                    printf("omega start %d\n",args.omega_start);
+                }
+            }
+            
+            if (strcmp("-O_end",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input omega angle end value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.omega_end = atoi(argv[i+1]);
+                    printf("omega end %d\n",args.omega_end);
+                }
+            }
+            
+            if (strcmp("-O_int",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input omega angle interval for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.omega_interval = atof(argv[i+1]);
+                    printf("omega interval %f\n",args.omega_interval);
                 }
             }
             
@@ -685,8 +766,47 @@ int main(int argc,char *argv[])
                 }
                 else
                 {
-                    args.Kappa_interval = atoi(argv[i+1]);
-                    printf("Kappa interval %d\n",args.Kappa_interval);
+                    args.Kappa_interval = atof(argv[i+1]);
+                    printf("Kappa interval %f\n",args.Kappa_interval);
+                }
+            }
+            
+            if (strcmp("-Sim_scale_start",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input scale start value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.sim_scale_start = atof(argv[i+1]);
+                    printf("sim scale start %f\n",args.sim_scale_start);
+                }
+            }
+            
+            if (strcmp("-Sim_scale_end",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input scale end value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.sim_scale_end = atof(argv[i+1]);
+                    printf("sim scale end %f\n",args.sim_scale_end);
+                }
+            }
+            
+            if (strcmp("-Sim_scale_int",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input scale interval value for simulation image\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.sim_scale_interval = atof(argv[i+1]);
+                    printf("sim scale interval %f\n",args.sim_scale_interval);
                 }
             }
             
@@ -726,6 +846,32 @@ int main(int argc,char *argv[])
                 {
                     args.pair_max_th = atoi(argv[i+1]);
                     printf("Maximum number of pairs threshold %d\n",args.pair_max_th);
+                }
+            }
+            
+            if (strcmp("-pair_azimuth_th",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input maximum azimuth angle difference of pair for multiple stereo matching\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.pair_Azimuth_th = atoi(argv[i+1]);
+                    printf("Maximum azimuth angle difference of pairs %d\n",args.pair_Azimuth_th);
+                }
+            }
+            
+            if (strcmp("-pair_time_dif",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please input maximum time[hour] difference of pair for multiple stereo matching\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.pair_time_dif = atoi(argv[i+1]);
+                    printf("Maximum maximum time[hour] difference of pairs %d\n",args.pair_time_dif);
                 }
             }
             
@@ -1887,6 +2033,14 @@ int main(int argc,char *argv[])
                         
                         ImageSimulation(projectfilename,args);
                     }
+                    else if(args.check_minmaxStretch)
+                    {
+                        ImageMinMaxStretch(args);
+                    }
+                    else if(args.check_gamma)
+                    {
+                        ImageGammaAdjust(args);
+                    }
                     else if(image_count > 1 || args.check_ortho)
                     {
                         args.number_of_images = image_count;
@@ -2102,6 +2256,211 @@ void DownSample(ARGINFO &args)
     }
 }
 
+void ImageGammaAdjust(ARGINFO &args)
+{
+    CSize data_size;
+    double minX, maxY, grid_size;
+    
+    TransParam param = {};
+    param.bHemisphere = args.param.bHemisphere; //no assigned
+    param.projection = args.param.projection;
+    param.utm_zone   = args.param.utm_zone;
+    param.pm = args.param.pm;
+    
+    SetTransParam_param(&param,param.bHemisphere);
+    
+    printf("input image %s\n",args.Image[0]);
+    
+    CSize Imagesize;
+    GetImageSize(args.Image[0], &Imagesize);
+    
+    printf("img size %d\t%d\n",Imagesize.width,Imagesize.height);
+    
+    long cols[2] = {0, Imagesize.width};
+    long rows[2] = {0, Imagesize.height};
+    uint16 type16(0);
+    
+    
+    
+    uint16 *img = Readtiff_T(args.Image[0],&Imagesize,cols,rows,&data_size,type16);
+    long length = (long)Imagesize.width*(long)Imagesize.height;
+    
+    uint16 *outimg = (uint16*)malloc(sizeof(uint16)*length);
+    for(long count = 0 ; count < length ; count++)
+    {
+        outimg[count] = uint16(floor(pow(2,16)*pow( (img[count]/pow(2,16)),1.0/args.gamma)));
+    }
+    
+    char outfile[500];
+    int Gamma = int(args.gamma*10);
+    
+    char *tmp_chr = remove_ext(args.Image[0]);
+    if(Gamma < 10)
+        sprintf(outfile,"%s_G0%d.tif",tmp_chr,Gamma);
+    else
+        sprintf(outfile,"%s_G%d.tif",tmp_chr,Gamma);
+                               
+    WriteGeotiff(outfile,outimg,Imagesize.width,Imagesize.height,1,0,0,param.projection,param.utm_zone,param.bHemisphere,12);
+    free(outimg);
+    
+    char orifile[500];
+    sprintf(orifile,"%s_EO.TXT",tmp_chr);
+    if(Gamma < 10)
+        sprintf(outfile,"%s_G0%d_EO.TXT",tmp_chr,Gamma);
+    else
+        sprintf(outfile,"%s_G%d_EO.TXT",tmp_chr,Gamma);
+    
+    FILE *pmetafile = fopen(orifile,"r");
+    FILE *pNewmetafile = fopen(outfile,"w");
+    char c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+    
+    sprintf(orifile,"%s_RPC.TXT",tmp_chr);
+    if(Gamma < 10)
+        sprintf(outfile,"%s_G0%d_RPC.TXT",tmp_chr,Gamma);
+    else
+        sprintf(outfile,"%s_G%d_RPC.TXT",tmp_chr,Gamma);
+    
+    pmetafile = fopen(orifile,"r");
+    pNewmetafile = fopen(outfile,"w");
+    c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+    
+    sprintf(orifile,"%s_metadata.xml",tmp_chr);
+    if(Gamma < 10)
+        sprintf(outfile,"%s_G0%d_metadata.xml",tmp_chr,Gamma);
+    else
+        sprintf(outfile,"%s_G%d_metadata.xml",tmp_chr,Gamma);
+    
+    pmetafile = fopen(orifile,"r");
+    pNewmetafile = fopen(outfile,"w");
+    c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+}
+ 
+void ImageMinMaxStretch(ARGINFO &args)
+{
+    CSize data_size;
+    double minX, maxY, grid_size;
+    
+    TransParam param = {};
+    param.bHemisphere = args.param.bHemisphere; //no assigned
+    param.projection = args.param.projection;
+    param.utm_zone   = args.param.utm_zone;
+    param.pm = args.param.pm;
+    
+    printf("input image %s\n",args.Image[0]);
+    
+    CSize Imagesize;
+    GetImageSize(args.Image[0], &Imagesize);
+    
+    printf("img size %d\t%d\n",Imagesize.width,Imagesize.height);
+    
+    long cols[2] = {0, Imagesize.width};
+    long rows[2] = {0, Imagesize.height};
+    uint16 type16(0);
+    
+    
+    
+    uint16 *img = Readtiff_T(args.Image[0],&Imagesize,cols,rows,&data_size,type16);
+    long length = (long)Imagesize.width*(long)Imagesize.height;
+    
+    uint16 *outimg = (uint16*)malloc(sizeof(uint16)*length);
+    int min = 99999;
+    int max = 0;
+    
+    if(args.min_S == 0 && args.max_S == 0)
+    {
+        for(long count = 0 ; count < length ; count++)
+        {
+            if(min > img[count] && img[count] > 0)
+                min = img[count];
+            if(max < img[count])
+                max = img[count];
+        }
+    }
+    else
+    {
+        min = args.min_S;
+        max = args.max_S;
+    }
+    printf("min max %d\t%d\n",min,max);
+    for(long count = 0 ; count < length ; count++)
+    {
+        int temp = floor( double(img[count] - min)/double(max - min)*4095);
+        if(temp >= 4096)
+            temp = 4095;
+        if(temp < 0)
+            temp = 0;
+        outimg[count] = temp;
+    }
+    
+    char outfile[500];
+    char *tmp_chr = remove_ext(args.Image[0]);
+    sprintf(outfile,"%s_S.tif",tmp_chr);
+                               
+    WriteGeotiff(outfile,outimg,Imagesize.width,Imagesize.height,1,0,0,param.projection,param.utm_zone,param.bHemisphere,12);
+    free(outimg);
+    
+    char orifile[500];
+    sprintf(orifile,"%s_EO.TXT",tmp_chr);
+    sprintf(outfile,"%s_S_EO.TXT",tmp_chr);
+    FILE *pmetafile = fopen(orifile,"r");
+    FILE *pNewmetafile = fopen(outfile,"w");
+    char c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+    
+    sprintf(orifile,"%s_RPC.TXT",tmp_chr);
+    sprintf(outfile,"%s_S_RPC.TXT",tmp_chr);
+    pmetafile = fopen(orifile,"r");
+    pNewmetafile = fopen(outfile,"w");
+    c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+    
+    sprintf(orifile,"%s_metadata.xml",tmp_chr);
+    sprintf(outfile,"%s_S_metadata.xml",tmp_chr);
+    pmetafile = fopen(orifile,"r");
+    pNewmetafile = fopen(outfile,"w");
+    c = fgetc(pmetafile);
+    while(c!=EOF)
+    {
+        fputc(c,pNewmetafile);
+        c = fgetc(pmetafile);
+    }
+    fclose(pmetafile);
+    fclose(pNewmetafile);
+}
+
 void ImageSimulation(char* _filename, ARGINFO args)
 {
     ProInfo *proinfo = new ProInfo;
@@ -2182,6 +2541,11 @@ void ImageSimulation(char* _filename, ARGINFO args)
             {
                 char *tmp_chr = remove_ext(args.Image[ti]);
                 double Imageparams[2] = {0};
+                D2DPOINT img_shift;
+                img_shift.m_Y = args.ra_line[0];
+                img_shift.m_X = args.ra_sample[0];
+                printf("image shift %f\t%f\n",img_shift.m_Y,img_shift.m_X);
+                
                 vector<D3DPOINT> VCPslatlong, VCPslatlong1;
                 vector<D2DPOINT> IPs, IPs1;
                 
@@ -2234,7 +2598,7 @@ void ImageSimulation(char* _filename, ARGINFO args)
                         //printf("ID %d\tIP %f\t%f\t%f\t%f\tVCP %f\t%f\t%f\t%f\t%f\t%f\n",i,IPs[i].m_X,IPs[i].m_Y,IPsPhoto[i].m_X,IPsPhoto[i].m_Y,VCPslatlong[i].m_X,VCPslatlong[i].m_Y,VCPslatlong[i].m_Z,VCPsXY[i].m_X,VCPsXY[i].m_Y,VCPsXY[i].m_Z);
                     }
                     
-                    CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                    CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,true);
                     WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                     
                     printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
@@ -2397,109 +2761,167 @@ void ImageSimulation(char* _filename, ARGINFO args)
                 EO rotate;
                 int degree = 1;
                 char temp_str[500];
-                sprintf(temp_str,"PK");
-                for( int k = args.Phi_start ; k <= args.Phi_end ; k+=args.Phi_interval)
+                
+                for( double k = args.Phi_start ; k <= args.Phi_end ; k+=args.Phi_interval)
                 {
-                    printf("start SEO\n");
-                    //int k = -1;
-                    rotate.m_Pl = k;
-                    int ref_a = (int)rotate.m_Pl;
-                    int tar_a;
-                    for(int kk = args.Kappa_start; kk <= args.Kappa_end ;kk+=args.Kappa_interval)
+                    for(double omega = args.omega_start ; omega <= args.omega_end ; omega+=args.omega_interval)
                     {
-                        rotate.m_Kl = kk;
-                        tar_a = (int)rotate.m_Kl;
-                        
-                        printf("input eo %f\t%f\t%f\t%f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
-                        
-                        //rotate.m_Xl = args.sim_shiftX;
-                        //rotate.m_Yl = args.sim_shiftY;
-                        
-                        //printf("input shift %f\t%f\n",rotate.m_Xl,rotate.m_Yl);
-                        
-                        EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate);
-                        
-                        printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
-                        
-                        //exit(1);
-                        printf("End SEO\n");
-                        simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
-                        
-                        double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
-                        printf("End VCPs\n");
-                        double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
-                        printf("End sim_RPCs\n");
-                        
-                        /*
-                        vector<D3DPOINT> VCPs;
-                        vector<D2DPOINT> IPs2;
-                        midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
-                        
-                        double maxX = -100000;
-                        double maxY = -100000;
-                        for(int i=0;i<VCPslatlong.size();i++)
+                        for(double kk = args.Kappa_start; kk <= args.Kappa_end ;kk+=args.Kappa_interval)
                         {
-                            printf("image %f\t%f\t%f\t%f\t%f\t%f\n",IPs2[i].m_X,IPs1[i].m_X,IPs2[i].m_Y,IPs1[i].m_Y,IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
-                            printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
-                            
-                            if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
-                                maxX = fabs(IPs2[i].m_X - IPs1[i].m_X);
-                            if(maxY < fabs(IPs2[i].m_Y - IPs1[i].m_Y))
-                                maxY = fabs(IPs2[i].m_Y - IPs1[i].m_Y);
+                            for(double sim_scale = args.sim_scale_start ; sim_scale <= args.sim_scale_end ; sim_scale+=args.sim_scale_interval)
+                            {
+                                printf("start SEO %d\t%d\t%d\t%f\n",k,omega,kk,sim_scale);
+                                //int k = -1;
+                                rotate.m_Pl = k;
+                                rotate.m_Wl = omega;
+                                rotate.m_Kl = kk;
+                                
+                                printf("input eo %f\t%f\t%f\t%f\t%f\t%f\n",proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl,proinfo->frameinfo.Photoinfo[ti].m_Wl,proinfo->frameinfo.Photoinfo[ti].m_Pl,proinfo->frameinfo.Photoinfo[ti].m_Kl);
+                                
+                                //rotate.m_Xl = args.sim_shiftX;
+                                //rotate.m_Yl = args.sim_shiftY;
+                                
+                                //printf("input shift %f\t%f\n",rotate.m_Xl,rotate.m_Yl);
+                                
+                                EO simulated_eo = simulatedEO(proinfo->frameinfo.Photoinfo[ti], proinfo->frameinfo.m_Camera, center_XYZ, rotate, sim_scale);
+                                
+                                printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                                
+                                //exit(1);
+                                printf("End SEO\n");
+                                simulated_eo.m_Rm = MakeRotationMatrix(simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                                
+                                double midH2 = GetVCPsIPsfromFRPCc_Collinear(RPCs[ti], param, Limagesize[ti], simulated_eo, proinfo->frameinfo.m_Camera, VCPslatlong1,IPs1);
+                                printf("End VCPs\n");
+                                //double **sim_RPCs = GetRPCsfromVCPsIPs(RPCs[ti],2,Imageparams, VCPslatlong1, IPs1);
+                                //printf("End sim_RPCs\n");
+                                
+                                /*
+                                vector<D3DPOINT> VCPs;
+                                vector<D2DPOINT> IPs2;
+                                midH2 = GetVCPsIPsfromFRPCc(sim_RPCs,2,Imageparams,Limagesize[ti],VCPs, IPs2);
+                                
+                                double maxX = -100000;
+                                double maxY = -100000;
+                                for(int i=0;i<VCPslatlong.size();i++)
+                                {
+                                    printf("image %f\t%f\t%f\t%f\t%f\t%f\n",IPs2[i].m_X,IPs1[i].m_X,IPs2[i].m_Y,IPs1[i].m_Y,IPs2[i].m_X - IPs1[i].m_X,IPs2[i].m_Y - IPs1[i].m_Y);
+                                    printf("XYZ %f\t%f\t%f\n",VCPs[i].m_X - VCPslatlong1[i].m_X, VCPs[i].m_Y - VCPslatlong1[i].m_Y, VCPs[i].m_Z - VCPslatlong1[i].m_Z);
+                                    
+                                    if(maxX < fabs(IPs2[i].m_X - IPs1[i].m_X))
+                                        maxX = fabs(IPs2[i].m_X - IPs1[i].m_X);
+                                    if(maxY < fabs(IPs2[i].m_Y - IPs1[i].m_Y))
+                                        maxY = fabs(IPs2[i].m_Y - IPs1[i].m_Y);
+                                }
+                                printf("maxXY %f\t%f\n",maxX,maxY);
+                                exit(1);
+                                */
+                                char imagefile[500];
+                                char RPCfile[500];
+                                char metatile[500];
+                                char EOfile[500];
+                                
+                                
+                                char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
+                                char *tmp_no_ext = remove_ext(Ifilename);
+                                if(args.sim_scale_start == 1 && args.sim_scale_end == 1)
+                                {
+                                    if(args.ra_line[0] == 0 && args.ra_sample[0] == 0)
+                                    {
+                                        sprintf(temp_str,"PWK");
+                                        if(args.Phi_interval >= 1.0 && args.omega_interval >= 1.0 && args.Kappa_interval >= 1.0)
+                                        {
+                                            sprintf(imagefile, "%s/%s_sim_%s%d%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(RPCfile, "%s/%s_sim_%s%d%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(EOfile, "%s/%s_sim_%s%d%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(metatile, "%s/%s_sim_%s%d%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                        }
+                                        else
+                                        {
+                                            sprintf(imagefile, "%s/%s_sim_%s%2.1f%2.1f%2.1f.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(RPCfile, "%s/%s_sim_%s%2.1f%2.1f%2.1f_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(EOfile, "%s/%s_sim_%s%2.1f%2.1f%2.1f_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                            sprintf(metatile, "%s/%s_sim_%s%2.1f%2.1f%2.1f_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        sprintf(temp_str,"PWK");
+                                        sprintf(imagefile, "%s/%s_sim_%s%d%d%d_RA%3.2f_%3.2f.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,args.ra_line[0],args.ra_sample[0]);
+                                        sprintf(RPCfile, "%s/%s_sim_%s%d%d%d_RA%3.2f_%3.2f_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,args.ra_line[0],args.ra_sample[0]);
+                                        sprintf(EOfile, "%s/%s_sim_%s%d%d%d_RA%3.2f_%3.2f_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,args.ra_line[0],args.ra_sample[0]);
+                                        sprintf(metatile, "%s/%s_sim_%s%d%d%d_RA%3.2f_%3.2f_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,args.ra_line[0],args.ra_sample[0]);
+                                    }
+                                }
+                                else
+                                {
+                                    sprintf(temp_str,"PWK");
+                                    double scale = sim_scale*100;
+                                    if(scale < 100 && scale >= 10)
+                                    {
+                                        sprintf(imagefile, "%s/%s_sim_%s%d%d%dS0%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(RPCfile, "%s/%s_sim_%s%d%d%dS0%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(EOfile, "%s/%s_sim_%s%d%d%dS0%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(metatile, "%s/%s_sim_%s%d%d%dS0%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                    }
+                                    else if(scale < 10)
+                                    {
+                                        sprintf(imagefile, "%s/%s_sim_%s%d%d%dS00%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(RPCfile, "%s/%s_sim_%s%d%d%dS00%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(EOfile, "%s/%s_sim_%s%d%d%dS00%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(metatile, "%s/%s_sim_%s%d%d%dS00%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                    }
+                                    else
+                                    {
+                                        sprintf(imagefile, "%s/%s_sim_%s%d%d%dS%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(RPCfile, "%s/%s_sim_%s%d%d%dS%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(EOfile, "%s/%s_sim_%s%d%d%dS%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                        sprintf(metatile, "%s/%s_sim_%s%d%d%dS%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,omega,kk,int(scale));
+                                    }
+                                }
+                                
+                                printf("new imagefile %s\n",imagefile);
+                                
+                                //WriteIRPCs_Planet(RPCfile, sim_RPCs);
+                                WriteEOs(EOfile, simulated_eo, proinfo->frameinfo.m_Camera);
+                                
+                                FILE *pmetafile = fopen(proinfo->Imagemetafile[ti],"r");
+                                FILE *pNewmetafile = fopen(metatile,"w");
+                                char c = fgetc(pmetafile);
+                                while(c!=EOF)
+                                {
+                                    fputc(c,pNewmetafile);
+                                    c = fgetc(pmetafile);
+                                }
+                                fclose(pmetafile);
+                                fclose(pNewmetafile);
+                                
+                                
+                                //copy simulated RPC from original RPC
+                                pmetafile = fopen(proinfo->RPCfilename[ti],"r");
+                                pNewmetafile = fopen(RPCfile,"w");
+                                c = fgetc(pmetafile);
+                                while(c!=EOF)
+                                {
+                                    fputc(c,pNewmetafile);
+                                    c = fgetc(pmetafile);
+                                }
+                                fclose(pmetafile);
+                                fclose(pNewmetafile);
+                                
+                                
+                                //RPCsFree(sim_RPCs);
+                                
+                                double objectBR[4];
+                                CSize new_imagesize = SetSimulatedImageSize(image_info[ti], minH, maxH, simulated_eo, center_XYZ, proinfo->frameinfo.m_Camera, param, objectBR);
+                                printf("BR %f\t%f\t%f\t%f\tSize %d\t%d\t SSize %d\t%d\n",objectBR[0],objectBR[1],objectBR[2],objectBR[3],imagesize_ori.width,imagesize_ori.height,new_imagesize.width,new_imagesize.height);
+                                
+                                new_imagesize = imagesize_ori;
+                                printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
+                                
+                                SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, new_imagesize, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param,img_shift);
+                            }
                         }
-                        printf("maxXY %f\t%f\n",maxX,maxY);
-                        exit(1);
-                        */
-                        char imagefile[500];
-                        char RPCfile[500];
-                        char metatile[500];
-                        char EOfile[500];
-                        
-                        
-                        char *Ifilename  = SetOutpathName(proinfo->Imagefilename[ti]);
-                        char *tmp_no_ext = remove_ext(Ifilename);
-                        //if(k < 0)
-                        {
-                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
-                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
-                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
-                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,k,kk);
-                        }
-                        /*else
-                        {
-                            sprintf(imagefile, "%s/%s_sim_%s%d%d.tif", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
-                            sprintf(RPCfile, "%s/%s_sim_%s%d%d_RPC.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
-                            sprintf(EOfile, "%s/%s_sim_%s%d%d_EO.TXT", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
-                            sprintf(metatile, "%s/%s_sim_%s%d%d_metadata.xml", proinfo->save_filepath, tmp_no_ext,temp_str,abs(degree*k),degree*kk);
-                        }
-                        */
-                        printf("new imagefile %s\n",imagefile);
-                        
-                        WriteIRPCs_Planet(RPCfile, sim_RPCs);
-                        WriteEOs(EOfile, simulated_eo, proinfo->frameinfo.m_Camera);
-                        
-                        FILE *pmetafile = fopen(proinfo->Imagemetafile[ti],"r");
-                        FILE *pNewmetafile = fopen(metatile,"w");
-                        char c = fgetc(pmetafile);
-                        while(c!=EOF)
-                        {
-                            fputc(c,pNewmetafile);
-                            c = fgetc(pmetafile);
-                        }
-                        fclose(pmetafile);
-                        fclose(pNewmetafile);
-                        
-                        
-                        RPCsFree(sim_RPCs);
-                        
-                        double objectBR[4];
-                        CSize new_imagesize = SetSimulatedImageSize(image_info[ti], minH, maxH, simulated_eo, center_XYZ, proinfo->frameinfo.m_Camera, param, objectBR);
-                        printf("BR %f\t%f\t%f\t%f\tSize %d\t%d\t SSize %d\t%d\n",objectBR[0],objectBR[1],objectBR[2],objectBR[3],imagesize_ori.width,imagesize_ori.height,new_imagesize.width,new_imagesize.height);
-                        
-                        new_imagesize = imagesize_ori;
-                        printf("simulated eo %f\t%f\t%f\t%f\t%f\t%f\n",simulated_eo.m_Xl,simulated_eo.m_Yl,simulated_eo.m_Zl,simulated_eo.m_Wl,simulated_eo.m_Pl,simulated_eo.m_Kl);
-                        
-                        SimulatedImageGeneration(seeddem, seeddem_size, minX, maxY, grid_size, dem_min_H, dem_max_H, oriimage, imagesize_ori, new_imagesize, imagefile, proinfo->frameinfo.Photoinfo[ti], simulated_eo, proinfo->frameinfo.m_Camera,param);
                     }
                 }
                 
@@ -2545,6 +2967,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->Max_daygap = args.Max_daygap;
     proinfo->Cloud_th = args.Cloud_th;
     proinfo->pair_max_th = args.pair_max_th;
+    proinfo->pair_Azimuth_th = args.pair_Azimuth_th;
+    proinfo->pair_time_dif = args.pair_time_dif;
     proinfo->pair_options = args.pair_options;
     proinfo->awnccmp = args.awnccmp;
     proinfo->merging_option = args.merging_option;
@@ -3280,7 +3704,10 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             else
                             {
                                 //printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
-                                CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                                if(proinfo->sensor_provider == PT)
+                                    CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,true);
+                                else
+                                    CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,false);
                                 //CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                                 WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                             }
@@ -3351,6 +3778,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                     printf("seed fff %d\n",proinfo->pre_DEMtif);
                     
                     CPairInfo pairinfo(MaxNCC);
+                    int CAHist[10] = {0};
                     //pairinfo.pairs = (UI2DPOINT*)malloc(sizeof(UI2DPOINT)*MaxNCC);
                     //pairinfo.BHratio = (float*)malloc(sizeof(float)*MaxNCC);
                     
@@ -3581,7 +4009,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 double temp_DEM_resolution = proinfo->DEM_resolution;
                                 proinfo->DEM_resolution = Image_res[0]*pwrtwo(pyramid_step+1);
                                 
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, IRPCs, ray_vector, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,1,2,1,2,subX,subY,bin_angle,Hinterval,Image_res, Imageparams, RPCs, IRPCs, ray_vector, NumOfIAparam, Limagesize,param, ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo,CAHist);
                                 proinfo->DEM_resolution = temp_DEM_resolution;
                             }
                         }
@@ -3864,10 +4292,11 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             if(!args.check_gridonly)
                             {
-                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs,IRPCs, ray_vector, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo);
+                                Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs,IRPCs, ray_vector, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo,CAHist);
                                 
                                 fprintf(pMetafile, "Number of stereo pairs=%d\n",pairinfo.SelectNumberOfPairs());
                                 
+                                int afterCAHist[10] = {0};
                                 for(int pair_number = 0 ; pair_number < pairinfo.SelectNumberOfPairs() ; pair_number++)
                                 {
                                     char t_str[500];
@@ -3877,7 +4306,18 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                             pairinfo.BHratio(pair_number),pairinfo.AE(pair_number),pairinfo.BIE(pair_number));
                                     printf(t_str);
                                     fprintf(pMetafile,t_str);
+                                    
+                                    int pos = floor(pairinfo.ConvergenceAngle(pair_number) + 0.5) - 1;
+                                    if(pos > 9)
+                                        pos = 9;
+                                    if(pos < 0)
+                                        pos = 0;
+                                    afterCAHist[pos]++;
                                 }
+                                
+                                fprintf(pMetafile, "stere pair histogram by CA\n[0-1\t1-2\t2-3\t3-4\t4-5\t5-6\t6-7\t7-8\t8-9\t9-10]\n");
+                                fprintf(pMetafile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",CAHist[0],CAHist[1],CAHist[2],CAHist[3],CAHist[4],CAHist[5],CAHist[6],CAHist[7],CAHist[8],CAHist[9],CAHist[10]);
+                                fprintf(pMetafile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",afterCAHist[0],afterCAHist[1],afterCAHist[2],afterCAHist[3],afterCAHist[4],afterCAHist[5],afterCAHist[6],afterCAHist[7],afterCAHist[8],afterCAHist[9],afterCAHist[10]);
                             }
                             
                             int numberofpairs = pairinfo.SelectNumberOfPairs();
@@ -4586,7 +5026,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
 //                        //printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
 //                        pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
                         //pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
-                        pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
+                        pairinfo.SetAzimuth(pair_number, fabs(azimuthangle_diff));
                         //pairinfo.BHratio[pair_number] = 0.5;
                     }
                     
@@ -4618,7 +5058,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
      for(int count=0;count<pairinfo.NumberOfPairs();count++)
      {
      //pairinfo.BHratio[count] =  (pairinfo.BHratio[count] - minBH)/(maxBH - minBH)*0.5 + 0.5;
-     printf("pairnumber %d\timage %d\t%d\tBHratio %f\t%f\t%f\t%f\t%f\n",count,pairinfo.pairs(count).m_X,pairinfo.pairs(count).m_Y,pairinfo.BHratio(count),minBH,maxBH,pairinfo.ConvergenceAngle(count),pairinfo.SigmaZ(count));
+     printf("pairnumber %d\timage %d\t%d\tBHratio %f\t%f\t%f\t%f\t%f\t%f\n",count,pairinfo.pairs(count).m_X,pairinfo.pairs(count).m_Y,pairinfo.BHratio(count),minBH,maxBH,pairinfo.ConvergenceAngle(count),pairinfo.SigmaZ(count),pairinfo.Azimuth(count));
      }
      
     //exit(1);
@@ -4629,7 +5069,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     vector<short> actual_pair_save;
     vector<PairCA> actual_pair_CA;
     
-    int max_stereo_pair = proinfo->pair_max_th;
+    int max_stereo_pair = plevelinfo.pairinfo->NumberOfPairs();//proinfo->pair_max_th;
     printf("max_stereo_pair %d\t pair option %d\t pair temporal baseline %f\ttotal pair %d\n",max_stereo_pair,proinfo->pair_options,proinfo->Max_daygap, plevelinfo.pairinfo->NumberOfPairs());
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
@@ -4713,7 +5153,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     double diff_day = fabs(ref_day - tar_day);
                     //printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,tar_time,diff_time);
                     
-                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < 10 && diff_time < 1)
+                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && diff_time <= proinfo->pair_time_dif)
                     {
                         
                         D2DPOINT bottom_left = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
@@ -4759,7 +5199,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         const int start_H     = minmaxHeight[0];
                         const int end_H       = minmaxHeight[1];
                         //if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
-                        if(!p_code_ref && !p_code_ti)
+                        //if(!p_code_ref && !p_code_ti)
                         {
                             double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number)*10;
                             int sigma_pairs_index = ceil((sigmaZ-300));
@@ -5208,7 +5648,7 @@ void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double B
     }
 }
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return)
+int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return, int *CAHist)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -5845,6 +6285,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 
                         printf("Done actural_pair\n");
                         //exit(1);
+                        for(int pos = 0 ; pos < 10 ; pos++)
+                            CAHist[pos] = 0;
+                        
                         for(int count = 0 ; count < levelinfo.pairinfo->SelectNumberOfPairs() ; count++)
                         {
                             int ref_id = levelinfo.pairinfo->pairs(count).m_X;
@@ -5854,13 +6297,20 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             printf("pair file count %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count,image_info[ref_id].month,image_info[ref_id].date,image_info[ref_id].hour,image_info[ref_id].min,
                                    image_info[tar_id].month,image_info[tar_id].date,image_info[tar_id].hour,image_info[tar_id].min);
                             
+                            int pos = floor(levelinfo.pairinfo->ConvergenceAngle(count) + 0.5) - 1;
+                            if(pos > 9)
+                                pos = 9;
+                            if(pos < 0)
+                                pos = 0;
+                            CAHist[pos]++;
+                            
                             if(proinfo->sensor_provider == PT)
                             {
                                 t_Imageparams[count][0]    = 0.0;
                                 t_Imageparams[count][1]    = 0.0;
                                 Imageparams[count][0]    = 0.0;
                                 Imageparams[count][1]    = 0.0;
-                                printf("RA param for planet %f\t%f\n",t_Imageparams[count][0],t_Imageparams[count][1]);
+                                //printf("RA param for planet %f\t%f\n",t_Imageparams[count][0],t_Imageparams[count][1]);
                             }
                             
                             
@@ -5883,6 +6333,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             free(PC);
                             
                         }
+                        printf("CAhist\n");
+                        printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+                               CAHist[0],CAHist[1],CAHist[2],CAHist[3],CAHist[4],CAHist[5],CAHist[6],CAHist[7],CAHist[8],CAHist[9]);
                         //exit(1);
                         
                         double max_stereo_angle = -100;

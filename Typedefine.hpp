@@ -863,6 +863,8 @@ typedef struct ProjectInfo{
     double CA_max_th;
     double Max_daygap;
     int pair_max_th;
+    int pair_Azimuth_th;
+    int pair_time_dif;
     double Cloud_th;
     
 	double minHeight;
@@ -959,9 +961,14 @@ typedef struct ArgumentInfo{
     double CA_max_th;
     double Max_daygap;
     int pair_max_th;
+    int pair_Azimuth_th;
+    int pair_time_dif;
     double Cloud_th;
     double sim_shiftX;
     double sim_shiftY;
+    double gamma;
+    int min_S;
+    int max_S;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -989,11 +996,16 @@ typedef struct ArgumentInfo{
     
     int Phi_start;
     int Phi_end;
-    int Phi_interval;
+    double Phi_interval;
     int Kappa_start;
     int Kappa_end;
-    int Kappa_interval;
-    
+    double Kappa_interval;
+    int omega_start;
+    int omega_end;
+    double omega_interval;
+    double sim_scale_start;
+    double sim_scale_end;
+    double sim_scale_interval;
     
     char Image[MaxImages][500];
     char Outputpath[500];
@@ -1005,6 +1017,8 @@ typedef struct ArgumentInfo{
     char Multi_input_file[500];
     char TIF_lists[500];
     
+    bool check_minmaxStretch;
+    bool check_gamma;
     bool check_DS_txy;
     bool check_downsample;
 	bool check_DEM_space;

@@ -7,67 +7,87 @@
 
 #include "CollinearEQ.hpp"
 
-void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool frame)
 {
     int numofpts = IPs.size();
     
-    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
-    printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    /*
-    CalibrationBundle1(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
-    */
-    EOEstimatefromInitial(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
-    PPAEstimatefromEO(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
-    RadialParamEstimate(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
-    TangentialParamEstimate(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
-    AffinityParamEstimate(IPs, GCPs, eo, camera);
-    printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2,camera.k3,
-           camera.p1,camera.p2,
-           camera.a1,camera.a2);
-    
+    if(frame)
+    {
+        GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+        printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        CalibrationBundle1(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+    }
+    else
+    {
+        GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+        printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        /*
+        CalibrationBundle1(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        */
+        EOEstimatefromInitial(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        PPAEstimatefromEO(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        RadialParamEstimate(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        TangentialParamEstimate(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+        
+        AffinityParamEstimate(IPs, GCPs, eo, camera);
+        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+               camera.k1,camera.k2,camera.k3,
+               camera.p1,camera.p2,
+               camera.a1,camera.a2);
+    }
     //exit(1);
     // */
     eo.m_Wl *= RadToDeg;
