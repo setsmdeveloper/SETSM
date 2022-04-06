@@ -12493,6 +12493,10 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     
     double awncc_factor = 0.10;
     double sigmaZ_th = 100.0;
+    int max_MTs = 1;
+    if(Pyramid_step == 0)
+        max_MTs = 0;
+    
 #pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
     {
@@ -12520,7 +12524,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         
         if(proinfo->pair_options == 1 || proinfo->pair_options == 3)
         {
-            if(PairArray[pt_index].size() > 1)
+            if(PairArray[pt_index].size() > max_MTs)
             {
                 bool check_sigma_th = false;
                 int count = 0;
