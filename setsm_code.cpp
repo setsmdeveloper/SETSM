@@ -4290,6 +4290,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             
                             printf("Tiles row:col = row = %d\t%d\t;col = %d\t%d\tseed flag =%d\n",iter_row_start,iter_row_end,t_col_start,t_col_end,proinfo->pre_DEMtif);
                             
+                            vector<short> usedimage_ID;
                             if(!args.check_gridonly)
                             {
                                 Matching_SETSM(proinfo,image_info,pyramid_step, Template_size, buffer_area,iter_row_start, iter_row_end,t_col_start,t_col_end,subX,subY,bin_angle,Hinterval,Image_res,Imageparams,RPCs,IRPCs, ray_vector, NumOfIAparam, Limagesize,param,ori_minmaxHeight,Boundary,convergence_angle,mean_product_res,&MPP_stereo_angle,pairinfo,CAHist);
@@ -4313,6 +4314,18 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                     if(pos < 0)
                                         pos = 0;
                                     afterCAHist[pos]++;
+                                    
+                                    if(!contains(usedimage_ID, pairinfo.pairs(pair_number).m_X))
+                                        usedimage_ID.push_back(pairinfo.pairs(pair_number).m_X);
+                                    if(!contains(usedimage_ID, pairinfo.pairs(pair_number).m_Y))
+                                        usedimage_ID.push_back(pairinfo.pairs(pair_number).m_Y);
+                                }
+                                
+                                args.number_of_images = usedimage_ID.size();
+                                for(int count = 0 ; count < args.number_of_images ; count++)
+                                {
+                                    int imageID = usedimage_ID[count];
+                                    sprintf(args.Image[count],"%s",proinfo->Imagefilename[imageID]);
                                 }
                                 
                                 fprintf(pMetafile, "stere pair histogram by CA\n[0-1\t1-2\t2-3\t3-4\t4-5\t5-6\t6-7\t7-8\t8-9\t9-10]\n");
@@ -4692,11 +4705,29 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 }
                             }
                             
-                            for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
+                            fprintf(pMetafile,"Used Images\n");
+                            for(int ti = 0 ; ti < usedimage_ID.size() ; ti++)
                             {
-                                fprintf(pMetafile,"Image %d info\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\n",ti+1,ti+1,image_info[ti].SatID,ti+1,image_info[ti].imagetime,ti+1,Image_gsd_r[ti],ti+1,Image_gsd_c[ti],ti+1,Image_gsd[ti],ti+1,image_info[ti].Mean_sun_azimuth_angle,ti+1,image_info[ti].Mean_sun_elevation,ti+1,image_info[ti].Mean_sat_azimuth_angle,ti+1,image_info[ti].Mean_sat_elevation,ti+1,image_info[ti].Intrack_angle,ti+1,image_info[ti].Crosstrack_angle,ti+1,image_info[ti].Offnadir_angle,ti+1,(int)leftright_band[ti].tdi,ti+1,leftright_band[ti].effbw,ti+1,leftright_band[ti].abscalfactor);
+                                int imageID = usedimage_ID[ti];
+                                fprintf(pMetafile,"Image %d info\nImage_%d_filename=%s\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\n",ti+1,
+                                        ti+1,proinfo->Imagefilename[imageID],
+                                        ti+1,image_info[imageID].SatID,
+                                        ti+1,image_info[imageID].imagetime,
+                                        ti+1,image_info[imageID].GSD.row_GSD,
+                                        ti+1,image_info[imageID].GSD.col_GSD,
+                                        ti+1,image_info[imageID].GSD.pro_GSD,
+                                        ti+1,image_info[imageID].Mean_sun_azimuth_angle,
+                                        ti+1,image_info[imageID].Mean_sun_elevation,
+                                        ti+1,image_info[imageID].Mean_sat_azimuth_angle,
+                                        ti+1,image_info[imageID].Mean_sat_elevation,
+                                        ti+1,image_info[imageID].Intrack_angle,
+                                        ti+1,image_info[imageID].Crosstrack_angle,
+                                        ti+1,image_info[imageID].Offnadir_angle,
+                                        ti+1,(int)leftright_band[imageID].tdi,
+                                        ti+1,leftright_band[imageID].effbw,
+                                        ti+1,leftright_band[imageID].abscalfactor);
                             }
-                            
+                                
                             fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",convergence_angle);
                             fprintf(pMetafile,"Stereo_pair_expected_height_accuracy=%f\n",MPP_stereo_angle);
                             fclose(pMetafile);
@@ -5199,7 +5230,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         const int start_H     = minmaxHeight[0];
                         const int end_H       = minmaxHeight[1];
                         //if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
-                        //if(!p_code_ref && !p_code_ti)
+                        if(!p_code_ref && !p_code_ti)
                         {
                             double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number)*10;
                             int sigma_pairs_index = ceil((sigmaZ-300));
@@ -5456,7 +5487,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }*/
         *plevelinfo.pairinfo = temp_pairs;
         pairinfo = temp_pairs;
-    } 
+    }
     else
     {
         plevelinfo.pairinfo->SetNumberOfPairs(0);
@@ -7269,7 +7300,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 {
                                                     Grid_pair.grid_max_sigmaZ[pt_index] = start_sigmaZ - (3-level)*10;
                                                 }
-                                                
+                                                fprintf(fid_sigma,"0\t");
                                                 fprintf(fid_gpratio,"0\t");
                                             }
                                             
