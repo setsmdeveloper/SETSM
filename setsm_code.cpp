@@ -138,6 +138,8 @@ int main(int argc,char *argv[])
     args.NR_level = 1;
     args.check_awncc = true;
     args.check_blunderdetection = true;
+    args.check_Planet_RA = false;
+    args.check_Planet_VC = true;
     
     args.Phi_start = 0;
     args.Phi_end = 0;
@@ -937,6 +939,32 @@ int main(int argc,char *argv[])
                 {
                     args.check_awncc = atoi(argv[i+1]);
                     printf("AWNCC %d\n",args.check_awncc);
+                }
+            }
+            
+            if (strcmp("-PRA",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please select relative RPCs bias for multiple stereo matching\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_Planet_RA = atoi(argv[i+1]);
+                    printf("check_Planet_RA %d\n",args.check_Planet_RA);
+                }
+            }
+            
+            if (strcmp("-PVC",argv[i]) == 0)
+            {
+                if (argc == i+1) {
+                    printf("Please select vertical coregistration for multiple stereo matching\n");
+                    cal_flag = false;
+                }
+                else
+                {
+                    args.check_Planet_VC = atoi(argv[i+1]);
+                    printf("check_Planet_VC %d\n",args.check_Planet_VC);
                 }
             }
             
@@ -2976,6 +3004,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
     proinfo->check_awncc = args.check_awncc;
     proinfo->check_blunderdetection = args.check_blunderdetection;
     proinfo->pre_SDM = args.check_sdm_seed;
+    proinfo->check_Planet_RA = args.check_Planet_RA;
+    proinfo->check_Planet_VC = args.check_Planet_VC;
     
     printf("sgm level %d\t system memory %f\t%d\n",proinfo->SGM_py,proinfo->System_memory,args.number_of_images);
     
@@ -4886,6 +4916,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
     {
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
+            if(proinfo->check_selected_image[ref_ti] && proinfo->check_selected_image[ti])
             /*if(proinfo->sensor_provider = PT)
             {
                 if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
@@ -4911,6 +4942,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                 }
             }
             else*/
+            if(proinfo->check_selected_image[image_number])
             {
                 minoffnadir = fabs(image_info[image_number].Offnadir_angle);
                 pairinfo.SetMinOffImage(image_number);
@@ -4924,6 +4956,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
         for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
         {
             //if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
+            if(proinfo->check_selected_image[ref_ti] && proinfo->check_selected_image[ti])
             {
                 pairinfo.SetPairs(pair_number, ref_ti, ti);
                 
@@ -5102,8 +5135,13 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     int max_stereo_pair = plevelinfo.pairinfo->NumberOfPairs();//proinfo->pair_max_th;
     printf("max_stereo_pair %d\t pair option %d\t pair temporal baseline %f\ttotal pair %d\n",max_stereo_pair,proinfo->pair_options,proinfo->Max_daygap, plevelinfo.pairinfo->NumberOfPairs());
+    
+    int input_paircount = plevelinfo.pairinfo->NumberOfPairs();
+    long* pair_coverage = (long*)calloc(sizeof(long),input_paircount);
+    
     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
     {
+        //printf("actual_pair %d/%d\n",iter_count,(*plevelinfo.Grid_length) );
         long int pt_index = iter_count;
 
         vector<short> pairs;
@@ -5187,24 +5225,130 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && diff_time <= proinfo->pair_time_dif)
                     {
                         
-                        D2DPOINT bottom_left = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
-                        D2DPOINT upper_right = {image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
+                        D2DPOINT min_XY(9999,9999);
+                        D2DPOINT max_XY(-9999,-9999);
+                        D2DPOINT temp;
+                        D2DPOINT coord;
+                        
+                        coord = {image_info[reference_id].LL[0],image_info[reference_id].LL[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[reference_id].LR[0],image_info[reference_id].LR[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[reference_id].UL[0],image_info[reference_id].UL[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[reference_id].UR[0],image_info[reference_id].UR[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        D2DPOINT bottom_left = min_XY;//{image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
+                        D2DPOINT upper_right = max_XY;//{image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
                         
                         //printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
                         //printf("image br_ref %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
-                        bottom_left = wgs2ps_single(param,bottom_left);
-                        upper_right = wgs2ps_single(param,upper_right);
+                        //bottom_left = wgs2ps_single(param,bottom_left);
+                        //upper_right = wgs2ps_single(param,upper_right);
                         
                         D2DPOINT min_pt = {plevelinfo.GridPts[pt_index]};
                         //printf("image br_ref %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
                         
                         uint32_t p_code_ref = calc_code(min_pt, bottom_left, upper_right);
                         
-                        bottom_left = {image_info[ti].LL[0], image_info[ti].LL[1]};
-                        upper_right = {image_info[ti].UR[0], image_info[ti].UR[1]};
+                        min_XY.m_X = 9999;
+                        min_XY.m_Y = 9999;
+                        max_XY.m_X = -9999;
+                        max_XY.m_Y = -9999;
+                        
+                        coord = {image_info[ti].LL[0],image_info[ti].LL[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[ti].LR[0],image_info[ti].LR[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[ti].UL[0],image_info[ti].UL[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        coord = {image_info[ti].UR[0],image_info[ti].UR[1]};
+                        temp = wgs2ps_single(param,coord);
+                        if(min_XY.m_X > temp.m_X)
+                            min_XY.m_X = temp.m_X;
+                        if(min_XY.m_Y > temp.m_Y)
+                            min_XY.m_Y = temp.m_Y;
+                        
+                        if(max_XY.m_X < temp.m_X)
+                            max_XY.m_X = temp.m_X;
+                        if(max_XY.m_Y < temp.m_Y)
+                            max_XY.m_Y = temp.m_Y;
+                        
+                        bottom_left = min_XY;//{image_info[ti].LL[0], image_info[ti].LL[1]};
+                        upper_right = max_XY;//{image_info[ti].UR[0], image_info[ti].UR[1]};
                         //printf("image br_ti %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
-                        bottom_left = wgs2ps_single(param,bottom_left);
-                        upper_right = wgs2ps_single(param,upper_right);
+                        //bottom_left = wgs2ps_single(param,bottom_left);
+                        //upper_right = wgs2ps_single(param,upper_right);
                         
                         //printf("image br_ti %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
                         //printf("target pt %f\t%f\n",min_pt.m_X,min_pt.m_Y);
@@ -5242,7 +5386,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                             
                             //if(!contains(sigma_pairs[sigma_pairs_index],pair_number))
                                 sigma_pairs[sigma_pairs_index].push_back(pair_number);
-                            
+                            pair_coverage[pair_number]++;;
                             //exit(1);
                         }
                     }
@@ -5437,12 +5581,38 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
         temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
         temp_pairs.SetHeightStep(pairinfo.HeightStep());
-
+        
+        /*
+        int max_coverage_pair;
+        int max_grids = 0;
+        for(int cnt = 0 ; cnt < input_paircount ; cnt++)
+        {
+            if(pair_coverage[cnt] > max_grids)
+            {
+                max_grids = pair_coverage[cnt];
+                max_coverage_pair = cnt;
+            }
+        }
+        */
         for(int count = 0 ; count < plevelinfo.pairinfo->SelectNumberOfPairs() /* actual_pair_save.size()*/ ; count++)
         {
             int pair_number = actual_pair_save[count];
             
+            if(plevelinfo.pairinfo->MaxCountMPs_pair() == pair_number && plevelinfo.pairinfo->MaxCountMPs_pair() > -1)
+            {
+                temp_pairs.SetMaxCountMPs_pair(count);
+                
+                printf("MaxcountMPs pair before %d\t%d\n",plevelinfo.pairinfo->MaxCountMPs_pair(),count);
+            }
+            
             temp_pairs.SetCal(count,1);
+            
+            D2DPOINT temp_RBias;
+            temp_RBias.m_X = plevelinfo.ImageAdjust[pair_number][0];
+            temp_RBias.m_Y = plevelinfo.ImageAdjust[pair_number][1];
+            temp_pairs.SetRBias(count,temp_RBias);
+            temp_pairs.SetTz(count,plevelinfo.pairinfo->Tz(pair_number));
+            
             temp_pairs.SetPairs(count, plevelinfo.pairinfo->pairs(pair_number).m_X, plevelinfo.pairinfo->pairs(pair_number).m_Y);
             temp_pairs.SetBHratio(count, plevelinfo.pairinfo->BHratio(pair_number));
             temp_pairs.SetCenterDist(count, plevelinfo.pairinfo->CenterDist(pair_number));
@@ -5498,7 +5668,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     }
     
     
-    
+    free(pair_coverage);
     
 }
 
@@ -5866,9 +6036,6 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                  */
             }
             
-            CPairInfo pairinfo;
-            SetPairs(proinfo,pairinfo,image_info,ray_vector,IRPCs, param, 2, Imageparams, Imagesizes);
-            
             time_t PreST = 0, PreET = 0;
             double Pregab = 0;
             
@@ -5890,6 +6057,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                 if(proinfo->check_selected_image[index_image])
                     count_available_images++;
             }
+            
+            CPairInfo pairinfo;
+            SetPairs(proinfo,pairinfo,image_info,ray_vector,IRPCs, param, 2, Imageparams, Imagesizes);
             
             double max_Memory;
             double minmaxheight_mem[2];
@@ -6056,6 +6226,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                     const int Py_combined_level = 0;
                     int RA_resize_level = 0;
                     vector<unsigned char> compute_pair;
+                    int max_countMPs_pair;
                     
                     while(lower_level_match && level >= 0)
                     {
@@ -6314,7 +6485,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 
                         actual_pair(proinfo, levelinfo, minmaxHeight, Grid_pair, pairinfo_return, image_info, ori_minmaxHeight,param);
 
-                        printf("Done actural_pair\n");
+                        //max_countMPs_pair = levelinfo.max_covergae_pair;
+                        printf("Done actural_pair max_countMPs_pair %d\n",max_countMPs_pair);
                         //exit(1);
                         for(int pos = 0 ; pos < 10 ; pos++)
                             CAHist[pos] = 0;
@@ -6324,9 +6496,14 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             int ref_id = levelinfo.pairinfo->pairs(count).m_X;
                             int tar_id = levelinfo.pairinfo->pairs(count).m_Y;
                             
-                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count));
+                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\tRBias %f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count),levelinfo.pairinfo->RBias(count).m_X,levelinfo.pairinfo->RBias(count).m_Y);
                             printf("pair file count %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count,image_info[ref_id].month,image_info[ref_id].date,image_info[ref_id].hour,image_info[ref_id].min,
                                    image_info[tar_id].month,image_info[tar_id].date,image_info[tar_id].hour,image_info[tar_id].min);
+                            
+                            levelinfo.ImageAdjust[count][0] = levelinfo.pairinfo->RBias(count).m_X;
+                            levelinfo.ImageAdjust[count][1] = levelinfo.pairinfo->RBias(count).m_Y;
+                            
+                            printf("ImageAdjust %f\t%f\n",levelinfo.ImageAdjust[count][0],levelinfo.ImageAdjust[count][1]);
                             
                             int pos = floor(levelinfo.pairinfo->ConvergenceAngle(count) + 0.5) - 1;
                             if(pos > 9)
@@ -6335,13 +6512,16 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                 pos = 0;
                             CAHist[pos]++;
                             
+                            
                             if(proinfo->sensor_provider == PT)
                             {
+                                /*
                                 t_Imageparams[count][0]    = 0.0;
                                 t_Imageparams[count][1]    = 0.0;
                                 Imageparams[count][0]    = 0.0;
                                 Imageparams[count][1]    = 0.0;
-                                //printf("RA param for planet %f\t%f\n",t_Imageparams[count][0],t_Imageparams[count][1]);
+                                 */
+                                printf("RA param for planet %f\t%f\n",t_Imageparams[count][0],t_Imageparams[count][1]);
                             }
                             
                             
@@ -6487,7 +6667,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             mem_th = 10;
                         
                         double minimum_memory;
-                        const double level_total_memory =  CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,minmaxheight_mem);
+                        const double level_total_memory =  10;//CalMemorySize(proinfo,levelinfo,GridPT3,&minimum_memory,iteration,minmaxheight_mem);
                         
                         if(total_memory < level_total_memory)
                             total_memory = level_total_memory;
@@ -6729,6 +6909,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     vector<vector<float>> Consave(Grid_length);
                                     vector<vector<float>> Slopsave(Grid_length);
                                     
+                                    vector<int> count_MPs_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                                    
                                     for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                                     {
                                         if(levelinfo.pairinfo->cal(pair_number) > 0)
@@ -6954,7 +7136,7 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                         {
                                                             multimps(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
                                                             multimps(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
-                                                            multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;
+                                                            multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z + levelinfo.pairinfo->Tz(pair_number);
                                                             multimps(ref_index, pair_number).check_matched = true;
                                                             
                                                             total_count_MPs++;
@@ -7019,6 +7201,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 
                                                 printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                                 
+                                                count_MPs_pair[pair_number] = count_MPs;
+                                                
                                                 pair_count++;
                                                 
                                                 if(temp_asc_fprint)
@@ -7026,8 +7210,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             }
                                             else
                                             {
-                                                levelinfo.pairinfo->cal(pair_number) = 0;
-                                                pairinfo_return.cal(pair_number) = 0;
+                                                //if(level <= 2)
+                                                {
+                                                    levelinfo.pairinfo->SetCal(pair_number,0);
+                                                    pairinfo_return.SetCal(pair_number,0);
+                                                }
                                             }
                                             
                                             MatchedPts_list.clear();
@@ -7152,33 +7339,55 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     //    printf("cal pairs ID %d\t%d/%d\n",iter,save_cal_pairs[iter],save_cal_pairs.size());
                                     
                                     vector<short> t_cal_pair;
+                                    int max_countMPs = 0;
+                                    printf("before finding maxpair %d\n",levelinfo.pairinfo->MaxCountMPs_pair());
                                     for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                                     {
-                                        bool check_cal = false;
-                                        int iter = 0;
-                                        while(iter < save_cal_pairs.size() && !check_cal)
+                                        //if(level <= 2)
                                         {
-                                            short qp = save_cal_pairs[iter];
-                                            if(pair_number == qp)
-                                                check_cal = true;
-                                            iter++;
+                                            bool check_cal = false;
+                                            int iter = 0;
+                                            while(iter < save_cal_pairs.size() && !check_cal)
+                                            {
+                                                short qp = save_cal_pairs[iter];
+                                                if(pair_number == qp)
+                                                    check_cal = true;
+                                                iter++;
+                                            }
+                                            
+                                            if(!check_cal)
+                                            {
+                                                levelinfo.pairinfo->SetCal(pair_number,0);
+                                                pairinfo_return.SetCal(pair_number,0);
+                                            }
+                                            else
+                                            {
+                                                levelinfo.pairinfo->SetCal(pair_number,1);
+                                                pairinfo_return.SetCal(pair_number,1);
+                                                t_cal_pair.push_back(pair_number);
+                                            }
                                         }
                                         
-                                        if(!check_cal)
+                                        if(max_countMPs < count_MPs_pair[pair_number])
                                         {
-                                            levelinfo.pairinfo->cal(pair_number) = 0;
-                                            pairinfo_return.cal(pair_number) = 0;
+                                            max_countMPs = count_MPs_pair[pair_number];
+                                            max_countMPs_pair = pair_number;
                                         }
-                                        else
-                                        {
-                                            levelinfo.pairinfo->cal(pair_number) = 1;
-                                            pairinfo_return.cal(pair_number) = 1;
-                                            t_cal_pair.push_back(pair_number);
-                                        }
+                                    }
+                                    
+                                    if(levelinfo.pairinfo->MaxCountMPs_pair() == -1)
+                                    {
+                                        levelinfo.pairinfo->MaxCountMPs_pair() = max_countMPs_pair;
+                                    }
+                                    else
+                                    {
+                                        max_countMPs_pair = levelinfo.pairinfo->MaxCountMPs_pair();
                                     }
                                     
                                     for(int pair_number = 0 ; pair_number < t_cal_pair.size() ; pair_number++)
                                         printf("final cal pairs ID %d\t%d/%d\n",pair_number,t_cal_pair[pair_number],t_cal_pair.size());
+                                    
+                                    printf("max countMP pair %d\t%d\n",max_countMPs_pair,max_countMPs);
                                     
                                     save_cal_pairs.clear();
                                     t_cal_pair.clear();
@@ -7235,6 +7444,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
 //                                            }
                                     //}
                                     printf("end pair setting\n");
+                                    
+                                    vector<vector<float>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
+                                    
                                     //file genration for pair counts, sigmaZ, GP_ratio
                                     for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
                                     {
@@ -7306,6 +7518,20 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             Grid_pair.grid_height_step[pt_index] = GetHeightStep_Planet_MPP(proinfo,levelinfo,(double)Grid_pair.grid_max_sigmaZ[pt_index]);
                                             
+                                            
+                                            //estimate Tz based on the largest matching point pair
+                                            if(multimps(pt_index,max_countMPs_pair).check_matched)
+                                            {
+                                                double ref_height = multimps(pt_index,max_countMPs_pair).peak_height;
+                                                
+                                                for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
+                                                {
+                                                    if(t_pair != max_countMPs_pair && multimps(pt_index, t_pair).check_matched)
+                                                    {
+                                                        save_difheight[t_pair].push_back(ref_height - multimps(pt_index, t_pair).peak_height);
+                                                    }
+                                                }
+                                            }
                                             //double mpp_for_hs = start_sigmaZ - (3-level)*10;
                                             //Grid_pair.grid_height_step[pt_index] = GetHeightStep_Planet_MPP(proinfo,levelinfo,mpp_for_hs);
                                         }
@@ -7313,6 +7539,56 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         fprintf(fid_sigma,"\n");
                                         fprintf(fid_gpratio,"\n");
                                     }
+                                    
+                                    for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
+                                    {
+                                        if(save_difheight[t_pair].size() > 100 && t_pair != max_countMPs_pair)
+                                        {
+                                            double dif_sum = 0;
+                                            double sel_count = 0;
+                                            for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
+                                            {
+                                                double th_H = height_step*5;
+                                                if(th_H < 30)
+                                                    th_H = 30;
+                                                
+                                                if(fabs(save_difheight[t_pair][cnt]) < th_H)
+                                                {
+                                                    dif_sum += save_difheight[t_pair][cnt];
+                                                    sel_count++;
+                                                    
+                                                    //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                                }
+                                            }
+                                            
+                                            if(sel_count > 50)
+                                            {
+                                                double dif_avg = dif_sum/sel_count;
+                                                double sum_dif_avg = levelinfo.pairinfo->Tz(t_pair) + dif_avg;
+                                                levelinfo.pairinfo->SetTz(t_pair,sum_dif_avg);
+                                            
+                                                if(!proinfo->check_Planet_VC)
+                                                    levelinfo.pairinfo->SetTz(t_pair,0);
+                                                printf("pair_number %d\tsel_pts %f\tdif_avg %f\t%f\n",t_pair,sel_count,dif_avg,levelinfo.pairinfo->Tz(t_pair));
+                                                
+                                                //exit(1);
+                                            }
+                                        }
+                                    }
+                                    for(long int trow = 0 ; trow < Size_Grid2D.height ; trow++)
+                                    {
+                                        for(long int tcol = 0 ; tcol < Size_Grid2D.width ; tcol++)
+                                        {
+                                            long int pt_index = trow*Size_Grid2D.width + tcol;
+                                            for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
+                                            {
+                                                if(multimps(pt_index,t_pair).check_matched && t_pair != max_countMPs_pair)
+                                                    multimps(pt_index,t_pair).peak_height = multimps(pt_index,t_pair).peak_height + levelinfo.pairinfo->Tz(t_pair);
+                                            }
+                                        }
+                                    }
+                                    
+                                    
                                     
                                     if(level == 0 && iteration == 3)
                                     {
@@ -7832,9 +8108,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         GridPT3     = SetHeightRange_vector(proinfo,levelinfo, count_MPs, count_tri, GridPT3, iteration, &minH_grid, &maxH_grid, MatchedPts_list_mps, t_trilists, check_matching_rate, Grid_pair);
                                     }
                                     
-                                    if(proinfo->IsRA)
+                                    if(proinfo->IsRA || proinfo->check_Planet_RA)
                                     {
-                                        if(level <= 3)
+                                        int RA_level = 3;
+                                        if(proinfo->sensor_provider == PT)
+                                            RA_level = 2;
+                                        if(level <= RA_level)
                                         {
                                             int RA_iter_counts = 0;
                                             RA_iter_counts = AdjustParam_vector(proinfo, levelinfo, count_MPs, t_Imageparams, proinfo->pyramid_level, MatchedPts_list_mps);
@@ -9796,7 +10075,10 @@ uint16 *SetsubsetImage(ProInfo *proinfo, LevelInfo &rlevelinfo, const int index_
             Startpos[index_image].m_X  = (double)(Lcols[0]);
             Startpos[index_image].m_Y  = (double)(Lrows[0]);
             
-            if(!outimage)
+            CSize sub_imagesize(Lcols[1] - Lcols[0],Lrows[1] - Lrows[0]);
+            printf("imagesize %d\t%d\n\n",sub_imagesize.width,sub_imagesize.height);
+            
+            if(!outimage || sub_imagesize.width < 300 || sub_imagesize.height < 300)
                 proinfo->check_selected_image[index_image] = false;
         }
     }
@@ -11019,6 +11301,8 @@ int VerticalLineLocus(GridVoxel &grid_voxel,const ProInfo *proinfo, const ImageI
                                                 if(check_height_orientation && temp_rho > -1 && temp_rho < 1.0)
                                                 {
                                                     grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number) = DoubleToSignedChar_voxel(db_INCC);
+                                                    
+                                                    //printf("INCC %d\n", grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number));
                                                 }
                                                 else
                                                 {
@@ -13509,7 +13793,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             sum_weight = 0;
                             max_weight = 0.0;
                             
-                            int q_kenel_size = 2;
+                            int q_kenel_size = 5;
                             bool check_kernel_iter = true;
                             int max_kernel_size = 10;
                             float var_th;
@@ -13527,6 +13811,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                             vector<unsigned char> check_kenel_cal((2*max_kernel_size+1)*(2*max_kernel_size+1),0);
                             vector<double> save_kernal_height_all;
                             vector<double> save_kernal_weight_all;
+                            vector<double> save_kernal_distance_all;
                             
                             while(check_kernel_iter && q_kenel_size < max_kernel_size)
                             {
@@ -13547,6 +13832,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             double kenel_sum_weight_height = 0;
                                             double kenel_sum_weight = 0;
                                             double kenel_total_weight = 0;
+                                            
                                             check_kenel_cal[kenel_pos] = 1;
                                             
                                             for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
@@ -13774,6 +14060,9 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                 
                                                 save_kernal_height_all.push_back(kenel_sum_weight_height/kenel_sum_weight);
                                                 save_kernal_weight_all.push_back(kenel_sum_weight);
+                                                
+                                                double kenel_distance = sqrt(q_kc*q_kc + q_kr*q_kr)*(*rlevelinfo.grid_resolution);
+                                                save_kernal_distance_all.push_back(kenel_distance);
                                             }
                                             
                                         }
@@ -13824,8 +14113,18 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                 double sum_W = 0;
                                 for(int i = 0 ; i < save_kernal_height_all.size() ; i++)
                                 {
-                                    sum_WH += save_kernal_height_all[i]*save_kernal_weight_all[i];
-                                    sum_W += save_kernal_weight_all[i];
+                                    /*if(save_kernal_distance_all[i] > 0)
+                                    {
+                                        double IDW= 1.0/pow(save_kernal_distance_all[i],1.5);
+                                        sum_WH += save_kernal_height_all[i]*save_kernal_weight_all[i]*IDW;
+                                        sum_W += save_kernal_weight_all[i]*IDW;
+                                    }
+                                    else*/
+                                    {
+                                        sum_WH += save_kernal_height_all[i]*save_kernal_weight_all[i];
+                                        sum_W += save_kernal_weight_all[i];
+                                    }
+                                        
                                 }
                                 final_height = sum_WH/sum_W;
                             }
@@ -21423,7 +21722,7 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
         CSize LImagesize(rlevelinfo.py_Sizes[reference_id][Pyramid_step].width, rlevelinfo.py_Sizes[reference_id][Pyramid_step].height);
         const double left_IA[2] = {0.0, 0.0};
         
-        //if(proinfo->check_selected_image[ti])
+        if(rlevelinfo.pairinfo->cal(pair_number) > 0)
         {
             bool check_stop = false;
             iter_count = 1;
@@ -21431,16 +21730,24 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
             {
                 bool flag_boundary = false;
                 int count_pts = 0;
-
+                int candi_pts = 0;
+                
                 std::vector<double> weights_X(NumofPts, 0.0);
                 std::vector<double> weights_Y(NumofPts, 0.0);
                 std::vector<double> max_rohs(NumofPts, 0.0);
 
-                const double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
+                double b_factor             = pwrtwo(total_pyramid-Pyramid_step+1);
+                int offset = 10;
+                if(proinfo->sensor_provider == PT)
+                {
+                    b_factor = 1.0;
+                    offset = 2;
+                }
+                
                 const int Half_template_size   = (int)(*rlevelinfo.Template_size/2.0);
                 int patch_size = (2*Half_template_size+1) * (2*Half_template_size+1);
 
-#pragma omp parallel reduction(+:count_pts)
+#pragma omp parallel reduction(+:count_pts,candi_pts)
                 {
                     Matrix<double> left_patch_vecs(3, patch_size);
                     Matrix<double> right_patch_vecs(3, patch_size);
@@ -21458,12 +21765,13 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
                         D2DPOINT Right_Imagecoord_p  = GetObjectToImageRPC_single(rlevelinfo.RPCs[ti],2,ImageAdjust[pair_number],Coord[i]);
                         D2DPOINT Right_Imagecoord    = OriginalToPyramid_single(Right_Imagecoord_p,rlevelinfo.py_Startpos->at(ti),Pyramid_step);
                         
-                        if(Left_Imagecoord.m_Y  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_X  > Half_template_size*b_factor + 10 && Left_Imagecoord.m_Y  < LImagesize.height - Half_template_size*b_factor - 10 && Left_Imagecoord.m_X  < LImagesize.width - Half_template_size*b_factor - 10 && Right_Imagecoord.m_Y > Half_template_size*b_factor + 10 && Right_Imagecoord.m_X > Half_template_size*b_factor + 10 && Right_Imagecoord.m_Y < RImagesize.height - Half_template_size*b_factor - 10 && Right_Imagecoord.m_X < RImagesize.width - Half_template_size*b_factor - 10)
+                        if(Left_Imagecoord.m_Y  > Half_template_size*b_factor + offset && Left_Imagecoord.m_X  > Half_template_size*b_factor + offset && Left_Imagecoord.m_Y  < LImagesize.height - Half_template_size*b_factor - offset && Left_Imagecoord.m_X  < LImagesize.width - Half_template_size*b_factor - offset && Right_Imagecoord.m_Y > Half_template_size*b_factor + offset && Right_Imagecoord.m_X > Half_template_size*b_factor + offset && Right_Imagecoord.m_Y < RImagesize.height - Half_template_size*b_factor - offset && Right_Imagecoord.m_X < RImagesize.width - Half_template_size*b_factor - offset)
                         {
                             long index_l = (long)Left_Imagecoord.m_Y*(long)LImagesize.width + (long)Left_Imagecoord.m_X;
                             long index_r = (long)Right_Imagecoord.m_Y*(long)RImagesize.width + (long)Right_Imagecoord.m_X;
                             if( (index_l > 0 && index_l < (long)LImagesize.height*(long)LImagesize.width) && (index_r > 0 && index_r < (long)RImagesize.height*(long)RImagesize.width) )
                             {
+                                candi_pts++;
                                 double ori_diff = rlevelinfo.py_OriImages[reference_id][index_l] - rlevelinfo.py_OriImages[ti][index_r];
                                 
                                 if(postNCC(rlevelinfo, ori_diff, Left_Imagecoord, Right_Imagecoord, subA, TsubA, InverseSubA, Half_template_size, reference_id, ti, &t_sum_weight_X, &t_sum_weight_Y, &t_sum_max_roh, left_patch_vecs, right_patch_vecs))
@@ -21488,7 +21796,7 @@ int AdjustParam_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, int NumofPts, do
                 for(const auto& v: max_rohs)
                     sum_max_roh += v;
 
-                printf("in AdjustParam, count_pts is %d\n", count_pts);
+                printf("in AdjustParam, count_pts is %d\t%d\t%d\n", count_pts,candi_pts,NumofPts);
                 if(count_pts > 10)
                 {
                     double shift_X             = sum_weight_X/sum_max_roh*pwrtwo(Pyramid_step);
@@ -21697,9 +22005,9 @@ bool postNCC(LevelInfo &rlevelinfo, const double Ori_diff, const D2DPOINT left_p
             if(fabs(max_Y) <= 1.0)
                 find_index_2 = true;
             if (*rlevelinfo.Pyramid_step >= 2)
-                find_index  = find_index_1 & find_index_2 & (max_roh > 0.80);
+                find_index  = find_index_1 & find_index_2 & (max_roh > 0.50);
             else
-                find_index  = find_index_1 & find_index_2 & (max_roh > 0.90);
+                find_index  = find_index_1 & find_index_2 & (max_roh > 0.60);
 
             if(find_index)
             {

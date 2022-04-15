@@ -31,8 +31,8 @@
 #define RadToDeg 180/PI
 #define UMToMM 0.001
 #define MMToUM 1000
-#define MaxImages 100
-#define MaxNCC 1000
+#define MaxImages 1000
+#define MaxNCC 2000
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
@@ -437,8 +437,11 @@ private:
     int m_SelectNumberOfPairs;
     int m_MinOffImage;
     float m_HeightStep;
+    int m_max_countMPs_pair;
     
     std::vector<short> m_cal;
+    std::vector<D2DPOINT> m_RBias;
+    std::vector<float> m_Tz;
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
     std::vector<float> m_ConvergenceAngle;
@@ -461,7 +464,11 @@ private:
     
     void allocate(int numberofpairs)
     {
+        m_max_countMPs_pair = -1;
+        
         m_cal = std::vector<short>(numberofpairs,1);
+        m_RBias = std::vector<D2DPOINT>(numberofpairs);
+        m_Tz = std::vector<float>(numberofpairs,0);
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
@@ -488,7 +495,7 @@ private:
     
     
 public:
-    CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0)
+    CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0), m_max_countMPs_pair(-1)
     {
     }
     
@@ -504,9 +511,16 @@ public:
         m_SelectNumberOfPairs = 0;
         m_MinOffImage = -1;
         m_HeightStep = 0;
+        m_max_countMPs_pair = -1;
         
         m_cal.clear();
         vector<short>().swap(m_cal);
+        
+        m_RBias.clear();
+        vector<D2DPOINT>().swap(m_RBias);
+        
+        m_Tz.clear();
+        vector<float>().swap(m_Tz);
         
         m_pairs.clear();
         vector<UI2DPOINT>().swap(m_pairs);
@@ -580,9 +594,24 @@ public:
         m_HeightStep = heightStep;
     }
     
+    void SetMaxCountMPs_pair(int pairID)
+    {
+        m_max_countMPs_pair = pairID;
+    }
+    
     void SetCal(int pos, short value)
     {
         m_cal[pos] = value;
+    }
+    
+    void SetRBias(int pos, D2DPOINT value)
+    {
+        m_RBias[pos] = value;
+    }
+    
+    void SetTz(int pos, float value)
+    {
+        m_Tz[pos] = value;
     }
     
     void SetPairs(int pos, UI2DPOINT value)
@@ -692,9 +721,24 @@ public:
         return m_HeightStep;
     }
     
+    int& MaxCountMPs_pair()
+    {
+        return m_max_countMPs_pair;
+    }
+    
     short& cal(int pos)
     {
         return m_cal[pos];
+    }
+    
+    D2DPOINT& RBias(int pos)
+    {
+        return m_RBias[pos];
+    }
+    
+    float& Tz(int pos)
+    {
+        return m_Tz[pos];
     }
     
     UI2DPOINT& pairs(int pos)
@@ -883,6 +927,8 @@ typedef struct ProjectInfo{
     int merging_option;
     int NR_level;
     bool check_awncc;;
+    bool check_Planet_RA;
+    bool check_Planet_VC;
     
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
@@ -1063,6 +1109,8 @@ typedef struct ArgumentInfo{
     int merging_option;
     int NR_level;
     bool check_awncc;
+    bool check_Planet_RA;
+    bool check_Planet_VC;
     
     //SGM test flag
     bool check_SNCC;
@@ -1198,7 +1246,7 @@ typedef struct taglevelinfo
     const int *Pyramid_step;
     const CSize * const *py_Sizes;
     const unsigned char *Template_size;
-    const double * const *ImageAdjust;
+    double **ImageAdjust;
     const TransParam *param;
     const unsigned char *NumOfIAparam;
     const double *bin_angle;
@@ -1220,6 +1268,7 @@ typedef struct taglevelinfo
     const CSize *Imagesize_ori;
     bool check_SGM;
     double MPP;
+    int max_covergae_pair;
 } LevelInfo;
 
 typedef struct PairCA
