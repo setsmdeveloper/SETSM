@@ -32,6 +32,8 @@ using std::max;
 
 #define SUB_RATIO 4.6
 
+bool VerticalShift(vector<float>& input, double height_step, double &shift, double &sel_count);
+bool VerticalShift(vector<D3DPOINT>& input, double height_step, double &shift, double &sel_count);
 char* remove_ext(const char* mystr);
 char* GetFileName(char file_path[]);
 char* GetFileDir(char file_path[],int *size);

@@ -928,7 +928,7 @@ typedef struct ProjectInfo{
     int NR_level;
     bool check_awncc;;
     bool check_Planet_RA;
-    bool check_Planet_VC;
+    int Planet_VC_level;
     
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
@@ -1110,7 +1110,7 @@ typedef struct ArgumentInfo{
     int NR_level;
     bool check_awncc;
     bool check_Planet_RA;
-    bool check_Planet_VC;
+    int Planet_VC_level;
     
     //SGM test flag
     bool check_SNCC;

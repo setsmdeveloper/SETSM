@@ -9,6 +9,131 @@
 
 int numcols[7] = {6,5,5,5,4,3,0};
 
+
+bool VerticalShift(vector<float>& input, double height_step, double &shift, double &sel_count)
+{
+    shift = 0;
+    
+    double th_H = height_step*5;
+    if(th_H < 30)
+        th_H = 30;
+    
+    int max_iter = 50;
+    int iteration = 0;
+    bool check_stop = false;
+    double shift_t = 0;
+    while(!check_stop && iteration < max_iter)
+    {
+        double dif_sum = 0;
+        sel_count = 0;
+        
+        for(int cnt = 0 ; cnt < input.size() ; cnt++)
+        {
+            if(fabs(input[cnt] - shift) < th_H)
+            {
+                dif_sum += (input[cnt] - shift);
+                sel_count ++;
+            }
+        }
+        
+        if(sel_count > 2000)
+            shift_t = dif_sum/sel_count;
+        else
+            return false;
+        
+        double sum_var = 0;
+        for(int cnt = 0 ; cnt < input.size() ; cnt++)
+        {
+            if(fabs(input[cnt] - shift) < th_H)
+                sum_var += (input[cnt] - shift - shift_t)*(input[cnt] - shift - shift_t);
+        }
+        double var = sqrt(sum_var/sel_count);
+        th_H = 1.96*var;
+        
+        shift = shift + shift_t;
+            
+        if( fabs(shift_t) < 0.005)
+        {
+            check_stop = true;
+            //printf("iteration %d\tshift %f\tshift_t %f\t%f\t%f\n",iteration, shift, shift_t,sel_count,th_H);
+            return true;
+        }
+        
+        //printf("iteration %d\tshift %f\tshift_t %f\t%f\t%f\n",iteration, shift, shift_t,sel_count,th_H);
+        
+        
+        iteration ++;
+    }
+    
+    if(!check_stop)
+    {
+        printf("Tz out of iteration\n");
+        return true;
+    }
+}
+
+bool VerticalShift(vector<D3DPOINT>& input, double height_step, double &shift, double &sel_count)
+{
+    shift = 0;
+    
+    double th_H = height_step*5;
+    if(th_H < 30)
+        th_H = 30;
+    
+    int max_iter = 50;
+    int iteration = 0;
+    bool check_stop = false;
+    double shift_t = 0;
+    while(!check_stop && iteration < max_iter)
+    {
+        double dif_sum = 0;
+        sel_count = 0;
+        
+        for(int cnt = 0 ; cnt < input.size() ; cnt++)
+        {
+            if(fabs(input[cnt].m_Z - shift) < th_H)
+            {
+                dif_sum += (input[cnt].m_Z - shift);
+                sel_count ++;
+            }
+        }
+        
+        if(sel_count > 2000)
+            shift_t = dif_sum/sel_count;
+        else
+            return false;
+        
+        double sum_var = 0;
+        for(int cnt = 0 ; cnt < input.size() ; cnt++)
+        {
+            if(fabs(input[cnt].m_Z - shift) < th_H)
+                sum_var += (input[cnt].m_Z - shift - shift_t)*(input[cnt].m_Z - shift - shift_t);
+        }
+        double var = sqrt(sum_var/sel_count);
+        th_H = 1.96*var;
+        
+        shift = shift + shift_t;
+            
+        if( fabs(shift_t) < 0.005)
+        {
+            check_stop = true;
+            //printf("iteration %d\tshift %f\tshift_t %f\t%f\t%f\n",iteration, shift, shift_t,sel_count,th_H);
+            return true;
+        }
+        
+        //printf("iteration %d\tshift %f\tshift_t %f\t%f\t%f\n",iteration, shift, shift_t,sel_count,th_H);
+        
+        
+        iteration ++;
+    }
+    
+    if(!check_stop)
+    {
+        printf("Tz out of iteration\n");
+        return true;
+    }
+}
+
 char* remove_ext(const char* mystr)
 {
     char *retstr;
