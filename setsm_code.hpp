@@ -201,9 +201,9 @@ void VerticalCoregistration(const ProInfo* info, LevelInfo &levelinfo, Matrix<Mu
 
 double DEM_average_plane(vector<D3DPOINT> &MatchedPts_list_mps);
 
-double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &selected_mps);
+double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std);
 
-double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps);
+double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std);
 
 void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs);
 
