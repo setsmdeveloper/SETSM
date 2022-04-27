@@ -7477,9 +7477,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         fprintf(fid_gpratio,"\n");
                                     }
                                     
+                                    vector<D3DPOINT> Tz_delta;
+                                    double Tz_sigma;
                                     if(level <= proinfo->Planet_VC_level)
                                     {
-                                        VerticalCoregistration_LSA(proinfo, levelinfo, multimps, count_MPs_pair, max_countMPs_pair, max_countMPs);
+                                        //if((iteration <= 3 && level == 3) || (iteration <= 2 && level == 2) || (iteration <= 1 && level == 1 || level == 0))
+                                            VerticalCoregistration_LSA(proinfo, levelinfo, multimps, count_MPs_pair, max_countMPs_pair, max_countMPs,Tz_delta,Tz_sigma);
                                         
                                         //VerticalCoregistration_LSA_H(proinfo, levelinfo, multimps, count_MPs_pair, max_countMPs_pair, max_countMPs,GridPT3);
                                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
@@ -7512,6 +7515,17 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                         sprintf(oncc_pair,"%s/grid_HS_%d_%d_%d_%d.tif",proinfo->save_filepath,row,col,level,iteration);
                                         WriteGeotiff(oncc_pair, oncc, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[1], param.projection, param.utm_zone, param.bHemisphere, 4);
                                         free(oncc);
+                                        
+                                        char coregistration_txt[500];
+                                        sprintf(oncc_pair,"%s/txt/Coregistration_result.txt",proinfo->save_filepath);
+                                        FILE* fid_coreg        = fopen(oncc_pair,"w");
+                                        fprintf(fid_coreg,"Tz sigam0 %f\n",Tz_sigma);
+                                        for(int cnt = 0 ; cnt < Tz_delta.size() ; cnt++)
+                                        {
+                                            D3DPOINT val = Tz_delta[cnt];
+                                            fprintf(fid_coreg,"Pair_ID %d\tdelta %4.2f\tTz %4.2f\n",(int)val.m_X,val.m_Y,val.m_Z);
+                                        }
+                                        fclose(fid_coreg);
                                     }
                                     
                                     fclose(fid_grid);
@@ -8471,26 +8485,34 @@ double DEM_average_plane(vector<D3DPOINT> &MatchedPts_list_mps)
         return 0;
 }
 
-double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std)
+double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma)
 {
     double DEM_shift;
     
     long counts = MatchedPts_list_mps.size();
     int n = 1000;
+    double dh_TH = sigma;
+    if(dh_TH < 30)
+        dh_TH = 30;
     
+    long selected_counts = 0;
     vector<vector<float>> save_Z(1000); //+-2000, 20
     for(long i = 0 ; i < counts ; i++)
     {
         D3DPOINT val = MatchedPts_list_mps[i];
         
-        int pos = ceil(val.m_Z/20.0) + n/2;
-        if(pos < 0)
-            pos = 0;
-        if(pos >= n)
-            pos = n-1;
- 
-        save_Z[pos].push_back(val.m_Z);
-        //printf("i %d\tpos %d\t Z %f\n",i,pos,val.m_Z);
+        if(fabs(val.m_Z) < dh_TH)
+        {
+            int pos = ceil(val.m_Z/20.0) + n/2;
+            if(pos < 0)
+                pos = 0;
+            if(pos >= n)
+                pos = n-1;
+     
+            save_Z[pos].push_back(val.m_Z);
+            selected_counts++;
+            //printf("i %d\tpos %d\t Z %f\n",i,pos,val.m_Z);
+        }
     }
     
     //sort
@@ -8532,9 +8554,9 @@ double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &se
         
         total_count += save_Z[while_iter].size();
     
-        double P = (double)total_count/(double)counts*100.0;
+        double P = (double)total_count/(double)selected_counts*100.0;
         DEM_shift = sum_Z/total_count;
-        //printf("while iter %d\ttotal_count %d\tcount %d\tP %f\tDEM_avg %f\n",while_iter,total_count,counts,P,DEM_shift);
+        //printf("while iter %d\ttotal_count %d\tcount %d\tP %f\tDEM_avg %f\n\n",while_iter,total_count,selected_counts,P,DEM_shift);
         
         double sum_var = 0;
         for(int i = 0 ; i < selected_mps.size() ; i++)
@@ -8555,26 +8577,34 @@ double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &se
         return 0;
 }
 
-double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std)
+double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma)
 {
     double DEM_shift;
     
     long counts = MatchedPts_list_mps.size();
     int n = 1000;
+    double dh_TH = sigma;
+    if(dh_TH < 30)
+        dh_TH = 30;
     
     vector<vector<float>> save_Z(1000); //+-2000, 20
+    long selected_counts = 0;
     for(long i = 0 ; i < counts ; i++)
     {
         float val = MatchedPts_list_mps[i];
         
-        int pos = ceil(val/20.0) + n/2;
-        if(pos < 0)
-            pos = 0;
-        if(pos >= n)
-            pos = n-1;
- 
-        save_Z[pos].push_back(val);
-        //printf("i %d\tpos %d\t Z %f\n",i,pos,val.m_Z);
+        if(fabs(val) < dh_TH)
+        {
+            int pos = ceil(val/20.0) + n/2;
+            if(pos < 0)
+                pos = 0;
+            if(pos >= n)
+                pos = n-1;
+     
+            save_Z[pos].push_back(val);
+            selected_counts++;
+            //printf("i %d\tpos %d\t Z %f\n",i,pos,val);
+        }
     }
     
     //sort
@@ -8615,7 +8645,7 @@ double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selec
         
         total_count += save_Z[while_iter].size();
     
-        double P = (double)total_count/(double)counts*100.0;
+        double P = (double)total_count/(double)selected_counts*100.0;
         DEM_shift = sum_Z/total_count;
         
         double sum_var = 0;
@@ -8623,7 +8653,7 @@ double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selec
             sum_var = (selected_mps[i] - DEM_shift)*(selected_mps[i] - DEM_shift);
         std = sqrt(sum_var/(double)selected_mps.size());
         
-        //printf("while iter %d\ttotal_count %d\tcount %d\tP %f\tDEM_avg %f\n",while_iter,total_count,counts,P,DEM_shift);
+        //printf("while iter %d\ttotal_count %d\tcount %d\tP %f\tDEM_avg %f\n\n",while_iter,total_count,selected_counts,P,DEM_shift);
         if(P > P_th)
         {
             check_stop = true;
@@ -8638,7 +8668,7 @@ double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selec
         return 0;
 }
 
-void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs)
+void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma)
 {
     int level = (*levelinfo.Pyramid_step);
     //set max matched pts stereo pair
@@ -8648,6 +8678,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         {
             max_countMPs = count_MPs_pair[pair_number];
             max_countMPs_pair = pair_number;
+            levelinfo.pairinfo->SetTz(pair_number,0);
         }
     }
     
@@ -8663,15 +8694,19 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     int while_iter = 0;
     double S0 = 10000;
     double S_ratio = 10000;
-    double P_start = 70;
-    
+    double P_start = 90;
+    double final_sigma;
     int possible_pairs = ceil((levelinfo.pairinfo->SelectNumberOfPairs()*(levelinfo.pairinfo->SelectNumberOfPairs()-1)));
     int total_observation = possible_pairs+levelinfo.pairinfo->SelectNumberOfPairs();
     vector<float> P_vector(total_observation,P_start);
     vector<int> P_index;
-    
+    vector<float> delta(levelinfo.pairinfo->SelectNumberOfPairs());
     while(!check_while && while_iter < 50)
     {
+        for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+        {
+            call_array[i] = 0;
+        }
         //set height difference between pairs
         vector<vector<float>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
         
@@ -8731,17 +8766,50 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             if(save_difheight[t_pair].size() > 2000 && t_pair != max_countMPs_pair)
             {
                 vector<float> selected_dh;
+                
+                double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
+                double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
+                double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
                 double std;
+                
+                double dif_sum = 0;
+                double sel_count = 0;
+                for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
+                {
+                    double th_H = height_step*5;
+                    if(th_H < 50)
+                        th_H = 50;
+                    
+                    if(fabs(save_difheight[t_pair][cnt]) < th_H)
+                    {
+                        dif_sum += save_difheight[t_pair][cnt];
+                        sel_count++;
+                        selected_dh.push_back(save_difheight[t_pair][cnt]);
+                        //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                    }
+                }
+                
+                double avg = dif_sum/sel_count;
+                double sum_var = 0;
+                for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                {
+                    sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                }
+                std = sqrt(sum_var/(double)selected_dh.size());
+                /*
+                
+                double std;
+                
+                if(sigma > height_step*5)
+                    sigma = height_step*5;
                 double P_th = P_vector[t_pair];
-                double sum_dif_avg = Dh_average_plane(save_difheight[t_pair],selected_dh,P_th,std);
+                double sum_dif_avg = Dh_average_plane(save_difheight[t_pair],selected_dh,P_th,std,sigma);
                 double sel_count = selected_dh.size();
                 
                 if(sel_count > 1000)
                 {
                     D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
-                    double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
-                    double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
-                    double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);
+                    
                     
                     refTz_pair.push_back(val);
                     ref_Tz_counts.push_back(sel_count);
@@ -8754,23 +8822,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     unknown.push_back(t_pair);
                 }
                 
-                /*
-                double dif_sum = 0;
-                double sel_count = 0;
-                for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
-                {
-                    double th_H = height_step*5;
-                    if(th_H < 30)
-                        th_H = 30;
-                    
-                    if(fabs(save_difheight[t_pair][cnt]) < th_H)
-                    {
-                        dif_sum += save_difheight[t_pair][cnt];
-                        sel_count++;
-                        
-                        //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
-                    }
-                }
+                */
+                
                 
                 if(sel_count > 1000)
                 {
@@ -8781,13 +8834,17 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     
                     refTz_pair.push_back(val);
                     ref_Tz_counts.push_back(sel_count);
+                    ref_Tz_std.push_back(std);
+                    //ref_Tz_P.push_back(P_th);
+                    ref_Tz_sigma.push_back(sigma);
                     
-                    check_all_Tz[t_pair] = 1;
-                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\n",t_pair,sel_count,dif_avg);
+                    P_index.push_back(t_pair);
+                    //check_all_Tz[t_pair] = 1;
+                    printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",t_pair,sel_count,sum_dif_avg,std,sigma);
                     unknown.push_back(t_pair);
                     //exit(1);
                 }
-                 */
+                 
             }
         }
         
@@ -8801,11 +8858,15 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         {
             if(noref_difheight[pair_pos].size() > 2000)
             {
-                /*
+                vector<float> selected_dh;
                 D3DPOINT val;
                 
                 val.m_X = noref_difheight[pair_pos][0].m_X;
                 val.m_Y = noref_difheight[pair_pos][0].m_Y;
+                
+                double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
                 
                 double dif_sum = 0;
                 double sel_count = 0;
@@ -8816,38 +8877,49 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     else
                     {
                         double th_H = height_step*5;
-                        if(th_H < 30)
-                            th_H = 30;
+                        if(th_H < 50)
+                            th_H = 50;
                         
                         if(fabs(noref_difheight[pair_pos][cnt].m_Z) < th_H)
                         {
                             dif_sum += noref_difheight[pair_pos][cnt].m_Z;
                             sel_count++;
-                            
+                            selected_dh.push_back(noref_difheight[pair_pos][cnt].m_Z);
                             //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
                         }
                     }
                 }
-                */
-                vector<float> selected_dh;
-                double std;
-                double P_th = P_vector[pair_pos + levelinfo.pairinfo->SelectNumberOfPairs()];
-                double sum_dif_avg = Dh_average_plane(noref_difheight[pair_pos],selected_dh,P_th,std);
-                double sel_count = selected_dh.size();
                 
+                double avg = dif_sum/sel_count;
+                double sum_var = 0;
+                for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                {
+                    sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                }
+                double std = sqrt(sum_var/(double)selected_dh.size());
+                
+                /*
+                
+                double std;
+                D3DPOINT val;
+                val.m_X = noref_difheight[pair_pos][0].m_X;
+                val.m_Y = noref_difheight[pair_pos][0].m_Y;
+                
+                
+                double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R)*pow(2,level);
+                if(sigma > height_step*5)
+                    sigma = height_step*5;
+                double P_th = P_vector[pair_pos + levelinfo.pairinfo->SelectNumberOfPairs()];
+                double sum_dif_avg = Dh_average_plane(noref_difheight[pair_pos],selected_dh,P_th,std,sigma);
+                double sel_count = selected_dh.size();
+                */
                 if(sel_count > 1000)
                 {
-                    D3DPOINT val;
-                    //double dif_avg = dif_sum/sel_count;
-                    double dif_avg = sum_dif_avg;
-                    
-                    val.m_X = noref_difheight[pair_pos][0].m_X;
-                    val.m_Y = noref_difheight[pair_pos][0].m_Y;
+                    double dif_avg = dif_sum/sel_count;
+                    //double dif_avg = sum_dif_avg;
                     val.m_Z = dif_avg;
-                    
-                    double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
-                    double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
-                    double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);
                     
                     bool check_m_X = false;
                     bool check_m_Y = false;
@@ -8870,17 +8942,18 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     
                     if(!check_next)
                     {
+                        
                         //printf("selected nonref %d\t%d\n",(int)val.m_X,(int)val.m_Y);
                         if(!check_m_X && !contains(unknown,(int)val.m_X) && check_m_Y)
                         {
                             nonref_Tz.push_back(val);
                             nonref_Tz_counts.push_back(sel_count);
                             nonref_Tz_std.push_back(std);
-                            nonref_Tz_P.push_back(P_th);
+                            //nonref_Tz_P.push_back(P_th);
                             nonref_Tz_sigma.push_back(sigma);
                             
                             P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                            printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tP %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,P_th,sigma);
+                            printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
                             printf("added pair %d\n",(int)val.m_X);
                             
                             unknown.push_back((int)val.m_X);
@@ -8890,26 +8963,27 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             nonref_Tz.push_back(val);
                             nonref_Tz_counts.push_back(sel_count);
                             nonref_Tz_std.push_back(std);
-                            nonref_Tz_P.push_back(P_th);
+                            //nonref_Tz_P.push_back(P_th);
                             nonref_Tz_sigma.push_back(sigma);
                             
                             P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                            printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tP %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,P_th,sigma);
-                            printf("added pair %d\n",(int)val.m_X);
+                            printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
+                            printf("added pair %d\n",(int)val.m_Y);
                             
                             unknown.push_back((int)val.m_Y);
                         }
+                         
                     }
                     else
                     {
                         nonref_Tz.push_back(val);
                         nonref_Tz_counts.push_back(sel_count);
                         nonref_Tz_std.push_back(std);
-                        nonref_Tz_P.push_back(P_th);
+                        //nonref_Tz_P.push_back(P_th);
                         nonref_Tz_sigma.push_back(sigma);
                         
                         P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                        printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tP %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,P_th,sigma);
+                        printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
                     }
                 }
                 
@@ -8921,7 +8995,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         
         int count_unknown = unknown.size();
         int count_observation = ref_Tz_counts.size() + nonref_Tz_counts.size();
-        
+        printf("unknown %d\tobj %d\n",count_unknown,count_observation);
         if(count_observation >= count_unknown && ref_Tz_counts.size() > 0 && unknown.size() > 0)
         {
             
@@ -9092,22 +9166,25 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     maxV = fabs(V_matrix->val[row][0]);
                     maxV_pos = row;
                 }
+                double V = V_matrix->val[row][0];
+                printf("V %d\t%f\n",row,V);
             }
             
             GMA_double_Tran(V_matrix, VT_matrix);
             GMA_double_mul(VT_matrix,V_matrix,VTV_matrix);
             double sigma = sqrt(VTV_matrix->val[0][0]/(count_observation-count_unknown));
-            
+            Tz_sigma = sigma;
             printf("sigma %f\tmax residual %d\t%f\n",sigma,maxV_pos,maxV);
-            P_vector[P_index[maxV_pos]] = P_vector[P_index[maxV_pos]] - 10;
-            if(P_vector[P_index[maxV_pos]] < 40)
-                P_vector[P_index[maxV_pos]] = 40;
+            //P_vector[P_index[maxV_pos]] = P_vector[P_index[maxV_pos]] - 10;
+            //if(P_vector[P_index[maxV_pos]] < 30)
+            //    P_vector[P_index[maxV_pos]] = 30;
             
             //GMA_double_printf(X_matrix);
             
             //printf("X matrix\n");
             
             double max_delta = -99999;
+            Tz_delta.clear();
             for(int c = 0 ; c < count_unknown ; c++)
             {
                 double A = X_matrix->val[c][0];
@@ -9116,7 +9193,10 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                 levelinfo.pairinfo->SetTz(pos,levelinfo.pairinfo->Tz(pos) + A);
                 if(max_delta < fabs(A))
                     max_delta = fabs(A);
+                delta[pos] = A;
                 
+                D3DPOINT result(pos,A,levelinfo.pairinfo->Tz(pos));
+                Tz_delta.push_back(result);
                 printf("delta %f\t Tz %f\n",A,levelinfo.pairinfo->Tz(pos));
             }
             printf("\n");
@@ -9139,10 +9219,10 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             GMA_double_destroy(VTV_matrix);
             
             S_ratio = fabs(S0 - sigma)/S0;
-            
+            final_sigma = sigma;
             printf("iteration %d\tS0 Sigma max_delta S_ratio %f\t%f\t%f\t%f\n",while_iter,S0,sigma,max_delta,S_ratio);
             
-            if(max_delta < 0.1 /*|| S_ratio < 0.1*/)
+            if(max_delta < 0.5 /*|| S_ratio < 0.1*/)
                 check_while = true;
             
             S0 = sigma;
@@ -9152,12 +9232,13 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         
         while_iter++;
     }
-    
+    /*
     for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
     {
-        if(call_array[i] == 0)
+        if(fabs(delta[i]) > final_sigma)
             levelinfo.pairinfo->SetTz(i,0);
     }
+     */
 }
 
 void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, UGRID &GridPT3)
