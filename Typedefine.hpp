@@ -386,12 +386,12 @@ typedef struct UpdateGrid{
     unsigned char &anchor_flag(long i) { return _anchor_flag[i]; }
     const unsigned char &anchor_flag(long i) const { return _anchor_flag[i]; }
 
-    unsigned char &selected_pair(long i) { return _selected_pair[i]; }
-    const unsigned char &selected_pair(long i) const { return _selected_pair[i]; }
+    short &selected_pair(long i) { return _selected_pair[i]; }
+    const short &selected_pair(long i) const { return _selected_pair[i]; }
     unsigned char &total_images(long i) { return _total_images[i]; }
     const unsigned char &total_images(long i) const { return _total_images[i]; }
-    signed char &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
-    const signed char &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
+    short &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
+    const short &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
 
 
 private:
@@ -409,9 +409,9 @@ private:
     vector<unsigned char> _Matched_flag;
     vector<unsigned char> _anchor_flag;
 
-    vector<unsigned char> _selected_pair; //reference image
+    vector<short> _selected_pair; //reference image
     vector<unsigned char> _total_images;
-    vector<signed char> _ncc_seleceted_pair; //selected peak pair
+    vector<short> _ncc_seleceted_pair; //selected peak pair
 //    float height_counts;
 }UGRID;
 
