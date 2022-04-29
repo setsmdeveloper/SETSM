@@ -441,6 +441,7 @@ private:
     
     std::vector<short> m_cal;
     std::vector<D2DPOINT> m_RBias;
+    std::vector<unsigned char> m_cloud;
     std::vector<float> m_Tz;
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
@@ -468,6 +469,7 @@ private:
         
         m_cal = std::vector<short>(numberofpairs,1);
         m_RBias = std::vector<D2DPOINT>(numberofpairs);
+        m_cloud = std::vector<unsigned char>(numberofpairs);
         m_Tz = std::vector<float>(numberofpairs,0);
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
@@ -518,6 +520,9 @@ public:
         
         m_RBias.clear();
         vector<D2DPOINT>().swap(m_RBias);
+        
+        m_cloud.clear();
+        vector<unsigned char>().swap(m_cloud);
         
         m_Tz.clear();
         vector<float>().swap(m_Tz);
@@ -607,6 +612,11 @@ public:
     void SetRBias(int pos, D2DPOINT value)
     {
         m_RBias[pos] = value;
+    }
+    
+    void SetCloud(int pos, unsigned char value)
+    {
+        m_cloud[pos] = value;
     }
     
     void SetTz(int pos, float value)
@@ -729,6 +739,11 @@ public:
     short& cal(int pos)
     {
         return m_cal[pos];
+    }
+    
+    unsigned char& Cloud(int pos)
+    {
+        return m_cloud[pos];
     }
     
     D2DPOINT& RBias(int pos)
@@ -1275,11 +1290,13 @@ typedef struct PairCA
 {
     short pair_ID;
     float CA;
+    unsigned char cloud;
 public:
-    PairCA(int pairid, float ca)
+    PairCA(int pairid, float ca, unsigned char cl)
     {
         pair_ID = pairid;
         CA = ca;
+        cloud  = cl;
     }
 } PairCA;
 

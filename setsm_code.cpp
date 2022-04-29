@@ -4960,6 +4960,9 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
             {
                 pairinfo.SetPairs(pair_number, ref_ti, ti);
                 
+                unsigned char cloud_cov = ceil((image_info[ref_ti].cloud + image_info[ti].cloud) /2.0);
+                pairinfo.SetCloud(pair_number,cloud_cov);
+                
                 double BIE_eo, AE_eo, CA_base_eo;
                 double BIE, AE, CA_base;
                 double convergence_angle_given;
@@ -5122,7 +5125,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
      for(int count=0;count<pairinfo.NumberOfPairs();count++)
      {
      //pairinfo.BHratio[count] =  (pairinfo.BHratio[count] - minBH)/(maxBH - minBH)*0.5 + 0.5;
-     printf("pairnumber %d\timage %d\t%d\tBHratio %f\t%f\t%f\t%f\t%f\t%f\n",count,pairinfo.pairs(count).m_X,pairinfo.pairs(count).m_Y,pairinfo.BHratio(count),minBH,maxBH,pairinfo.ConvergenceAngle(count),pairinfo.SigmaZ(count),pairinfo.Azimuth(count));
+     printf("pairnumber %d\timage %d\t%d\tBHratio %f\t%f\t%f\t%f\t%f\t%f\t%d\n",count,pairinfo.pairs(count).m_X,pairinfo.pairs(count).m_Y,pairinfo.BHratio(count),minBH,maxBH,pairinfo.ConvergenceAngle(count),pairinfo.SigmaZ(count),pairinfo.Azimuth(count),pairinfo.Cloud(count));
      }
      
     //exit(1);
@@ -5130,6 +5133,8 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param)
 {
+    int py_level = (*plevelinfo.Pyramid_step);
+    
     vector<short> actual_pair_save;
     vector<PairCA> actual_pair_CA;
     
@@ -5170,7 +5175,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         if(!contains(actual_pair_save, pair_number))
                         {
                             actual_pair_save.push_back(pair_number);
-                            PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                            PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->Cloud(pair_number));
                             actual_pair_CA.push_back(temp_pca);
                         }
                     }
@@ -5424,7 +5429,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         if(!contains(actual_pair_save, t_pair_num) && diff_day <= daygap)
                         {
                             actual_pair_save.push_back(t_pair_num);
-                            PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num));
+                            PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num),plevelinfo.pairinfo->Cloud(t_pair_num));
                             actual_pair_CA.push_back(temp_pca);
                         }
                     }
@@ -5533,12 +5538,88 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             vector<short>().swap(pairs);
         }
     }
+
     
+    if(py_level <= 1)
+    {
+        int maximum_pair_count = 60;
+        if(actual_pair_CA.size() > maximum_pair_count)
+        {
+            vector<D2DPOINT> outofcloud;
+            vector<unsigned short> call_check(actual_pair_CA.size(),0);
+            bool check_stop = false;
+            
+            for(int j = 0 ; j < actual_pair_CA.size() ; j++)
+            {
+                printf("before index %d\tID %d\tcloud %d\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
+            }
+            
+            int cloud_th = (int)proinfo->Cloud_th;
+            while(!check_stop && cloud_th >= 0)
+            {
+                int count_pair = 0;
+                while(count_pair < actual_pair_CA.size())
+                {
+                    if(actual_pair_CA[count_pair].cloud >= cloud_th && call_check[count_pair] == 0)
+                    {
+                        D2DPOINT temp(actual_pair_CA[count_pair].pair_ID,actual_pair_CA[count_pair].cloud);
+                        outofcloud.push_back(temp);
+                        call_check[count_pair] = 1;
+                    }
+                
+                    if(actual_pair_CA.size() - outofcloud.size() <= maximum_pair_count)
+                        check_stop = true;
+                    
+                    count_pair++;
+                }
+                cloud_th--;
+            }
+            
+            for(int j = 0 ; j < outofcloud.size() ; j++ )
+                printf("filter pair ID %d\tcloud %d\n",(int)outofcloud[j].m_X,(int)outofcloud[j].m_Y);
+            
+            vector<PairCA> actual_pair_CA_replace;
+            for(int j = 0 ; j < actual_pair_CA.size() ; j++)
+            {
+                check_stop = false;
+                int count_pair = 0;
+                while(!check_stop && count_pair < outofcloud.size())
+                {
+                    if(actual_pair_CA[j].pair_ID == (int)outofcloud[count_pair].m_X)
+                        check_stop = true;
+                    
+                    count_pair++;
+                }
+                
+                if(!check_stop)
+                    actual_pair_CA_replace.push_back(actual_pair_CA[j]);
+            }
+            
+            actual_pair_save.clear();
+            vector<short>().swap(actual_pair_save);
+            
+            actual_pair_CA.clear();
+            vector<PairCA>().swap(actual_pair_CA);
+            
+            for(int i = 0 ; i < actual_pair_CA_replace.size() ; i ++)
+            {
+                actual_pair_CA.push_back(actual_pair_CA_replace[i]);
+                actual_pair_save.push_back(actual_pair_CA_replace[i].pair_ID);
+            }
+            
+            for(int j = 0 ; j < actual_pair_CA.size() ; j++)
+            {
+                printf("after index %d\tID %d\tcloud %d\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
+            }
+        }
+    }
+        
     float last = quickselect(actual_pair_CA,actual_pair_CA.size(),actual_pair_CA.size());
     
     for(int j = 0 ; j < actual_pair_save.size() ; j++)
     {
         actual_pair_save[j] = actual_pair_CA[j].pair_ID;
+        
         //actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
         //printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
     }
@@ -5626,6 +5707,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             D2DPOINT temp_RBias;
             temp_RBias.m_X = plevelinfo.ImageAdjust[pair_number][0];
             temp_RBias.m_Y = plevelinfo.ImageAdjust[pair_number][1];
+            temp_pairs.SetCloud(count,plevelinfo.pairinfo->Cloud(pair_number));
             temp_pairs.SetRBias(count,temp_RBias);
             temp_pairs.SetTz(count,plevelinfo.pairinfo->Tz(pair_number));
             
