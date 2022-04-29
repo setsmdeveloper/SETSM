@@ -7482,11 +7482,11 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                     if(level <= proinfo->Planet_VC_level)
                                     {
                                         vector<D2DPOINT> ref_pair;
-                                        vector<vector<D3DPOINT>> final_Tz(levelinfo.pairinfo->SelectNumberOfPairs());
+                                        //vector<vector<D3DPOINT>> final_Tz(levelinfo.pairinfo->SelectNumberOfPairs());
                                         
                                         vector<short> call_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                                         VerticalCoregistration_LSA(proinfo, levelinfo, multimps, count_MPs_pair, max_countMPs_pair, max_countMPs,Tz_delta,Tz_sigma,ref_pair,true,call_array);
-                                        
+                                        /*
                                         vector<vector<float>> Tz_saved(ref_pair.size()+1);
                                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                         {
@@ -7543,11 +7543,12 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                                 printf("\n");
                                             }
                                         }
-                                         
+                                        */
+                                        
                                         
                                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                         {
-                                            if(final_Tz[t_pair].size() > 0)
+                                            //if(final_Tz[t_pair].size() > 0)
                                                 printf("final refTz pairnumber %d\tTz %f\n",t_pair,levelinfo.pairinfo->Tz(t_pair));
                                         }
                                         
