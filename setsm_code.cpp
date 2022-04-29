@@ -5561,8 +5561,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     }
     
     short result_pair_size = actual_pair_save_cov.size();
-    if(result_pair_size > 127)
-        result_pair_size = 127;
+    //if(result_pair_size > 127)
+    //    result_pair_size = 127;
     printf("original selected pair count %d\tmodified count %d\n",actual_pair_save.size(),result_pair_size);
     
     if(result_pair_size > 0)
