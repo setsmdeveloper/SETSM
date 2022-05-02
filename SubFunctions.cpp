@@ -2800,6 +2800,68 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
 }
 
 
+void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_image)
+{
+    for(int i = 0 ; i < total_image ; i++)
+    {
+        D2DPOINT min_XY(999999999,999999999);
+        D2DPOINT max_XY(-999999999,-999999999);
+        D2DPOINT temp;
+        D2DPOINT coord;
+        
+        coord = {image_info[i].LL[0],image_info[i].LL[1]};
+        temp = wgs2ps_single(param,coord);
+        if(min_XY.m_X > temp.m_X)
+            min_XY.m_X = temp.m_X;
+        if(min_XY.m_Y > temp.m_Y)
+            min_XY.m_Y = temp.m_Y;
+        
+        if(max_XY.m_X < temp.m_X)
+            max_XY.m_X = temp.m_X;
+        if(max_XY.m_Y < temp.m_Y)
+            max_XY.m_Y = temp.m_Y;
+        
+        coord = {image_info[i].LR[0],image_info[i].LR[1]};
+        temp = wgs2ps_single(param,coord);
+        if(min_XY.m_X > temp.m_X)
+            min_XY.m_X = temp.m_X;
+        if(min_XY.m_Y > temp.m_Y)
+            min_XY.m_Y = temp.m_Y;
+        
+        if(max_XY.m_X < temp.m_X)
+            max_XY.m_X = temp.m_X;
+        if(max_XY.m_Y < temp.m_Y)
+            max_XY.m_Y = temp.m_Y;
+        
+        coord = {image_info[i].UL[0],image_info[i].UL[1]};
+        temp = wgs2ps_single(param,coord);
+        if(min_XY.m_X > temp.m_X)
+            min_XY.m_X = temp.m_X;
+        if(min_XY.m_Y > temp.m_Y)
+            min_XY.m_Y = temp.m_Y;
+        
+        if(max_XY.m_X < temp.m_X)
+            max_XY.m_X = temp.m_X;
+        if(max_XY.m_Y < temp.m_Y)
+            max_XY.m_Y = temp.m_Y;
+        
+        coord = {image_info[i].UR[0],image_info[i].UR[1]};
+        temp = wgs2ps_single(param,coord);
+        if(min_XY.m_X > temp.m_X)
+            min_XY.m_X = temp.m_X;
+        if(min_XY.m_Y > temp.m_Y)
+            min_XY.m_Y = temp.m_Y;
+        
+        if(max_XY.m_X < temp.m_X)
+            max_XY.m_X = temp.m_X;
+        if(max_XY.m_Y < temp.m_Y)
+            max_XY.m_Y = temp.m_Y;
+        
+        image_info[i].min_XY = min_XY;
+        image_info[i].max_XY = max_XY;
+    }
+}
+
 void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
 {
     FILE *pFile;

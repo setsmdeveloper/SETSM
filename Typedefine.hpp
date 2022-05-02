@@ -451,6 +451,9 @@ private:
     std::vector<float> m_CenterDist;
     std::vector<float> m_SigmaZ;
     std::vector<float> m_AzimuthDiff;
+    std::vector<unsigned char> m_diff_day;
+    std::vector<unsigned char> m_diff_time;
+    std::vector<float> m_MPs_P;
     
     std::vector<float> m_AE;
     std::vector<float> m_BIE;
@@ -478,6 +481,9 @@ private:
         m_CenterDist = std::vector<float>(numberofpairs);
         m_SigmaZ = std::vector<float>(numberofpairs);
         m_AzimuthDiff = std::vector<float>(numberofpairs);
+        m_diff_day = std::vector<unsigned char>(numberofpairs);
+        m_diff_time = std::vector<unsigned char>(numberofpairs);
+        m_MPs_P = std::vector<float>(numberofpairs);
         
         m_AE = std::vector<float>(numberofpairs);
         m_BIE = std::vector<float>(numberofpairs);
@@ -547,6 +553,15 @@ public:
         
         m_AzimuthDiff.clear();
         vector<float>().swap(m_AzimuthDiff);
+        
+        m_diff_day.clear();
+        vector<unsigned char>().swap(m_diff_day);
+        
+        m_diff_time.clear();
+        vector<unsigned char>().swap(m_diff_time);
+        
+        m_MPs_P.clear();
+        vector<float>().swap(m_MPs_P);
         
         m_AE.clear();
         vector<float>().swap(m_AE);
@@ -658,6 +673,21 @@ public:
     void SetAzimuth(int pos, float value)
     {
         m_AzimuthDiff[pos] = value;
+    }
+    
+    void SetDiffDay(int pos, unsigned char value)
+    {
+        m_diff_day[pos] = value;
+    }
+    
+    void SetDiffTime(int pos, unsigned char value)
+    {
+        m_diff_time[pos] = value;
+    }
+    
+    void SetMatchingP(int pos, float value)
+    {
+        m_MPs_P[pos] = value;
     }
     
     void SetAE(int pos, float value)
@@ -784,6 +814,21 @@ public:
     float& Azimuth(int pos)
     {
         return m_AzimuthDiff[pos];
+    }
+    
+    unsigned char DiffDay(int pos)
+    {
+        return m_diff_day[pos];
+    }
+    
+    unsigned char DiffTime(int pos)
+    {
+        return m_diff_time[pos];
+    }
+    
+    float MatchingP(int pos)
+    {
+        return m_MPs_P[pos];
     }
     
     float& AE(int pos)
@@ -1171,6 +1216,8 @@ typedef struct tagImageInfo
     float Image_ori_azi;
     float dx,dy,f;
     float UL[3], UR[3],LR[3],LL[3];
+    D2DPOINT min_XY;
+    D2DPOINT max_XY;
     double Center[2];
     float convergence_angle;
     float AZ_ray[2]; //1 for IRPC vector, 2 for EO vector
@@ -1290,9 +1337,9 @@ typedef struct PairCA
 {
     short pair_ID;
     float CA;
-    unsigned char cloud;
+    float cloud;
 public:
-    PairCA(int pairid, float ca, unsigned char cl)
+    PairCA(int pairid, float ca, float cl)
     {
         pair_ID = pairid;
         CA = ca;

@@ -4907,7 +4907,7 @@ void FindImageWithCondition(ProInfo *proinfo, ARGINFO args, const double * const
     }
 }
 
-void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize)
+void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, const D3DPOINT* ray_vector, const double*const*const* IRPCs, TransParam param, const uint8 numofparam, double **imageparam, const CSize *imagesize)
 {
     int pair_number = 0;
     float minBH = 100;
@@ -4949,6 +4949,9 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
             }
         }
     }
+    
+    GeographicToXYforImage(image_info, param, proinfo->number_of_images);
+    
     //printf("pairinfo.MinOffImage %d\n", pairinfo.MinOffImageID());
     pair_number = 0;
     for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
@@ -5107,6 +5110,17 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, const ImageInfo *image_info
                            pairinfo.BaseRay(pair_number).m_X,pairinfo.BaseRay(pair_number).m_Y,pairinfo.BaseRay(pair_number).m_Z,
                            pairinfo.BaseRay_IRPC(pair_number).m_X,pairinfo.BaseRay_IRPC(pair_number).m_Y,pairinfo.BaseRay_IRPC(pair_number).m_Z);
                     */
+                    
+                    
+                    //time separation for shadow
+                    double ref_time = (double)image_info[ref_ti].hour*60 + (double)image_info[ref_ti].min;
+                    double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
+                    double diff_time = fabs(ref_time - tar_time)/60.0;
+                    double ref_day = (double)image_info[ref_ti].month*30 + (double)image_info[ref_ti].date;
+                    double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
+                    double diff_day = fabs(ref_day - tar_day);
+                    pairinfo.SetDiffDay(pair_number,(unsigned char)diff_day);
+                    pairinfo.SetDiffTime(pair_number,(unsigned char)diff_time);
                 }
                 
                 if(minBH > pairinfo.BHratio(pair_number))
@@ -5136,6 +5150,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     int py_level = (*plevelinfo.Pyramid_step);
     
     vector<short> actual_pair_save;
+    vector<unsigned char> actual_pair_save_check(plevelinfo.pairinfo->NumberOfPairs(),0);
+    
     vector<PairCA> actual_pair_CA;
     
     int max_stereo_pair = plevelinfo.pairinfo->NumberOfPairs();//proinfo->pair_max_th;
@@ -5150,6 +5166,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         long int pt_index = iter_count;
 
         vector<short> pairs;
+        vector<unsigned char> pairs_check(plevelinfo.pairinfo->NumberOfPairs(),0);
         
         if(proinfo->sensor_provider != PT)
         {
@@ -5209,300 +5226,55 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
         else //PlanetDEM
         {
-            vector<vector<short>> sigma_pairs(600); //32,34,36,...,68
-            
+            int selected_pairs = 0 ;
             for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
             {
                 if(pairinfo.cal(pair_number) > 0)
                 {
-                    const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
-                    const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-                    
-                    //time separation for shadow
-                    double ref_time = (double)image_info[reference_id].hour*60 + (double)image_info[reference_id].min;
-                    double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
-                    double diff_time = fabs(ref_time - tar_time)/60.0;
-                    double ref_day = (double)image_info[reference_id].month*30 + (double)image_info[reference_id].date;
-                    double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
-                    double diff_day = fabs(ref_day - tar_day);
-                    //printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,tar_time,diff_time);
-                    
-                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && diff_time <= proinfo->pair_time_dif)
+                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)
                     {
-                        
-                        D2DPOINT min_XY(9999,9999);
-                        D2DPOINT max_XY(-9999,-9999);
-                        D2DPOINT temp;
-                        D2DPOINT coord;
-                        
-                        coord = {image_info[reference_id].LL[0],image_info[reference_id].LL[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[reference_id].LR[0],image_info[reference_id].LR[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[reference_id].UL[0],image_info[reference_id].UL[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[reference_id].UR[0],image_info[reference_id].UR[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        D2DPOINT bottom_left = min_XY;//{image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
-                        D2DPOINT upper_right = max_XY;//{image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
-                        
-                        //printf("param projection %d\tzone %d\tdirection %d(1=north,-1=south)\n",param.projection,param.utm_zone,param.pm);
-                        //printf("image br_ref %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
-                        //bottom_left = wgs2ps_single(param,bottom_left);
-                        //upper_right = wgs2ps_single(param,upper_right);
+                        const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+                        const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
                         
                         D2DPOINT min_pt = {plevelinfo.GridPts[pt_index]};
-                        //printf("image br_ref %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
+                        
+                        D2DPOINT bottom_left = image_info[reference_id].min_XY;
+                        D2DPOINT upper_right = image_info[reference_id].max_XY;
                         
                         uint32_t p_code_ref = calc_code(min_pt, bottom_left, upper_right);
+                     
+                        bottom_left = image_info[ti].min_XY;
+                        upper_right = image_info[ti].max_XY;
                         
-                        min_XY.m_X = 9999;
-                        min_XY.m_Y = 9999;
-                        max_XY.m_X = -9999;
-                        max_XY.m_Y = -9999;
-                        
-                        coord = {image_info[ti].LL[0],image_info[ti].LL[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[ti].LR[0],image_info[ti].LR[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[ti].UL[0],image_info[ti].UL[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        coord = {image_info[ti].UR[0],image_info[ti].UR[1]};
-                        temp = wgs2ps_single(param,coord);
-                        if(min_XY.m_X > temp.m_X)
-                            min_XY.m_X = temp.m_X;
-                        if(min_XY.m_Y > temp.m_Y)
-                            min_XY.m_Y = temp.m_Y;
-                        
-                        if(max_XY.m_X < temp.m_X)
-                            max_XY.m_X = temp.m_X;
-                        if(max_XY.m_Y < temp.m_Y)
-                            max_XY.m_Y = temp.m_Y;
-                        
-                        bottom_left = min_XY;//{image_info[ti].LL[0], image_info[ti].LL[1]};
-                        upper_right = max_XY;//{image_info[ti].UR[0], image_info[ti].UR[1]};
-                        //printf("image br_ti %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
-                        //bottom_left = wgs2ps_single(param,bottom_left);
-                        //upper_right = wgs2ps_single(param,upper_right);
-                        
-                        //printf("image br_ti %f\t%f\t%f\t%f\n",bottom_left.m_X,bottom_left.m_Y,upper_right.m_X,upper_right.m_Y);
-                        //printf("target pt %f\t%f\n",min_pt.m_X,min_pt.m_Y);
                         uint32_t p_code_ti = calc_code(min_pt, bottom_left, upper_right);
-                        //printf("inside %d\t%d\t%d\n",p_code_ref,p_code_ti,!p_code_ref && !p_code_ti);
                         
-                        /*
-                        D2DPOINT LL = {image_info[reference_id].LL[0], image_info[reference_id].LL[1]};
-                        D2DPOINT UR = {image_info[reference_id].UR[0], image_info[reference_id].UR[1]};
-                        D2DPOINT LR = {image_info[reference_id].LR[0], image_info[reference_id].LR[1]};
-                        D2DPOINT UL = {image_info[reference_id].UL[0], image_info[reference_id].UL[1]};
-                        
-                        uint32_t p_code_ref = calc_code_line(plevelinfo.Grid_wgs[pt_index],LL, LR, UR, UL);
-                        
-                        LL = {image_info[ti].LL[0], image_info[ti].LL[1]};
-                        UR = {image_info[ti].UR[0], image_info[ti].UR[1]};
-                        LR = {image_info[ti].LR[0], image_info[ti].LR[1]};
-                        UL = {image_info[ti].UL[0], image_info[ti].UL[1]};
-                        
-                        uint32_t p_code_ti = calc_code_line(plevelinfo.Grid_wgs[pt_index],LL, LR, UR, UL);
-                        */
-                        //exit(1);
-                        const int start_H     = minmaxHeight[0];
-                        const int end_H       = minmaxHeight[1];
-                        //if(check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,reference_id,pair_number, true) && check_image_boundary_any(proinfo,plevelinfo,plevelinfo.GridPts[pt_index],plevelinfo.Grid_wgs[pt_index],start_H,end_H,7,ti,pair_number, false))
                         if(!p_code_ref && !p_code_ti)
                         {
-                            double sigmaZ = plevelinfo.pairinfo->SigmaZ(pair_number)*10;
-                            int sigma_pairs_index = ceil((sigmaZ-300));
-                            if(sigma_pairs_index < 0)
-                                sigma_pairs_index = 0;
-                            if(sigma_pairs_index > 599)
-                                sigma_pairs_index = 599;
-                            //printf("sigmaZ %f\t index %d\t%d\n",sigmaZ,sigma_pairs_index,pair_number);
+                            pair_coverage[pair_number]++;
                             
-                            //if(!contains(sigma_pairs[sigma_pairs_index],pair_number))
-                                sigma_pairs[sigma_pairs_index].push_back(pair_number);
-                            pair_coverage[pair_number]++;;
-                            //exit(1);
-                        }
-                    }
-                }
-            }
-                
-            bool stop_condition = false;
-            int t_count = 0;
-            int total_pair_count = 0;
-            
-            while(!stop_condition && t_count < 600)
-            {
-                short daygap = 1;
-                bool check_daystop = false;
-                while(daygap <= proinfo->Max_daygap && !check_daystop)
-                {
-                    for(int k = 0 ; k < sigma_pairs[t_count].size() ; k++)
-                    {
-                        int t_pair_num = sigma_pairs[t_count][k];
-                        
-                        const int reference_id = plevelinfo.pairinfo->pairs(t_pair_num).m_X;
-                        const int ti = plevelinfo.pairinfo->pairs(t_pair_num).m_Y;
-                        
-                        //time separation for temporal change
-                        double ref_day = (double)image_info[reference_id].month*30 + (double)image_info[reference_id].date;
-                        double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
-                        double diff_day = fabs(ref_day - tar_day);
-                        
-                        if(!contains(pairs, t_pair_num) && diff_day <= daygap)
-                        {
-                            pairs.push_back(t_pair_num);
-                            total_pair_count++;
-                        }
-          
-                        if(!contains(actual_pair_save, t_pair_num) && diff_day <= daygap)
-                        {
-                            actual_pair_save.push_back(t_pair_num);
-                            PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num),plevelinfo.pairinfo->Cloud(t_pair_num));
-                            actual_pair_CA.push_back(temp_pca);
-                        }
-                    }
-                    
-                    if(total_pair_count > max_stereo_pair)
-                    {
-                        stop_condition = true;
-                        check_daystop = true;
-                    }
-                    daygap++;
-                }
-                t_count++;
-            }
-            
-            /*
-            //for comparison
-            int tt_count = 0;
-            while(!stop_condition && tt_count < 600)
-            {
-                t_count = tt_count;
-                bool check_count = false;
-                while(!check_count && t_count < tt_count + 100)
-                {
-                    short daygap = 1;
-                    bool check_daystop = false;
-                    while(daygap <= proinfo->Max_daygap && !check_daystop)
-                    {
-                        bool check_pair = false;
-                        int k = 0;
-                        while(!check_pair && k < sigma_pairs[t_count].size())
-                        {
-                            int t_pair_num = sigma_pairs[t_count][k];
-                            
-                            const int reference_id = plevelinfo.pairinfo->pairs(t_pair_num).m_X;
-                            const int ti = plevelinfo.pairinfo->pairs(t_pair_num).m_Y;
-                            
-                            //time separation for temporal change
-                            double ref_day = (double)image_info[reference_id].month*30 + (double)image_info[reference_id].date;
-                            double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
-                            double diff_day = fabs(ref_day - tar_day);
-                            
-                            if(!contains(pairs, t_pair_num) && diff_day <= daygap)
+                            if(!pairs_check[pair_number])
                             {
-                                pairs.push_back(t_pair_num);
-                                total_pair_count++;
-                                check_pair = true;
-                                check_count = true;
-                                check_daystop = true;
-                                
-                                if(!contains(actual_pair_save, t_pair_num))
-                                {
-                                    actual_pair_save.push_back(t_pair_num);
-                                    PairCA temp_pca(t_pair_num,plevelinfo.pairinfo->ConvergenceAngle(t_pair_num));
-                                    actual_pair_CA.push_back(temp_pca);
-                                }
+                                pairs.push_back(pair_number);
+                                pairs_check[pair_number] = 1;
                             }
-                            
-                            k++;
-                        }
-                        
-                        if(total_pair_count > max_stereo_pair)
-                        {
-                            stop_condition = true;
-                            check_daystop = true;
-                            check_count = true;
-                        }
-                        daygap++;
+              
+                            if(!actual_pair_save_check[pair_number])
+                            {
+                                actual_pair_save.push_back(pair_number);
+                                actual_pair_save_check[pair_number] = 1;
+                                
+                                PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->MatchingP(pair_number));
+                                actual_pair_CA.push_back(temp_pca);
+                            }
+                            /*
+                            printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,diff_day,diff_time);
+                            printf("cal time diff %d\t day diff %d\n", plevelinfo.pairinfo->DiffDay(pair_number),plevelinfo.pairinfo->DiffTime(pair_number));
+                            exit(1);*/
+                         }
                     }
-                    t_count++;
                 }
-                tt_count+=100;
             }
-            */
+            
             if(pairs.size() > 0)
             {
                 grid_pair.add_pairs(iter_count, pairs);
@@ -5539,10 +5311,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         }
     }
 
-    
-    if(py_level <= 1)
+    int maximum_pair_count = 60;
+    if(py_level <= 2 && actual_pair_CA.size() > maximum_pair_count)
     {
-        int maximum_pair_count = 60;
         if(actual_pair_CA.size() > maximum_pair_count)
         {
             vector<D2DPOINT> outofcloud;
@@ -5551,16 +5322,17 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             
             for(int j = 0 ; j < actual_pair_CA.size() ; j++)
             {
-                printf("before index %d\tID %d\tcloud %d\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
+                printf("before index %d\tID %d\tcloud %f\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
             }
             
-            int cloud_th = (int)proinfo->Cloud_th;
-            while(!check_stop && cloud_th >= 0)
+            float cloud_th = 0;//(int)proinfo->Cloud_th;
+            while(!check_stop && cloud_th <= 50)
             {
                 int count_pair = 0;
-                while(count_pair < actual_pair_CA.size())
+                bool check_coun_pair = false;
+                while(!check_coun_pair && count_pair < actual_pair_CA.size())
                 {
-                    if(actual_pair_CA[count_pair].cloud >= cloud_th && call_check[count_pair] == 0)
+                    if(actual_pair_CA[count_pair].cloud <= cloud_th && call_check[count_pair] == 0)
                     {
                         D2DPOINT temp(actual_pair_CA[count_pair].pair_ID,actual_pair_CA[count_pair].cloud);
                         outofcloud.push_back(temp);
@@ -5568,15 +5340,18 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     }
                 
                     if(actual_pair_CA.size() - outofcloud.size() <= maximum_pair_count)
+                    {
                         check_stop = true;
+                        check_coun_pair = true;
+                    }
                     
                     count_pair++;
                 }
-                cloud_th--;
+                cloud_th = cloud_th + 0.1;
             }
             
             for(int j = 0 ; j < outofcloud.size() ; j++ )
-                printf("filter pair ID %d\tcloud %d\n",(int)outofcloud[j].m_X,(int)outofcloud[j].m_Y);
+                printf("filter pair ID %d\tcloud %f\n",(int)outofcloud[j].m_X,outofcloud[j].m_Y);
             
             vector<PairCA> actual_pair_CA_replace;
             for(int j = 0 ; j < actual_pair_CA.size() ; j++)
@@ -5609,7 +5384,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             
             for(int j = 0 ; j < actual_pair_CA.size() ; j++)
             {
-                printf("after index %d\tID %d\tcloud %d\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
+                printf("after index %d\tID %d\tcloud %f\n",j,actual_pair_CA[j].pair_ID,actual_pair_CA[j].cloud);
             }
         }
     }
@@ -5717,6 +5492,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetConvergenceAngle(count, plevelinfo.pairinfo->ConvergenceAngle(pair_number));
             temp_pairs.SetSigmaZ(count, plevelinfo.pairinfo->SigmaZ(pair_number));
             temp_pairs.SetAzimuth(count, plevelinfo.pairinfo->Azimuth(pair_number));
+            temp_pairs.SetDiffDay(count,plevelinfo.pairinfo->DiffDay(pair_number));
+            temp_pairs.SetDiffTime(count,plevelinfo.pairinfo->DiffTime(pair_number));
+            temp_pairs.SetMatchingP(count,plevelinfo.pairinfo->MatchingP(pair_number));
             
             temp_pairs.SetAE(count,plevelinfo.pairinfo->AE(pair_number));
             temp_pairs.SetBIE(count,plevelinfo.pairinfo->BIE(pair_number));
@@ -5947,7 +5725,7 @@ void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double B
     }
 }
 
-int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return, int *CAHist)
+int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *ori_minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo_return, int *CAHist)
 {
 #ifdef BUILDMPI
     int rank, size;
@@ -6596,9 +6374,9 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                             int ref_id = levelinfo.pairinfo->pairs(count).m_X;
                             int tar_id = levelinfo.pairinfo->pairs(count).m_Y;
                             
-                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\tRBias %f\t%f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count),levelinfo.pairinfo->RBias(count).m_X,levelinfo.pairinfo->RBias(count).m_Y);
-                            printf("pair file count %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count,image_info[ref_id].month,image_info[ref_id].date,image_info[ref_id].hour,image_info[ref_id].min,
-                                   image_info[tar_id].month,image_info[tar_id].date,image_info[tar_id].hour,image_info[tar_id].min);
+                            printf("actual pair count %d\t%d\t%d\t%f\t%f\t%d\t%f\t%f\t%f\t%f\t%f\tRBias %f\t%f\tCloud %d\tMatchingP %f\n",count, levelinfo.pairinfo->pairs(count).m_X,levelinfo.pairinfo->pairs(count).m_Y,levelinfo.pairinfo->BHratio(count),levelinfo.pairinfo->ConvergenceAngle(count),levelinfo.pairinfo->MinOffImageID(),levelinfo.pairinfo->SigmaZ(count),levelinfo.pairinfo->Azimuth(count),levelinfo.pairinfo->AE(count),levelinfo.pairinfo->BIE(count),levelinfo.pairinfo->ConvergenceAngle_EQ(count),levelinfo.pairinfo->RBias(count).m_X,levelinfo.pairinfo->RBias(count).m_Y,levelinfo.pairinfo->Cloud(count),levelinfo.pairinfo->MatchingP(count));
+                            //printf("pair file count %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count,image_info[ref_id].month,image_info[ref_id].date,image_info[ref_id].hour,image_info[ref_id].min,
+                            //       image_info[tar_id].month,image_info[tar_id].date,image_info[tar_id].hour,image_info[tar_id].min);
                             
                             levelinfo.ImageAdjust[count][0] = levelinfo.pairinfo->RBias(count).m_X;
                             levelinfo.ImageAdjust[count][1] = levelinfo.pairinfo->RBias(count).m_Y;
@@ -7032,6 +6810,8 @@ int Matching_SETSM(ProInfo *proinfo,const ImageInfo *image_info, const uint8 pyr
                                             
                                             double matching_ratio_pair = (double)count_MPs/(double)(*levelinfo.Grid_length)*100;
                                             printf("pair_number %d\tmatching_ratio_pair %f\n",pair_number,matching_ratio_pair);
+                                            
+                                            levelinfo.pairinfo->SetMatchingP(pair_number,matching_ratio_pair);
                                             
                                             if(matching_ratio_pair > 0) //default 1
                                             {

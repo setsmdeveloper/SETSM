@@ -74,6 +74,7 @@ double** OpenXMLFile_Planet(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
 void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo);
 void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo);
+void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_image);
 void SetImageFileInfo(char* _filename, ImageInfo &Iinfo);
 void Open_planetmultiinfo_args(ARGINFO *args);
 void WriteEOs(char* filename, EO eo, CAMERA_INFO ca);
