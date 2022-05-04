@@ -13,6 +13,9 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
     
     if(frame)
     {
+        EO ori_eo = eo;
+        CAMERA_INFO ori_camera = camera;
+        /*
         GetInitialPCfromDLT(IPs, GCPs, eo, camera);
         printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
         printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
@@ -20,8 +23,14 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.k1,camera.k2,camera.k3,
                camera.p1,camera.p2,
                camera.a1,camera.a2);
-        
-        CalibrationBundle1(IPs, GCPs, eo, camera);
+        */
+        bool check_conver = CalibrationBundle1(IPs, GCPs, eo, camera);
+        if(!check_conver)
+        {
+            bool check_conver2 = CalibrationBundlewithoutFL(IPs, GCPs, ori_eo, ori_camera);
+            eo = ori_eo;
+            camera = ori_camera;
+        }
         printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
         printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
                camera.m_focalLength,camera.m_ppx,camera.m_ppy,
@@ -268,9 +277,12 @@ void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, 
     GMA_double_destroy(AI_matrix);
     GMA_double_destroy(AIL_matrix);
     
-    
-    
-    //exit(1);
+    printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+    printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+           camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+           camera.k1,camera.k2,camera.k3,
+           camera.p1,camera.p2,
+           camera.a1,camera.a2);
 }
 
 void EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
@@ -937,14 +949,16 @@ void Make_b_J_K(D3DPOINT PP, D3DPOINT GP, D2DPOINT p, EO eo, CAMERA_INFO camera,
     */
 };
 
-void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
 {
+    bool check_conver = false;
+    
     int numofpts = IPs.size();
     
     GetInitialPCfromDLT(IPs, GCPs, eo, camera);
     
     int iteration = 0;
-    int max_iter = 100;
+    int max_iter = 50;
     double max_correct = 10000000;
     
     //camera.m_ppx = 0;
@@ -965,7 +979,7 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     printf("input camera %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy,
            camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
     
-    while(iteration < max_iter && max_correct > 0.0000001)
+    while(iteration < max_iter && !check_conver)
     {
         iteration++;
         
@@ -1061,7 +1075,7 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         
         double sigma = sqrt(var_sum/(numofpts*2 - 16));
         printf("adjust sigma %f\n", sigma);
-        GMA_double_printf(X_matrix);
+        //GMA_double_printf(X_matrix);
         
         //exit(1);
         
@@ -1093,10 +1107,15 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         max_correct = fabs(X_matrix->val[0][0]);
         for(int i=1;i<16;i++)
         {
+            double t = X_matrix->val[i][0];
+            printf("X %f\n",t);
             if(max_correct < fabs(X_matrix->val[i][0]))
                 max_correct = fabs(X_matrix->val[i][0]);
         }
         
+        if(max_correct <= 0.0000001)
+            check_conver = true;
+            
         printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
         //exit(1);
@@ -1113,10 +1132,14 @@ void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
+    
+    return check_conver;
 }
 
-void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
 {
+    bool check_conver = false;
+    
     int numofpts = IPs.size();
     
     GetInitialPCfromDLT(IPs, GCPs, eo, camera);
@@ -1128,7 +1151,7 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
     //camera.m_ppx = 0;
     //camera.m_ppy = 0;
     //camera.m_focalLength = 8800.0;
-    int unknowns = 13;
+    int unknowns = 15;
     GMA_double *J_matrix = GMA_double_create(numofpts*2,unknowns);
     GMA_double *K_matrix = GMA_double_create(numofpts*2,1);
     GMA_double *JT_matrix = GMA_double_create(unknowns,numofpts*2);
@@ -1140,7 +1163,7 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
     GMA_double *JX_matrix = GMA_double_create(numofpts*2,1);
     GMA_double *V_matrix = GMA_double_create(numofpts*2,1);
     
-    while(iteration < max_iter && max_correct > 0.0000001)
+    while(iteration < max_iter && !check_conver)
     {
         iteration++;
         
@@ -1193,13 +1216,15 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
             
             for(int j=0; j<2; j++)
             {
-                J_matrix->val[i*2+j][6 + 0] = pdcs.c[j][3];
-                J_matrix->val[i*2+j][6 + 1] = pdcs.c[j][4];
-                J_matrix->val[i*2+j][6 + 2] = pdcs.c[j][5];
-                J_matrix->val[i*2+j][6 + 3] = pdcs.c[j][6];
-                J_matrix->val[i*2+j][6 + 4] = pdcs.c[j][7];
-                J_matrix->val[i*2+j][6 + 5] = pdcs.c[j][8];
-                J_matrix->val[i*2+j][6 + 6] = pdcs.c[j][9];
+                J_matrix->val[i*2+j][6 + 0] = pdcs.c[j][1];
+                J_matrix->val[i*2+j][6 + 1] = pdcs.c[j][2];
+                J_matrix->val[i*2+j][6 + 2] = pdcs.c[j][3];
+                J_matrix->val[i*2+j][6 + 3] = pdcs.c[j][4];
+                J_matrix->val[i*2+j][6 + 4] = pdcs.c[j][5];
+                J_matrix->val[i*2+j][6 + 5] = pdcs.c[j][6];
+                J_matrix->val[i*2+j][6 + 6] = pdcs.c[j][7];
+                J_matrix->val[i*2+j][6 + 7] = pdcs.c[j][8];
+                J_matrix->val[i*2+j][6 + 8] = pdcs.c[j][9];
             }
             
             
@@ -1243,15 +1268,15 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
         eo.m_Yl += X_matrix->val[4][0];
         eo.m_Zl += X_matrix->val[5][0];
         
-        //camera.m_ppx += X_matrix->val[6][0];
-        //camera.m_ppy += X_matrix->val[7][0];
-        camera.k1 += X_matrix->val[6][0];
-        camera.k2 += X_matrix->val[7][0];
-        camera.k3 += X_matrix->val[8][0];
-        camera.p1 += X_matrix->val[9][0];
-        camera.p2 += X_matrix->val[10][0];
-        camera.a1 += X_matrix->val[11][0];
-        camera.a2 += X_matrix->val[12][0];
+        camera.m_ppx += X_matrix->val[6][0];
+        camera.m_ppy += X_matrix->val[7][0];
+        camera.k1 += X_matrix->val[8][0];
+        camera.k2 += X_matrix->val[9][0];
+        camera.k3 += X_matrix->val[10][0];
+        camera.p1 += X_matrix->val[11][0];
+        camera.p2 += X_matrix->val[12][0];
+        camera.a1 += X_matrix->val[13][0];
+        camera.a2 += X_matrix->val[14][0];
         
         printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
         printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
@@ -1269,7 +1294,8 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
         
         printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
-            
+        if( max_correct <= 0.0001)
+            check_conver = true;
     }
     
     GMA_double_destroy(J_matrix);
@@ -1283,6 +1309,7 @@ void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
+    return check_conver;
 }
 
 void CalibrationBundle2(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)

@@ -3726,19 +3726,21 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             char eofile[500];
                             sprintf(eofile,"%s/%s_EO.TXT",image_info[ti].fullpath,image_info[ti].filename);
                             FILE *pfile = fopen(eofile,"r");
-                            if(pfile)
+                            /*if(pfile)
                             {
                                 //printf("%d/%d read existing EOs %s\n",ti,proinfo->number_of_images,eofile);
                                 ReadEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                             }
-                            else
+                            else*/
                             {
                                 //printf("%d/%d generating EOs from rpcs %s\n",ti,proinfo->number_of_images,eofile);
+                                
                                 if(proinfo->sensor_provider == PT)
                                     CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,true);
                                 else
                                     CollinearCalibration(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera,false);
                                 //CalibrationBundle(IPsPhoto,VCPsXY,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
+                                
                                 WriteEOs(eofile,proinfo->frameinfo.Photoinfo[ti],proinfo->frameinfo.m_Camera);
                             }
                             printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
@@ -7344,11 +7346,11 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     if(level <= proinfo->Planet_VC_level)
                                     {
                                         vector<D2DPOINT> ref_pair;
-                                        //vector<vector<D3DPOINT>> final_Tz(levelinfo.pairinfo->SelectNumberOfPairs());
+                                        vector<vector<D3DPOINT>> final_Tz(levelinfo.pairinfo->SelectNumberOfPairs());
                                         
                                         vector<short> call_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                                         VerticalCoregistration_LSA(proinfo, levelinfo, multimps, count_MPs_pair, max_countMPs_pair, max_countMPs,Tz_delta,Tz_sigma,ref_pair,true,call_array);
-                                        /*
+                                        
                                         vector<vector<float>> Tz_saved(ref_pair.size()+1);
                                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                         {
@@ -7405,13 +7407,19 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                 printf("\n");
                                             }
                                         }
-                                        */
                                         
                                         
                                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                         {
-                                            //if(final_Tz[t_pair].size() > 0)
+                                            if(final_Tz[t_pair].size() > 0)
+                                            {
+                                                if(fabs(levelinfo.pairinfo->Tz(t_pair)) > 40)
+                                                {
+                                                    printf("more than 40 %d\t%f\n",t_pair,levelinfo.pairinfo->Tz(t_pair) );
+                                                    levelinfo.pairinfo->SetTz(t_pair,0);
+                                                }
                                                 printf("final refTz pairnumber %d\tTz %f\n",t_pair,levelinfo.pairinfo->Tz(t_pair));
+                                            }
                                         }
                                         
                                         for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
@@ -14614,7 +14622,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
         double height_step = Grid_pair.grid_height_step[iter_count];
         
         double height_interval = (*rlevelinfo.grid_resolution)*10;
-        height_interval = height_step*3;
+        //height_interval = height_step*3;
         //double level_HI = max_sigmaZ*pwrtwo(Pyramid_step)*1.5;
         //if(level_HI > height_interval)
         //    height_interval = level_HI;

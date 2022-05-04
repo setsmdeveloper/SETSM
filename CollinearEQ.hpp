@@ -33,7 +33,7 @@ void AffinityParamEstimate(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo
 void Make_b_J_K(D3DPOINT PP, D3DPOINT GP, D2DPOINT p, EO eo, CAMERA_INFO camera, CLB &B);
 
 void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera);
-void CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera); //all parameters 16
-void CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera); // 15
+bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera); //all parameters 16
+bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera); // 15
 void CalibrationBundle2(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera); // EO parameters 6
 #endif /* CollinearEQ_hpp */
