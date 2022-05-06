@@ -205,7 +205,7 @@ double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &se
 
 double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma);
 
-void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array);
+void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray);
 
 void VerticalCoregistration_2(const ProInfo* proinfo, LevelInfo &levelinfo, int max_countMPs_pair, vector<vector<float>> &save_difheight, vector<vector<D3DPOINT>> &noref_difheight, int possible_pairs, double &max_dif_avg);
 

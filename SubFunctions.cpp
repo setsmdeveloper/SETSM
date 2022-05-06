@@ -2857,6 +2857,11 @@ void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_i
         if(max_XY.m_Y < temp.m_Y)
             max_XY.m_Y = temp.m_Y;
         
+        min_XY.m_X -= 500;
+        min_XY.m_Y -= 500;
+        max_XY.m_X += 500;
+        max_XY.m_Y += 500;
+        
         image_info[i].min_XY = min_XY;
         image_info[i].max_XY = max_XY;
     }
