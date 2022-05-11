@@ -635,6 +635,15 @@ inline double ShortToDouble_SGM(short val, double factor)
     return (double)(val)/factor;
 }
 
+inline unsigned short DoubleToUnsignedShort(double val)
+{
+    return (unsigned short)round(val*100.0);
+}
+
+inline double UnsignedShortToDouble(unsigned short val)
+{
+    return (double)(val)/100.0;
+}
 
 inline short DoubleToSignedChar_result(double val)
 {
