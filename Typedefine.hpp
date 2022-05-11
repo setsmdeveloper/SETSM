@@ -32,7 +32,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 1000
-#define MaxNCC 2000
+#define MaxNCC 10000
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0

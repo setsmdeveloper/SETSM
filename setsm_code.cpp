@@ -5455,7 +5455,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         CPairInfo temp_pairs(plevelinfo.pairinfo->SelectNumberOfPairs());
         temp_pairs.SetMinOffImage(pairinfo.MinOffImageID());
         temp_pairs.SetHeightStep(pairinfo.HeightStep());
-        
+        printf("temp_pairs\n");        
         /*
         int max_coverage_pair;
         int max_grids = 0;
@@ -5482,8 +5482,10 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             temp_pairs.SetCal(count,1);
             
             D2DPOINT temp_RBias;
+            //printf("imageadjust start %d\n",count);
             temp_RBias.m_X = plevelinfo.ImageAdjust[pair_number][0];
             temp_RBias.m_Y = plevelinfo.ImageAdjust[pair_number][1];
+            //printf("imageadjust end %d\n",count);
             temp_pairs.SetCloud(count,plevelinfo.pairinfo->Cloud(pair_number));
             temp_pairs.SetRBias(count,temp_RBias);
             temp_pairs.SetTz(count,plevelinfo.pairinfo->Tz(pair_number));
@@ -5516,7 +5518,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 image_info[temp_pairs.pairs(count).m_Y].cloud);
              */
         }
-        
+         printf("end for\n");
         /*plevelinfo.pairinfo->initialize();
         
         printf("initialize all pairinfo count %d/n",plevelinfo.pairinfo->SelectNumberOfPairs(),plevelinfo.pairinfo->NumberOfPairs());
