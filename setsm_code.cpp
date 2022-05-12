@@ -6584,10 +6584,10 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                         auto grid_voxel_size = check_matching_rate ? 0 : Size_Grid2D.width*Size_Grid2D.height;
                         GridVoxel grid_voxel = GridVoxel(grid_voxel_size, Grid_pair);
                         
-                        
-                        
                         vector<NCCresult> nccresult(Grid_length);
                         
+                        printf("gridvoxel memory usage!!\n");
+                        printMaxMemUsage();
                         
                         levelinfo.check_matching_rate = &check_matching_rate;
                         
@@ -6670,6 +6670,9 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                             
                             if(!check_matching_rate)
                                 InitializeVoxel(proinfo,grid_voxel,levelinfo,GridPT3, nccresult,iteration,minmaxHeight, Grid_pair);
+                            
+                            printf("InitializeVoxel memory usage!!\n");
+                            printMaxMemUsage();
                             
                             const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,image_info,nccresult,levelinfo,GridPT3,iteration,minmaxHeight, ori_minmaxHeight, Grid_pair);
                             
@@ -7205,9 +7208,6 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         free(Pcount);
                                     }
                                     
-                                    //for(int iter = 0 ; iter < save_cal_pairs.size() ; iter++)
-                                    //    printf("cal pairs ID %d\t%d/%d\n",iter,save_cal_pairs[iter],save_cal_pairs.size());
-                                    
                                     vector<short> t_cal_pair;
                                     int max_countMPs = 0;
                                     printf("before finding maxpair %d\n",levelinfo.pairinfo->MaxCountMPs_pair());
@@ -7244,9 +7244,32 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     for(int pair_number = 0 ; pair_number < t_cal_pair.size() ; pair_number++)
                                         printf("final cal pairs ID %d\t%d/%d\n",pair_number,t_cal_pair[pair_number],t_cal_pair.size());
                                     
-                                    printf("max countMP pair %d\t%d\n",max_countMPs_pair,max_countMPs);
+                                    /*
+                                    if(t_cal_pair.size() > 100)
+                                    {
+                                        vector<PairCA> actual_pair_CA;
+                                        
+                                        for(int index = 0 ; index < Grid_length ; index++)
+                                        {
+                                            int pair_size = PairArray[index].size();
+                                            
+                                            if(pair_size >= 3)
+                                            {
+                                                for(int pair = 0 ; pair < pair_size ; pair++)
+                                                {
+                                                    int pair_number = PairArray[index][pair];
+                                                    save_MPcount[pair_number]++;
+                                                }
+                                            }
+                                        }
+                                        
+                                        float last = quickselect(save_MPcount,save_MPcount.size(),save_MPcount.size());
+                                    }
+                                    */
                                     
-                                    short cal_pair_count = t_cal_pair.size();
+                                    
+                                    
+                                    printf("max countMP pair %d\t%d\n",max_countMPs_pair,max_countMPs);
                                     
                                     save_cal_pairs.clear();
                                     t_cal_pair.clear();
@@ -7407,7 +7430,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     double simga2 = 1.0/(final_Tz[t_pair][cnt].m_Y*final_Tz[t_pair][cnt].m_Y);
                                                     weight += simga2;
                                                     weighted_sum += final_Tz[t_pair][cnt].m_X*simga2;
-                                                    printf("pair ID %d\tref ID %d\tTz %f\tLS sigma %f\tweight %f\n",t_pair,(int)final_Tz[t_pair][cnt].m_Z,final_Tz[t_pair][cnt].m_X, final_Tz[t_pair][cnt].m_Y,simga2);
+                                                    //printf("pair ID %d\tref ID %d\tTz %f\tLS sigma %f\tweight %f\n",t_pair,(int)final_Tz[t_pair][cnt].m_Z,final_Tz[t_pair][cnt].m_X, final_Tz[t_pair][cnt].m_Y,simga2);
                                                 }
                                                 double final_Tz = weighted_sum/weight;
                                                 levelinfo.pairinfo->SetTz(t_pair,final_Tz);
@@ -8800,7 +8823,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     
                     P_index.push_back(t_pair);
                     //check_all_Tz[t_pair] = 1;
-                    printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",t_pair,sel_count,sum_dif_avg,std,sigma);
+                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",t_pair,sel_count,sum_dif_avg,std,sigma);
                     unknown.push_back(t_pair);
                     //exit(1);
                     
@@ -8951,7 +8974,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         nonref_Tz_sigma.push_back(sigma);
                         
                         P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                        printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
+                        //printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
                     }
                 }
                 
@@ -9254,7 +9277,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             max_dif_avg = fabs(dif_avg);
                         
                         levelinfo.pairinfo->SetTz(t_pair,sum_dif_avg);
-                        printf("residual ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\t%f\n",t_pair,sel_count,dif_avg,levelinfo.pairinfo->Tz(t_pair));
+                        //printf("residual ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\t%f\n",t_pair,sel_count,dif_avg,levelinfo.pairinfo->Tz(t_pair));
                         
                         //exit(1);
                     }
@@ -12212,7 +12235,8 @@ double GetHeightStep_Planet(const ProInfo *proinfo, LevelInfo &rlevelinfo)
 
 double GetHeightStep_Planet_MPP(const ProInfo *proinfo, LevelInfo &rlevelinfo, double MPP)
 {
-    double h_divide = 7 + (3 - (*rlevelinfo.Pyramid_step));
+    //double h_divide = 7 + (3 - (*rlevelinfo.Pyramid_step));
+    double h_divide = 4;
     /*if(*rlevelinfo.Pyramid_step <= 1)
     {
         if(*rlevelinfo.iteration <= 2)
