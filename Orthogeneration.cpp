@@ -267,7 +267,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
             for(long j=0; j<subfactor;j++)
             {
                 char MEG[500];
-                sprintf(MEG,"Tile %d %d, processing:%6.1f\n",j+1,i+1,((i)*subfactor+j+1)/subfactor/subfactor*100);
+                sprintf(MEG,"Tile %ld %ld, processing:%6.1f\n",j+1,i+1,((i)*subfactor+j+1)/subfactor/subfactor*100);
                 printf("%s",MEG);
 
                 double Y_size[2];

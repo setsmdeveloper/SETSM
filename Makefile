@@ -4,13 +4,13 @@
 
 # If libtiff is installed in a nonstandard location you must edit 
 # TIFFPATH and uncomment the following three lines.
-TIFFPATH?=/home/noh.56/software/tiff-4.0.3
+TIFFPATH?=/fs/ess/PZS0720/tiff-4.0.7
 TIFFINC?=-I$(TIFFPATH)/include
 TIFFLIB?=-L$(TIFFPATH)/lib
 
 # If libgeotiff is installed in a nonstandard location you must edit
 # GEOTIFFPATH and uncomment the following three lines.
-GEOTIFFPATH?=/home/noh.56/software/libgeotiff-1.4.2
+GEOTIFFPATH?=/fs/ess/PZS0720/libgeotiff-1.4.2
 GEOTIFFINC?=-I$(GEOTIFFPATH)/include
 GEOTIFFLIB?=-L$(GEOTIFFPATH)/lib
 PROJLIB?=-L/home/noh.56/software/proj-5.1.0/lib
@@ -46,6 +46,20 @@ else ifeq ($(COMPILER), cray)
   MPICXX=CC
   CFLAGS=
   CXXFLAGS=-hstd=c++11 -h aggress
+else ifeq ($(COMPILER), intelLLVM)
+  CC=icx
+  CXX=icpx
+  MPICC=mpicc 
+  MPICXX=mpicxx
+  CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise
+  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise -g
+else ifeq ($(COMPILER), HPC)
+  CC=nvc
+  CXX=nvc++
+  MPICC=mpicc
+  MPICXX=mpicxx
+  CFLAGS=
+  CXXFLAGS=
 else
   CC=gcc
   CXX=g++
