@@ -295,18 +295,18 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
-            printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
+            printf("rows %ld\t%ld\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
             starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
-            printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
+            printf("cols %ld\t%ld\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
             if(end_col > Imagesize->width)
                 end_col = Imagesize->width;
             
-            printf("start %d\t%d\t end %d\t%d\n",start_col,start_row,end_col,end_row);
+            printf("start %lu\t%lu\t end %lu\t%lu\n",start_col,start_row,end_col,end_row);
             cols[0]         = start_col;
             cols[1]         = end_col;
             rows[0]         = start_row;
@@ -555,7 +555,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     
     long total_grid_counts = MPs.size();
     
-    printf("total pts %d\n",total_grid_counts);
+    printf("total pts %ld\n",total_grid_counts);
     
     sprintf(temp_path,"%s/txt/GCPs_Image_ID_%d_level_%d.txt",proinfo->save_filepath,ti,Pyramid_step);
     FILE *fid_pts = fopen(temp_path,"w");

@@ -3843,7 +3843,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                   
                             const long int Accessable_grid = VerticalLineLocus(grid_voxel,proinfo,nccresult,levelinfo,GridPT3,iteration,minmaxHeight);
                             
-                            printf("Done VerticalLineLocus\tgrid %d\n",Accessable_grid);
+                            printf("Done VerticalLineLocus\tgrid %ld\n",Accessable_grid);
                             
                             if(!check_matching_rate)
                             {
@@ -3876,7 +3876,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             
                             count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, MPP, final_level_iteration, MPP_stereo_angle, &MatchedPts_list);
                             
-                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
+                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%zu\n",row,col,level,iteration,count_MPs,MatchedPts_list.size());
                             
                             D3DPOINT *ptslists = NULL;
                             
@@ -3979,7 +3979,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                             {
                                 if(check_ortho_cal && proinfo->IsRA != 1)
                                 {
-                                    printf("settingflag %d\t%d\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
+                                    printf("settingflag %zu\t%zu\n",MatchedPts_list_anchor.size(),MatchedPts_list_blunder.size());
                                     count_MPs = SetttingFlagOfGrid(levelinfo, GridPT3, MatchedPts_list_anchor, MatchedPts_list_blunder, &MatchedPts_list_mps);
                                     MatchedPts_list_anchor.clear();
                                     vector<D3DPOINT>().swap(MatchedPts_list_anchor);
@@ -3987,7 +3987,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                     vector<D3DPOINT>().swap(MatchedPts_list_blunder);
                                 }
                                 
-                                printf("count_MPs %d\t%d\n",count_MPs,MatchedPts_list_mps.size());
+                                printf("count_MPs %d\t%zu\n",count_MPs,MatchedPts_list_mps.size());
                                 count_MPs = MatchedPts_list_mps.size();
                                 
                                 vector<UI3DPOINT> t_trilists;
@@ -4149,7 +4149,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         
                                         matching_rate = count_MPs/(double)(Accessable_grid);
                                         
-                                        printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
+                                        printf("matching change rate pre curr %f\t%d\t%d\tmatching rate %f\t%ld\n",matching_change_rate,count_MPs,pre_matched_pts,matching_rate,Accessable_grid);
                                         pre_matched_pts = count_MPs;
                                         
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
@@ -4337,7 +4337,7 @@ int Matching_SETSM(ProInfo *proinfo,const uint8 pyramid_step, const uint8 Templa
                                         }
                                         
                                         matching_rate = count_MPs/(double)(Accessable_grid);
-                                        printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%d\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
+                                        printf("matching change rate pre curr %f\t%d\t%d\tTh_roh %f\t%f\tmatching rate %f\t%ld\n",matching_change_rate,count_MPs,pre_matched_pts,Th_roh,Th_roh_min,matching_rate,Accessable_grid);
                                         
                                         if(level <= 2 && matching_rate < th_mr && proinfo->DEM_resolution <= 4)
                                             level_check_matching_rate = true;
@@ -5426,7 +5426,7 @@ void SetHeightWithSeedDEM(const ProInfo *proinfo, LevelInfo &rlevelinfo, UGRID *
 
             float type(0);
             float *seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size, type);
-            printf("Grid size %d\t%d\tcols rows %d\t%d\t%d\t%d\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
+            printf("Grid size %d\t%d\tcols rows %ld\t%ld\t%ld\t%ld\n",rlevelinfo.Size_Grid2D->width,rlevelinfo.Size_Grid2D->height,cols[0],cols[1],rows[0],rows[1]);
 
             SetGridHeightFromSeed(rlevelinfo, Grid, seeddem, seeddem_size, grid_size, minX, maxY, seedDEM_sigma, minmaxHeight);
             
@@ -7054,7 +7054,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
             {
                 long t_index = i*(long)Size_Grid2D.width + j;
                 if(Pyramid_step == 0 && iteration == 3 && nccresult[t_index].NumOfHeight > 2000)
-                    printf("gridsize %d\t%d\t pos %d\t%d\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
+                    printf("gridsize %d\t%d\t pos %ld\t%ld\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
                 if(nccresult[t_index].NumOfHeight > 0)
                 {
                     SumCost[t_index] = (float*)calloc(sizeof(float),nccresult[t_index].NumOfHeight);
@@ -7333,7 +7333,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 }
              
 #pragma omp for
-                for(ref_iter = start_col[direction_iter] ; ref_iter >= end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
+                for(ref_iter = start_col[direction_iter] ; ref_iter < end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
                 {
                     pts_col = ref_iter;
                     bool check_free_LHcost_pre = false;
@@ -7357,7 +7357,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
              
                             if(pts_col >= 0 && pts_col < Size_Grid2D.width)
                             {
-                                long pt_index = pts_row*Size_Grid2D.width + pts_col;
+                                long pt_index = pts_row*(long)Size_Grid2D.width + pts_col;
              
                                 memset(LHcost_curr, 0, nccresult[pt_index].NumOfHeight*sizeof(float));
                                 SGM_con_pos(pts_col, pts_row, Size_Grid2D, direction_iter, step_height, P_HS_step, u_col, v_row, nccresult, grid_voxel, GridPT3, pt_index, P1, P2, LHcost_pre, LHcost_curr, SumCost);
@@ -7377,7 +7377,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 //printf("bottom left to right\n");
                 direction_iter = 6;
 #pragma omp for
-                for(ref_iter = start_row[direction_iter] ; ref_iter >= end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
+                for(ref_iter = start_row[direction_iter] ; ref_iter < end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
                 {
                     pts_row = ref_iter;
                     bool check_free_LHcost_pre = false;
@@ -7459,7 +7459,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 //printf("bottom right to left\n");
                 direction_iter = 7;
 #pragma omp for
-                for(ref_iter = start_row[direction_iter] ; ref_iter >= end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
+                for(ref_iter = start_row[direction_iter] ; ref_iter < end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
                 {
                     pts_row = ref_iter;
                     bool check_free_LHcost_pre = false;
@@ -7499,7 +7499,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 }
              
 #pragma omp for
-                for(ref_iter = start_col[direction_iter] ; ref_iter >= end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
+                for(ref_iter = start_col[direction_iter] ; ref_iter < end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
                 {
                     pts_col = ref_iter;
                     bool check_free_LHcost_pre = false;
@@ -11237,7 +11237,7 @@ void MergeTiles(const ProInfo *info, const int iter_row_start, const int t_col_s
                                    &t_row,&t_col,&t_level,&t_boundary[0],&t_boundary[1],&t_grid_size,&col_size,&row_size);
                         }
                         
-                        printf("header %f\t%f\t%d\t%d\t%f\t%d\n",t_boundary[0],t_boundary[1],col_size,row_size,grid_size,buffer);
+                        printf("header %f\t%f\t%ld\t%ld\t%f\t%d\n",t_boundary[0],t_boundary[1],col_size,row_size,grid_size,buffer);
                         
                         char hv_t_str[500];
                         sprintf(hv_t_str,"%s/txt/tin_h_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,final_iteration);
@@ -11405,7 +11405,7 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
     FILE *fheader = fopen(DEM_header,"r");
     double dummy;
     fscanf(fheader,"%lf\t%lf\t%lf\t%ld\t%ld",&DEM_minX,&DEM_maxY,&dummy,&DEM_cols,&DEM_rows);
-    printf("%f\t%f\t%d\t%d\n",DEM_minX,DEM_maxY,DEM_cols,DEM_rows);
+    printf("%f\t%f\t%ld\t%ld\n",DEM_minX,DEM_maxY,DEM_cols,DEM_rows);
     fclose(fheader);
     
     remove(DEM_header);
@@ -11463,7 +11463,7 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
         if(row >= row_start && row <= row_end && col >= col_start &&  col <= col_end)
         {
             char t_str[500];
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_0_%d.txt",proinfo->save_filepath,row,col,final_iteration);
+            sprintf(t_str,"%s/txt/matched_pts_%ld_%ld_0_%d.txt",proinfo->save_filepath,row,col,final_iteration);
             FILE *pfile   = fopen(t_str,"rb");
             if(pfile)
             {
@@ -11476,10 +11476,10 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
                     char h_t_str[500];
                     char c_t_str[500];
                     
-                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
+                    sprintf(h_t_str,"%s/txt/headerinfo_row_%ld_col_%ld.txt",proinfo->save_filepath,row,col);
                     FILE *p_hfile     = fopen(h_t_str,"r");
                     
-                    sprintf(c_t_str,"%s/txt/count_row_%d_col_%d.txt",proinfo->save_filepath,row,col);
+                    sprintf(c_t_str,"%s/txt/count_row_%ld_col_%ld.txt",proinfo->save_filepath,row,col);
                     FILE *c_hfile     = fopen(c_t_str,"r");
                     
                     if(p_hfile)
@@ -11500,7 +11500,7 @@ void NNA_M(const ProInfo *proinfo, const TransParam _param, const int row_start,
                         fscanf(c_hfile,"%ld\n",&count_MPs);
                         D3DPOINTSAVE *temp_pts = (D3DPOINTSAVE*)malloc(sizeof(D3DPOINTSAVE)*count_MPs);
                         fread(temp_pts,sizeof(D3DPOINTSAVE),count_MPs,pfile);
-                        printf("read count_MPs %d\t%d\n",count_MPs,buffer_clip);
+                        printf("read count_MPs %ld\t%d\n",count_MPs,buffer_clip);
                         
                         long count_read = 0;
                         long count_out = 0;
@@ -11718,7 +11718,7 @@ void MergeTiles_Ortho(const ProInfo *info, const int iter_row_start, const int t
         for(long col = t_col_start ; col <= t_col_end ; col++)
         {
             char t_str[500];
-            sprintf(t_str,"%s/txt/matched_pts_%d_%d_%d_%d.txt",info->save_filepath,row,col,find_level,final_iteration);
+            sprintf(t_str,"%s/txt/matched_pts_%ld_%ld_%d_%d.txt",info->save_filepath,row,col,find_level,final_iteration);
             FILE *pfile   = fopen(t_str,"r");
             if(pfile)
             {
@@ -11728,7 +11728,7 @@ void MergeTiles_Ortho(const ProInfo *info, const int iter_row_start, const int t
                 if(size > 0)
                 {
                     char h_t_str[500];
-                    sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info->save_filepath,row,col);
+                    sprintf(h_t_str,"%s/txt/headerinfo_row_%ld_col_%ld.txt",info->save_filepath,row,col);
                     FILE *p_hfile     = fopen(h_t_str,"r");
                     if(p_hfile)
                     {
@@ -11744,7 +11744,7 @@ void MergeTiles_Ortho(const ProInfo *info, const int iter_row_start, const int t
                         }
                         
                         char ortho_str[500];
-                        sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%d_%d_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,final_iteration);
+                        sprintf(ortho_str,"%s/txt/tin_ortho_ncc_level_%ld_%ld_%d_iter_%d_final.txt",info->save_filepath,row,col,find_level,final_iteration);
                         FILE *p_orthofile = fopen(ortho_str,"rb");
                         
                         if(p_orthofile)
@@ -11989,7 +11989,7 @@ void NNA_M_MT(const ProInfo *proinfo, const TransParam _param, const int row_sta
         
         check_size = 0;
         max_total_iteration = 3;
-        total_iteration;
+        total_iteration = 0;
         
         for(total_iteration = 1  ; total_iteration <= max_total_iteration ; total_iteration++)
         {

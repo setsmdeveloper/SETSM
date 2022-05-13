@@ -124,7 +124,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 printf("pyramid level %d\tSDM_ss %d\tend_level = %d\t%d\n",proinfo.pyramid_level,proinfo.SDM_SS,end_level,th_grid);
                 
                 int sdm_kernal_size = floor( (double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution*pwrtwo(proinfo.pyramid_level)));
-            printf("sdm_kernel size %f\t%f\t%f\t%f\t%d\n",sdm_kernal_size,proinfo.SDM_AS,proinfo.SDM_days,proinfo.resolution,proinfo.pyramid_level);
+            printf("sdm_kernel size %d\t%f\t%f\t%f\t%d\n",sdm_kernal_size,proinfo.SDM_AS,proinfo.SDM_days,proinfo.resolution,proinfo.pyramid_level);
                 if(proinfo.pre_DEMtif)
                 {
                     sdm_kernal_size = 3;
@@ -590,7 +590,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                         
                         vector<D3DPOINT> Matched_pts_col, Matched_pts_row;
                         long count_MPs = SelectMPs_SDM(proinfo, levelinfo, nccresult, GridPT3, Matched_pts_col, Matched_pts_row);
-                        printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %d\t%d\n",1,1,level,iteration,count_MPs, Matched_pts_col.size());
+                        printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\n",1,1,level,iteration,count_MPs, Matched_pts_col.size());
                         
                         if(count_MPs > 100)
                             lower_level_match = true;
@@ -609,7 +609,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 else
                                     matching_change_rate = fabs( (double)pre_matched_pts - (double)count_MPs ) /(double)pre_matched_pts;
                                 
-                                printf("matching change rate pre curr %f\t%d\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
+                                printf("matching change rate pre curr %f\t%ld\t%d\n",matching_change_rate,count_MPs,pre_matched_pts);
                                 pre_matched_pts = count_MPs;
                                 
                                 if(level >= 4)
@@ -679,9 +679,9 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                 //displacement computation
                                 if(level <= pyramid_step)
                                 {
-                                    printf("Size_Grid2D %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,count_MPs);
+                                    printf("Size_Grid2D %d\t%d\t%ld\n",Size_Grid2D.width,Size_Grid2D.height,count_MPs);
                                     
-                                    printf("TIN interpolation for col row shift %d\n",count_MPs);
+                                    printf("TIN interpolation for col row shift %ld\n",count_MPs);
                                    
                                     if(count_MPs > 5)
                                     {
@@ -739,7 +739,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                         t_trilists.clear();
                                         vector<UI3DPOINT>().swap(t_trilists);
                                         
-                                        printf("end tingeneration %d\t%d\n",count_tri,count_MPs);
+                                        printf("end tingeneration %d\t%ld\n",count_tri,count_MPs);
                                         
                                         double* ortho_ncc = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
                                         double* INCC = (double*)calloc(Size_Grid2D.height*Size_Grid2D.width,sizeof(double));
@@ -790,9 +790,9 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                             printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SetHeightRange\n",1,1,level,iteration);
                             
                             
-                            fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\n",
+                            fprintf(fid,"row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %ld\n",
                                     1,1,level,iteration,count_MPs);
-                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %d\n",
+                            printf("row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd iterpolation of Grids!! Mps = %ld\n",
                                    1,1,level,iteration,count_MPs);
                             
                             printf("Size_Grid2D %d\t%d\n",Size_Grid2D.width,Size_Grid2D.height);
@@ -1148,7 +1148,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
     
     const long numofpts = *(plevelinfo.Grid_length);
     
-    printf("numofpts %d\t%d\t%d\tcoreg %f\t%f\n",numofpts,plevelinfo.Size_Grid2D->height,plevelinfo.Size_Grid2D->width,Coreg_param[0],Coreg_param[1]);
+    printf("numofpts %ld\t%d\t%d\tcoreg %f\t%f\n",numofpts,plevelinfo.Size_Grid2D->height,plevelinfo.Size_Grid2D->width,Coreg_param[0],Coreg_param[1]);
     const int reference_id = 0;
     const int target_id = 1;
 #pragma omp parallel
@@ -1728,7 +1728,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
     
     const int slope_step = 360/da;
     
-    printf("angle step %d\t%d\n",slope_step,data_length);
+    printf("angle step %d\t%ld\n",slope_step,data_length);
     
     const int shift_max_pixel = (int)(((double)(proinfo.SDM_AS * proinfo.SDM_days) / (proinfo.resolution)) );
     
