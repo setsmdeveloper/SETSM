@@ -50,8 +50,8 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 FILE *pMetafile    = fopen(metafilename,"w");
                 fprintf(pMetafile,"SETSM Version=%s\n",setsm_version);
                 
-                char temp_filepath[500];
-                double Image1_gsd, Image2_gsd;
+                //char temp_filepath[500];
+                //double Image1_gsd, Image2_gsd;
                 ImageGSD GSD_image1, GSD_image2;
                 double image1_minX, image1_maxY, image2_minX, image2_maxY, image1_grid, image2_grid;
                 
@@ -329,8 +329,8 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                 D2DPOINT *GridPT = NULL;
                 int final_level_iteration = 1;
                 
-                int total_matching_candidate_pts = 0;
-                double matching_rate = 0;
+                //int total_matching_candidate_pts = 0;
+                //double matching_rate = 0;
                 
                 while(lower_level_match && level >= 0)
                 {
@@ -402,11 +402,11 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                     
                     fprintf(fid_header, "%d\t%d\t%d\t%f\t%f\t%f\t%d\t%d\n", 1, 1, level, subBoundary[0], subBoundary[1], grid_resolution, Size_Grid2D.width,Size_Grid2D.height);
                     
-                    double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
+                    //double left_mag_var, left_mag_avg, right_mag_var, right_mag_avg;
                     
                     printf("load subimages\n");
                     
-                    total_matching_candidate_pts = (long)Size_Grid2D.width*(long)Size_Grid2D.height;
+                    //total_matching_candidate_pts = (long)Size_Grid2D.width*(long)Size_Grid2D.height;
                     
                     printf("End load subimages blunder_selected_level\n");
                     
@@ -513,7 +513,7 @@ void Matching_SETSM_SDM(ProInfo proinfo, TransParam param, uint8 Template_size, 
                                     long row = (floor(index/Size_Grid2D.width));
                                     long col = index%Size_Grid2D.width;
                                     long search_index = row*(long)Size_Grid2D.width + col;
-                                    const double p = 1.5;
+                                    //const double p = 1.5;
                                     if (t_ncc_array[search_index] == 1)
                                     {
                                         double sum_row_shift=0;
@@ -1144,7 +1144,7 @@ bool VerticalLineLocus_SDM(ProInfo proinfo, LevelInfo &plevelinfo, NCCresultSDM*
     }
     
     int Half_template_size = (int)(Template_size/2);
-    const double subBoundary[4] = {plevelinfo.Boundary[0], plevelinfo.Boundary[1], plevelinfo.Boundary[2], plevelinfo.Boundary[3]};
+    //const double subBoundary[4] = {plevelinfo.Boundary[0], plevelinfo.Boundary[1], plevelinfo.Boundary[2], plevelinfo.Boundary[3]};
     
     const long numofpts = *(plevelinfo.Grid_length);
     
@@ -1504,7 +1504,7 @@ bool Update_ortho_NCC(ProInfo proinfo, LevelInfo &rlevelinfo, UGRIDSDM *GridPT3,
     }
     
     const int Half_template_size = (int)(Template_size/2);
-    double subBoundary[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
+    //double subBoundary[4] = {rlevelinfo.Boundary[0], rlevelinfo.Boundary[1], rlevelinfo.Boundary[2], rlevelinfo.Boundary[3]};
     
     const long numofpts = *rlevelinfo.Grid_length;
     
@@ -1767,15 +1767,15 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
             int* hist_slope = (int*)calloc(sizeof(int),slope_step);
             
             int hist_col[6000] = {0};
-            int hist_col_id[6000];
+            //int hist_col_id[6000];
             int hist_row[6000] = {0};
-            int hist_row_id[6000];
+            //int hist_row_id[6000];
             
-            for(int k=0;k<3000;k++)
+            /*for(int k=0;k<3000;k++)
             {
                 hist_col_id[k] = k;
                 hist_row_id[k] = k;
-            }
+            }*/
             
             long save_count = 0;
             for(long k = -kernal_size ; k <= kernal_size ; k++)
@@ -1975,8 +1975,8 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
                 {
                     double sum1 = 0;
                     double sum2 = 0;
-                    double sum1_r = 0;
-                    double sum2_r = 0;
+                    //double sum1_r = 0;
+                    //double sum2_r = 0;
                     
                     if(pyramid_step >= 0)
                     {
@@ -2016,10 +2016,10 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
                 //row
                 if(total_seleted_count_row > 0)
                 {
-                    double sum1, sum2, sum1_r, sum2_r;;
+                    double sum1_r, sum2_r; //sum1, sum2
                     
-                    sum1 = 0;
-                    sum2 = 0;
+                    //sum1 = 0;
+                    //sum2 = 0;
                     sum1_r = 0;
                     sum2_r = 0;
                     
@@ -2116,7 +2116,7 @@ void shift_filtering(ProInfo proinfo, UGRIDSDM *GridPT3, LevelInfo &rlevelinfo)
 void echo_print_nccresults_SDM(char *save_path,int row,int col,int level, int iteration, NCCresultSDM *nccresult, CSize *Size_Grid2D, char *add_str)
 {
     int k,j;
-    FILE *outfile_min, *outfile_max, *outfile_h, *outfile_roh, *outfile_diff, *outfile_peak, *outINCC, *outGNCC,*outcount;
+    FILE *outfile_min; //*outfile_max, *outfile_h, *outfile_roh, *outfile_diff, *outfile_peak, *outINCC, *outGNCC,*outcount
     CSize temp_S;
     char t_str[500];
     
@@ -2205,20 +2205,20 @@ bool average_filter_colrowshift(CSize Size_Grid2D, UGRIDSDM *GridPT3,uint8 Pyram
 
 double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,int final_iteration,TransParam _param, uint8 pyramid_step)
 {
-    FILE *poutDEM;
-    FILE *poutMatchtag;
-    FILE *poutheader;
-    FILE *poutrowshift;
-    FILE *poutcolshift;
-    FILE *poutvxshift;
-    FILE *poutvyshift;
+    // FILE *poutDEM;
+    // FILE *poutMatchtag;
+    // FILE *poutheader;
+    // FILE *poutrowshift;
+    // FILE *poutcolshift;
+    // FILE *poutvxshift;
+    // FILE *poutvyshift;
     
-    int header_line = pyramid_step+3;
-    int row,col;
+    //int header_line = pyramid_step+3;
+    //int row,col;
     int row_end = iter_row_end;
     int col_end = t_col_end;
     int find_level = 0;
-    int find_iter  = final_iteration;
+    //int find_iter  = final_iteration;
     long int size;
     double grid_size;
     
@@ -2232,7 +2232,7 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
     //bool *Matchtag;
     char DEM_str[500];
     
-    bool check_gs = false;
+    //bool check_gs = false;
     
     //find boundary of DEM
     boundary[0] = 10000000.0;
@@ -2302,7 +2302,7 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
     }
     
     printf("boundary %f\t%f\t%f\t%f\n",boundary[0],boundary[1],boundary[2],boundary[3]);
-    check_gs = false;
+    //check_gs = false;
     
     buffer    = (int)(floor(buffer/grid_size));
     
@@ -2343,14 +2343,14 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
             if(size > 0)
             {
                 char h_t_str[500];
-                FILE *p_hfile, *p_hvfile, *p_cshift, *p_rshift, *p_vxshift, *p_vyshift, *p_roh, *p_mag;
+                FILE *p_hfile, *p_vxshift, *p_vyshift, *p_roh; //*p_hvfile, *p_cshift, *p_rshift, *p_mag
                 
                 sprintf(h_t_str,"%s/txt/headerinfo_row_%d_col_%d.txt",info.save_filepath,row,col);
                 p_hfile        = fopen(h_t_str,"r");
                 printf("%s\n",h_t_str);
                 //if(p_hfile)
                 {
-                    int iter;
+                    //int iter;
                     char hv_t_str[500];
                     int row_size,col_size;
                     double t_boundary[4];
@@ -2389,8 +2389,8 @@ double MergeTiles_SDM(ProInfo info,int iter_row_end,int t_col_end, int buffer,in
                                 double t_row = ( (double)(boundary[3] - (t_boundary[1] + grid_size*iter_row))/grid_size);
                                 int index = (int)(t_row*DEM_size.width + t_col + 0.01);
                                 
-                                double DEM_value;
-                                double Col_value, Row_value, Vx_value, Vy_value, Roh_value;
+                                //double DEM_value;
+                                double Vx_value, Vy_value, Roh_value;//Col_value, Row_value
                                 
                                 //fscanf(p_cshift,"%lf\t",&Col_value);
                                 //fscanf(p_rshift,"%lf\t",&Row_value);

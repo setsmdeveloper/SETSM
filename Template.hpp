@@ -109,11 +109,13 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
                         (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
                     {
-                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
+                        /*if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
                         {
                             temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
                             count ++;
-                        }
+                        }*/
+                        temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            count ++;
                     }
                 }
             }
@@ -492,7 +494,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
     }
     else if(check_ftype == 2 && bin)
     {
-        long r,c,a;
+        long r,a;
         data_size->width    = cols[1] - cols[0];
         data_size->height   = rows[1] - rows[0];
         
@@ -543,7 +545,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
         {
             for(long col = 0 ; col < grid_size.width ; col ++)
             {
-                long index = row*(long)grid_size.width + col;
+                //long index = row*(long)grid_size.width + col;
                 D2DPOINT temp_pts(over_Boundary[0] + col*grid_space, over_Boundary[1] + row*grid_space);
                 MPs.push_back(temp_pts);
             }

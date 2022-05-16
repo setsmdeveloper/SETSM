@@ -22,7 +22,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
     
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    FILE *time_fid;
+    //FILE *time_fid;
     
     total_ST = time(0);
     
@@ -45,9 +45,9 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         else
         {
             *cal_check = true;
-            char temp_filepath[500];
+            //char temp_filepath[500];
             
-            int check_folder = 1;
+            //int check_folder = 1;
             
             sprintf(proinfo->save_filepath,"%s",args.Outputpath);
             
@@ -228,7 +228,7 @@ double** ImageCoregistration(TransParam *return_param, char* _filename, ARGINFO 
         
             char **Subsetfilename;
             CSize **data_size_lr;
-            char save_file[500];
+            //char save_file[500];
             char out_file[500];
             char *filename;
             
@@ -484,7 +484,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
     
     time_t total_ST = 0, total_ET = 0;
     double total_gap;
-    FILE *time_fid;
+    //FILE *time_fid;
     
     total_ST = time(0);
     int py_kernel_size = 3;
@@ -730,7 +730,7 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 
                 double ImageBoundary_tar[4] = {0.0};
                 double Boundary[4] = {0.0};
-                double GridSize_width, GridSize_height;
+                //double GridSize_width, GridSize_height;
                 
                 Boundary[0] = ImageBoundary_ref[0];
                 Boundary[1] = ImageBoundary_ref[1];
@@ -779,10 +779,10 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                     Boundary[3] = args.Max_Y;
                 }
                 
-                GridSize_width = Boundary[2] - Boundary[0];
-                GridSize_height = Boundary[3] - Boundary[1];
+                // GridSize_width = Boundary[2] - Boundary[0];
+                // GridSize_height = Boundary[3] - Boundary[1];
                 
-                int iter_counts;
+                //int iter_counts;
                 
                 D2DPOINT adjust_std;
                 vector<D2DPOINT> MPs_2D;
@@ -809,8 +809,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                 int RA_iter_counts = MPs_2D.size();
                 if(RA_iter_counts > 10)
                 {
-                    time_t total_ST_a = 0, total_ET_a = 0;
-                    total_ST_a = time(0);
+                    // time_t total_ST_a = 0, total_ET_a = 0;
+                    // total_ST_a = time(0);
                     
                     const double Coreg_param[2] = {- ImageAdjust_coreg[0]*tar_dy, ImageAdjust_coreg[1]*tar_dx};
                     const double W_th = 80;
@@ -1093,8 +1093,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                     
                     if(!check_cps)
                     {
-                        double min_save_Z = 100000;
-                        double max_save_Z = -100000;
+                        //double min_save_Z = 100000;
+                        //double max_save_Z = -100000;
                         
                         float* co_dem = NULL;
                         float* copoly_dem = NULL;
@@ -1131,8 +1131,8 @@ void DEM_ImageCoregistration_hillshade(TransParam *return_param, char* _filename
                             
                             double dz_sum = 0;
                             double dz_sum_med = 0;
-                            min_save_Z = 100000;
-                            max_save_Z = -100000;
+                            //min_save_Z = 100000;
+                            //max_save_Z = -100000;
                             for(long co_index = 0 ; co_index < tar_data_length ; co_index++)
                             {
                                 long pts_row = floor(co_index/tar_dem_size.width);
@@ -1522,7 +1522,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                         weight.push_back(0.0);
                     
                     double level_ref_dx = ref_dx;
-                    double level_tar_dx = tar_dx;
+                    //double level_tar_dx = tar_dx;
                     
                     CSize GridSize;
                     GridSize.width = ceil((Boundary[2] - Boundary[0])/level_ref_dx);
@@ -1562,10 +1562,10 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                     double pre_sigma = 10000.0;
                     bool check_null_dem = false;
                     
-                    double min_X = Boundary[0];
-                    double max_X = Boundary[2];
-                    double min_Y = Boundary[1];
-                    double max_Y = Boundary[3];
+                    //double min_X = Boundary[0];
+                    //double max_X = Boundary[2];
+                    //double min_Y = Boundary[1];
+                    //double max_Y = Boundary[3];
                     
                     int max_W_update = 4;
                     while(!check_stop && while_iter < 50)
@@ -1587,7 +1587,7 @@ void DEM_ImageCoregistration_GeomatricConstraint(TransParam *return_param, char*
                             {
                                 long tininfo_col = (long)((select_pts_tar[index].m_X - Boundary[0])/level_ref_dx + 0.5);
                                 long tininfo_row = (long)((Boundary[3] - select_pts_tar[index].m_Y)/level_ref_dx + 0.5);
-                                long tininfo_pos = tininfo_row*GridSize.width + tininfo_col;
+                                //long tininfo_pos = tininfo_row*GridSize.width + tininfo_col;
                                 
                                 long ref_col = (long)((select_pts_tar[index].m_X - ImageBoundary_ref[0])/level_ref_dx + 0.5);
                                 long ref_row = (long)((ImageBoundary_ref[3] - select_pts_tar[index].m_Y)/level_ref_dx + 0.5);
@@ -2152,16 +2152,16 @@ D3DPOINT FindNormal(D3DPOINT *normal_ori, const float* dem, const D3DPOINT Pos, 
             {
                 RM R = MakeRotationMatrix(X.omega, X.phi, X.kappa);
                 
-                const double R11 = R.m11;
-                const double R12 = R.m12;
+                //const double R11 = R.m11;
+                //const double R12 = R.m12;
                 const double R13 = R.m13;
                 
-                const double R21 = R.m21;
-                const double R22 = R.m22;
+                //const double R21 = R.m21;
+                //const double R22 = R.m22;
                 const double R23 = R.m23;
                 
-                const double R31 = R.m31;
-                const double R32 = R.m32;
+                //const double R31 = R.m31;
+                //const double R32 = R.m32;
                 const double R33 = R.m33;
                 
                 P1.m_Z = X.scale*( R13*P1.m_X + R23*P1.m_Y + R33*P1.m_Z ) + X.Tz;
@@ -2536,7 +2536,7 @@ void SettingControls(const ProInfo *proinfo, const float* DEM_ref, const float* 
     {
         for(long c=0;c<coord_size.width;c++)
         {
-            long control_index = r*(long)coord_size.width + c;
+            //long control_index = r*(long)coord_size.width + c;
             
             double t_coord_x = overlapped_br[0] + c*control_spacing;
             double t_coord_y = overlapped_br[3] - r*control_spacing;
@@ -2653,7 +2653,7 @@ double* CoeffMatrix_25D(const D3DPOINT coord_center, const D3DPOINT coord_scale,
     Wb_matrix->val[5][5] = 1.0;
     Wb_matrix->val[6][6] = 1.0;
     
-    long count = 0;
+    //long count = 0;
     
     for(long count = 0 ; count < selected_pts ; count++)
     {

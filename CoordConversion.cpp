@@ -14,10 +14,10 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
     
     if(_param.projection == 1)
     {
-        bool m_bHemisphere = _param.bHemisphere;
+        //bool m_bHemisphere = _param.bHemisphere;
         double a = _param.a;
         double e = _param.e;
-        double phi_c = _param.phi_c;
+        //double phi_c = _param.phi_c;
         double lambda_0 = _param.lambda_0;
         
         int pm = _param.pm;
@@ -48,9 +48,9 @@ D2DPOINT *wgs2ps(TransParam _param, int _numofpts, D2DPOINT *_wgs)
     }
     else
     {
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
+        //double sa = _param.sa;
+        //double sb = _param.sb;
+        //double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
         int Huso = _param.utm_zone;
@@ -104,10 +104,10 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs)
 {
     if(_param.projection == 1)
     {
-        bool m_bHemisphere = _param.bHemisphere;
+       //bool m_bHemisphere = _param.bHemisphere;
         double a = _param.a;
         double e = _param.e;
-        double phi_c = _param.phi_c;
+        //double phi_c = _param.phi_c;
         double lambda_0 = _param.lambda_0;
         int pm = _param.pm;
         double t_c = _param.t_c;
@@ -134,9 +134,9 @@ D2DPOINT wgs2ps_single(TransParam _param, D2DPOINT _wgs)
     }
     else
     {
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
+        //double sa = _param.sa;
+        //double sb = _param.sb;
+        //double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
         int Huso = _param.utm_zone;
@@ -187,10 +187,10 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
     if(_param.projection == 1)
     {
         
-        bool m_bHemisphere = _param.bHemisphere;
+        //bool m_bHemisphere = _param.bHemisphere;
         double a = _param.a;
         double e = _param.e;
-        double phi_c = _param.phi_c;
+        //double phi_c = _param.phi_c;
         double lambda_0 = _param.lambda_0;
         
         int pm = _param.pm;
@@ -222,9 +222,9 @@ D3DPOINT *wgs2ps_3D(TransParam _param, int _numofpts, D3DPOINT *_wgs)
     }
     else
     {
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
+        //double sa = _param.sa;
+        //double sb = _param.sb;
+        //double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
         int Huso = _param.utm_zone;
@@ -287,10 +287,10 @@ D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT
     {
         if(_param.projection == 1)
         {
-            const bool m_bHemisphere = _param.bHemisphere;
+            //const bool m_bHemisphere = _param.bHemisphere;
             const double a = _param.a;
             const double e = _param.e;
-            const double phi_c = _param.phi_c;
+            //const double phi_c = _param.phi_c;
             const double lambda_0 = _param.lambda_0;
 
             const int pm = _param.pm;
@@ -336,9 +336,9 @@ D2DPOINT *ps2wgs(const TransParam _param,const long int _numofpts,const D2DPOINT
         else
         {
             const int hemis = _param.pm; //1 = north, -1 = south
-            const double sa = _param.sa;
-            const double sb = _param.sb;
-            const double e2 = _param.e2;
+            //const double sa = _param.sa;
+            //const double sb = _param.sb;
+            //const double e2 = _param.e2;
             const double e2cuadrada = _param.e2cuadrada;
             const double c = _param.c;
 
@@ -397,10 +397,10 @@ D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps)
 {
     if(_param.projection == 1)
     {
-        bool m_bHemisphere = _param.bHemisphere;
+        //bool m_bHemisphere = _param.bHemisphere;
         double a = _param.a;
         double e = _param.e;
-        double phi_c = _param.phi_c;
+        //double phi_c = _param.phi_c;
         double lambda_0 = _param.lambda_0;
         int pm = _param.pm;
         double t_c = _param.t_c;
@@ -442,9 +442,9 @@ D2DPOINT ps2wgs_single(const TransParam _param, const D2DPOINT _ps)
     else
     {
         int hemis = _param.pm; //1 = north, -1 = south
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
+        //double sa = _param.sa;
+        //double sb = _param.sb;
+        //double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
         
@@ -498,10 +498,10 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
     int m_NumOfPts = _numofpts;
     if(_param.projection == 1)
     {
-        bool m_bHemisphere = _param.bHemisphere;
+        //bool m_bHemisphere = _param.bHemisphere;
         double a = _param.a;
         double e = _param.e;
-        double phi_c = _param.phi_c;
+        //double phi_c = _param.phi_c;
         double lambda_0 = _param.lambda_0;
         
         int pm = _param.pm;
@@ -552,9 +552,9 @@ D3DPOINT *ps2wgs_3D(TransParam _param, int _numofpts, D3DPOINT *_ps)
     else
     {
         int hemis = _param.pm; //1 = north, -1 = south
-        double sa = _param.sa;
-        double sb = _param.sb;
-        double e2 = _param.e2;
+        //double sa = _param.sa;
+        //double sb = _param.sb;
+        //double e2 = _param.e2;
         double e2cuadrada = _param.e2cuadrada;
         double c = _param.c;
             
@@ -822,7 +822,7 @@ D2DPOINT* PyramidToOriginal(uint16 numofpts,D2DPOINT* InCoord, D2DPOINT Startpos
 //Aerial Frame Camera
 RM MakeRotationMatrix(double o, double p, double k)
 {
-    double M[9] = {0.0};
+    //double M[9] = {0.0};
     RM m_rm;
     o *= DegToRad;
     p *= DegToRad;

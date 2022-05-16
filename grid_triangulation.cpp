@@ -128,8 +128,8 @@ void GridTriangulation<GridType, IterType>::RemoveEdgeAndTwin(Edge &edge)
 	// Get edge, its twin, and orig/dest
 	Edge *e = &edge;
 	Edge *et = e->twin;	
-	GridPoint &orig = e->orig;
-	GridPoint &dest = et->orig;
+	//GridPoint &orig = e->orig;
+	//GridPoint &dest = et->orig;
 
 	// Update next/prev edges
 	e->oprev->dnext = et->dnext;
@@ -720,9 +720,9 @@ void GridTriangulation<GridType, IterType>::RetriangulateVertical(std::vector<Gr
 		//Split blunders in half. Will be sorted into three sets: top and bottom portion (Unlinkeds), and middle (Linked).
 		int med = blunders.size()/2;
 		std::sort(blunders.begin(), blunders.end(), LessThanPtrYX);
-		int len1 = 0;
-		int len2 = 0;
-		int linked_len = 0;
+		//int len1 = 0;
+		//int len2 = 0;
+		//int linked_len = 0;
 		std::vector<GridPoint*> Unlinked1;
 		//There should never be more than half of the total blunders in either half given we split by # of blunders and some are in the middle, so reserve med
 		Unlinked1.reserve(med);
