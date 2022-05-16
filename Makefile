@@ -53,7 +53,7 @@ else ifeq ($(COMPILER), intelLLVM)
   MPICXX=mpicxx
   CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise
   CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise -g
-else ifeq ($(COMPILER), HPC)
+else ifeq ($(COMPILER), nvhpc)
   CC=nvc
   CXX=nvc++
   MPICC=mpicc
