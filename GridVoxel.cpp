@@ -1,3 +1,3 @@
 #include "GridVoxel.hpp"
 
-constexpr short GridVoxel::INCC_UNSET;
+constexpr signed char GridVoxel::INCC_UNSET;

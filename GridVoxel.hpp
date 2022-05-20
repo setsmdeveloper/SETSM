@@ -9,19 +9,19 @@
 #include <stdio.h>
 #include "Typedefine.hpp"
 
-constexpr inline short _DoubleToSignedChar_voxel(double val)
+constexpr inline signed char _DoubleToSignedChar_voxel(double val)
 {
-    return (short)(val*1000.0);
+    return (signed char)(val*100.0);
 }
 
-constexpr inline double _SignedCharToDouble_voxel(short val)
+constexpr inline double _SignedCharToDouble_voxel(signed char val)
 {
-    return (double)(val)/1000.0;
+    return (double)(val)/100.0;
 }
 
-inline short DoubleToSignedChar_voxel(double val)
+inline signed char DoubleToSignedChar_voxel(double val)
 {
-    if(val > 30 || val < -30)
+    if(val > 1.20 || val < -1.20)
     {
         printf("DoubleToSignedChar_voxel overflow %f\n",val);
         exit(1);
@@ -29,9 +29,9 @@ inline short DoubleToSignedChar_voxel(double val)
     return _DoubleToSignedChar_voxel(val);
 }
 
-inline double SignedCharToDouble_voxel(short val)
+inline double SignedCharToDouble_voxel(signed char val)
 {
-    if(val > 30000 || val < -30000)
+    if(val > 120 || val < -120)
     {
         printf("SignedCharToDouble_voxel overflow %d\n",val);
         exit(1);
@@ -50,7 +50,7 @@ public:
             : incc_grid(length), Gridpairs(Gridpairs) {}
 
     // Const and nonconst accessors for INCC
-    short& INCC(size_t grid_index, size_t h_index, size_t pair_id) {
+    signed char& INCC(size_t grid_index, size_t h_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
         int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
@@ -60,7 +60,7 @@ public:
     }
 
     // const versions of the above
-    const short& INCC(size_t grid_index, size_t h_index, size_t pair_id) const {
+    const signed char& INCC(size_t grid_index, size_t h_index, size_t pair_id) const {
         auto &pairs = Gridpairs.get_pairs(grid_index);
         int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
@@ -85,7 +85,7 @@ public:
 
     /** Set size to zero and clear memory */
     void clear(size_t grid_index) {
-        std::vector<short>().swap(incc_grid[grid_index]);
+        std::vector<signed char>().swap(incc_grid[grid_index]);
     }
 
     /** Allocate n elements.
@@ -94,7 +94,7 @@ public:
      */
     void allocate(size_t grid_index, size_t n) {
         auto num_pairs = Gridpairs.get_pairs(grid_index).size();
-        incc_grid[grid_index] = std::vector<short>(n * num_pairs, INCC_UNSET);
+        incc_grid[grid_index] = std::vector<signed char>(n * num_pairs, INCC_UNSET);
     }
 
     /** Remove pair_id from grid_index
@@ -105,7 +105,7 @@ public:
 
         // save these in case we need to update incc values
         std::vector<short> old_pairs(Gridpairs.get_pairs(grid_index));
-        std::vector<short> old_incc(incc_grid[grid_index]);
+        std::vector<signed char> old_incc(incc_grid[grid_index]);
         size_t old_num_pairs = old_pairs.size();
         size_t n = old_incc.size() / old_num_pairs; // height range
 
@@ -137,10 +137,10 @@ public:
 
 
 private:
-    std::vector<std::vector<short>> incc_grid;
+    std::vector<std::vector<signed char>> incc_grid;
     GridPairs Gridpairs;
 
-    static constexpr short INCC_UNSET = _DoubleToSignedChar_voxel(-1);
+    static constexpr signed char INCC_UNSET = _DoubleToSignedChar_voxel(-1);
 
     int pair_id_to_index(const std::vector<short> &pairs, size_t pair_id) const {
         auto it = std::find(pairs.begin(), pairs.end(), pair_id);

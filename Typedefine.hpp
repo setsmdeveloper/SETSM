@@ -247,6 +247,13 @@ typedef struct tagD3DPoint
     
 } D3DPOINT;
 
+typedef struct tagF3DPoint
+{
+    float m_X;
+    float m_Y;
+    float m_Z;
+} F3DPOINT;
+
 typedef struct tagD3DPointSave
 {
     float m_X;
@@ -357,7 +364,7 @@ typedef struct UpdateGrid{
         _angle(len,0), _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
         /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
         _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
-        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0)
+        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0), PairArray(len), PairCheck(len)
         {}
     UpdateGrid() : UpdateGrid(0, 0) {}
 
@@ -392,7 +399,9 @@ typedef struct UpdateGrid{
     const unsigned char &total_images(long i) const { return _total_images[i]; }
     short &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
     const short &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
-
+    
+    vector<vector<short>> PairArray;
+    vector<vector<short>> PairCheck;
 
 private:
     long len;
@@ -412,6 +421,8 @@ private:
     vector<short> _selected_pair; //reference image
     vector<unsigned char> _total_images;
     vector<short> _ncc_seleceted_pair; //selected peak pair
+    
+    
 //    float height_counts;
 }UGRID;
 
@@ -1331,6 +1342,7 @@ typedef struct taglevelinfo
     bool check_SGM;
     double MPP;
     int max_covergae_pair;
+    bool check_Height_update;
 } LevelInfo;
 
 typedef struct PairCA
@@ -1513,6 +1525,19 @@ public:
         add_pairs(index, new_pairs);
     }
 
+    void clear_pairs(long length)
+    {
+        
+        pair_ids.clear();
+        empty.clear();
+        for(size_t i = 0 ; i < length ; i++)
+        {
+            pair_lists[i].clear();
+            pair_ids.push_back(-1);
+        }
+        next_id = 0;
+    }
+    
     void remap_pairs(const std::map<short, short> &pair_map) {
         for(auto &it : pair_lists) {
             for(short &p_num : it.second) {
