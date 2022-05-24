@@ -7129,10 +7129,14 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     
                                     lower_level_match = false;
 
+                                    /*
                                     Matrix<MultiMPs> multimps(
                                             Grid_length,
                                             levelinfo.pairinfo->SelectNumberOfPairs()+1,
                                             { 0, 0, Nodata, false});
+                                    */
+                                    MultiMPs multimps(Grid_length);
+                                    
                                     
                                     printf("multimps memory usage!!\n");
                                     printMaxMemUsage();
@@ -7218,17 +7222,24 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             
                                             if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
                                             {
-                                                multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_roh = MatchedPts_list[tcnt].m_roh;
-                                                multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height = MatchedPts_list[tcnt].m_Z;
-                                                multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).check_matched = true;
+                                                MultiPTs temp_pt;
+                                                temp_pt.peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                temp_pt.peak_height = MatchedPts_list[tcnt].m_Z;
+                                                temp_pt.Pair_ID = levelinfo.pairinfo->SelectNumberOfPairs();
+                                                
+                                                multimps.multiInfo[ref_index].push_back(temp_pt);
+                                                
+                                                //multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                //multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height = MatchedPts_list[tcnt].m_Z;
+                                                //multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).check_matched = true;
                                                 total_count_MPs++;
                                                 //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps(ref_index, pair_number).peak_roh,multimps(ref_index, pair_number).peak_height);
                                                 
                                                 //fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
-                                                if(min_pair_H > multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height)
-                                                    min_pair_H = multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height;
-                                                if(max_pair_H < multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height)
-                                                    max_pair_H = multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height;
+                                                if(min_pair_H > MatchedPts_list[tcnt].m_Z)
+                                                    min_pair_H = MatchedPts_list[tcnt].m_Z;
+                                                if(max_pair_H < MatchedPts_list[tcnt].m_Z)
+                                                    max_pair_H = MatchedPts_list[tcnt].m_Z;
                                                 
                                                 //m_roh[ref_index] = SignedCharToDouble_result(MatchedPts_list[tcnt].m_roh);
                                             }
@@ -7495,20 +7506,26 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     {
                                                         if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
                                                         {
-                                                            multimps(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
-                                                            multimps(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
-                                                            multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;// - levelinfo.pairinfo->Tz(pair_number);
-                                                            multimps(ref_index, pair_number).check_matched = true;
+                                                            MultiPTs temp_pt;
+                                                            temp_pt.peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                            temp_pt.peak_height = MatchedPts_list[tcnt].m_Z;
+                                                            temp_pt.Pair_ID = pair_number;
+                                                            temp_pt.ortho_roh = ortho_ncc[ref_index];
+                                                            multimps.multiInfo[ref_index].push_back(temp_pt);
+                                                            //multimps(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
+                                                            //multimps(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
+                                                            //multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;// - levelinfo.pairinfo->Tz(pair_number);
+                                                            //multimps(ref_index, pair_number).check_matched = true;
                                                             
                                                             total_count_MPs++;
                                                             //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps(ref_index, pair_number).peak_roh,multimps(ref_index, pair_number).peak_height);
                                                             if(temp_asc_fprint)
                                                                 fprintf(pfile_pair,"%f\t%f\t%f\n",MatchedPts_list[tcnt].m_X,MatchedPts_list[tcnt].m_Y,MatchedPts_list[tcnt].m_Z);
                                                             
-                                                            if(min_pair_H > multimps(ref_index, pair_number).peak_height)
-                                                                min_pair_H = multimps(ref_index, pair_number).peak_height;
-                                                            if(max_pair_H < multimps(ref_index, pair_number).peak_height)
-                                                                max_pair_H = multimps(ref_index, pair_number).peak_height;
+                                                            if(min_pair_H > MatchedPts_list[tcnt].m_Z)
+                                                                min_pair_H = MatchedPts_list[tcnt].m_Z;
+                                                            if(max_pair_H < MatchedPts_list[tcnt].m_Z)
+                                                                max_pair_H = MatchedPts_list[tcnt].m_Z;
                                                             
                                                             PairArray[ref_index].push_back(pair_number);
                                                             /*
@@ -7993,11 +8010,15 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         {
                                             for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                             {
-                                                if(multimps(pt_index,t_pair).check_matched /*&& t_pair != max_countMPs_pair*/)
+                                                MultiPTs temp_pt;
+                                                int pos;
+                                                bool check = multimps.FindPair(pt_index,t_pair,temp_pt,pos);
+                                                if(check)
                                                 {
-                                                    multimps(pt_index,t_pair).peak_height = multimps(pt_index,t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
-                                                    //if(levelinfo.pairinfo->Tz(t_pair) == 0)
-                                                    //    multimps(pt_index,t_pair).check_matched = false;
+                                                    temp_pt.peak_height = temp_pt.peak_height - levelinfo.pairinfo->Tz(t_pair);
+                                                    multimps.multiInfo[pt_index][pos] = temp_pt;
+                                                        //if(levelinfo.pairinfo->Tz(t_pair) == 0)
+                                                        //    multimps(pt_index,t_pair).check_matched = false;
                                                 }
                                             }
                                         }
@@ -8042,12 +8063,13 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         case 1:
                                             AWNCC_MPs(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list,SigmaZArray, PairArray,Grid_pair);
                                             break;
-                                        case 2:
+                                        /*case 2:
                                             AWNCC_MPs_median(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list,SigmaZArray, PairArray,Grid_pair);
                                             break;
                                         case 3:
                                             AWNCC_MPs_average(proinfo,levelinfo,Size_Grid2D, GridPT3,nccresult,height_step,level,iteration,MaxNumberofHeightVoxel,minmaxHeight,multimps,MatchedPts_list,SigmaZArray, PairArray,Grid_pair);
                                             break;
+                                         */
                                     }
                                     
                                     count_MPs = MatchedPts_list.size();
@@ -9185,7 +9207,7 @@ double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selec
         return 0;
 }
 
-void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray)
+void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray)
 {
     int level = (*levelinfo.Pyramid_step);
     //set max matched pts stereo pair
@@ -9228,6 +9250,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     //vector<float> P_vector(total_observation,P_start);
     //vector<int> P_index;
     //vector<float> delta(levelinfo.pairinfo->SelectNumberOfPairs());
+    
     while(!check_while && while_iter < 50)
     {
         for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
@@ -9244,18 +9267,25 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         {
             //estimate Tz based on the largest matching point pair
             int count_mult = PairArray[pt_index].size();
-                        
-            if(multimps(pt_index,max_countMPs_pair).check_matched)
+            
+            MultiPTs MAX_pair;
+            int pair_pos;
+            bool check_pts = multimps.FindPair(pt_index,max_countMPs_pair,MAX_pair,pair_pos);
+            
+            if(check_pts)
             {
-                double ref_height = multimps(pt_index,max_countMPs_pair).peak_height;
+                double ref_height = MAX_pair.peak_height;
                 
                 for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                 {
-                    if(t_pair != max_countMPs_pair && multimps(pt_index, t_pair).check_matched)
+                    MultiPTs temp_pair;
+                    int temp_pos;
+                    bool check_temp = multimps.FindPair(pt_index,t_pair,temp_pair,temp_pos);
+                    if(t_pair != max_countMPs_pair && check_temp)
                     {
-                        double tar_height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        double tar_height = temp_pair.peak_height - levelinfo.pairinfo->Tz(t_pair);
                         save_difheight[t_pair].push_back(ref_height - tar_height);
-                        double weight = count_mult*count_mult*(multimps(pt_index,max_countMPs_pair).peak_roh + multimps(pt_index, t_pair).peak_roh) /2.0;
+                        double weight = count_mult*count_mult*(MAX_pair.peak_roh + temp_pair.peak_roh) /2.0;
                         save_difheight_roh[t_pair].push_back( weight );
                     }
                 }
@@ -9264,22 +9294,31 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             {
                 for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() - 1 ; t_pair++)
                 {
-                    if(multimps(pt_index,t_pair).check_matched && t_pair != max_countMPs_pair)
+                    MultiPTs temp_pair;
+                    int temp_pos;
+                    bool check_temp = multimps.FindPair(pt_index,t_pair,temp_pair,temp_pos);
+                    
+                    if(check_temp && t_pair != max_countMPs_pair)
                     {
-                        double height1 = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        double height1 = temp_pair.peak_height - levelinfo.pairinfo->Tz(t_pair);
                         for(int t_pair2 = t_pair + 1 ; t_pair2 < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair2++)
                         {
+                            MultiPTs temp_pair2;
+                            int temp_pos2;
+                            bool check_temp2 = multimps.FindPair(pt_index,t_pair2,temp_pair2,temp_pos2);
+                            
                             int pair_pos = t_pair*levelinfo.pairinfo->SelectNumberOfPairs() + t_pair2;
-                            if(multimps(pt_index,t_pair2).check_matched && t_pair2 != max_countMPs_pair)
+                            
+                            if(check_temp2 && t_pair2 != max_countMPs_pair)
                             {
-                                double height2 = multimps(pt_index, t_pair2).peak_height - levelinfo.pairinfo->Tz(t_pair2);
+                                double height2 = temp_pair2.peak_height - levelinfo.pairinfo->Tz(t_pair2);
                                 F3DPOINT val;
                                 val.m_X = t_pair;
                                 val.m_Y = t_pair2;
                                 val.m_Z = height1 - height2;
                                 noref_difheight[pair_pos].push_back(val);
                                 
-                                double weight = count_mult*count_mult*(multimps(pt_index,max_countMPs_pair).peak_roh + multimps(pt_index, t_pair).peak_roh) /2.0;
+                                double weight = count_mult*count_mult*(temp_pair.peak_roh + temp_pair2.peak_roh) /2.0;
                                 noref_difheight_roh[pair_pos].push_back( weight );
                             }
                         }
@@ -9775,23 +9814,29 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             //set height difference between pairs
             vector<vector<float>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
             vector<vector<float>> save_difheight_roh(levelinfo.pairinfo->SelectNumberOfPairs());
-            
             for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
             {
                 //estimate Tz based on the largest matching point pair
                 int count_mult = PairArray[pt_index].size();
-                            
-                if(multimps(pt_index,max_countMPs_pair).check_matched)
+                
+                MultiPTs MAX_pair;
+                int pair_pos;
+                bool check_pts = multimps.FindPair(pt_index,max_countMPs_pair,MAX_pair,pair_pos);
+                
+                if(check_pts)
                 {
-                    double ref_height = multimps(pt_index,max_countMPs_pair).peak_height;
+                    double ref_height = MAX_pair.peak_height;
                     
                     for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                     {
-                        if(t_pair != max_countMPs_pair && multimps(pt_index, t_pair).check_matched)
+                        MultiPTs temp_pair;
+                        int temp_pos;
+                        bool check_temp = multimps.FindPair(pt_index,t_pair,temp_pair,temp_pos);
+                        if(t_pair != max_countMPs_pair && check_temp)
                         {
-                            double tar_height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                            double tar_height = temp_pair.peak_height - levelinfo.pairinfo->Tz(t_pair);
                             save_difheight[t_pair].push_back(ref_height - tar_height);
-                            double weight = count_mult*count_mult*(multimps(pt_index,max_countMPs_pair).peak_roh + multimps(pt_index, t_pair).peak_roh) /2.0;
+                            double weight = count_mult*count_mult*(MAX_pair.peak_roh + temp_pair.peak_roh) /2.0;
                             save_difheight_roh[t_pair].push_back( weight );
                         }
                     }
@@ -10108,7 +10153,7 @@ void VerticalCoregistration_2(const ProInfo* proinfo, LevelInfo &levelinfo, int 
 }
 
 
-void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, UGRID &GridPT3)
+void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, UGRID &GridPT3)
 {
     int level = (*levelinfo.Pyramid_step);
     //set max matched pts stereo pair
@@ -10135,10 +10180,12 @@ void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, 
     double S_ratio = 10000;
     while(!check_while && while_iter < 50)
     {
+        
         //set height difference between pairs
         vector<vector<float>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
         int possible_pairs = ceil((levelinfo.pairinfo->SelectNumberOfPairs()*(levelinfo.pairinfo->SelectNumberOfPairs()-1)));
         vector<vector<D3DPOINT>> noref_difheight(possible_pairs);
+        /*
         for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
         {
             //estimate Tz based on the largest matching point pair
@@ -10179,7 +10226,7 @@ void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, 
             }
             
         }
-        
+        */
         double height_step = (*levelinfo.height_step);
         
         vector<short> unknown;
@@ -10560,7 +10607,7 @@ void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, 
     }
 }
 
-void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs)
+void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs)
 {
     int level = (*levelinfo.Pyramid_step);
     //set max matched pts stereo pair
@@ -10582,6 +10629,7 @@ void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix
     vector<vector<float>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
     int possible_pairs = ceil((levelinfo.pairinfo->SelectNumberOfPairs()*(levelinfo.pairinfo->SelectNumberOfPairs()-1)));
     vector<vector<D3DPOINT>> noref_difheight(possible_pairs);
+    /*
     for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
     {
         //estimate Tz based on the largest matching point pair
@@ -10620,7 +10668,7 @@ void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix
         }
         
     }
-    
+    */
     double height_step = (*levelinfo.height_step);
     
     vector<short> refTz_pair;
@@ -10897,7 +10945,7 @@ void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix
         else
             levelinfo.pairinfo->Tz(t_pair) = 0;
     }
-    
+    /*
     for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
     {
         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
@@ -10910,6 +10958,7 @@ void VerticalCoregistration(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix
             }
         }
     }
+     */
 }
 
 
@@ -15202,7 +15251,7 @@ double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc)
     }
 }
 
-void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
+void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, MultiMPs &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
 {
     //char filename_pair[500];
     //sprintf(filename_pair,"%s/txt/mps_pts.txt",proinfo->save_filepath);
@@ -15224,7 +15273,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     double awncc_factor = 0.10;
     double sigmaZ_th = 100.0;
     
-#pragma omp parallel for schedule(guided)
+//#pragma omp parallel for schedule(guided)
     for(long iter_count = 0 ; iter_count < *rlevelinfo.Grid_length ; iter_count++)
     {
         float max_sigmaZ = (float)Grid_pair.grid_max_sigmaZ[iter_count];
@@ -15315,26 +15364,32 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             double sum_peak_roh = 0;
             double sum_ortho_roh = 0;
             
-            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+            for(int cnt = 0 ; cnt < multimps.multiInfo[pt_index].size() ; cnt++)
             {
-                int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                MultiPTs temp_pt = multimps.multiInfo[pt_index][cnt];
+                int pair_number = temp_pt.Pair_ID;
                 
-                bool check_select_pair = true;
-                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                    check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
-                
-                if(check_select_pair)
+                if(pair_number < AWNCC_id )
                 {
-                    double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
-                    double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
+                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
-                    if(pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min && multimps(pt_index, pair_number).check_matched)
+                    bool check_select_pair = true;
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                        check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
+                    
+                    if(check_select_pair)
                     {
-                        sum_peak_roh += pair_peak_roh;
-                        sum_ortho_roh += pair_ortho_roh;
-                        save_peak_roh.push_back(pair_peak_roh);
-                        save_ortho_roh.push_back(pair_ortho_roh);
+                        double pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                        double pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
+                        
+                        if(pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min/* && multimps(pt_index, pair_number).check_matched*/)
+                        {
+                            sum_peak_roh += pair_peak_roh;
+                            sum_ortho_roh += pair_ortho_roh;
+                            save_peak_roh.push_back(pair_peak_roh);
+                            save_ortho_roh.push_back(pair_ortho_roh);
+                        }
                     }
                 }
             }
@@ -15368,41 +15423,47 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             //printf("after minimum %f\t%f\t%d\n",peak_roh_min,ortho_roh_min,save_peak_roh.size());
             //exit(1);
             //select max_ncc pair and selected_pair
-            for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+            for(int cnt = 0 ; cnt < multimps.multiInfo[pt_index].size() ; cnt++)
             {
-                int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                MultiPTs temp_pt = multimps.multiInfo[pt_index][cnt];
+                int pair_number = temp_pt.Pair_ID;
                 
-                bool check_select_pair = true;
-                if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                    check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
-                
-                if(check_select_pair)
+                if(pair_number < AWNCC_id)
                 {
-                    double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
-                    double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
+                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                     
-                    if(pair_peak_roh > 0.0 && multimps(pt_index, pair_number).check_matched)
+                    bool check_select_pair = true;
+                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                        check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
+                    
+                    if(check_select_pair)
                     {
-                        //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps(pt_index, pair_number).peak_height);
-                        GridPT3.total_images(pt_index)++;
+                        double pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                        double pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
                         
-                        if(pair_ortho_roh > 0.0)
+                        if(pair_peak_roh > 0.0 /*&& multimps(pt_index, pair_number).check_matched*/)
                         {
-                            if(max_ortho < pair_ortho_roh)
+                            //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps(pt_index, pair_number).peak_height);
+                            GridPT3.total_images(pt_index)++;
+                            
+                            if(pair_ortho_roh > 0.0)
                             {
-                                max_ortho = pair_ortho_roh;
-                                selected_pair = pair_number;
+                                if(max_ortho < pair_ortho_roh)
+                                {
+                                    max_ortho = pair_ortho_roh;
+                                    selected_pair = pair_number;
+                                }
+                                
+                                if(min_ortho > pair_ortho_roh)
+                                {
+                                    min_ortho = pair_ortho_roh;
+                                }
                             }
                             
-                            if(min_ortho > pair_ortho_roh)
-                            {
-                                min_ortho = pair_ortho_roh;
-                            }
                         }
-                        
+                        //printf("pair_number %d\tcheck %d\tpair_peak_roh %f\t%f\n",pair_number,multimps(pt_index, pair_number).check_matched,pair_peak_roh,pair_ortho_roh);
                     }
-                    //printf("pair_number %d\tcheck %d\tpair_peak_roh %f\t%f\n",pair_number,multimps(pt_index, pair_number).check_matched,pair_peak_roh,pair_ortho_roh);
                 }
             }
             //printf("selected_pair %d\n",selected_pair);
@@ -15410,52 +15471,60 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             
             if(selected_pair < 0 && Pyramid_step > 1)
             {
-                for(int pair_number = 0 ; pair_number <= rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                for(int cnt = 0 ; cnt < multimps.multiInfo[pt_index].size() ; cnt++)
                 {
-                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                    //printf("reference_id ti %d\t%d\n",reference_id,ti);
-                    bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                        check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
+                    MultiPTs temp_pt = multimps.multiInfo[pt_index][cnt];
+                    int pair_number = temp_pt.Pair_ID;
                     
-                    if(check_select_pair)
+                    if(pair_number < AWNCC_id)
                     {
-                        double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
-                        double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
+                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                        //printf("reference_id ti %d\t%d\n",reference_id,ti);
+                        bool check_select_pair = true;
+                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                            check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
                         
-                        if(pair_peak_roh > 0.0 && multimps(pt_index, pair_number).check_matched)
+                        if(check_select_pair)
                         {
-                            GridPT3.total_images(pt_index)++;
+                            double pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                            double pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
                             
-                            if(pair_peak_roh > 0.0)
+                            if(pair_peak_roh > 0.0 /*&& multimps(pt_index, pair_number).check_matched*/)
                             {
-                                if(max_wncc < pair_peak_roh)
-                                {
-                                    max_wncc = pair_peak_roh;
-                                    selected_pair = pair_number;
-                                }
+                                GridPT3.total_images(pt_index)++;
                                 
-                                if(min_wncc > pair_peak_roh)
+                                if(pair_peak_roh > 0.0)
                                 {
-                                    min_wncc = pair_peak_roh;
+                                    if(max_wncc < pair_peak_roh)
+                                    {
+                                        max_wncc = pair_peak_roh;
+                                        selected_pair = pair_number;
+                                    }
+                                    
+                                    if(min_wncc > pair_peak_roh)
+                                    {
+                                        min_wncc = pair_peak_roh;
+                                    }
                                 }
                             }
+                            
                         }
-                        
                     }
                 }
             }
             
             //printf("selected_pair %d\n",selected_pair);
             
-            if(max_wncc < SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh))
-                max_wncc = SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh);
-            if(min_wncc > SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh))
-                min_wncc = SignedCharToDouble_result(multimps(pt_index, AWNCC_id).peak_roh);
+            /*
+            if(max_wncc < SignedCharToDouble_result(AWNCC_pts.peak_roh))
+                max_wncc = SignedCharToDouble_result(AWNCC_pts.peak_roh);
+            if(min_wncc > SignedCharToDouble_result(AWNCC_pts.peak_roh))
+                min_wncc = SignedCharToDouble_result(AWNCC_pts.peak_roh);
             
             double wncc_interval = max_wncc - min_wncc;
             double ortho_interval = max_ortho - min_ortho;
+            */
             //select matched height from average WNCC and single WNCC, set minmax height with weighted method
             
             save_selected_pair[pt_index] = selected_pair;
@@ -15463,21 +15532,33 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             {
                 //if(wncc_interval > 0 && ortho_interval > 0 && bhratio_interval > 0)
                 {
+                    MultiPTs Selected_pts;
+                    int SP_pos;
+                    bool check_pts = multimps.FindPair(pt_index,selected_pair,Selected_pts,SP_pos);
+                    /*
+                    for(int i = 0 ; i < multimps.multiInfo[pt_index].size() ; i++)
+                    {
+                        MultiPTs temp = multimps.multiInfo[pt_index][i];
+                        printf("%d\t%d\t%f\t%d\n",temp.peak_roh,temp.ortho_roh,temp.peak_height,temp.Pair_ID);
+                    }
+                    printf("check pts %d\tID %d\tpos %d\n",check_pts,Selected_pts.Pair_ID,SP_pos);
+                    exit(1);
+                     */
                     double min_Height = 9999;
                     double max_Height = -9999;
                     //printf("interval %f\t%f\tminmax %f\t%f\t%f\t%f\n",bhratio_interval,wncc_interval,min_bhratio,max_bhratio,min_wncc,max_wncc);
-                    if(wncc_interval < 0)
-                        exit(1);
+                    //if(wncc_interval < 0)
+                    //    exit(1);
                     
-                    final_height = multimps(pt_index, selected_pair).peak_height;
+                    final_height = Selected_pts.peak_height;
 
                     //printf("mem allocate\n");
                     double sum_weight_height = 0;
                     double sum_weight = 0;
                     //int final_selected_pair = selected_pair;
-                    int end_query_pair = rlevelinfo.pairinfo->SelectNumberOfPairs();
-                    if(rlevelinfo.pairinfo->SelectNumberOfPairs() == 1)
-                        end_query_pair = 1;
+                    int end_query_pair = multimps.multiInfo[pt_index].size();
+                    //if(multimps[pt_index].multiInfo.size() == 1)
+                    //    end_query_pair = 1;
 
                     
                     //center pos
@@ -15485,34 +15566,41 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     long q_pts_col = pts_col_cen;
                     long q_pt_index = q_pts_row*Size_Grid2D.width + q_pts_col;
                     
+                    MultiPTs AWNCC_pts;
+                    int AWNCC_pos;
+                    bool check_awncc_pts = multimps.FindPair(q_pt_index,AWNCC_id,AWNCC_pts,AWNCC_pos);
                     
                     double max_weight = -9999;
                     for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                     {
-                        vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                        vector<vector<float>> save_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
-                        vector<float> mid_H(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
-                        vector<float> weight_height(rlevelinfo.pairinfo->SelectNumberOfPairs()+1,0.0);
+                        vector<vector<unsigned char>> save_pair(multimps.multiInfo[pt_index].size());
+                        vector<vector<float>> save_height(multimps.multiInfo[pt_index].size());
+                        //vector<float> mid_H(multimps.multiInfo[pt_index].size(),0.0);
+                        vector<float> weight_height(multimps.multiInfo[pt_index].size(),0.0);
                         
                         //int query_pair = selected_pair;
                         weight_height[query_pair] = Nodata;
                         save_pair[query_pair].clear();
                         save_height[query_pair].clear();
                         
-                        if(multimps(q_pt_index, query_pair).check_matched /*&& multimps(pt_index, selected_pair).check_matched*/)
+                        MultiPTs Query_pts = multimps.multiInfo[q_pt_index][query_pair];
+                        
+                        
+                        //if(multimps(q_pt_index, query_pair).check_matched /*&& multimps(pt_index, selected_pair).check_matched*/)
                         {
-                            double query_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).peak_roh);
-                            double query_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, query_pair).ortho_roh);
-                            height_diff = fabs(multimps(pt_index, selected_pair).peak_height - multimps(q_pt_index, query_pair).peak_height);
+                            double query_peak_roh = SignedCharToDouble_result(Query_pts.peak_roh);
+                            double query_ortho_roh = SignedCharToDouble_result(Query_pts.ortho_roh);
+                            height_diff = fabs(Selected_pts.peak_height - Query_pts.peak_height);
                             if(/*height_diff < height_interval &&*/ (query_peak_roh > peak_roh_min && query_ortho_roh > ortho_roh_min))
                             {
                                 int count = 0;
                                 bool check_query_pair = false;
                                 
-                                if(query_pair < rlevelinfo.pairinfo->SelectNumberOfPairs())
+                                if(Query_pts.Pair_ID < AWNCC_id)
                                 {
-                                    int reference_id = rlevelinfo.pairinfo->pairs(query_pair).m_X;
-                                    int ti = rlevelinfo.pairinfo->pairs(query_pair).m_Y;
+                                    int pair_number = Query_pts.Pair_ID;
+                                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
                                     
                                     bool check_select_pair = true;
                                     if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
@@ -15525,28 +15613,34 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     
                                 if(check_query_pair)
                                 {
-                                    for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                    for(int cnt = 0 ; cnt < multimps.multiInfo[q_pt_index].size() ; cnt++)
                                     {
-                                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                        MultiPTs temp_pt = multimps.multiInfo[q_pt_index][cnt];
+                                        int pair_number = temp_pt.Pair_ID;
                                         
-                                        bool check_select_pair = true;
-                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                                            check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                        
-                                        //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
-                                        
-                                        if(check_select_pair)
+                                        if(pair_number < AWNCC_id)
                                         {
-                                            if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                            int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                            int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                            
+                                            bool check_select_pair = true;
+                                            if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                                                check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                            
+                                            //bool check_select_pair = (reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index)) /*&& (query_pair != pair_number)*/;
+                                            
+                                            if(check_select_pair)
                                             {
-                                                double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
+                                                //if(multimps(q_pt_index, pair_number).check_matched)//Single peak
                                                 {
-                                                    save_pair[query_pair].push_back(pair_number);
-                                                    save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
+                                                    double pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                                                    double pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
+                                                    height_diff = fabs(Query_pts.peak_height - temp_pt.peak_height);
+                                                    if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
+                                                    {
+                                                        save_pair[query_pair].push_back(cnt);
+                                                        save_height[query_pair].push_back(temp_pt.peak_height);
+                                                    }
                                                 }
                                             }
                                         }
@@ -15555,36 +15649,42 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                     if(proinfo->check_awncc)
                                     {
                                         //AWNCC add check
-                                        if(multimps(q_pt_index, AWNCC_id).check_matched)
+                                        if(check_awncc_pts)
                                         {
-                                            height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, AWNCC_id).peak_height);
-                                            double awncc_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, AWNCC_id).peak_roh);
+                                            height_diff = fabs(Query_pts.peak_height - AWNCC_pts.peak_height);
+                                            double awncc_peak_roh = SignedCharToDouble_result(AWNCC_pts.peak_roh);
                                             if(height_diff < height_interval && awncc_peak_roh > peak_roh_min)
                                             {
                                                 //AWNCC bhratio setting
                                                 double sum_bhratio = 0;
                                                 double sum_ortho_roh = 0;
                                                 int count_pair = 0;
-                                                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                                for(int cnt = 0 ; cnt < multimps.multiInfo[q_pt_index].size() ; cnt++)
                                                 {
-                                                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                                                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                                    MultiPTs temp_pt = multimps.multiInfo[q_pt_index][cnt];
+                                                    int pair_number = temp_pt.Pair_ID;
                                                     
-                                                    bool check_select_pair = true;
-                                                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                                                        check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
-                                                    
-                                                    if(check_select_pair)
+                                                    if(pair_number < AWNCC_id)
                                                     {
-                                                        if(multimps(q_pt_index, pair_number).check_matched)//Single peak
+                                                        int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
+                                                        int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                                        
+                                                        bool check_select_pair = true;
+                                                        if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
+                                                            check_select_pair = reference_id == GridPT3.selected_pair(q_pt_index) || ti == GridPT3.selected_pair(q_pt_index);
+                                                        
+                                                        if(check_select_pair)
                                                         {
-                                                            double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                                            double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
-                                                            height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                            if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
+                                                            //if(multimps(q_pt_index, pair_number).check_matched)//Single peak
                                                             {
-                                                                save_pair[AWNCC_id].push_back(pair_number);
-                                                                count_pair++;
+                                                                double pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                                                                double pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
+                                                                height_diff = fabs(AWNCC_pts.peak_height - temp_pt.peak_height);
+                                                                if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))
+                                                                {
+                                                                    save_pair[AWNCC_pos].push_back(cnt);
+                                                                    count_pair++;
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -15592,8 +15692,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                 
                                                 if(count_pair > 0)
                                                 {
-                                                    save_pair[query_pair].push_back(AWNCC_id);
-                                                    save_height[query_pair].push_back(multimps(q_pt_index, AWNCC_id).peak_height);
+                                                    save_pair[query_pair].push_back(AWNCC_pos);
+                                                    save_height[query_pair].push_back(AWNCC_pts.peak_height);
                                                 }
                                             }
                                         }
@@ -15625,11 +15725,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         
                                         sum_height_diff += save_height[query_pair][count];
                                         
+                                        MultiPTs temp_pt = multimps.multiInfo[q_pt_index][pair_number];
                                         
-                                        if(pair_number < AWNCC_id)
+                                        if(temp_pt.Pair_ID < AWNCC_id)
                                         {
-                                            pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
-                                            pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
+                                            pair_peak_roh = SignedCharToDouble_result(temp_pt.peak_roh);
+                                            pair_ortho_roh = SignedCharToDouble_result(temp_pt.ortho_roh);
                                             
                                             //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
                                             //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
@@ -15638,20 +15739,22 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                             
                                             //w_bhncc = Weightparam(weight_bhratio[pair_number], w_ncc, w_ortho_ncc);
                                             
-                                            w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);
+                                            w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(temp_pt.Pair_ID), w_ncc, w_ortho_ncc);
                                             
                                         }
                                         else
                                         {
-                                            weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_id].size();
+                                            weightAWNCC = 1.0 + awncc_factor*save_pair[AWNCC_pos].size();
                                             
                                             double sum_w_bhncc=0;
                                             //double max_w_bhncc = -99;
-                                            for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_id].size() ; awncc_count++)
+                                            for(int awncc_count = 0 ; awncc_count < save_pair[AWNCC_pos].size() ; awncc_count++)
                                             {
-                                                int awncc_pair = save_pair[AWNCC_id][awncc_count];
-                                                pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).peak_roh);
-                                                pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, awncc_pair).ortho_roh);
+                                                int awncc_pair = save_pair[AWNCC_pos][awncc_count];
+                                                MultiPTs tp_pt = multimps.multiInfo[q_pt_index][awncc_pair];
+                                                
+                                                pair_peak_roh = SignedCharToDouble_result(tp_pt.peak_roh);
+                                                pair_ortho_roh = SignedCharToDouble_result(tp_pt.ortho_roh);
                                                 
                                                 //w_ncc = (pair_peak_roh-min_wncc)/wncc_interval*bhratio_norm;
                                                 //w_ortho_ncc = (pair_ortho_roh - min_ortho)/ortho_interval*bhratio_norm;
@@ -16106,13 +16209,30 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                         point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
                         point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
                         point.m_Z = final_height;
-                        point.m_roh = multimps(pt_index, selected_pair).peak_roh;
+                        
+                        MultiPTs temp_pts;
+                        int pts_pos;
+                        bool check = multimps.FindPair(pt_index,selected_pair,temp_pts,pts_pos);
+                        
+                        point.m_roh = temp_pts.peak_roh;
                         point.flag = false;
                         
                         temp_points[pt_index] = point;
                         
                         //GridPT3.Mean_ortho_ncc(pt_index) = GridPT3.ortho_ncc(pt_index, selected_pair);
                         GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
+                        
+                        
+                        if(final_height < -100 || final_height > 10000)
+                        {
+                            for(int i = 0 ; i < multimps.multiInfo[pt_index].size() ; i++)
+                            {
+                                MultiPTs temp = multimps.multiInfo[pt_index][i];
+                                printf("%d\t%d\t%f\t%d\n",temp.peak_roh,temp.ortho_roh,temp.peak_height,temp.Pair_ID);
+                            }
+                            printf("check pts %d\tID %d\tpos %d\tfinal_height %f\n",check,temp_pts.Pair_ID,pts_pos,final_height);
+                            exit(1);
+                        }
                     }
                 }
             }
@@ -16120,13 +16240,28 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             {
                 if(Pyramid_step > NR_level )
                 {
-                    if(multimps(pt_index, AWNCC_id).check_matched)
+                    MultiPTs temp_pts;
+                    int pts_pos;
+                    bool check = multimps.FindPair(pt_index,AWNCC_id,temp_pts,pts_pos);
+                    
+                    if(check)
                     {
+                        if(temp_pts.peak_height < -100 || temp_pts.peak_height > 10000)
+                        {
+                            for(int i = 0 ; i < multimps.multiInfo[pt_index].size() ; i++)
+                            {
+                                MultiPTs temp = multimps.multiInfo[pt_index][i];
+                                printf("%d\t%d\t%f\t%d\n",temp.peak_roh,temp.ortho_roh,temp.peak_height,temp.Pair_ID);
+                            }
+                            printf("check pts %d\tID %d\tpos %d\n",check,temp_pts.Pair_ID,pts_pos);
+                            exit(1);
+                        }
+                        
                         D3DPOINT point;
                         point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
                         point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                        point.m_Z = multimps(pt_index, AWNCC_id).peak_height;
-                        point.m_roh = multimps(pt_index, AWNCC_id).peak_roh;
+                        point.m_Z = temp_pts.peak_height;
+                        point.m_roh = temp_pts.peak_roh;
                         point.flag = false;
                         
                         temp_points[pt_index] = point;
@@ -16261,7 +16396,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
                 point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
                 point.m_Z = final_height;
-                point.m_roh = multimps(pt_index, save_selected_pair[pt_index]).peak_roh;
+                
+                MultiPTs temp_pts;
+                int pts_pos;
+                bool check = multimps.FindPair(pt_index,save_selected_pair[pt_index],temp_pts,pts_pos);
+                
+                point.m_roh = temp_pts.peak_roh;
                 point.flag = false;
                 
                 temp_points[pt_index] = point;
@@ -16271,14 +16411,17 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
             }
             else
             {
+                MultiPTs temp_pts;
+                int pts_pos;
+                bool check = multimps.FindPair(pt_index,AWNCC_id,temp_pts,pts_pos);
                 
-                if(multimps(pt_index, AWNCC_id).check_matched)
+                if(check)
                 {
                     D3DPOINT point;
                     point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
                     point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                    point.m_Z = multimps(pt_index, AWNCC_id).peak_height;
-                    point.m_roh = multimps(pt_index, AWNCC_id).peak_roh;
+                    point.m_Z = temp_pts.peak_height;
+                    point.m_roh = temp_pts.peak_roh;
                     point.flag = false;
                     
                     temp_points[pt_index] = point;
@@ -16302,8 +16445,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
     //fclose(pfile_pair);
     //exit(1);
 }
-
-void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
+/*
+void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, vector<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
 {
     double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
     int NR_level = proinfo->NR_level;
@@ -16392,65 +16535,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                 double height_diff;
                 double final_height;
                 
-                /*
-                //minimum calculation for peak_roh and ortho_roh by std
-                vector<double> save_peak_roh;
-                vector<double> save_ortho_roh;
-                double sum_peak_roh = 0;
-                double sum_ortho_roh = 0;
                 
-                for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
-                {
-                    int reference_id = rlevelinfo.pairinfo->pairs(pair_number).m_X;
-                    int ti = rlevelinfo.pairinfo->pairs(pair_number).m_Y;
-                    
-                    bool check_select_pair = true;
-                    if(proinfo->sensor_type == AB && proinfo->sensor_provider != PT)
-                        check_select_pair = reference_id == GridPT3.selected_pair(pt_index) || ti == GridPT3.selected_pair(pt_index);
-                    
-                    if(check_select_pair)
-                    {
-                        double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
-                        double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
-                        
-                        if(pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min && multimps(pt_index, pair_number).check_matched)
-                        {
-                            sum_peak_roh += pair_peak_roh;
-                            sum_ortho_roh += pair_ortho_roh;
-                            save_peak_roh.push_back(pair_peak_roh);
-                            save_ortho_roh.push_back(pair_ortho_roh);
-                        }
-                    }
-                }
-                
-                if(save_peak_roh.size() > 2)
-                {
-                    double mean_peak_roh = sum_peak_roh/save_peak_roh.size();
-                    double mean_ortho_roh = sum_ortho_roh/save_ortho_roh.size();
-                    
-                    double sum_peak_var = 0;
-                    double sum_ortho_var = 0;
-                    for(int t_c = 0 ; t_c < save_peak_roh.size() ; t_c++)
-                    {
-                        sum_peak_var += (save_peak_roh[t_c] - mean_peak_roh)*(save_peak_roh[t_c] - mean_peak_roh);
-                        sum_ortho_var += (save_ortho_roh[t_c] - mean_ortho_roh)*(save_ortho_roh[t_c] - mean_ortho_roh);
-                    }
-                    double std_peak = sqrt(sum_peak_var/save_peak_roh.size());
-                    double std_ortho = sqrt(sum_ortho_var/save_peak_roh.size());
-                    
-                    peak_roh_min = mean_peak_roh - std_peak*1.96;
-                    ortho_roh_min = mean_ortho_roh - std_ortho*1.96;
-                    //printf("before minimum %f\t%f\t%d\n",peak_roh_min,ortho_roh_min,save_peak_roh.size());
-                    
-                    if(peak_roh_min < 0)
-                        peak_roh_min = 0;
-                    
-                    if(ortho_roh_min < 0)
-                        ortho_roh_min = 0;
-                }
-                */
-                //printf("after minimum %f\t%f\t%d\n",peak_roh_min,ortho_roh_min,save_peak_roh.size());
-                //exit(1);
                 //select max_ncc pair and selected_pair
                 for(int pair_number = 0 ; pair_number < rlevelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
                 {
@@ -16466,7 +16551,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                         double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
                         double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
                         
-                        if(/*pair_peak_roh > 0.0 &&*/ multimps(pt_index, pair_number).check_matched)
+                        if(multimps(pt_index, pair_number).check_matched)
                         {
                             //printf("pair_peak_roh %d\t%f\t%f\n",pt_index,pair_peak_roh,multimps(pt_index, pair_number).peak_height);
                             GridPT3.total_images(pt_index)++;
@@ -16508,7 +16593,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                             double pair_peak_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).peak_roh);
                             double pair_ortho_roh = SignedCharToDouble_result(multimps(pt_index, pair_number).ortho_roh);
                             
-                            if(/*pair_peak_roh > 0.0 &&*/ multimps(pt_index, pair_number).check_matched)
+                            if( multimps(pt_index, pair_number).check_matched)
                             {
                                 GridPT3.total_images(pt_index)++;
                                 
@@ -16808,21 +16893,6 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
                 }
                 else
                 {
-                    /*
-                    if(multimps(pt_index, AWNCC_id).check_matched)
-                    {
-                        D3DPOINT point;
-                        point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
-                        point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                        point.m_Z = multimps(pt_index, AWNCC_id).peak_height;
-                        point.m_roh = multimps(pt_index, AWNCC_id).peak_roh;
-                        point.flag = false;
-                        
-                        temp_points[pt_index] = point;
-                        
-                        //printf("Id %d\tselected_pair %d\theight %f\n",iter_count,selected_pair,final_height);
-                    }
-                    */
                     GridPT3.ncc_seleceted_pair(pt_index) = AWNCC_id;
                 }
             }
@@ -16841,7 +16911,7 @@ void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D
     //exit(1);
 }
 
-void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
+void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, vector<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair)
 {
     double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
     int NR_level = proinfo->NR_level;
@@ -17338,20 +17408,6 @@ void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D,
                         GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
                             
                     }
-                    /*else
-                    {
-                        D3DPOINT point;
-                        point.m_X = pts_col*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[0];
-                        point.m_Y = pts_row*(*rlevelinfo.grid_resolution)+rlevelinfo.Boundary[1];
-                        point.m_Z = multimps(pt_index, selected_pair).peak_height;;
-                        point.m_roh = multimps(pt_index, selected_pair).peak_roh;
-                        point.flag = false;
-                        
-                        temp_points[pt_index] = point;
-                        
-                        //GridPT3.Mean_ortho_ncc(pt_index) = GridPT3.ortho_ncc(pt_index, selected_pair);
-                        GridPT3.ncc_seleceted_pair(pt_index) = selected_pair;
-                    }*/
                 }
                 else
                 {
@@ -17386,7 +17442,7 @@ void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D,
     //fclose(pfile_pair);
     //exit(1);
 }
-
+*/
 void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, const int pairnumber, GridPairs &Grid_pair)
 {
     // P2 >= P1
