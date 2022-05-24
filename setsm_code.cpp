@@ -6989,7 +6989,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                         
                         vector<NCCresult> nccresult(Grid_length);
                         
-                        printf("gridvoxel memory usage!!\n");
+                        printf("gridvoxel nccresult memory usage!!\n");
                         printMaxMemUsage();
                         
                         levelinfo.check_matching_rate = &check_matching_rate;
@@ -7081,6 +7081,9 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                             
                             printf("Done VerticalLineLocus\tgrid %ld\n",Accessable_grid);
                             
+                            printf("VerticalLineLocus memory usage!!\n");
+                            printMaxMemUsage();
+                            
                             if(levelinfo.pairinfo->SelectNumberOfPairs() > 0)
                             {
                                 if( (levelinfo.pairinfo->SelectNumberOfPairs() < 2 || proinfo->IsRA) /*&& proinfo->sensor_provider != PT*/)
@@ -7130,6 +7133,9 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             Grid_length,
                                             levelinfo.pairinfo->SelectNumberOfPairs()+1,
                                             { 0, 0, Nodata, false});
+                                    
+                                    printf("multimps memory usage!!\n");
+                                    printMaxMemUsage();
                                     
                                     long max_count_MPs = 0;
                                     long total_count_MPs = 0 ;
@@ -7202,7 +7208,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         
                                         count_MPs = SelectMPs(proinfo, levelinfo, nccresult, GridPT3, Th_roh, Th_roh_min, Th_roh_start, Th_roh_next, iteration, final_level_iteration, MPP_stereo_angle, &MatchedPts_list, Grid_pair);
                                         
-                                        float* m_roh = (float*)calloc(sizeof(float),(*levelinfo.Grid_length));
+                                        //float* m_roh = (float*)calloc(sizeof(float),(*levelinfo.Grid_length));
                                         
                                         for(long tcnt=0;tcnt<MatchedPts_list.size();tcnt++)
                                         {
@@ -7224,10 +7230,11 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                 if(max_pair_H < multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height)
                                                     max_pair_H = multimps(ref_index, levelinfo.pairinfo->SelectNumberOfPairs()).peak_height;
                                                 
-                                                m_roh[ref_index] = SignedCharToDouble_result(MatchedPts_list[tcnt].m_roh);
+                                                //m_roh[ref_index] = SignedCharToDouble_result(MatchedPts_list[tcnt].m_roh);
                                             }
                                         }
                                         
+                                        /*
                                         if(level == 0 && iteration == 3)
                                         {
                                             char roh_AWNCC[500];
@@ -7235,7 +7242,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             WriteGeotiff(roh_AWNCC, m_roh, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[3], param.projection, param.utm_zone, param.bHemisphere, 4);
                                         }
                                         free(m_roh);
-                                        
+                                        */
                                         
                                         printf("AWNCC row = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                         
@@ -7250,6 +7257,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     vector<vector<short>> PairArray(*levelinfo.Grid_length);
                                     vector<short> save_cal_pairs(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                                     
+                                    /*
                                     vector<float> minHpair(Grid_length,99999);
                                     vector<float> maxHpair(Grid_length,-99999);
                                     vector<vector<float>> HeightSave(Grid_length);
@@ -7258,7 +7266,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     vector<vector<float>> Entsave(Grid_length);
                                     vector<vector<float>> Consave(Grid_length);
                                     vector<vector<float>> Slopsave(Grid_length);
-                                    
+                                    */
                                     vector<int> count_MPs_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                                     
                                     for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
@@ -7288,16 +7296,16 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             {
                                                 vector<short> ortho_ncc(Grid_length,-9999);
                                                 vector<float> UHeight(Grid_length,Nodata);
-                                                vector<float> angle(Grid_length,Nodata);;
                                                 
-                                                Cal_ortho_ncc(proinfo, levelinfo, count_MPs,GridPT3, iteration, MatchedPts_list, pair_number,ortho_ncc,UHeight,angle);
                                                 
-                                                MakeSlopeImage(Size_Grid2D,UHeight,angle,grid_resolution);
+                                                Cal_ortho_ncc(proinfo, levelinfo, count_MPs,GridPT3, iteration, MatchedPts_list, pair_number,ortho_ncc,UHeight);
                                                 
+                                                /*
                                                 if(level == 0 && iteration == 3)
                                                 {
                                                     //save stereo pair information by tiff
-                                                    
+                                                    vector<float> angle(Grid_length,Nodata);
+                                                    MakeSlopeImage(Size_Grid2D,UHeight,angle,grid_resolution);
                                                     
                                                     float* oncc = (float*)calloc(sizeof(float),Grid_length);
                                                     float* m_Z = (float*)calloc(sizeof(float),Grid_length);
@@ -7461,13 +7469,13 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     
                                                     // end tif save
                                                 }
-                                                
+                                                */
                                                 UHeight.clear();
                                                 
                                                 if(max_count_MPs < count_MPs)
                                                     max_count_MPs = count_MPs;
                                                 
-                                                unsigned char* matchtag = (unsigned char*)calloc(sizeof(unsigned char),Grid_length);
+                                                //unsigned char* matchtag = (unsigned char*)calloc(sizeof(unsigned char),Grid_length);
                                                 
                                                 if(temp_asc_fprint)
                                                 {
@@ -7518,7 +7526,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                             long int pts_col = ref_index % Size_Grid2D.width;
                                                             long int tiff_pos = (long int)(Size_Grid2D.height-1 - pts_row)*(long int)Size_Grid2D.width + pts_col;
                                                             
-                                                            matchtag[tiff_pos] = 1;
+                                                            //matchtag[tiff_pos] = 1;
                                                             
                                                             
                                                             //printf("min max DN %d\t%d\t%d\t%d\t%d\t%d\n",min_val.m_X,min_val.m_Y,max_val.m_X,max_val.m_Y,min_DN[ref_index],max_DN[ref_index]);
@@ -7526,6 +7534,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     }
                                                 }
                                                 
+                                                /*
                                                 if(level == 0 && iteration == 3)
                                                 {
                                                     char MDN[500];
@@ -7534,6 +7543,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                 }
                                                 
                                                 free(matchtag);
+                                                */
                                                 
                                                 printf("pair %d\trow = %d\tcol = %d\tlevel = %d\titeration = %d\tEnd SelectMPs\tcount_mps = %ld\t%ld\t%f\t%f\n",pair_number,row,col,level,iteration,count_MPs,MatchedPts_list.size(),min_pair_H,max_pair_H);
                                                 
@@ -7604,7 +7614,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     */
                                     
                                     
-                                    
+                                    /*
                                     if(level == 0 && iteration == 3)
                                     {
                                         float* m_Z = (float*)calloc(sizeof(float),Grid_length);
@@ -7717,6 +7727,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         WriteGeotiff(MDN, Pcount, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[3], param.projection, param.utm_zone, param.bHemisphere, 1);
                                         free(Pcount);
                                     }
+                                    */
                                     
                                     vector<short> t_cal_pair;
                                     int max_countMPs = 0;
@@ -14388,7 +14399,7 @@ void FindPeakNcc_SGM(ProInfo *proinfo, const int Pyramid_step, const int iterati
 }
 
 
-void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID &GridPT3, long pt_index, vector<float> &LHcost_pre, SumCostContainer &SumCost, double height_step_interval, const int pairnumber)
+void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVoxel &grid_voxel, LevelInfo &rlevelinfo, UGRID &GridPT3, long pt_index, vector<short> &LHcost_pre, SumCostContainer &SumCost, double height_step_interval, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -14424,16 +14435,17 @@ void SGM_start_pos(const ProInfo *proinfo, vector<NCCresult> &nccresult, GridVox
             if(pair_count > 0)
                 WNCC_sum /= (double)pair_count;
            
-            LHcost_pre[height_step] = WNCC_sum;
+            LHcost_pre[height_step] = DoubleToShort_SGM(WNCC_sum,100.0);
+            /*
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
-            else
-                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_pre[height_step],100.0);
+                SumCost.value(pt_index, height_step) += LHcost_pre[height_step];
+            else*/
+                SumCost.value(pt_index, height_step) += LHcost_pre[height_step];
         }
     }
 }
 
-void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, vector<NCCresult> &nccresult, GridVoxel &grid_voxel,UGRID &GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, vector<float> &LHcost_pre, vector<float> &LHcost_curr, SumCostContainer &SumCost, const int pairnumber)
+void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSize Size_Grid2D, int direction_iter, double step_height, int P_HS_step, int *u_col, int *v_row, vector<NCCresult> &nccresult, GridVoxel &grid_voxel,UGRID &GridPT3, LevelInfo &rlevelinfo, long pt_index, double P1, double P2, vector<short> &LHcost_pre, vector<short> &LHcost_curr, SumCostContainer &SumCost, const int pairnumber)
 {
     for(int height_step = 0 ; height_step < nccresult[pt_index].NumOfHeight ; height_step++)
     {
@@ -14487,8 +14499,8 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
 
                                 if(is_cal && is_cal_2)
                                 {
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value23 = V2 > V3 ? V2 : V3;
@@ -14496,32 +14508,26 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal)
                                 {
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V3 > V4 ? V3 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal_2)
                                 {
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V2 > V4 ? V2 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else
                                 {
@@ -14531,8 +14537,6 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                             }
                             else if(t_index_h_index == nccresult[t_index].NumOfHeight - 1 && t_index_h_index_1 >= 0 && t_index_h_index_1 < nccresult[t_index].NumOfHeight)
@@ -14542,8 +14546,8 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
 
                                 if(is_cal && is_cal_1)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value23 = V1 > V3 ? V1 : V3;
@@ -14551,32 +14555,26 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal)
                                 {
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V3 > V4 ? V3 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal_1)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V1 > V4 ? V1 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else
                                 {
@@ -14586,8 +14584,6 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                             }
                             else if(t_index_h_index   > 0 && t_index_h_index   < nccresult[t_index].NumOfHeight - 1 &&
@@ -14601,9 +14597,9 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                 if(is_cal && is_cal_1
                                    && is_cal_2)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value12 = V1 > V2 ? V1 : V2;
@@ -14612,13 +14608,11 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal && is_cal_1)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value12 = V1;
@@ -14627,13 +14621,11 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal_1 && is_cal_2)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value12 = V1 > V2 ? V1 : V2;
@@ -14642,13 +14634,11 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal && is_cal_2)
                                 {
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value12 = V2;
@@ -14657,12 +14647,10 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal)
                                 {
-                                    V3 = LHcost_pre[t_index_h_index];
+                                    V3 = ShortToDouble_SGM(LHcost_pre[t_index_h_index],100.0);
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value23 = V3;
@@ -14670,32 +14658,26 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal_1)
                                 {
-                                    V1 = LHcost_pre[t_index_h_index_1] - P1;
+                                    V1 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_1],100.0) - P1;
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V1 > V4 ? V1 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else if(is_cal_2)
                                 {
-                                    V2 = LHcost_pre[t_index_h_index_2] - P1;
+                                    V2 = ShortToDouble_SGM(LHcost_pre[t_index_h_index_2],100.0) - P1;
                                     V4 = maxWNCC - P2;
                                     
                                     double max_value = V2 > V4 ? V2 : V4;
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                                 else
                                 {
@@ -14705,8 +14687,6 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                     double t_WNCC_sum = max_value - maxWNCC;
                                     sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                     pair_count++;
-                                    //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                    //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                                 }
                             }
                             else
@@ -14718,8 +14698,6 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
                                 
                                 sum_LHcost_curr += (WNCC_sum + t_WNCC_sum)*bhratio;
                                 pair_count++;
-                                //LHcost_curr[height_step] = WNCC_sum + t_WNCC_sum;
-                                //SumCost[pt_index][height_step] += LHcost_curr[height_step];
                             }
                         }
                         
@@ -14728,21 +14706,14 @@ void SGM_con_pos(const ProInfo *proinfo, long int pts_col, long int pts_row, CSi
             }
     
             if(pair_count > 0)
-                LHcost_curr[height_step] = sum_LHcost_curr/(double)pair_count;
+                LHcost_curr[height_step] = DoubleToShort_SGM(sum_LHcost_curr/(double)pair_count,100.0);
             else
-                LHcost_curr[height_step] = sum_LHcost_curr;
-            
-            //SumCost[pt_index][height_step] += DoubleToShort_SGM(LHcost_curr[height_step]);
-            
+                LHcost_curr[height_step] = DoubleToShort_SGM(sum_LHcost_curr,100.0);
+            /*
             if(*(rlevelinfo.Pyramid_step) >= 1)
-                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
-            else
-                SumCost.value(pt_index, height_step) += DoubleToShort_SGM(LHcost_curr[height_step],100.0);
-            
-            //if(pair_count > 0)
-            //    WNCC_sum /= (double)pair_count;
-            
-            
+                SumCost.value(pt_index, height_step) += LHcost_curr[height_step];
+            else*/
+                SumCost.value(pt_index, height_step) += LHcost_curr[height_step];
         }
     }
 }
@@ -17449,7 +17420,12 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         }
     }
     printf("after SumCost vector array\n");
+    
+    printf("before SumCost usage!!\n");
+    printMaxMemUsage();
     SumCost.allocate();
+    printf("after SumCost usage!!\n");
+    printMaxMemUsage();
 
     //left , right, top, bottom, upper left, upper right, bottom left, bottom right
     int v_row[8]    = { 0, 0, -1, 1, -1, -1 ,  1, 1};
@@ -17475,9 +17451,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
 #pragma omp parallel
       {
         
-        vector<float> LHcost_pre(maxHeight,0.0);
-        vector<float> LHcost_curr(maxHeight,0.0);
-        vector<float> temp;
+        vector<short> LHcost_pre(maxHeight,0.0);
+        vector<short> LHcost_curr(maxHeight,0.0);
         //printf("left to right\n");
 #pragma omp for
         for(long pts_row = start_row[direction_iter] ; pts_row < end_row[direction_iter] ; pts_row = pts_row + row_iter[direction_iter])
@@ -17639,9 +17614,8 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         float *LHcost_curr = (float*)calloc(sizeof(float), maxHeight);
         float *temp;
            */
-        vector<float> LHcost_pre(maxHeight,0.0);
-        vector<float> LHcost_curr(maxHeight,0.0);
-          vector<float> temp;
+        vector<short> LHcost_pre(maxHeight,0.0);
+        vector<short> LHcost_curr(maxHeight,0.0);
         long ref_iter;
         long pts_row, pts_col;
         {
@@ -20593,7 +20567,7 @@ long SelectMPs(const ProInfo *proinfo,LevelInfo &rlevelinfo, const vector<NCCres
     return count_MPs;
 }
 
-void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input, UGRID &GridPT3, const uint8 iteration, vector<D3DPOINT> &ptslists, int pair_number, vector<short> &ortho_ncc, vector<float> &UHeight, vector<float> &angle)
+void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int count_MPs_input, UGRID &GridPT3, const uint8 iteration, vector<D3DPOINT> &ptslists, int pair_number, vector<short> &ortho_ncc, vector<float> &UHeight)
 {
     const long int count_MPs       = count_MPs_input;
  
@@ -20610,7 +20584,7 @@ void Cal_ortho_ncc(const ProInfo *proinfo, LevelInfo &rlevelinfo, const long int
     delete origTri;
     
     count_tri = t_trilists.size();
-    SetHeight_onGrid(rlevelinfo,ptslists, count_MPs, t_trilists,count_tri, UHeight, angle);
+    SetHeight_onGrid(rlevelinfo,ptslists, count_MPs, t_trilists,count_tri, UHeight);
     t_trilists.clear();
     
     VerticalLineLocus_blunder_vector_singlepair(proinfo, rlevelinfo, iteration,pair_number,UHeight,ortho_ncc);
@@ -23206,7 +23180,7 @@ static void update_max(std::atomic<float> *cur, float val) {
     }
 }
 
-bool SetHeight_onGrid(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, vector<float> &UHeight, vector<float> &angle)
+bool SetHeight_onGrid(LevelInfo &rlevelinfo, const vector<D3DPOINT> &pts, const long int numPts, vector<UI3DPOINT> &tris,const long num_triangles, vector<float> &UHeight)
 {
 
     long len = *(rlevelinfo.Grid_length);
