@@ -364,7 +364,7 @@ typedef struct UpdateGrid{
         _angle(len,0), _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
         /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
         _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
-        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0), PairArray(len), PairCheck(len)
+        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0), PairCheck(len)//, PairArray(len)
         {}
     UpdateGrid() : UpdateGrid(0, 0) {}
 
@@ -400,7 +400,7 @@ typedef struct UpdateGrid{
     short &ncc_seleceted_pair(long i) { return _ncc_seleceted_pair[i]; }
     const short &ncc_seleceted_pair(long i) const { return _ncc_seleceted_pair[i]; }
     
-    vector<vector<short>> PairArray;
+    //vector<vector<short>> PairArray;
     vector<vector<short>> PairCheck;
 
 private:
