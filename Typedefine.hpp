@@ -351,50 +351,12 @@ typedef struct tagNCCresult
     }
 } NCCresult;
 
-typedef struct tagMultiPTs
+typedef struct tagMultiMPs
 {
     short peak_roh; //first peak roh
     short ortho_roh;
     float peak_height; //first peak height
-    unsigned char Pair_ID;
-    //bool check_matched;
-} MultiPTs;
-
-typedef struct tagMultiMPs
-{
-    tagMultiMPs(long size):array(size)
-    {
-        multiInfo = std::vector<vector<MultiPTs>>(size);
-    }
-    
-    vector<vector<MultiPTs>> multiInfo; //first peak roh
-    long array;
-    bool FindPair(long index, short pair_number, MultiPTs &pts, int &pos)
-    {
-        bool check = false;
-        int cnt = 0;
-        auto &temp = multiInfo[index];
-        if(temp.size() > 0)
-        {
-            while(!check && cnt < temp.size())
-            {
-                pts = temp[cnt];
-                if(pts.Pair_ID == pair_number)
-                {
-                    check = true;
-                    pos = cnt;
-                }
-                cnt++;
-            }
-        }
-        else
-        {
-            pos = -1;
-        }
-        
-        return check;
-    }
-    
+    bool check_matched;
 } MultiMPs;
 
 typedef struct UpdateGrid{

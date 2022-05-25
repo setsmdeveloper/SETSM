@@ -116,11 +116,11 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc);
 
 double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc);
 
-void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, MultiMPs &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
+void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
 
-void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, vector<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
+void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
 
-void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, vector<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
+void AWNCC_MPs_median(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
 
 void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, const int pairnumber, GridPairs &Grid_pair);
 
@@ -197,7 +197,7 @@ void findOverlappArea_Imageinfo(ProInfo *proinfo, ImageInfo *imageinfo, double B
 
 int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_step, const uint8 Template_size, const uint16 buffer_area, const uint8 iter_row_start, const uint8 iter_row_end, const uint8 t_col_start, const uint8 t_col_end, const double subX,const double subY,const double bin_angle,const double Hinterval,const double *Image_res, double **Imageparams, const double *const*const*RPCs, const double*const*const* IRPCs, const D3DPOINT* ray_vector, const uint8 NumOfIAparam, const CSize *Imagesizes,const TransParam param, double *minmaxHeight,const double *Boundary, const double CA,const double mean_product_res, double *stereo_angle_accuracy, CPairInfo &pairinfo, int *CAHist);
 
-void VerticalCoregistration(const ProInfo* info, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs);
+void VerticalCoregistration(const ProInfo* info, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs);
 
 double DEM_average_plane(vector<D3DPOINT> &MatchedPts_list_mps);
 
@@ -205,11 +205,11 @@ double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &se
 
 double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma);
 
-void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray);
+void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray);
 
 void VerticalCoregistration_2(const ProInfo* proinfo, LevelInfo &levelinfo, int max_countMPs_pair, vector<vector<float>> &save_difheight, vector<vector<D3DPOINT>> &noref_difheight, int possible_pairs, double &max_dif_avg);
 
-void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, MultiMPs &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, UGRID &GridPT3);
+void VerticalCoregistration_LSA_H(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, UGRID &GridPT3);
 
 bool check_kernel_size(ProInfo *proinfo, const CSize *Subsetsize,const int Template_size, const int pyramid_step);
 
