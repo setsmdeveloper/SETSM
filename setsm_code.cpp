@@ -5149,34 +5149,28 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param, vector<vector<short>> &PairCheck)
 {
-    int maximum_pair_count = 50;
+    int maximum_pair_count = 100;
     
     int py_level = (*plevelinfo.Pyramid_step);
-    
-    vector<short> actual_pair_save_t;
-    vector<unsigned char> actual_pair_save_check_t(plevelinfo.pairinfo->NumberOfPairs(),0);
-    vector<PairCA> actual_pair_CA_t;
     
     int max_stereo_pair = plevelinfo.pairinfo->NumberOfPairs();//proinfo->pair_max_th;
     printf("max_stereo_pair %d\t pair option %d\t pair temporal baseline %f\ttotal pair %d\n",max_stereo_pair,proinfo->pair_options,proinfo->Max_daygap, plevelinfo.pairinfo->NumberOfPairs());
     
+    vector<short> actual_pair_save;
+    vector<unsigned char> actual_pair_save_check(plevelinfo.pairinfo->NumberOfPairs(),0);
+    vector<PairCA> actual_pair_CA;
     int input_paircount = plevelinfo.pairinfo->NumberOfPairs();
     long* pair_coverage = (long*)calloc(sizeof(long),input_paircount);
     
-    vector<vector<unsigned short>> Gridpair_count((*plevelinfo.Grid_length));
-    vector<vector<unsigned char>> Gridpair_order((*plevelinfo.Grid_length));
-    vector<vector<unsigned char>> Gridpair_daydiff((*plevelinfo.Grid_length));
-    vector<vector<float>> Gridpair_CA((*plevelinfo.Grid_length));
-    
-    for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+    if(proinfo->sensor_provider != PT)
     {
-        //printf("actual_pair %d/%d\n",iter_count,(*plevelinfo.Grid_length) );
-        long int pt_index = iter_count;
-        long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
-        long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
-        
-        if(proinfo->sensor_provider != PT)
+        for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
         {
+            //printf("actual_pair %d/%d\n",iter_count,(*plevelinfo.Grid_length) );
+            long int pt_index = iter_count;
+            long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
+            long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
+            
             vector<short> pairs;
             const int start_H     = minmaxHeight[0];
             const int end_H       = minmaxHeight[1];
@@ -5197,11 +5191,11 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                 pairs.push_back(pair_number);
                         }
                         
-                        if(!contains(actual_pair_save_t, pair_number))
+                        if(!contains(actual_pair_save, pair_number))
                         {
-                            actual_pair_save_t.push_back(pair_number);
+                            actual_pair_save.push_back(pair_number);
                             PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->Cloud(pair_number));
-                            actual_pair_CA_t.push_back(temp_pca);
+                            actual_pair_CA.push_back(temp_pca);
                         }
                     }
                 }
@@ -5232,203 +5226,222 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             pairs.clear();
             vector<short>().swap(pairs);
         }
-        else //PlanetDEM
-        {
-            vector<short> pairs;
-            
-            int selected_pairs = 0 ;
-            for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
-            {
-                if(plevelinfo.pairinfo->cal(pair_number) > 0)
-                {
-                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)
-                    {
-                        const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
-                        const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
-                        
-                        D2DPOINT min_pt = {plevelinfo.GridPts[pt_index]};
-                        
-                        D2DPOINT bottom_left = image_info[reference_id].min_XY;
-                        D2DPOINT upper_right = image_info[reference_id].max_XY;
-                        
-                        uint32_t p_code_ref = calc_code(min_pt, bottom_left, upper_right);
-                     
-                        bottom_left = image_info[ti].min_XY;
-                        upper_right = image_info[ti].max_XY;
-                        
-                        uint32_t p_code_ti = calc_code(min_pt, bottom_left, upper_right);
-                        
-                        if(!p_code_ref && !p_code_ti)
-                        {
-                            int kernel = 1;
-                            bool check_kernel = false;
-                            if(py_level == 0)
-                            {
-                                auto& paircheck = PairCheck[pt_index];
-                                int cnt = 0;
-                                while(!check_kernel && cnt < paircheck.size())
-                                {
-                                    short ID = paircheck[cnt];
-                                    if(ID == pair_number)
-                                    {
-                                        check_kernel = true;
-                                    }
-                                    cnt++;
-                                }
-                                /*
-                                while(!check_kernel && kernel < 5)
-                                {
-                                    bool check_cnt = false;
-                                    for(int row = -kernel ; row <= kernel ; row++)
-                                    {
-                                        for(int col = -kernel ; col <= kernel ; col++)
-                                        {
-                                            long col_pos = pts_col + col;
-                                            long row_pos = pts_row + row;
-                                            long pos = row_pos*plevelinfo.Size_Grid2D->width + col_pos;
-                                            if(col_pos >= 0 && col_pos < plevelinfo.Size_Grid2D->width && row_pos >= 0 && row_pos < plevelinfo.Size_Grid2D->height)
-                                            {
-                                                auto& paircheck = PairCheck[pos];
-                                                int cnt = 0;
-                                                while(!check_cnt && cnt < paircheck.size())
-                                                {
-                                                    short ID = paircheck[cnt];
-                                                    if(ID == pair_number)
-                                                        check_cnt = true;
-                                                    cnt++;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if(check_cnt)
-                                        check_kernel = true;
-                                    
-                                    kernel++;
-                                }*/
-                            }
-                            else
-                                check_kernel = true;
-                            
-                            if(check_kernel)
-                            {
-                                pairs.push_back(pair_number);
-                                
-                                if(!actual_pair_save_check_t[pair_number])
-                                {
-                                    actual_pair_save_t.push_back(pair_number);
-                                    actual_pair_save_check_t[pair_number] = 1;
-                                }
-                            }
-                            /*
-                            printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,diff_day,diff_time);
-                            printf("cal time diff %d\t day diff %d\n", plevelinfo.pairinfo->DiffDay(pair_number),plevelinfo.pairinfo->DiffTime(pair_number));
-                            exit(1);*/
-                         }
-                    }
-                }
-            }
-            
-            if(pairs.size() > 0)
-            {
-                if(py_level <= 2 && pairs.size() > proinfo->pair_max_th)
-                {
-                    for(int i = proinfo->pair_max_th ; i < pairs.size() ; i++)
-                    {
-                        int pairnumber = pairs[i];
-                        /*
-                        Gridpair_save.pair[pt_index].push_back(pairnumber);
-                        Gridpair_save.order[pt_index].push_back(i - proinfo->pair_max_th);
-                        Gridpair_save.daydiff[pt_index].push_back(plevelinfo.pairinfo->DiffDay(pairnumber));
-                        Gridpair_save.CA[pt_index].push_back(plevelinfo.pairinfo->ConvergenceAngle(pairnumber));
-                        */
-                        Gridpair_count[pt_index].push_back(pairnumber);
-                        Gridpair_order[pt_index].push_back(i);
-                        Gridpair_daydiff[pt_index].push_back(plevelinfo.pairinfo->DiffDay(pairnumber));
-                        Gridpair_CA[pt_index].push_back(plevelinfo.pairinfo->ConvergenceAngle(pairnumber));
-                    }
-                }
-            }
-            
-            pairs.clear();
-            vector<short>().swap(pairs);
-        }
     }
-
-    printf("end pairs\n");
-    
-    vector<short> actual_pair_save;
-    vector<unsigned char> actual_pair_save_check(plevelinfo.pairinfo->NumberOfPairs(),0);
-    vector<PairCA> actual_pair_CA;
-    
-    if(proinfo->sensor_provider == PT)
+    else //planet
     {
-        
-        if(py_level <= 2 && actual_pair_save_t.size() > maximum_pair_count)
+        int count_effectivepair = 0;
+        for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
         {
-            vector<double> CostofPair(plevelinfo.pairinfo->NumberOfPairs(),0);
-            for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
-            {
-                if(Gridpair_count[iter_count].size() > 0)
-                {
-                    for(int i = 0 ; i < Gridpair_count[iter_count].size() ; i++)
-                    {
-                        int pairnumber = Gridpair_count[iter_count][i];
-                        if(actual_pair_save_check_t[pairnumber])
-                        {
-                            double daydiff = ceil((double)Gridpair_daydiff[iter_count][i]/5.0);
-                            if(daydiff == 0)
-                                daydiff = 1;
-                            double order = Gridpair_order[iter_count][i] - proinfo->pair_max_th + 1;
-                            if(daydiff == 0 || order == 0)
-                            {
-                                printf("id %d\tinf %f\t%f\n",pairnumber,daydiff, (double)(Gridpair_order[iter_count][i]));
-                                exit(1);
-                            }
-                            //CostofPair[pairnumber] += Gridpair_save.CA[iter_count][i]/daydiff/Gridpair_save.order[iter_count][i];
-                            
-                            CostofPair[pairnumber] += Gridpair_CA[iter_count][i]/daydiff/order;
-                            //int pairnumber = Gridpair_count[iter_count][i];
-                            //OutcountPairs[pairnumber] += 1.0/Gridpair_order[iter_count][i];
-                        }
-                    }
-                }
-            }
-            
-            vector<PairCA> OutPairs;
-            for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
-            {
-                if(actual_pair_save_check_t[pair_number] && CostofPair[pair_number] > 0)
-                {
-                    PairCA temp_pca(pair_number,CostofPair[pair_number],plevelinfo.pairinfo->ConvergenceAngle(pair_number));
-                    OutPairs.push_back(temp_pca);
-                }
-            }
-            
-            quickselect(OutPairs,OutPairs.size(),OutPairs.size());
-            
-            
-            for(int i = 0 ; i < OutPairs.size() ; i ++)
-            {
-                printf("index %d\tpair_ID %d\tcost %f\n",i,OutPairs[i].pair_ID,OutPairs[i].CA);
-            }
-            
+            if(plevelinfo.pairinfo->cal(pair_number) > 0)
+                count_effectivepair++;
+        }
+        
+        if(py_level <= 2 && count_effectivepair > maximum_pair_count)
+        {
             bool check_stop = false;
             int count_removed = 0;
-            int pair_number_t = OutPairs.size() - 1;
-            while(!check_stop && pair_number_t >= 0)
+            
+            while(!check_stop)
             {
-                int pair_ID = OutPairs[pair_number_t].pair_ID;
-                if(actual_pair_save_check_t[pair_ID])
+                vector<short> actual_pair_save_t;
+                vector<unsigned char> actual_pair_save_check_t(plevelinfo.pairinfo->NumberOfPairs(),0);
+                
+                vector<short> actual_pair_save_total;
+                vector<unsigned char> actual_pair_save_check_total(plevelinfo.pairinfo->NumberOfPairs(),0);
+                
+                vector<short> underpair;
+                vector<unsigned char> underpair_check(plevelinfo.pairinfo->NumberOfPairs(),0);
+                
+                vector<vector<unsigned short>> Gridpair_count((*plevelinfo.Grid_length));
+                vector<vector<unsigned char>> Gridpair_order((*plevelinfo.Grid_length));
+                vector<vector<unsigned char>> Gridpair_daydiff((*plevelinfo.Grid_length));
+                vector<vector<float>> Gridpair_CA((*plevelinfo.Grid_length));
+                
+                for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
                 {
-                    count_removed++;
-                    plevelinfo.pairinfo->SetCal(pair_ID,0);
+                    //printf("actual_pair %d/%d\n",iter_count,(*plevelinfo.Grid_length) );
+                    long int pt_index = iter_count;
+                    long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
+                    long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
                     
-                    if(actual_pair_save_t.size() - count_removed <= maximum_pair_count)
-                        check_stop = true;
+                    vector<short> pairs;
                     
-                    printf("removed ID %d\tpair ID %d\t outcount %f\n",pair_number_t,pair_ID,OutPairs[pair_number_t].CA);
+                    int selected_pairs = 0 ;
+                    for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
+                    {
+                        if(plevelinfo.pairinfo->cal(pair_number) > 0)
+                        {
+                            if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)
+                            {
+                                const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
+                                const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
+                                
+                                D2DPOINT min_pt = {plevelinfo.GridPts[pt_index]};
+                                
+                                D2DPOINT bottom_left = image_info[reference_id].min_XY;
+                                D2DPOINT upper_right = image_info[reference_id].max_XY;
+                                
+                                uint32_t p_code_ref = calc_code(min_pt, bottom_left, upper_right);
+                             
+                                bottom_left = image_info[ti].min_XY;
+                                upper_right = image_info[ti].max_XY;
+                                
+                                uint32_t p_code_ti = calc_code(min_pt, bottom_left, upper_right);
+                                
+                                if(!p_code_ref && !p_code_ti)
+                                {
+                                    int kernel = 1;
+                                    bool check_kernel = false;
+                                    //if(py_level == 0)
+                                    {
+                                        auto& paircheck = PairCheck[pt_index];
+                                        int cnt = 0;
+                                        while(!check_kernel && cnt < paircheck.size())
+                                        {
+                                            short ID = paircheck[cnt];
+                                            if(ID == pair_number)
+                                            {
+                                                check_kernel = true;
+                                            }
+                                            cnt++;
+                                        }
+                                    }
+                                    
+                                    if(check_kernel)
+                                    {
+                                        pairs.push_back(pair_number);
+                                        
+                                        if(!actual_pair_save_check_total[pair_number])
+                                        {
+                                            actual_pair_save_total.push_back(pair_number);
+                                            actual_pair_save_check_total[pair_number] = 1;
+                                        }
+                                    }
+                   
+                                    /*
+                                    printf("time ref %d\t%d\ntar %d\t%d\nref_time tar_time %f\t%f\ndiff_time %f\n",image_info[reference_id].hour,image_info[reference_id].min,image_info[ti].hour,image_info[ti].min,ref_time,diff_day,diff_time);
+                                    printf("cal time diff %d\t day diff %d\n", plevelinfo.pairinfo->DiffDay(pair_number),plevelinfo.pairinfo->DiffTime(pair_number));
+                                    exit(1);*/
+                                 }
+                            }
+                        }
+                    }
+                    
+                    if(pairs.size() > 0)
+                    {
+                        if(pairs.size() > proinfo->pair_max_th*1.5)
+                        {
+                            for(int i = proinfo->pair_max_th ; i < pairs.size() ; i++)
+                            {
+                                int pairnumber = pairs[i];
+                                
+                                if(!actual_pair_save_check_t[pairnumber])
+                                {
+                                    actual_pair_save_t.push_back(pairnumber);
+                                    actual_pair_save_check_t[pairnumber] = 1;
+                                }
+                                
+                                Gridpair_count[pt_index].push_back(pairnumber);
+                                Gridpair_order[pt_index].push_back(i);
+                                Gridpair_daydiff[pt_index].push_back(plevelinfo.pairinfo->DiffDay(pairnumber));
+                                Gridpair_CA[pt_index].push_back(plevelinfo.pairinfo->ConvergenceAngle(pairnumber));
+                            }
+                        }
+                        else
+                        {
+                            for(int i = 0 ; i < pairs.size() ; i++)
+                            {
+                                if(!underpair_check[pairs[i]])
+                                {
+                                    underpair_check[pairs[i]] = 1;
+                                    underpair.push_back(pairs[i]);
+                                }
+                            }
+                        }
+                            
+                    }
+                    
+                    pairs.clear();
+                    vector<short>().swap(pairs);
                 }
-                pair_number_t--;
+                
+                printf("count_removed %d\n",count_removed);
+                
+                if(actual_pair_save_total.size() > maximum_pair_count)
+                {
+                    vector<double> CostofPair(plevelinfo.pairinfo->NumberOfPairs(),0);
+                    for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
+                    {
+                        if(Gridpair_count[iter_count].size() > 0)
+                        {
+                            for(int i = 0 ; i < Gridpair_count[iter_count].size() ; i++)
+                            {
+                                int pairnumber = Gridpair_count[iter_count][i];
+                                if(actual_pair_save_check_t[pairnumber])
+                                {
+                                    double daydiff = ceil((double)Gridpair_daydiff[iter_count][i]/5.0);
+                                    if(daydiff == 0)
+                                        daydiff = 1;
+                                    double order = Gridpair_order[iter_count][i] - proinfo->pair_max_th + 1;
+                                    if(daydiff == 0 || order == 0)
+                                    {
+                                        printf("id %d\tinf %f\t%f\n",pairnumber,daydiff, (double)(Gridpair_order[iter_count][i]));
+                                        exit(1);
+                                    }
+                                    //CostofPair[pairnumber] += Gridpair_save.CA[iter_count][i]/daydiff/Gridpair_save.order[iter_count][i];
+                                    
+                                    CostofPair[pairnumber] += Gridpair_CA[iter_count][i]/daydiff/order;
+                                    //int pairnumber = Gridpair_count[iter_count][i];
+                                    //OutcountPairs[pairnumber] += 1.0/Gridpair_order[iter_count][i];
+                                }
+                            }
+                        }
+                    }
+                    
+                    for(int i = 0; i < underpair.size() ; i ++)
+                    {
+                        printf("underpairs index %d\tID %d\n",i,underpair[i]);
+                    }
+                    
+                    vector<PairCA> OutPairs;
+                    for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
+                    {
+                        if(actual_pair_save_check_t[pair_number] && CostofPair[pair_number] > 0)
+                        {
+                            if(!underpair_check[pair_number])
+                            {
+                                PairCA temp_pca(pair_number,CostofPair[pair_number],plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                                OutPairs.push_back(temp_pca);
+                            }
+                        }
+                    }
+                    
+                    if(OutPairs.size() > 0)
+                    {
+                        quickselect(OutPairs,OutPairs.size(),OutPairs.size());
+                        
+                        for(int i = 0 ; i < OutPairs.size() ; i ++)
+                        {
+                            printf("index %d\tpair_ID %d\tcost %f\n",i,OutPairs[i].pair_ID,OutPairs[i].CA);
+                        }
+                        
+                        int pair_number_t = OutPairs.size() - 1;
+                        int pair_ID = OutPairs[pair_number_t].pair_ID;
+                        if(actual_pair_save_check_t[pair_ID])
+                        {
+                            plevelinfo.pairinfo->SetCal(pair_ID,0);
+                            count_removed++;
+                            printf("removed ID %d\tpair ID %d\t outcount %f\n",pair_number_t,pair_ID,OutPairs[pair_number_t].CA);
+                        }
+                        
+                        if(actual_pair_save_total.size() -1 /*- count_removed*/ <= maximum_pair_count)
+                            check_stop = true;
+                    }
+                    else
+                        check_stop = true;
+                }
+                else
+                    check_stop = true;
             }
         }
         
@@ -5439,7 +5452,6 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             long int pts_row = (long int)(floor(iter_count/plevelinfo.Size_Grid2D->width));
             long int pts_col = iter_count % plevelinfo.Size_Grid2D->width;
             
-             //PlanetDEM
             vector<short> pairs;
             
             int selected_pairs = 0 ;
@@ -5482,40 +5494,6 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                     }
                                     cnt++;
                                 }
-                                
-                                
-                                /*
-                                while(!check_kernel && kernel < 5)
-                                {
-                                    bool check_cnt = false;
-                                    for(int row = -kernel ; row <= kernel ; row++)
-                                    {
-                                        for(int col = -kernel ; col <= kernel ; col++)
-                                        {
-                                            long col_pos = pts_col + col;
-                                            long row_pos = pts_row + row;
-                                            long pos = row_pos*plevelinfo.Size_Grid2D->width + col_pos;
-                                            if(col_pos >= 0 && col_pos < plevelinfo.Size_Grid2D->width && row_pos >= 0 && row_pos < plevelinfo.Size_Grid2D->height)
-                                            {
-                                                auto& paircheck = PairCheck[pos];
-                                                int cnt = 0;
-                                                while(!check_cnt && cnt < paircheck.size())
-                                                {
-                                                    short ID = paircheck[cnt];
-                                                    if(ID == pair_number)
-                                                    {
-                                                        check_cnt = true;
-                                                    }
-                                                    cnt++;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if(check_cnt)
-                                        check_kernel = true;
-                                    
-                                    kernel++;
-                                }*/
                             }
                             else
                                 check_kernel = true;
@@ -5579,15 +5557,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             vector<short>().swap(pairs);
         }
     }
-    else
-    {
-        for(int i = 0 ; i < actual_pair_save.size() ; i++)
-        {
-            actual_pair_save.push_back(actual_pair_save_t[i]);
-            PairCA temp(actual_pair_CA[i].pair_ID,actual_pair_CA[i].CA,actual_pair_CA[i].cloud);
-            actual_pair_CA.push_back(temp);
-        }
-    }
+    
     printf("end pairs\n");
     /*
     if(py_level <= 2 && actual_pair_CA.size() > maximum_pair_count)
@@ -6739,7 +6709,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                             }
                         }
                         /*
-                        //if(level < proinfo->pyramid_level)
+                        if(level < proinfo->pyramid_level)
                         {
                             unsigned char* PC = (unsigned char*)calloc(sizeof(unsigned char),Grid_length);
                             unsigned char** paircheck = (unsigned char**)calloc(sizeof(unsigned char*),levelinfo.pairinfo->SelectNumberOfPairs());
@@ -7490,7 +7460,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     
                                                     bool check_pair_th = false;
                                                     //check_pair_th = (PairArray[ref_index].size() < proinfo->pair_max_th && level > 0) || (PairArray[ref_index].size() < proinfo->pair_max_th && level == 0 && iteration < 2) || (level == 0 && iteration >= 2);
-                                                    check_pair_th = (PairArray[ref_index].size() < proinfo->pair_max_th);// && iteration == 1) || iteration > 1 ;
+                                                    check_pair_th = true;// (PairArray[ref_index].size() < proinfo->pair_max_th);// && iteration == 1) || iteration > 1 ;
                                                     if(check_pair_th)
                                                     {
                                                         if(t_col >= 0 && t_col < Size_Grid2D.width && t_row >=0 && t_row < Size_Grid2D.height)
