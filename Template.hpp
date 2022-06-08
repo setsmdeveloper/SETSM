@@ -109,11 +109,13 @@ T* CreateImagePyramid(T* _input, CSize _img_size, int _filter_size, double _sigm
                     if( (2*r + l) >= 0 && (2*c + k) >= 0 &&
                         (2*r + l) < _img_size.height && (2*c + k) < _img_size.width)
                     {
-                        if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
+                        /*if(_input[(2*r + l)*_img_size.width +(2*c + k)] > Nodata)
                         {
                             temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
                             count ++;
-                        }
+                        }*/
+                        temp_v += GaussianFilter(l + half_filter_size, k + half_filter_size)*_input[(2*r + l)*_img_size.width +(2*c + k)];
+                            count ++;
                     }
                 }
             }
@@ -295,18 +297,18 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
-            printf("rows %d\t%d\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
+            printf("rows %ld\t%ld\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
             starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
-            printf("cols %d\t%d\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
+            printf("cols %ld\t%ld\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
             if(end_col > Imagesize->width)
                 end_col = Imagesize->width;
             
-            printf("start %d\t%d\t end %d\t%d\n",start_col,start_row,end_col,end_row);
+            printf("start %lu\t%lu\t end %lu\t%lu\n",start_col,start_row,end_col,end_row);
             cols[0]         = start_col;
             cols[1]         = end_col;
             rows[0]         = start_row;
@@ -492,7 +494,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
     }
     else if(check_ftype == 2 && bin)
     {
-        long r,c,a;
+        long r,a;
         data_size->width    = cols[1] - cols[0];
         data_size->height   = rows[1] - rows[0];
         
@@ -543,7 +545,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
         {
             for(long col = 0 ; col < grid_size.width ; col ++)
             {
-                long index = row*(long)grid_size.width + col;
+                //long index = row*(long)grid_size.width + col;
                 D2DPOINT temp_pts(over_Boundary[0] + col*grid_space, over_Boundary[1] + row*grid_space);
                 MPs.push_back(temp_pts);
             }
@@ -555,7 +557,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     
     long total_grid_counts = MPs.size();
     
-    printf("total pts %d\n",total_grid_counts);
+    printf("total pts %ld\n",total_grid_counts);
     
     sprintf(temp_path,"%s/txt/GCPs_Image_ID_%d_level_%d.txt",proinfo->save_filepath,ti,Pyramid_step);
     FILE *fid_pts = fopen(temp_path,"w");

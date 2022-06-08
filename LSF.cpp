@@ -264,7 +264,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
                 }
                 else
                 {
-                    double lat;
+                    //double lat;
                     char t_str1[500];
                     char hh[100];
                     char com[100] = "M";
