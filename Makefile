@@ -46,6 +46,20 @@ else ifeq ($(COMPILER), cray)
   MPICXX=CC
   CFLAGS=
   CXXFLAGS=-hstd=c++11 -h aggress
+else ifeq ($(COMPILER), intelLLVM)
+  CC=icx
+  CXX=icpx
+  MPICC=mpicc 
+  MPICXX=mpicxx
+  CFLAGS=-std=c99 -O3 -qopenmp -fp-model precise -fp-speculation=fast -no-vec
+  CXXFLAGS=-std=c++11 -O3 -qopenmp -fp-model precise -fp-speculation=fast -no-vec
+else ifeq ($(COMPILER), nvhpc)
+  CC=nvc
+  CXX=nvc++
+  MPICC=mpicc
+  MPICXX=mpicxx
+  CFLAGS=
+  CXXFLAGS=
 else
   CC=gcc
   CXX=g++
