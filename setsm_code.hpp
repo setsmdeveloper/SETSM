@@ -116,6 +116,8 @@ double Weightparam(double bhratio, double ncc, double ortho_ncc);
 
 double Weightparam_sigmaZ(double sigmaZ, double ncc, double ortho_ncc);
 
+void AWNCC_MPs_single(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, uint8 Pyramid_step, Matrix<MultiMPs> &multimps, int pair_number);
+
 void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
 
 void AWNCC_MPs_average(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID &GridPT3, vector<NCCresult> &nccresult, double step_height, uint8 Pyramid_step, uint8 iteration,int MaxNumberofHeightVoxel, double *minmaxHeight, Matrix<MultiMPs> &multimps, vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &SigmaZArray, vector<vector<short>> &PairArray, GridPairs &Grid_pair);
@@ -204,6 +206,8 @@ double DEM_average_plane(vector<D3DPOINT> &MatchedPts_list_mps);
 double Dh_average_plane(vector<D3DPOINT> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma);
 
 double Dh_average_plane(vector<float> &MatchedPts_list_mps, vector<float> &selected_mps, double P_th, double &std, double sigma);
+
+void VerticalCoregistration_LSA_simulate();
 
 void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray);
 

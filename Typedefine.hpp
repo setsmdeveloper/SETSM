@@ -254,6 +254,12 @@ typedef struct tagF3DPoint
     float m_Z;
 } F3DPOINT;
 
+typedef struct tagF2DPoint
+{
+    float m_X;
+    float m_Y;
+} F2DPOINT;
+
 typedef struct tagD3DPointSave
 {
     float m_X;
@@ -454,6 +460,8 @@ private:
     std::vector<D2DPOINT> m_RBias;
     std::vector<unsigned char> m_cloud;
     std::vector<float> m_Tz;
+    std::vector<float> m_Tz_var;
+    std::vector<float> m_Tz_res;
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
     std::vector<float> m_ConvergenceAngle;
@@ -485,6 +493,8 @@ private:
         m_RBias = std::vector<D2DPOINT>(numberofpairs);
         m_cloud = std::vector<unsigned char>(numberofpairs);
         m_Tz = std::vector<float>(numberofpairs,0);
+        m_Tz_var = std::vector<float>(numberofpairs,0);
+        m_Tz_res = std::vector<float>(numberofpairs,0);
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
@@ -543,6 +553,12 @@ public:
         
         m_Tz.clear();
         vector<float>().swap(m_Tz);
+        
+        m_Tz_var.clear();
+        vector<float>().swap(m_Tz_var);
+        
+        m_Tz_res.clear();
+        vector<float>().swap(m_Tz_res);
         
         m_pairs.clear();
         vector<UI2DPOINT>().swap(m_pairs);
@@ -648,6 +664,16 @@ public:
     void SetTz(int pos, float value)
     {
         m_Tz[pos] = value;
+    }
+    
+    void SetTz_var(int pos, float value)
+    {
+        m_Tz_var[pos] = value;
+    }
+    
+    void SetTz_res(int pos, float value)
+    {
+        m_Tz_res[pos] = value;
     }
     
     void SetPairs(int pos, UI2DPOINT value)
@@ -795,6 +821,16 @@ public:
     float& Tz(int pos)
     {
         return m_Tz[pos];
+    }
+    
+    float& Tz_var(int pos)
+    {
+        return m_Tz_var[pos];
+    }
+    
+    float& Tz_res(int pos)
+    {
+        return m_Tz_res[pos];
     }
     
     UI2DPOINT& pairs(int pos)
