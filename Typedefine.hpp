@@ -493,8 +493,8 @@ private:
         m_RBias = std::vector<D2DPOINT>(numberofpairs);
         m_cloud = std::vector<unsigned char>(numberofpairs);
         m_Tz = std::vector<float>(numberofpairs,0);
-        m_Tz_var = std::vector<float>(numberofpairs,0);
-        m_Tz_res = std::vector<float>(numberofpairs,0);
+        m_Tz_var = std::vector<float>(numberofpairs,1.0);
+        m_Tz_res = std::vector<float>(numberofpairs,1.0);
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
