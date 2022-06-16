@@ -462,6 +462,8 @@ private:
     std::vector<float> m_Tz;
     std::vector<float> m_Tz_var;
     std::vector<float> m_Tz_res;
+    std::vector<vector<unsigned char>> m_linked_pair;
+    
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
     std::vector<float> m_ConvergenceAngle;
@@ -495,6 +497,10 @@ private:
         m_Tz = std::vector<float>(numberofpairs,0);
         m_Tz_var = std::vector<float>(numberofpairs,1.0);
         m_Tz_res = std::vector<float>(numberofpairs,1.0);
+        m_linked_pair = std::vector<vector<unsigned char>>(numberofpairs);
+        for(int index = 0 ; index < numberofpairs ; index++)
+            m_linked_pair[index] = std::vector<unsigned char>(numberofpairs,0);
+        
         m_pairs = std::vector<UI2DPOINT>(numberofpairs);
         m_BHratio = std::vector<float>(numberofpairs);
         m_ConvergenceAngle = std::vector<float>(numberofpairs);
@@ -676,6 +682,11 @@ public:
         m_Tz_res[pos] = value;
     }
     
+    void SetLinked_pair(int pos, short linked_pair, unsigned char value)
+    {
+        m_linked_pair[pos][linked_pair] = value;
+    }
+    
     void SetPairs(int pos, UI2DPOINT value)
     {
         m_pairs[pos] = value;
@@ -831,6 +842,11 @@ public:
     float& Tz_res(int pos)
     {
         return m_Tz_res[pos];
+    }
+    
+    unsigned char& linked_pair(int pos, short query_pair)
+    {
+        return m_linked_pair[pos][query_pair];
     }
     
     UI2DPOINT& pairs(int pos)
