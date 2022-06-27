@@ -3755,6 +3755,7 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                    proinfo->frameinfo.m_Camera.k1,proinfo->frameinfo.m_Camera.k2,proinfo->frameinfo.m_Camera.k3,
                                    proinfo->frameinfo.m_Camera.p1,proinfo->frameinfo.m_Camera.p2,
                                    proinfo->frameinfo.m_Camera.a1,proinfo->frameinfo.m_Camera.a2);
+                            
                             /*
                             printf("file name %s\n",proinfo->Imagefilename[ti]);
                             printf("EO %f\t%f\t%f\t%f\t%f\t%f\n",
@@ -4336,8 +4337,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                 for(int pair_number = 0 ; pair_number < pairinfo.SelectNumberOfPairs() ; pair_number++)
                                 {
                                     char t_str[500];
-                                    sprintf(t_str,"Image_ID %d\tImage_ID %d\tCA_geo %f\tCA_cal %f\tBH %f\tAE %f\tBIE %f\n",
-                                            pairinfo.pairs(pair_number).m_X, pairinfo.pairs(pair_number).m_Y,
+                                    sprintf(t_str,"Pair ID %d\tImage_ID %d\tImage_ID %d\tCA_geo %f\tCA_cal %f\tBH %f\tAE %f\tBIE %f\n",
+                                            pair_number,pairinfo.pairs(pair_number).m_X, pairinfo.pairs(pair_number).m_Y,
                                             pairinfo.ConvergenceAngle(pair_number),pairinfo.ConvergenceAngle_EQ(pair_number),
                                             pairinfo.BHratio(pair_number),pairinfo.AE(pair_number),pairinfo.BIE(pair_number));
                                     printf(t_str);
@@ -4744,7 +4745,8 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                             for(int ti = 0 ; ti < usedimage_ID.size() ; ti++)
                             {
                                 int imageID = usedimage_ID[ti];
-                                fprintf(pMetafile,"Image %d info\nImage_%d_filename=%s\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\n",ti+1,
+                                fprintf(pMetafile,"Image %d info\nImage_%d_Image_Index %d\nImage_%d_filename=%s\nImage_%d_satID=%s\nImage_%d_Acquisition_time=%s\nImage_%d_Mean_row_GSD=%f\nImage_%d_Mean_col_GSD=%f\nImage_%d_Mean_GSD=%f\nImage_%d_Mean_sun_azimuth_angle=%f\nImage_%d_Mean_sun_elevation=%f\nImage_%d_Mean_sat_azimuth_angle=%f\nImage_%d_Mean_sat_elevation=%f\nImage_%d_Intrack_angle=%f\nImage_%d_Crosstrack_angle=%f\nImage_%d_Offnadir_angle=%f\nImage_%d_tdi=%d\nImage_%d_effbw=%f\nImage_%d_abscalfact=%f\nImage_%d_PC_X=%f\nImage_%d_PC_Y=%f\nImage_%d_PC_Z=%f\nImage_%d_PC_W=%f\nImage_%d_PC_P=%f\nImage_%d_PC_K=%f\nImage_%d_AZ_IRPC=%f\nImage_%d_AZ_EO=%f\nImage_%d_EL_IRPC=%f\nImage_%d_EL_EO=%f\n",ti+1,
+                                        ti+1,imageID,
                                         ti+1,proinfo->Imagefilename[imageID],
                                         ti+1,image_info[imageID].SatID,
                                         ti+1,image_info[imageID].imagetime,
@@ -4760,7 +4762,18 @@ int SETSMmainfunction(TransParam *return_param, char* _filename, ARGINFO args, c
                                         ti+1,image_info[imageID].Offnadir_angle,
                                         ti+1,(int)leftright_band[imageID].tdi,
                                         ti+1,leftright_band[imageID].effbw,
-                                        ti+1,leftright_band[imageID].abscalfactor);
+                                        ti+1,leftright_band[imageID].abscalfactor,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Xl,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Yl,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Zl,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Wl,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Pl,
+                                        ti+1,proinfo->frameinfo.Photoinfo[imageID].m_Kl,
+                                        ti+1,image_info[imageID].AZ_ray[0],
+                                        ti+1,image_info[imageID].AZ_ray[1],
+                                        ti+1,image_info[imageID].EL_ray[0],
+                                        ti+1,image_info[imageID].EL_ray[1]);
+                                    
                             }
                                 
                             fprintf(pMetafile,"Stereo_pair_convergence_angle=%f\n",convergence_angle);
@@ -4961,49 +4974,38 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
     pair_number = 0;
     for(int ref_ti = 0 ; ref_ti < proinfo->number_of_images - 1 ; ref_ti++)
     {
-        for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
+        //if(ref_ti != 9)
         {
-            //if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
-            if(proinfo->check_selected_image[ref_ti] && proinfo->check_selected_image[ti])
+            for(int ti = ref_ti + 1 ; ti < proinfo->number_of_images ; ti ++)
             {
-                pairinfo.SetPairs(pair_number, ref_ti, ti);
-                
-                unsigned char cloud_cov = ceil((image_info[ref_ti].cloud + image_info[ti].cloud) /2.0);
-                pairinfo.SetCloud(pair_number,cloud_cov);
-                
-                double BIE_eo, AE_eo, CA_base_eo;
-                double BIE, AE, CA_base;
-                double convergence_angle_given;
-                D3DPOINT Baseray, Baseray_eo;
-                
-                GetStereoGeometryFromEO(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],ray_vector[proinfo->number_of_images + ref_ti], ray_vector[proinfo->number_of_images + ti], image_info[ref_ti], image_info[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
-                
-                pairinfo.SetAE(pair_number,AE_eo);
-                pairinfo.SetBIE(pair_number,BIE_eo);
-                pairinfo.SetConvergenceAngle(pair_number,CA_base_eo);
-                pairinfo.SetBaseRay(pair_number,Baseray_eo);
-                
-                double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[1]*DegToRad)*sin(image_info[ti].EL_ray[1]*DegToRad) + cos(image_info[ref_ti].EL_ray[1]*DegToRad)*cos(image_info[ti].EL_ray[1]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[1] - image_info[ti].AZ_ray[1])*DegToRad))*RadToDeg;
-                
-                pairinfo.SetConvergenceAngle_EQ(pair_number,convergence_angle_cal);
-                
-                convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[0]*DegToRad)*sin(image_info[ti].EL_ray[0]*DegToRad) + cos(image_info[ref_ti].EL_ray[0]*DegToRad)*cos(image_info[ti].EL_ray[0]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[0] - image_info[ti].AZ_ray[0])*DegToRad))*RadToDeg;
-                
-                pairinfo.SetConvergenceAngle_EQ_IRPC(pair_number,convergence_angle_cal);
-                
-                D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
-                D3DPOINT image2_PL(proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl);
-                double PC_distance = SQRT(image1_PL,image2_PL,3);
-                pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
-                pairinfo.SetCenterDist(pair_number, PC_distance);
-                //pairinfo.SetConvergenceAngle(pair_number, 0);
-                pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
-                
-                
-                pairinfo.SetAzimuth(pair_number, fabs(proinfo->frameinfo.Photoinfo[ref_ti].m_Kl - proinfo->frameinfo.Photoinfo[ti].m_Kl));
-                
-                if(proinfo->sensor_type == AB)
+                //if(image_info[ref_ti].cloud < CLD_COV && image_info[ti].cloud < CLD_COV)
+                if(proinfo->check_selected_image[ref_ti] && proinfo->check_selected_image[ti])// && ti != 9)
                 {
+                    pairinfo.SetPairs(pair_number, ref_ti, ti);
+                    
+                    unsigned char cloud_cov = ceil((image_info[ref_ti].cloud + image_info[ti].cloud) /2.0);
+                    pairinfo.SetCloud(pair_number,cloud_cov);
+                    
+                    double BIE_eo, AE_eo, CA_base_eo;
+                    double BIE, AE, CA_base;
+                    double convergence_angle_given;
+                    D3DPOINT Baseray, Baseray_eo;
+                    
+                    GetStereoGeometryFromEO(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],ray_vector[proinfo->number_of_images + ref_ti], ray_vector[proinfo->number_of_images + ti], image_info[ref_ti], image_info[ti], CA_base_eo, AE_eo, BIE_eo, Baseray_eo);
+                    
+                    pairinfo.SetAE(pair_number,AE_eo);
+                    pairinfo.SetBIE(pair_number,BIE_eo);
+                    pairinfo.SetConvergenceAngle(pair_number,CA_base_eo);
+                    pairinfo.SetBaseRay(pair_number,Baseray_eo);
+                    
+                    double convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[1]*DegToRad)*sin(image_info[ti].EL_ray[1]*DegToRad) + cos(image_info[ref_ti].EL_ray[1]*DegToRad)*cos(image_info[ti].EL_ray[1]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[1] - image_info[ti].AZ_ray[1])*DegToRad))*RadToDeg;
+                    
+                    pairinfo.SetConvergenceAngle_EQ(pair_number,convergence_angle_cal);
+                    
+                    convergence_angle_cal = acos(sin(image_info[ref_ti].EL_ray[0]*DegToRad)*sin(image_info[ti].EL_ray[0]*DegToRad) + cos(image_info[ref_ti].EL_ray[0]*DegToRad)*cos(image_info[ti].EL_ray[0]*DegToRad)*cos( (image_info[ref_ti].AZ_ray[0] - image_info[ti].AZ_ray[0])*DegToRad))*RadToDeg;
+                    
+                    pairinfo.SetConvergenceAngle_EQ_IRPC(pair_number,convergence_angle_cal);
+                    
                     D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
                     D3DPOINT image2_PL(proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl);
                     double PC_distance = SQRT(image1_PL,image2_PL,3);
@@ -5012,135 +5014,149 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
                     //pairinfo.SetConvergenceAngle(pair_number, 0);
                     pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                     
-                    /*
-                    if(proinfo->sensor_provider == PT)
+                    
+                    pairinfo.SetAzimuth(pair_number, fabs(proinfo->frameinfo.Photoinfo[ref_ti].m_Kl - proinfo->frameinfo.Photoinfo[ti].m_Kl));
+                    
+                    if(proinfo->sensor_type == AB)
                     {
-                        convergence_angle_given = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
-                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                        D3DPOINT image1_PL(proinfo->frameinfo.Photoinfo[ref_ti].m_Xl,proinfo->frameinfo.Photoinfo[ref_ti].m_Yl,proinfo->frameinfo.Photoinfo[ref_ti].m_Zl);
+                        D3DPOINT image2_PL(proinfo->frameinfo.Photoinfo[ti].m_Xl,proinfo->frameinfo.Photoinfo[ti].m_Yl,proinfo->frameinfo.Photoinfo[ti].m_Zl);
+                        double PC_distance = SQRT(image1_PL,image2_PL,3);
+                        pairinfo.SetBHratio(pair_number, PC_distance/((proinfo->frameinfo.Photoinfo[ref_ti].m_Zl + proinfo->frameinfo.Photoinfo[ti].m_Zl)/2.0));
+                        pairinfo.SetCenterDist(pair_number, PC_distance);
+                        //pairinfo.SetConvergenceAngle(pair_number, 0);
+                        pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
                         
-                        
-                        //convergence_angle = CA_ray;
-                        
-                        double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
-                        if(azimuthangle_diff > 360)
-                            azimuthangle_diff -= 360;
-                        else if(azimuthangle_diff < -360)
-                            azimuthangle_diff += 360;
-                        
-                        pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
-                    }
-                     */
-                }
-                else
-                {
-                    /*
-                    double CA_ray = acos( (ray_vector[ref_ti].m_X*ray_vector[ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ti].m_Z) /
-                                     (sqrt(ray_vector[ref_ti].m_X*ray_vector[ref_ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ref_ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ref_ti].m_Z)*
-                                      sqrt(ray_vector[ti].m_X*ray_vector[ti].m_X + ray_vector[ti].m_Y*ray_vector[ti].m_Y + ray_vector[ti].m_Z*ray_vector[ti].m_Z)) )*RadToDeg;
-                    */
-                    
-                    //printf("ID %d\t%d\n",ref_ti,ti);
-                    
-                    GetStereoGeometryFromIRPC(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],IRPCs[ref_ti], IRPCs[ti], ray_vector[ref_ti], ray_vector[ti], image_info[ref_ti], image_info[ti], param, numofparam, imageparam[ti], imagesize[ref_ti], imagesize[ti],  CA_base, AE, BIE, Baseray);
-                    
-                    pairinfo.SetAE_IRPC(pair_number,AE);
-                    pairinfo.SetBIE_IRPC(pair_number,BIE);
-                    pairinfo.SetConvergenceAngle_IRPC(pair_number,CA_base);
-                    pairinfo.SetBaseRay_IRPC(pair_number,Baseray);
-                    
-                    pairinfo.SetBHratio(pair_number, 2.0*tan(pairinfo.ConvergenceAngle(pair_number)*DegToRad*0.5));
-                    pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
-                    
-                    /*
-                    printf("CA AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",pairinfo.CAray(pair_number), pairinfo.AE(pair_number),pairinfo.BIE(pair_number),pairinfo.BaseRay(pair_number).m_X, pairinfo.BaseRay(pair_number).m_Y, pairinfo.BaseRay(pair_number).m_Z);
-                    printf("CA_eo AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",CA_base_eo, AE_eo,BIE_eo,Baseray_eo.m_X, Baseray_eo.m_Y, Baseray_eo.m_Z);
-                    */
-                    if(proinfo->sensor_provider == DG)
-                    {
-                        convergence_angle_given = acos(sin(image_info[ref_ti].Mean_sat_elevation*DegToRad)*sin(image_info[ti].Mean_sat_elevation*DegToRad) + cos(image_info[ref_ti].Mean_sat_elevation*DegToRad)*cos(image_info[ti].Mean_sat_elevation*DegToRad)*cos( (image_info[ref_ti].Mean_sat_azimuth_angle - image_info[ti].Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
-                        
-                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
-                        
-                        //printf("CA given_eq %f\tray_vector_acos %f\teo_vector_acos %f\tray base %f\teo base %f\t%f\t%f\t%f\t%f\n",convergence_angle,CA_ray,convergence_angle_cal,CA_base,CA_base_eo,AE,AE_eo,BIE,BIE_eo);
-                        
-                        //convergence_angle = CA_ray;
-                        
-                        //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
-                        
-                        pairinfo.SetCenterDist(pair_number,0.0);
-                        
-                    }
-                    else if(proinfo->sensor_provider == PT)
-                    {
-                        convergence_angle_given = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
-                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
-                        
-                        
-                        //convergence_angle = CA_ray;
-                        
-                        double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
-                        if(azimuthangle_diff > 360)
-                            azimuthangle_diff -= 360;
-                        else if(azimuthangle_diff < -360)
-                            azimuthangle_diff += 360;
-                        
-                        //printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
-                        /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
+                        /*
+                        if(proinfo->sensor_provider == PT)
                         {
-                            offnadir_weight = 0.7; //30% weight
-                            printf("ref_ti ti %d\t%d\t%f\n",ref_ti,ti,offnadir_weight);
+                            convergence_angle_given = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                            pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                            
+                            
+                            //convergence_angle = CA_ray;
+                            
+                            double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
+                            if(azimuthangle_diff > 360)
+                                azimuthangle_diff -= 360;
+                            else if(azimuthangle_diff < -360)
+                                azimuthangle_diff += 360;
+                            
+                            pairinfo.SetAzimuth(pair_number, azimuthangle_diff);
                         }
+                         */
+                    }
+                    else
+                    {
+                        /*
+                        double CA_ray = acos( (ray_vector[ref_ti].m_X*ray_vector[ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ti].m_Z) /
+                                         (sqrt(ray_vector[ref_ti].m_X*ray_vector[ref_ti].m_X + ray_vector[ref_ti].m_Y*ray_vector[ref_ti].m_Y + ray_vector[ref_ti].m_Z*ray_vector[ref_ti].m_Z)*
+                                          sqrt(ray_vector[ti].m_X*ray_vector[ti].m_X + ray_vector[ti].m_Y*ray_vector[ti].m_Y + ray_vector[ti].m_Z*ray_vector[ti].m_Z)) )*RadToDeg;
                         */
                         
-                        //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
-                        //pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
+                        //printf("ID %d\t%d\n",ref_ti,ti);
                         
-//                        D2DPOINT center_dist;
-//                        center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
-//                        center_dist.m_Y = fabs(image_info[ref_ti].Center[1] - image_info[ti].Center[1]);
-//                        //printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
-//                        pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
-                        //pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
-                        pairinfo.SetAzimuth(pair_number, fabs(azimuthangle_diff));
-                        //pairinfo.BHratio[pair_number] = 0.5;
+                        GetStereoGeometryFromIRPC(proinfo->frameinfo.Photoinfo[ref_ti],proinfo->frameinfo.Photoinfo[ti],IRPCs[ref_ti], IRPCs[ti], ray_vector[ref_ti], ray_vector[ti], image_info[ref_ti], image_info[ti], param, numofparam, imageparam[ti], imagesize[ref_ti], imagesize[ti],  CA_base, AE, BIE, Baseray);
+                        
+                        pairinfo.SetAE_IRPC(pair_number,AE);
+                        pairinfo.SetBIE_IRPC(pair_number,BIE);
+                        pairinfo.SetConvergenceAngle_IRPC(pair_number,CA_base);
+                        pairinfo.SetBaseRay_IRPC(pair_number,Baseray);
+                        
+                        pairinfo.SetBHratio(pair_number, 2.0*tan(pairinfo.ConvergenceAngle(pair_number)*DegToRad*0.5));
+                        pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                        
+                        /*
+                        printf("CA AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",pairinfo.CAray(pair_number), pairinfo.AE(pair_number),pairinfo.BIE(pair_number),pairinfo.BaseRay(pair_number).m_X, pairinfo.BaseRay(pair_number).m_Y, pairinfo.BaseRay(pair_number).m_Z);
+                        printf("CA_eo AE BIE %f\t%f\t%f\tBAseRay %f\t%f\t%f\n",CA_base_eo, AE_eo,BIE_eo,Baseray_eo.m_X, Baseray_eo.m_Y, Baseray_eo.m_Z);
+                        */
+                        if(proinfo->sensor_provider == DG)
+                        {
+                            convergence_angle_given = acos(sin(image_info[ref_ti].Mean_sat_elevation*DegToRad)*sin(image_info[ti].Mean_sat_elevation*DegToRad) + cos(image_info[ref_ti].Mean_sat_elevation*DegToRad)*cos(image_info[ti].Mean_sat_elevation*DegToRad)*cos( (image_info[ref_ti].Mean_sat_azimuth_angle - image_info[ti].Mean_sat_azimuth_angle)*DegToRad))*RadToDeg;
+                            
+                            pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                            
+                            //printf("CA given_eq %f\tray_vector_acos %f\teo_vector_acos %f\tray base %f\teo base %f\t%f\t%f\t%f\t%f\n",convergence_angle,CA_ray,convergence_angle_cal,CA_base,CA_base_eo,AE,AE_eo,BIE,BIE_eo);
+                            
+                            //convergence_angle = CA_ray;
+                            
+                            //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
+                            
+                            pairinfo.SetCenterDist(pair_number,0.0);
+                            
+                        }
+                        else if(proinfo->sensor_provider == PT)
+                        {
+                            convergence_angle_given = fabs(image_info[ref_ti].Offnadir_angle - image_info[ti].Offnadir_angle);
+                            pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                            
+                            
+                            //convergence_angle = CA_ray;
+                            
+                            double azimuthangle_diff = image_info[ref_ti].Mean_sat_azimuth_angle_xml - image_info[ti].Mean_sat_azimuth_angle_xml;
+                            if(azimuthangle_diff > 360)
+                                azimuthangle_diff -= 360;
+                            else if(azimuthangle_diff < -360)
+                                azimuthangle_diff += 360;
+                            
+                            //printf("azimuth %f\t%f\n",image_info[ref_ti].Mean_sat_azimuth_angle_xml,image_info[ti].Mean_sat_azimuth_angle_xml);
+                            /*if(pairinfo.MinOffImage == ref_ti || pairinfo.MinOffImage == ti)
+                            {
+                                offnadir_weight = 0.7; //30% weight
+                                printf("ref_ti ti %d\t%d\t%f\n",ref_ti,ti,offnadir_weight);
+                            }
+                            */
+                            
+                            //pairinfo.SetConvergenceAngle(pair_number, convergence_angle);
+                            //pairinfo.SetBHratio(pair_number, 2.0*tan(convergence_angle*DegToRad*0.5));
+                            
+    //                        D2DPOINT center_dist;
+    //                        center_dist.m_X = fabs(image_info[ref_ti].Center[0] - image_info[ti].Center[0]);
+    //                        center_dist.m_Y = fabs(image_info[ref_ti].Center[1] - image_info[ti].Center[1]);
+    //                        //printf("dist XY %f\t%f\n",center_dist.m_X,center_dist.m_Y);
+    //                        pairinfo.SetCenterDist(pair_number, sqrt(center_dist.m_X*center_dist.m_X + center_dist.m_Y*center_dist.m_Y));
+                            //pairinfo.SetSigmaZ(pair_number, 1.414* ((image_info[ref_ti].GSD.pro_GSD + image_info[ti].GSD.pro_GSD)/2.0) / pairinfo.BHratio(pair_number));
+                            pairinfo.SetAzimuth(pair_number, fabs(azimuthangle_diff));
+                            //pairinfo.BHratio[pair_number] = 0.5;
+                        }
+                        
+                        pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
+                        /*
+                        printf("CA given_eq_acos %f\neo_geo %f\t irpc_geo %f\neo_eq_acos %f\t irpc_eq_acos %f\n eo_AE %f\t irpc_AE %f\t eo_BIE %f\t irpc_BIE %f\n",pairinfo.ConvergenceAngle_given(pair_number),
+                               pairinfo.ConvergenceAngle(pair_number),pairinfo.ConvergenceAngle_IRPC(pair_number),
+                               pairinfo.ConvergenceAngle_EQ(pair_number),pairinfo.ConvergenceAngle_EQ_IRPC(pair_number),
+                               pairinfo.AE(pair_number),pairinfo.AE_IRPC(pair_number),pairinfo.BIE(pair_number),pairinfo.BIE_IRPC(pair_number));
+                        printf("eo base vector %f\t%f\t%f\nirpc base vector %f\t%f\t%f\n",
+                               pairinfo.BaseRay(pair_number).m_X,pairinfo.BaseRay(pair_number).m_Y,pairinfo.BaseRay(pair_number).m_Z,
+                               pairinfo.BaseRay_IRPC(pair_number).m_X,pairinfo.BaseRay_IRPC(pair_number).m_Y,pairinfo.BaseRay_IRPC(pair_number).m_Z);
+                        */
+                        
+                        
+                        //time separation for shadow
+                        double ref_time = (double)image_info[ref_ti].hour*60 + (double)image_info[ref_ti].min;
+                        double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
+                        double diff_time = fabs(ref_time - tar_time)/60.0;
+                        double ref_day = (double)image_info[ref_ti].month*30 + (double)image_info[ref_ti].date;
+                        double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
+                        double diff_day = fabs(ref_day - tar_day);
+                        pairinfo.SetDiffDay(pair_number,(unsigned char)diff_day);
+                        pairinfo.SetDiffTime(pair_number,(unsigned char)diff_time);
                     }
                     
-                    pairinfo.SetConvergenceAngle_given(pair_number,convergence_angle_given);
-                    /*
-                    printf("CA given_eq_acos %f\neo_geo %f\t irpc_geo %f\neo_eq_acos %f\t irpc_eq_acos %f\n eo_AE %f\t irpc_AE %f\t eo_BIE %f\t irpc_BIE %f\n",pairinfo.ConvergenceAngle_given(pair_number),
-                           pairinfo.ConvergenceAngle(pair_number),pairinfo.ConvergenceAngle_IRPC(pair_number),
-                           pairinfo.ConvergenceAngle_EQ(pair_number),pairinfo.ConvergenceAngle_EQ_IRPC(pair_number),
-                           pairinfo.AE(pair_number),pairinfo.AE_IRPC(pair_number),pairinfo.BIE(pair_number),pairinfo.BIE_IRPC(pair_number));
-                    printf("eo base vector %f\t%f\t%f\nirpc base vector %f\t%f\t%f\n",
-                           pairinfo.BaseRay(pair_number).m_X,pairinfo.BaseRay(pair_number).m_Y,pairinfo.BaseRay(pair_number).m_Z,
-                           pairinfo.BaseRay_IRPC(pair_number).m_X,pairinfo.BaseRay_IRPC(pair_number).m_Y,pairinfo.BaseRay_IRPC(pair_number).m_Z);
-                    */
+                    if(minBH > pairinfo.BHratio(pair_number))
+                        minBH = pairinfo.BHratio(pair_number);
                     
+                    if(maxBH < pairinfo.BHratio(pair_number))
+                        maxBH = pairinfo.BHratio(pair_number);
                     
-                    //time separation for shadow
-                    double ref_time = (double)image_info[ref_ti].hour*60 + (double)image_info[ref_ti].min;
-                    double tar_time = (double)image_info[ti].hour*60 + (double)image_info[ti].min;
-                    double diff_time = fabs(ref_time - tar_time)/60.0;
-                    double ref_day = (double)image_info[ref_ti].month*30 + (double)image_info[ref_ti].date;
-                    double tar_day = (double)image_info[ti].month*30 + (double)image_info[ti].date;
-                    double diff_day = fabs(ref_day - tar_day);
-                    pairinfo.SetDiffDay(pair_number,(unsigned char)diff_day);
-                    pairinfo.SetDiffTime(pair_number,(unsigned char)diff_time);
+                    //printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\tAzimuth %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number),pairinfo.Azimuth(pair_number));
+                    
+                    pair_number++;
                 }
-                
-                if(minBH > pairinfo.BHratio(pair_number))
-                    minBH = pairinfo.BHratio(pair_number);
-                
-                if(maxBH < pairinfo.BHratio(pair_number))
-                    maxBH = pairinfo.BHratio(pair_number);
-                
-                //printf("pairnumber %d\timage %d\t%d\tConvergenceAngle %f\tBHratio %f\t%f\t%f\tCenterDist %f\tAzimuth %f\n",pair_number,pairinfo.pairs(pair_number).m_X,pairinfo.pairs(pair_number).m_Y,pairinfo.ConvergenceAngle(pair_number),pairinfo.BHratio(pair_number),minBH,maxBH,pairinfo.CenterDist(pair_number),pairinfo.Azimuth(pair_number));
-                
-                pair_number++;
             }
         }
     }
-    
+    //exit(1);
      for(int count=0;count<pairinfo.NumberOfPairs();count++)
      {
      //pairinfo.BHratio[count] =  (pairinfo.BHratio[count] - minBH)/(maxBH - minBH)*0.5 + 0.5;
@@ -5274,7 +5290,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     {
                         if(plevelinfo.pairinfo->cal(pair_number) > 0)
                         {
-                            if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)
+                            if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)// && plevelinfo.pairinfo->AE(pair_number) < 5)
                             {
                                 const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
                                 const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
@@ -5462,7 +5478,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             {
                 if(plevelinfo.pairinfo->cal(pair_number) > 0)
                 {
-                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)
+                    if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)// && plevelinfo.pairinfo->AE(pair_number) < 5)
                     {
                         const int reference_id = plevelinfo.pairinfo->pairs(pair_number).m_X;
                         const int ti = plevelinfo.pairinfo->pairs(pair_number).m_Y;
@@ -7108,12 +7124,12 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             Grid_length,
                                             levelinfo.pairinfo->SelectNumberOfPairs()+1,
                                             { 0, 0, Nodata, false});
-                                    /*
+                                    
                                     Matrix<MultiMPs> multimps_VC(
                                             Grid_length,
                                             levelinfo.pairinfo->SelectNumberOfPairs()+1,
                                             { 0, 0, Nodata, false});
-                                    */
+                                    
                                     printf("multimps memory usage!!\n");
                                     printMaxMemUsage();
                                     
@@ -7480,12 +7496,12 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                             multimps(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;// - levelinfo.pairinfo->Tz(pair_number);
                                                             multimps(ref_index, pair_number).check_matched = true;
                                                             
-                                                            /*
+                                                            
                                                             multimps_VC(ref_index, pair_number).peak_roh = MatchedPts_list[tcnt].m_roh;
                                                             multimps_VC(ref_index, pair_number).ortho_roh = ortho_ncc[ref_index];
                                                             multimps_VC(ref_index, pair_number).peak_height = MatchedPts_list[tcnt].m_Z;// - levelinfo.pairinfo->Tz(pair_number);
                                                             multimps_VC(ref_index, pair_number).check_matched = true;
-                                                            */
+                                                            
                                                             
                                                             total_count_MPs++;
                                                             //printf("pos %d\t%d\t%d\t%f\n",t_col,t_row,multimps(ref_index, pair_number).peak_roh,multimps(ref_index, pair_number).peak_height);
@@ -7948,6 +7964,34 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         
                                         if(level == 0 && iteration == 3)
                                         {
+                                            for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                                            {
+                                                if(call_array[pair_number] == 1)
+                                                {
+                                                    float* m_Noise_H = (float*)calloc(sizeof(float),Grid_length);
+                                                    
+                                                    AWNCC_MPs_single(proinfo,levelinfo,Size_Grid2D, GridPT3, level, multimps_VC, pair_number);
+                                                    
+                                                    for(long int pt_index = 0 ; pt_index < Grid_length ; pt_index++)
+                                                    {
+                                                        long int pts_row = (long int)(floor(pt_index/Size_Grid2D.width));
+                                                        long int pts_col = pt_index % Size_Grid2D.width;
+                                                        long int tiff_pos = (long int)(Size_Grid2D.height-1 - pts_row)*(long int)Size_Grid2D.width + pts_col;
+                                                        if(multimps_VC(pt_index,pair_number).check_matched)
+                                                            m_Noise_H[tiff_pos] = multimps_VC(pt_index,pair_number).peak_height - levelinfo.pairinfo->Tz(pair_number);
+                                                        else
+                                                            m_Noise_H[tiff_pos] = Nodata;
+                                                    }
+                                                    
+                                                    char MDN[500];
+                                                    sprintf(MDN,"%s/%d_AWNCC_MPs_single_DEM_%d_%d_%3.2f_%3.2f_%4.2f_%d.tif",proinfo->save_filepath,pair_number,
+                                                            levelinfo.pairinfo->pairs(pair_number).m_X,levelinfo.pairinfo->pairs(pair_number).m_Y,
+                                                            levelinfo.pairinfo->ConvergenceAngle(pair_number),levelinfo.pairinfo->AE(pair_number),levelinfo.pairinfo->BIE(pair_number),levelinfo.pairinfo->Cloud(pair_number));
+                                                    WriteGeotiff(MDN, m_Noise_H, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[3], param.projection, param.utm_zone, param.bHemisphere, 4);
+                                                    free(m_Noise_H);
+                                                }
+                                            }
+                                            /*
                                             char MDN[500];
                                             float* m_Noise_BH = (float*)calloc(sizeof(float),Grid_length);
                                             for(long int pt_index = 0 ; pt_index < Grid_length ; pt_index++)
@@ -7974,7 +8018,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                     long int pts_col = pt_index % Size_Grid2D.width;
                                                     long int tiff_pos = (long int)(Size_Grid2D.height-1 - pts_row)*(long int)Size_Grid2D.width + pts_col;
                                                     if(multimps(pt_index, pair_number).check_matched)
-                                                        m_Noise_BH[tiff_pos] = multimps(pt_index, pair_number).peak_height;
+                                                        m_Noise_BH[tiff_pos] = multimps(pt_index, pair_number).peak_height - levelinfo.pairinfo->Tz(pair_number);
                                                     else
                                                         m_Noise_BH[tiff_pos] = Nodata;
                                                 }
@@ -7982,6 +8026,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                 WriteGeotiff(MDN, m_Noise_BH, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[3], param.projection, param.utm_zone, param.bHemisphere, 4);
                                                 free(m_Noise_BH);
                                             }
+                                             */
                                         }
                                         
                                         
@@ -8500,7 +8545,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                 {
                                     int RA_level = 3;
                                     if(proinfo->sensor_provider == PT)
-                                        RA_level = 2;
+                                        RA_level = 1;
                                     if(level <= RA_level)
                                     {
                                         double DEM_avg_plane = DEM_average_plane(MatchedPts_list_mps);
@@ -9801,7 +9846,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     vector<vector<F2DPOINT>> noref_difheight(possible_pairs);
     vector<vector<UI2DPOINT>> noref_difheight_pair(possible_pairs);
     vector<vector<float>> noref_difheight_roh(possible_pairs);
-    vector<unsigned char> ref_selected_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+    
+    vector<unsigned char> ref_selected_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0); // check for dH existing pair with master pair
     
     vector<float> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
     vector<int> V_array_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
@@ -9874,7 +9920,6 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     printf("end cal dh\n");
     
     
-    //vector<short> reference_pairs;
     vector<long> reference_pairs_overlap_count;
     vector<unsigned char> pair_coverage(*levelinfo.Grid_length,0);
     long pair_coverage_counts = 0;
@@ -9887,7 +9932,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         }
     }
     
-    vector<long> overlap_counts(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+    vector<unsigned char> pair_class(levelinfo.pairinfo->SelectNumberOfPairs(),0); // 0 for non selected pair, 1 for reference pairs, 2 for ref-attached pairs, 3 for nonref attached pairs, 10 for removed pair
     short totoal_pair_count = 0;
     vector<short> finished_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
     bool check_overlap_P = false;
@@ -9951,12 +9996,12 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     for(int i = 0 ; i < reference_pairs.size() ; i++)
     {
         int pair_number = reference_pairs[i];
+        pair_class[pair_number] = 1;
         reference_pairs_final_W[pair_number] = weight_min + WS*(reference_pairs.size() - i);
         printf("reference pairs %d\t%f\t%d\t%f\n",pair_number,reference_pairs_final_W[pair_number],reference_pairs_overlap_count[i],reference_pairs_overlap_count[i]/(double)(*levelinfo.Grid_length));
     }
     
     
-    vector<unsigned char> check_selected_ref(levelinfo.pairinfo->SelectNumberOfPairs(),0);
     vector<short> ref_remove_pair;
     int step_by_step = 0;
     while(step_by_step < 2)
@@ -9973,7 +10018,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             vector<short> CA_range_pair;
             for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
             {
-                if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && !check_selected_ref[i] && reference_pairs_final_W[i] == 0)
+                if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && pair_class[i] == 0)
                 {
                     CA_range_pair.push_back(i);
                     printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
@@ -10019,7 +10064,6 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         vector<float> ref_Tz_std;
                         vector<float> ref_Tz_P;
                         vector<float> ref_Tz_sigma;
-                        vector<unsigned char> check_ref_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                         
                         //seleted reference
                         for(int ref = 0 ; ref < reference_pairs.size() ; ref++)
@@ -10072,11 +10116,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     //ref_Tz_P.push_back(P_th);
                                     ref_Tz_sigma.push_back(sigma);
                                     
-                                    check_ref_pair[t_pair] = true;
-                                    
                                     //P_index.push_back(t_pair);
                                     //check_all_Tz[t_pair] = 1;
-                                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
+                                    printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
                                     unknown.push_back(t_pair);
                                     unknown_obs_count[t_pair]++;
                                     levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
@@ -10093,10 +10135,10 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         }
                         
                         
-                        //added pair
+                        //previous added ref pair
                         for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                         {
-                            if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && check_selected_ref[t_pair] && reference_pairs_final_W[t_pair] == 0)
+                            if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && pair_class[t_pair] == 2)
                             {
                                 vector<float> selected_dh;
                                 
@@ -10142,11 +10184,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     //ref_Tz_P.push_back(P_th);
                                     ref_Tz_sigma.push_back(sigma);
                                     
-                                    check_ref_pair[t_pair] = true;
-                                    
                                     //P_index.push_back(t_pair);
                                     //check_all_Tz[t_pair] = 1;
-                                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
+                                    printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
                                     unknown.push_back(t_pair);
                                     unknown_obs_count[t_pair]++;
                                     levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
@@ -10162,11 +10202,17 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             }
                         }
                         
-                        
-                        //new pair
+                        //new pair refattached pair
                         //for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                         {
                             int t_pair = CA_range_pair[CA_iter_pair];
+                            
+                            if(step_by_step == 1)
+                            {
+                                if(pair_class[t_pair] == 0)
+                                    pair_class[t_pair] = 4;
+                            }
+                                
                             
                             bool check_CA_ref = false;
                             
@@ -10178,7 +10224,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             else
                                 check_CA_ref = true;
                             
-                            if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && check_CA_ref && reference_pairs_final_W[t_pair] == 0)
+                            if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && pair_class[t_pair] == 0)
                             {
                                 vector<float> selected_dh;
                                 
@@ -10228,20 +10274,10 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     }
                                     check_rm_pair = check_temp;
                                 }
-                                /*
-                                UI2DPOINT temp;
-                                temp.m_X = max_countMPs_pair;
-                                temp.m_Y = t_pair;
-                                if(!check_rm_pair)
-                                {
-                                    check_rm_pair = FindExistingPair(obs_remove_pair,temp);
-                                    if(check_rm_pair)
-                                        printf("removed refTz %d\t%d\n",temp.m_X,temp.m_Y);
-                                }
-                                */
+                                
                                 if(check_rm_pair)
                                     printf("removed refTz %d\t%d\n",max_countMPs_pair,t_pair);
-                                if(sel_count > minimum_counts && !check_rm_pair/* && std < 10.0*/)
+                                if(sel_count > minimum_counts && !check_rm_pair)
                                 {
                                     double dif_avg = avg;
                                     double sum_dif_avg = dif_avg;
@@ -10254,12 +10290,11 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     //ref_Tz_P.push_back(P_th);
                                     ref_Tz_sigma.push_back(sigma);
                                     
-                                    check_ref_pair[t_pair] = true;
-                                    
                                     //P_index.push_back(t_pair);
                                     //check_all_Tz[t_pair] = 1;
-                                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
+                                    printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
                                     unknown.push_back(t_pair);
+                                    pair_class[t_pair] = 2;
                                     unknown_obs_count[t_pair]++;
                                     levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
                                     //exit(1);
@@ -10287,116 +10322,99 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 val.m_X = noref_difheight_pair[pair_pos][0].m_X;
                                 val.m_Y = noref_difheight_pair[pair_pos][0].m_Y;
                                 
+                                bool check_class = false;
                                 
+                                if(step_by_step < 2)
                                 {
-                                    
-                                    vector<float> selected_dh;
-                                   
-                                    double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
-                                    double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
-                                    double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
-                                    
-                                    double dif_sum_weight = 0;
-                                    double sum_weight = 0;
-                                    double sel_count = 0;
-                                    
-                                    for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
+                                    if((pair_class[(int)val.m_X] == 1 || pair_class[(int)val.m_X] == 2) && (pair_class[(int)val.m_Y] == 1 || pair_class[(int)val.m_Y] == 2))
                                     {
-                                        float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
-                                        if(fabs(dH) < th_H)
-                                        {
-                                            dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
-                                            sum_weight += noref_difheight_roh[pair_pos][cnt];
-                                            sel_count++;
-                                            selected_dh.push_back(dH);
-                                            //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
-                                        }
-                                    }
-                                    
-                                    double avg = dif_sum_weight/sum_weight;
-                                    double sum_var = 0;
-                                    for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
-                                    {
-                                        sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
-                                    }
-                                    double std = sqrt(sum_var/(double)selected_dh.size());
-                                    
-                                    bool check_rm_pair = false;
-                                    
-                                    if(ref_remove_pair.size() > 0)
-                                    {
-                                        bool check_temp = false;
-                                        int count_temp = 0;
-                                        while(!check_temp && count_temp < ref_remove_pair.size())
-                                        {
-                                            short temp_pair = ref_remove_pair[count_temp];
-                                            
-                                            if(val.m_X == temp_pair)
-                                                check_temp = true;
-                                            else if(val.m_Y == temp_pair)
-                                                check_temp = true;
-                                            count_temp++;
-                                        }
-                                        check_rm_pair = check_temp;
-                                    }
-                                    
-                                    /*
-                                    UI2DPOINT temp;
-                                    temp.m_X = val.m_X;
-                                    temp.m_Y = val.m_Y;
-                                    check_rm_pair = FindExistingPair(obs_remove_pair,temp);
-                                    if(check_rm_pair)
-                                        printf("removed nonrefTz %d\t%d\n",temp.m_X,temp.m_Y);
-                                     */
-                                    //if(check_rm_pair)
-                                    //    printf("removed nonrefTz %d\t%d\n",(int)val.m_X,(int)val.m_Y);
-                                    
-                                    if(sel_count > 1000 && /*std < 10.0 &&*/ !check_rm_pair)
-                                    {
-                                        double dif_avg = avg;
-                                        //double dif_avg = sum_dif_avg;
-                                        val.m_Z = dif_avg;
+                                        vector<float> selected_dh;
+                                       
+                                        double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                                        double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                                        double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
                                         
+                                        double dif_sum_weight = 0;
+                                        double sum_weight = 0;
+                                        double sel_count = 0;
                                         
-                                        bool check_m_X = false;
-                                        bool check_m_Y = false;
-                                        int count_refTz_pair = 0;
-                                        bool check_next = false;
-                                        while(!check_next && count_refTz_pair < refTz_pair.size()) //find pair having both refTz
+                                        for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
                                         {
-                                            D3DPOINT ref_val = refTz_pair[count_refTz_pair];
-                                            short set_pair = (int)ref_val.m_Y;
-                                            if(set_pair == val.m_X)
-                                                check_m_X = true;
-                                            if(set_pair == val.m_Y)
-                                                check_m_Y = true;
-                                            
-                                            if(check_m_X && check_m_Y)
-                                                check_next = true;
-                                            
-                                            count_refTz_pair++;
-                                        }
-                                        
-                                        if(step_by_step == 0)
-                                        {
-                                            if(check_next)// && levelinfo.pairinfo->ConvergenceAngle((int)val.m_X) >= CA_th && levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y) >= CA_th)
+                                            float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
+                                            if(fabs(dH) < th_H)
                                             {
-                                                nonref_Tz.push_back(val);
-                                                nonref_Tz_counts.push_back(sel_count);
-                                                nonref_Tz_std.push_back(std);
-                                                //nonref_Tz_P.push_back(P_th);
-                                                nonref_Tz_sigma.push_back(sigma);
-                                                
-                                                unknown_obs_count[(int)val.m_X]++;
-                                                unknown_obs_count[(int)val.m_Y]++;
-                                                levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
-                                                
-                                                //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                                                //printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma);
+                                                dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
+                                                sum_weight += noref_difheight_roh[pair_pos][cnt];
+                                                sel_count++;
+                                                selected_dh.push_back(dH);
+                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
                                             }
                                         }
-                                        else
+                                        
+                                        double avg = dif_sum_weight/sum_weight;
+                                        double sum_var = 0;
+                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
                                         {
+                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                        }
+                                        double std = sqrt(sum_var/(double)selected_dh.size());
+                                        
+                                        bool check_rm_pair = false;
+                                        
+                                        if(ref_remove_pair.size() > 0)
+                                        {
+                                            bool check_temp = false;
+                                            int count_temp = 0;
+                                            while(!check_temp && count_temp < ref_remove_pair.size())
+                                            {
+                                                short temp_pair = ref_remove_pair[count_temp];
+                                                
+                                                if(val.m_X == temp_pair)
+                                                    check_temp = true;
+                                                else if(val.m_Y == temp_pair)
+                                                    check_temp = true;
+                                                count_temp++;
+                                            }
+                                            check_rm_pair = check_temp;
+                                        }
+                                        
+                                        /*
+                                        UI2DPOINT temp;
+                                        temp.m_X = val.m_X;
+                                        temp.m_Y = val.m_Y;
+                                        check_rm_pair = FindExistingPair(obs_remove_pair,temp);
+                                        if(check_rm_pair)
+                                            printf("removed nonrefTz %d\t%d\n",temp.m_X,temp.m_Y);
+                                         */
+                                        //if(check_rm_pair)
+                                        //    printf("removed nonrefTz %d\t%d\n",(int)val.m_X,(int)val.m_Y);
+                                        
+                                        if(sel_count > minimum_counts && /*std < 10.0 &&*/ !check_rm_pair)
+                                        {
+                                            double dif_avg = avg;
+                                            //double dif_avg = sum_dif_avg;
+                                            val.m_Z = dif_avg;
+                                            
+                                            
+                                            bool check_m_X = false;
+                                            bool check_m_Y = false;
+                                            int count_refTz_pair = 0;
+                                            bool check_next = false;
+                                            while(!check_next && count_refTz_pair < refTz_pair.size()) //find pair having both refTz
+                                            {
+                                                D3DPOINT ref_val = refTz_pair[count_refTz_pair];
+                                                short set_pair = (int)ref_val.m_Y;
+                                                if(set_pair == val.m_X)
+                                                    check_m_X = true;
+                                                if(set_pair == val.m_Y)
+                                                    check_m_Y = true;
+                                                
+                                                if(check_m_X && check_m_Y)
+                                                    check_next = true;
+                                                
+                                                count_refTz_pair++;
+                                            }
+                                            
                                             if(check_next)
                                             {
                                                 nonref_Tz.push_back(val);
@@ -10410,51 +10428,244 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                 levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                                 
                                                 //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                                                //printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
                                             }
-                                            else
+                                        }
+                                    }
+                                }
+                                
+                                if(step_by_step == 1)
+                                {
+                                    if( ((pair_class[(int)val.m_X] == 1 || pair_class[(int)val.m_X] == 2) && (pair_class[(int)val.m_Y] == 4 || pair_class[(int)val.m_Y] == 3)) ||
+                                       ((pair_class[(int)val.m_Y] == 1 || pair_class[(int)val.m_Y] == 2) && (pair_class[(int)val.m_X] == 4 || pair_class[(int)val.m_X] == 3)) )
+                                    {
+                                        vector<float> selected_dh;
+                                       
+                                        double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                                        double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                                        double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
+                                        
+                                        double dif_sum_weight = 0;
+                                        double sum_weight = 0;
+                                        double sel_count = 0;
+                                        
+                                        for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
+                                        {
+                                            float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
+                                            if(fabs(dH) < th_H)
                                             {
+                                                dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
+                                                sum_weight += noref_difheight_roh[pair_pos][cnt];
+                                                sel_count++;
+                                                selected_dh.push_back(dH);
+                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                            }
+                                        }
+                                        
+                                        double avg = dif_sum_weight/sum_weight;
+                                        double sum_var = 0;
+                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                                        {
+                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                        }
+                                        double std = sqrt(sum_var/(double)selected_dh.size());
+                                        
+                                        bool check_rm_pair = false;
+                                        
+                                        if(ref_remove_pair.size() > 0)
+                                        {
+                                            bool check_temp = false;
+                                            int count_temp = 0;
+                                            while(!check_temp && count_temp < ref_remove_pair.size())
+                                            {
+                                                short temp_pair = ref_remove_pair[count_temp];
                                                 
-                                                //printf("selected nonref %d\t%d\n",(int)val.m_X,(int)val.m_Y);
-                                                if(!check_m_X && check_m_Y && levelinfo.pairinfo->ConvergenceAngle((int)val.m_X) >= CA_th )
+                                                if(val.m_X == temp_pair)
+                                                    check_temp = true;
+                                                else if(val.m_Y == temp_pair)
+                                                    check_temp = true;
+                                                count_temp++;
+                                            }
+                                            check_rm_pair = check_temp;
+                                        }
+                                        
+                                        /*
+                                        UI2DPOINT temp;
+                                        temp.m_X = val.m_X;
+                                        temp.m_Y = val.m_Y;
+                                        check_rm_pair = FindExistingPair(obs_remove_pair,temp);
+                                        if(check_rm_pair)
+                                            printf("removed nonrefTz %d\t%d\n",temp.m_X,temp.m_Y);
+                                         */
+                                        //if(check_rm_pair)
+                                        //    printf("removed nonrefTz %d\t%d\n",(int)val.m_X,(int)val.m_Y);
+                                        
+                                        if(sel_count > minimum_counts && /*std < 10.0 &&*/ !check_rm_pair)
+                                        {
+                                            double dif_avg = avg;
+                                            //double dif_avg = sum_dif_avg;
+                                            val.m_Z = dif_avg;
+                                            
+                                            
+                                            bool check_m_X = false;
+                                            bool check_m_Y = false;
+                                            int count_refTz_pair = 0;
+                                            bool check_next = false;
+                                            while(!check_next && count_refTz_pair < refTz_pair.size()) //find pair having both refTz
+                                            {
+                                                D3DPOINT ref_val = refTz_pair[count_refTz_pair];
+                                                short set_pair = (int)ref_val.m_Y;
+                                                if(set_pair == val.m_X)
+                                                    check_m_X = true;
+                                                if(set_pair == val.m_Y)
+                                                    check_m_Y = true;
+                                                
+                                                if(check_m_X && check_m_Y)
+                                                    check_next = true;
+                                                
+                                                count_refTz_pair++;
+                                            }
+                                            
+                                            //printf("selected nonref %d\t%d\n",(int)val.m_X,(int)val.m_Y);
+                                            if(!check_m_X && check_m_Y)// && levelinfo.pairinfo->ConvergenceAngle((int)val.m_X) >= CA_th )
+                                            {
+                                                nonref_Tz.push_back(val);
+                                                nonref_Tz_counts.push_back(sel_count);
+                                                nonref_Tz_std.push_back(std);
+                                                //nonref_Tz_P.push_back(P_th);
+                                                nonref_Tz_sigma.push_back(sigma);
+                                                
+                                                unknown_obs_count[(int)val.m_X]++;
+                                                unknown_obs_count[(int)val.m_Y]++;
+                                                levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
+                                                
+                                                //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
+                                                printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                //printf("added pair %d\n",(int)val.m_X);
+                                                
+                                                if(!contains(unknown,(int)val.m_X))
                                                 {
-                                                    nonref_Tz.push_back(val);
-                                                    nonref_Tz_counts.push_back(sel_count);
-                                                    nonref_Tz_std.push_back(std);
-                                                    //nonref_Tz_P.push_back(P_th);
-                                                    nonref_Tz_sigma.push_back(sigma);
-                                                    
-                                                    unknown_obs_count[(int)val.m_X]++;
-                                                    unknown_obs_count[(int)val.m_Y]++;
-                                                    levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
-                                                    
-                                                    //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                                                    //printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
-                                                    //printf("added pair %d\n",(int)val.m_X);
-                                                    
-                                                    if(!contains(unknown,(int)val.m_X))
-                                                        unknown.push_back((int)val.m_X);
+                                                    unknown.push_back((int)val.m_X);
+                                                    pair_class[(int)val.m_X] = 3;
                                                 }
-                                                if(!check_m_Y && check_m_X && levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y) >= CA_th)
+                                            }
+                                            if(!check_m_Y && check_m_X)// && levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y) >= CA_th)
+                                            {
+                                                nonref_Tz.push_back(val);
+                                                nonref_Tz_counts.push_back(sel_count);
+                                                nonref_Tz_std.push_back(std);
+                                                //nonref_Tz_P.push_back(P_th);
+                                                nonref_Tz_sigma.push_back(sigma);
+                                                
+                                                unknown_obs_count[(int)val.m_X]++;
+                                                unknown_obs_count[(int)val.m_Y]++;
+                                                levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
+                                                
+                                                //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
+                                                printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                //printf("added pair %d\n",(int)val.m_Y);
+                                                
+                                                if(!contains(unknown,(int)val.m_Y))
                                                 {
-                                                    nonref_Tz.push_back(val);
-                                                    nonref_Tz_counts.push_back(sel_count);
-                                                    nonref_Tz_std.push_back(std);
-                                                    //nonref_Tz_P.push_back(P_th);
-                                                    nonref_Tz_sigma.push_back(sigma);
-                                                    
-                                                    unknown_obs_count[(int)val.m_X]++;
-                                                    unknown_obs_count[(int)val.m_Y]++;
-                                                    levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
-                                                    
-                                                    //P_index.push_back(pair_pos + levelinfo.pairinfo->SelectNumberOfPairs());
-                                                    //printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
-                                                    //printf("added pair %d\n",(int)val.m_Y);
-                                                    
-                                                    if(!contains(unknown,(int)val.m_Y))
-                                                        unknown.push_back((int)val.m_Y);
+                                                    unknown.push_back((int)val.m_Y);
+                                                    pair_class[(int)val.m_Y] = 3;
                                                 }
-                                                 
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if(step_by_step > 0)
+                        {
+                            for(int pair_pos = 0 ; pair_pos < possible_pairs ; pair_pos++)
+                            {
+                                if(noref_difheight[pair_pos].size() > minimum_counts)
+                                {
+                                    D3DPOINT val;
+                                    val.m_X = noref_difheight_pair[pair_pos][0].m_X;
+                                    val.m_Y = noref_difheight_pair[pair_pos][0].m_Y;
+                                    
+                                    if((pair_class[(int)val.m_X] == 3 && pair_class[(int)val.m_Y] == 3))
+                                    {
+                                        vector<float> selected_dh;
+                                       
+                                        double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                                        double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                                        double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
+                                        
+                                        double dif_sum_weight = 0;
+                                        double sum_weight = 0;
+                                        double sel_count = 0;
+                                        
+                                        for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
+                                        {
+                                            float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
+                                            if(fabs(dH) < th_H)
+                                            {
+                                                dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
+                                                sum_weight += noref_difheight_roh[pair_pos][cnt];
+                                                sel_count++;
+                                                selected_dh.push_back(dH);
+                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                            }
+                                        }
+                                        
+                                        double avg = dif_sum_weight/sum_weight;
+                                        double sum_var = 0;
+                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                                        {
+                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                        }
+                                        double std = sqrt(sum_var/(double)selected_dh.size());
+                                        
+                                        bool check_rm_pair = false;
+                                        
+                                        if(ref_remove_pair.size() > 0)
+                                        {
+                                            bool check_temp = false;
+                                            int count_temp = 0;
+                                            while(!check_temp && count_temp < ref_remove_pair.size())
+                                            {
+                                                short temp_pair = ref_remove_pair[count_temp];
+                                                
+                                                if(val.m_X == temp_pair)
+                                                    check_temp = true;
+                                                else if(val.m_Y == temp_pair)
+                                                    check_temp = true;
+                                                count_temp++;
+                                            }
+                                            check_rm_pair = check_temp;
+                                        }
+                                        
+                                                                              
+                                        if(sel_count > minimum_counts && !check_rm_pair)
+                                        {
+                                            double dif_avg = avg;
+                                            //double dif_avg = sum_dif_avg;
+                                            val.m_Z = dif_avg;
+                                            
+                                            nonref_Tz.push_back(val);
+                                            nonref_Tz_counts.push_back(sel_count);
+                                            nonref_Tz_std.push_back(std);
+                                            //nonref_Tz_P.push_back(P_th);
+                                            nonref_Tz_sigma.push_back(sigma);
+                                            
+                                            unknown_obs_count[(int)val.m_X]++;
+                                            unknown_obs_count[(int)val.m_Y]++;
+                                            levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
+                                            
+                                            printf("nonref_Tz_33 pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                            
+                                            if(!contains(unknown,(int)val.m_X))
+                                            {
+                                                unknown.push_back((int)val.m_X);
+                                            }
+                                            
+                                            if(!contains(unknown,(int)val.m_Y))
+                                            {
+                                                unknown.push_back((int)val.m_Y);
                                             }
                                         }
                                     }
@@ -10463,19 +10674,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         }
                         printf("iteration %d\tnon end cal dh\n",while_iter);
                         
-                        vector<unsigned char> added_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                         for(auto i = unknown.begin() ; i != unknown.end(); ++i)
                         {
-                            added_pair[*i] = 1;
-                            if(check_selected_ref[*i])
-                                added_pair[*i] = 0;
                             printf("unknown %d\tunknown count %d\n",*i,unknown_obs_count[*i]);
-                        }
-                        
-                        for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
-                        {
-                            if(added_pair[i])
-                                printf("added pair %d\n",i);
                         }
                         
                         int count_unknown = unknown.size();
@@ -10616,7 +10817,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 UI2DPOINT pair_ID(max_countMPs_pair,unknown[pos]);
                                 obs_pair.push_back(pair_ID);
                                 
-                                printf("ref obs W row %d\tpair ID %d\tweight %f\n",i,unknown[pos],weight);
+                                printf("ref obs W row %d\tpair ID %d\tweight %f\tclass %d\tstd %f\n",i,unknown[pos],weight,pair_class[unknown[pos]],ref_Tz_std[i]);
                             }
                             
                             for(int i = 0 ; i < nonref_Tz.size() ; i++)
@@ -10654,7 +10855,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 UI2DPOINT pair_ID(unknown[pos_X],unknown[pos_Y]);
                                 obs_pair.push_back(pair_ID);
                                 
-                                printf("nonref obs W row %d\tpair ID %d\tweight %f\tpair ID %d\tweight %f\tweight %f\n",i,unknown[pos_X],weight_factor1,unknown[pos_Y],weight_factor2,weight);
+                                printf("nonref obs W row %d\tpair ID %d\tweight %f\tpair ID %d\tweight %f\tweight %f\tclass %d\t%d\tstd %f\n",i,unknown[pos_X],weight_factor1,unknown[pos_Y],weight_factor2,weight,pair_class[unknown[pos_X]],pair_class[unknown[pos_Y]],nonref_Tz_std[i]);
                             }
                             /*
                             printf("A matrix\n");
@@ -10722,35 +10923,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 sum_V += V_matrix->val[row][0];
                                 if(fabs(V_matrix->val[row][0]) > maxV)
                                 {
-                                    /*
-                                    if(reiter_count == 0)
-                                    {
-                                        if(max_countMPs_pair != obs_pair[row].m_X)
-                                        {
-                                            //if(unknown_obs_count[(int)obs_pair[row].m_X] > 1 && unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                            {
-                                                maxV = fabs(V_matrix->val[row][0]);
-                                                maxV_pos = row;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            //if(unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                            {
-                                                maxV = fabs(V_matrix->val[row][0]);
-                                                maxV_pos = row;
-                                            }
-                                        }
-                                    }
-                                    else*/
-                                    {
-                                        //if(max_countMPs_pair != obs_pair[row].m_X) && unknown_obs_count[(int)obs_pair[row].m_X] > 1 && unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                        {
-                                            maxV = fabs(V_matrix->val[row][0]);
-                                            maxV_pos = row;
-                                        }
-                                    }
-                                    
+                                    maxV = fabs(V_matrix->val[row][0]);
+                                    maxV_pos = row;
                                 }
                                 
                                 if(fabs(V_matrix->val[row][0]) > total_maxV)
@@ -10772,85 +10946,22 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 Tz_sigma = sigma;
                             }
                             
-                            vector<double> added_pair_V(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-                            vector<short> added_pair_V_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-                            
                             for(int row = 0; row < count_observation ; row++)
                             {
                                 double V = V_matrix->val[row][0];
                                 
-                                /*
-                                if(reiter_count == 0)
+                                //outliers
+                                if( (fabs(V) > 7 || (fabs(V) > sigma*1.96 && fabs(V) > 5) ))
                                 {
-                                    if( (fabs(V) > 5 || (fabs(V) > sigma*3 && fabs(V) > 3) ) )
-                                    {
-                                        if(max_countMPs_pair != obs_pair[row].m_X)
-                                        {
-                                            //if(unknown_obs_count[(int)obs_pair[row].m_X] > 1 && unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                            {
-                                                //if(!FindExistingPair(obs_remove_pair,obs_pair[row]))
-                                                {
-                                                    obs_remove_pair.push_back(obs_pair[row]);
-                                                    obs_remove_pair_V.push_back(fabs(V));
-                                                    printf("ref outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
-                                                    check_remove_pair = true;
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            //if(unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                            {
-                                                //if(!FindExistingPair(obs_remove_pair,obs_pair[row]))
-                                                {
-                                                    obs_remove_pair.push_back(obs_pair[row]);
-                                                    obs_remove_pair_V.push_back(fabs(V));
-                                                    printf("ref outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
-                                                    check_remove_pair = true;
-                                                }
-                                            }
-                                        }
-                                    }
+                                    obs_remove_pair.push_back(obs_pair[row]);
+                                    obs_remove_pair_V.push_back(fabs(V));
+                                    //printf("outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
+                                    check_remove_pair = true;
                                 }
-                                else*/
-                               //outliers
-                                if( (fabs(V) > 5 || (fabs(V) > sigma*1.96 && fabs(V) > 4) ))// && max_countMPs_pair != obs_pair[row].m_X )
+                                else if(fabs(V) > sigma*1.645 && fabs(V) > 3)//blunders
                                 {
-                                    //if(unknown_obs_count[(int)obs_pair[row].m_X] > 1 && unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                    {
-                                        //if(!FindExistingPair(obs_remove_pair,obs_pair[row]))
-                                        {
-                                            obs_remove_pair.push_back(obs_pair[row]);
-                                            obs_remove_pair_V.push_back(fabs(V));
-                                            //printf("outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
-                                            check_remove_pair = true;
-                                        }
-                                    }
-                                }
-                                else if(fabs(V) > sigma*1.645 && fabs(V) > 2)//blunders
-                                {
-                                    //if(unknown_obs_count[(int)obs_pair[row].m_X] > 1 && unknown_obs_count[(int)obs_pair[row].m_Y] > 1)
-                                    {
-                                        //if(!FindExistingPair(obs_remove_pair,obs_pair[row]))
-                                        {
-                                            obs_remove_pair_bl.push_back(obs_pair[row]);
-                                            obs_remove_pair_V_bl.push_back(fabs(V));
-                                            //printf("blunder removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
-                                            //check_remove_pair = true;
-                                        }
-                                    }
-                                }
-                                
-                                if(added_pair[obs_pair[row].m_X])
-                                {
-                                    added_pair_V[obs_pair[row].m_X] += fabs(V);
-                                    added_pair_V_count[obs_pair[row].m_X] ++;
-                                }
-                                
-                                if(added_pair[obs_pair[row].m_Y])
-                                {
-                                    added_pair_V[obs_pair[row].m_Y] += fabs(V);
-                                    added_pair_V_count[obs_pair[row].m_Y] ++;
+                                    obs_remove_pair_bl.push_back(obs_pair[row]);
+                                    obs_remove_pair_V_bl.push_back(fabs(V));
                                 }
                             }
                             
@@ -10878,7 +10989,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 
                                 D3DPOINT result(pos,A,levelinfo.pairinfo->Tz(pos));
                                 Tz_delta.push_back(result);
-                                //printf("delta %f\t sigam unknown %f\n",A,cov);
+                                printf("index %d\t pair ID %d\tdelta %f\t pair class %d\n",c,pos,A,pair_class[pos]);
                             }
                             
                             
@@ -10968,7 +11079,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                             pair_weight[index] = 1.0;
                                       
                                         //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
-                                        //printf("outliers pair ID %d\tpair check %d\tpair weight %f\tmax_std %f\tmax_pair %d\t%d\n",index,check_ref_pair[index], pair_weight[index],max_stdvalue,max_pairweight,check_selected_ref[index]);
+                                        //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
                                     }
                                     
                                     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
@@ -10991,7 +11102,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                             pair_weight[index] = 1.0;
                                       
                                         //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
-                                        //printf("outliers pair ID %d\tpair check %d\tpair weight %f\tmax_std %f\tmax_pair %d\t%d\n",index,check_ref_pair[index], pair_weight[index],max_stdvalue,max_pairweight,check_selected_ref[index]);
+                                        //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
                                     }
                                     /*
                                     if(max_pairweight >= 0)
@@ -11094,7 +11205,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                             pair_weight[index] = 1.0;
                                       
                                         //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
-                                        //printf("blunder pair ID %d\tpair check %d\tpair weight %f\tmax_pair %d\t%d\n",index,check_ref_pair[index], pair_weight[index],max_pairweight,check_selected_ref[index]);
+                                        //printf("blunder pair ID %d\tpair weight %f\tmax_pair %d\n",index, pair_weight[index],max_pairweight);
                                     }
                                 }
                                 
@@ -11128,25 +11239,19 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         {
                             ref_remove_pair.push_back(max_pairweight);
                             call_array[max_pairweight] = 0;
-                            check_selected_ref[max_pairweight] = 0;
                             printf("removed pair %d\n",max_pairweight);
+                            pair_class[max_pairweight] = 10;
                             pre_unknown_count =  pre_unknown_count - 2;
                         }
                     }
                     
                     reiter_S0 = S0;
                     
-                     reiter_count++;
+                    reiter_count++;
                     check_while = false;
                     while_iter = 0;
                 
                 }
-                
-                for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
-                {
-                    check_selected_ref[index] = call_array[index];
-                }
-                
                 reiter_count=0;
                 check_reiter=false;
             }
@@ -16949,6 +17054,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     
                     
                     double max_weight = -9999;
+                    
                     for(int query_pair = 0 ; query_pair < end_query_pair ; query_pair++)
                     {
                         vector<vector<unsigned char>> save_pair(rlevelinfo.pairinfo->SelectNumberOfPairs()+1);
@@ -17005,7 +17111,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                 double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
                                                 double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
                                                 height_diff = fabs(multimps(q_pt_index, query_pair).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min) && save_pair[query_pair].size() < proinfo->pair_max_th && rlevelinfo.pairinfo->Tz_var(pair_number) < V_var_th)
+                                                if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))// && save_pair[query_pair].size() < proinfo->pair_max_th)// && rlevelinfo.pairinfo->Tz_var(pair_number) < V_var_th)
                                                 {
                                                     save_pair[query_pair].push_back(pair_number);
                                                     save_height[query_pair].push_back(multimps(q_pt_index, pair_number).peak_height);
@@ -17043,7 +17149,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                             double pair_peak_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).peak_roh);
                                                             double pair_ortho_roh = SignedCharToDouble_result(multimps(q_pt_index, pair_number).ortho_roh);
                                                             height_diff = fabs(multimps(q_pt_index, AWNCC_id).peak_height - multimps(q_pt_index, pair_number).peak_height);
-                                                            if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min) && save_pair[AWNCC_id].size() < proinfo->pair_max_th && rlevelinfo.pairinfo->Tz_var(pair_number) < V_var_th)
+                                                            if(height_diff < height_interval && (pair_peak_roh > peak_roh_min && pair_ortho_roh > ortho_roh_min))// && save_pair[AWNCC_id].size() < proinfo->pair_max_th)// && rlevelinfo.pairinfo->Tz_var(pair_number) < V_var_th)
                                                             {
                                                                 save_pair[AWNCC_id].push_back(pair_number);
                                                                 count_pair++;
