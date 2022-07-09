@@ -17107,14 +17107,12 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         {
                                             var_Hdiff += (save_height[query_pair][count] - multimps(q_pt_index, query_pair).peak_height)*(save_height[query_pair][count] - multimps(q_pt_index, query_pair).peak_height);
                                         }
-                                        double std_Hdiff = (var_Hdiff/save_pair[query_pair].size());
-                                        if(std_Hdiff == 0)
-                                            std_Hdiff = 1.0;
+                                        double std_Hdiff = (int)(sqrt(var_Hdiff/save_pair[query_pair].size())/10.0) + 1;
                                         
                                         double WIDW, WBH;
                                         
-                                        total_weight = weight_idw;//*(1.0/std_Hdiff);
-                                        //total_weight = 1.0;
+                                        //total_weight = (exp(1.0/std_Hdiff) - 1.0)*100;
+                                        total_weight = 1.0;
                                         
                                         weight_height[query_pair] = wheight_idw/weight_idw;
                                         //weight_height[query_pair] = wheight_idw/weight_idw;
@@ -17154,7 +17152,7 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                     {
                         final_height = sum_weight_height/sum_weight;
                         update_height[pt_index] = final_height;
-                        update_weight[pt_index] = sum_weight;
+                        update_weight[pt_index] = 1.0;
                     }
                     
                     if(Pyramid_step > NR_level )
