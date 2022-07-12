@@ -14,7 +14,7 @@
 #include "Typedefine.hpp"
 #include "SubFunctions.hpp"
 
-void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool frame);
+bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool frame);
 
 void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera);
 

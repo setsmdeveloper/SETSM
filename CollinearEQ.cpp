@@ -7,14 +7,15 @@
 
 #include "CollinearEQ.hpp"
 
-void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool frame)
+bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool frame)
 {
+    bool check_solution = false;
     int numofpts = IPs.size();
     
     if(frame)
     {
-        EO ori_eo = eo;
-        CAMERA_INFO ori_camera = camera;
+        EO p_eo = eo;
+        CAMERA_INFO p_camera = camera;
         /*
         GetInitialPCfromDLT(IPs, GCPs, eo, camera);
         printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
@@ -24,12 +25,50 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.p1,camera.p2,
                camera.a1,camera.a2);
         */
-        bool check_conver = CalibrationBundle1(IPs, GCPs, eo, camera);
+        bool check_conver = CalibrationBundle1(IPs, GCPs, p_eo, p_camera);
         if(!check_conver)
         {
-            bool check_conver2 = CalibrationBundlewithoutFL(IPs, GCPs, ori_eo, ori_camera);
-            eo = ori_eo;
-            camera = ori_camera;
+            EO pp_eo = eo;
+            CAMERA_INFO pp_camera;
+            pp_camera.m_focalLength = camera.m_focalLength;
+            pp_camera.m_ppx = 0;
+            pp_camera.m_ppy = 0;
+            pp_camera.k1 = 0;
+            pp_camera.k2 = 0;
+            pp_camera.k3 = 0;
+            pp_camera.p1 = 0;
+            pp_camera.p2 = 0;
+            pp_camera.a1 = 0;
+            pp_camera.a2 = 0;
+            
+            bool check_conver2 = CalibrationBundlewithoutFL(IPs, GCPs, pp_eo, pp_camera);
+            
+            if(!check_conver2)
+            {
+                eo.m_Wl = 0;
+                eo.m_Pl = 0;
+                eo.m_Kl = 0;
+                
+                eo.m_Xl = 0;
+                eo.m_Yl = 0;
+                eo.m_Zl = 0;
+                
+                printf("No solution\n");
+                check_solution = false;
+            }
+            else
+            {
+                eo = pp_eo;
+                camera = pp_camera;
+                check_solution = true;
+            }
+            
+        }
+        else
+        {
+            eo = p_eo;
+            camera = p_camera;
+            check_solution = true;
         }
         printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
         printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
@@ -96,12 +135,16 @@ void CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.k1,camera.k2,camera.k3,
                camera.p1,camera.p2,
                camera.a1,camera.a2);
+        
+        check_solution = true;
     }
     //exit(1);
     // */
     eo.m_Wl *= RadToDeg;
     eo.m_Pl *= RadToDeg;
     eo.m_Kl *= RadToDeg;
+    
+    return check_solution;
 }
 
 void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
@@ -1132,6 +1175,7 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
+    printf("Convergence %d\n",check_conver);
     
     return check_conver;
 }
@@ -1309,6 +1353,7 @@ bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
+    printf("Convergence %d\n",check_conver);
     return check_conver;
 }
 
