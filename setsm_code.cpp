@@ -10816,7 +10816,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 double V = V_matrix->val[row][0];
                                 
                                 //outliers
-                                if( (fabs(V) > 10 || (fabs(V) > sigma*1.96 && fabs(V) > 8) ))
+                                if( (fabs(V) > 6 || (fabs(V) > sigma*1.96 && fabs(V) > 4) ))
                                 {
                                     obs_remove_pair.push_back(obs_pair[row]);
                                     obs_remove_pair_V.push_back(fabs(V));
@@ -17125,8 +17125,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         
                                         double WIDW, WBH;
                                         
-                                        total_weight = 0.5*((exp(1.0/std_Hdiff) - 1.0)*100) + 0.5*weight_idw;
-                                        //total_weight = 1.0;
+                                        //total_weight = 0.5*((exp(1.0/std_Hdiff) - 1.0)*100) + 0.5*weight_idw;
+                                        total_weight = weight_idw;
                                         
                                         weight_height[query_pair] = wheight_idw/weight_idw;
                                         //weight_height[query_pair] = wheight_idw/weight_idw;
