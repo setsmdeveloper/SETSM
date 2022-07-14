@@ -80,7 +80,6 @@ set (SRCS
     grid.cpp
     grid_triangulation.cpp
     edge_list.cpp
-    GridVoxel.cpp
     log.cpp
     setsm_code.cpp
 )
