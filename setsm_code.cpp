@@ -5672,37 +5672,85 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     }
     */
     
-    float last = quickselect(actual_pair_CA,actual_pair_CA.size(),actual_pair_CA.size());
     
-    for(int j = 0 ; j < actual_pair_save.size() ; j++)
-    {
-        actual_pair_save[j] = actual_pair_CA[j].pair_ID;
-        
-        //actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
-        //printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
-    }
-    /*
-    for(int j = 0 ; j < actual_pair_save.size() ; j++)
-    {
-        printf("sorted final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_CA[j].pair_ID,plevelinfo.pairinfo->ConvergenceAngle(actual_pair_CA[j].pair_ID),plevelinfo.pairinfo->SigmaZ(actual_pair_CA[j].pair_ID),plevelinfo.pairinfo->Azimuth(actual_pair_CA[j].pair_ID));
-    }
-    */
     //exit(1);
     
     printf("before coverage\n");
+    
     vector<short> actual_pair_save_cov;
-    for(int count = 0 ; count < actual_pair_save.size() ; count++)
+    
+    if(actual_pair_save.size() > 250)
     {
-        int pair_number = actual_pair_save[count];
-        double coverage_P = (double)pair_coverage[pair_number]/(double)(*plevelinfo.Grid_length)*100.0;
-        if(coverage_P > 0)
-            actual_pair_save_cov.push_back(pair_number);
+        vector<PairCA> actual_pair_CA_re;
+        vector<unsigned char> actual_pair_save_ch(actual_pair_save.size(),0);
+        
+        bool check_ca = 0;
+        int ca_th = 10;
+        int total_count = 0;
+        while(!check_ca && ca_th >= 3)
+        {
+            bool check_coverage = 0;
+            int ca_cov = 50;
+            while(!check_coverage && ca_cov >= 20)
+            {
+                int count = 0;
+                while(count < actual_pair_save.size() && total_count < 250)
+                {
+                    int pair_number = actual_pair_save[count];
+                    double coverage_P = (double)pair_coverage[pair_number]/(double)(*plevelinfo.Grid_length)*100.0;
+                    
+                    printf("query pair_number %d\tcoverage_P %f\tCA %f\n",pair_number,coverage_P,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                    if(coverage_P > ca_cov && plevelinfo.pairinfo->ConvergenceAngle(pair_number) > ca_th)
+                    {
+                        if(!actual_pair_save_ch[count])
+                        {
+                            //actual_pair_save_cov.push_back(pair_number);
+                            actual_pair_save_ch[count] = 1;
+                            total_count++;
+                            
+                            PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->MatchingP(pair_number));
+                            actual_pair_CA_re.push_back(temp_pca);
+                            
+                            printf("total_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\n",total_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number);
+                        }
+                    }
+                    
+                    if(total_count > 250)
+                    {
+                        check_ca = true;
+                        check_coverage = true;
+                    }
+                    count++;
+                }
+                ca_cov = ca_cov - 5;
+            }
+            ca_th = ca_th - 1;
+        }
+        
+        float last = quickselect(actual_pair_CA_re,actual_pair_CA_re.size(),actual_pair_CA_re.size());
+        
+        for(int j = 0 ; j < actual_pair_CA_re.size() ; j++)
+        {
+            actual_pair_save_cov.push_back(actual_pair_CA_re[j].pair_ID);
+            //actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
+            //printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
+        }
+    }
+    else
+    {
+        float last = quickselect(actual_pair_CA,actual_pair_CA.size(),actual_pair_CA.size());
+        
+        for(int j = 0 ; j < actual_pair_CA.size() ; j++)
+        {
+            actual_pair_save_cov.push_back(actual_pair_CA[j].pair_ID);
+            //actual_pair_save[j] = actual_pair_CA[actual_pair_save.size() - 1 - j].pair_ID;
+            //printf("final pair num %d\tpair ID %d\tCA %f\tsigmaZ %f\tAzimuth %f\n",actual_pair_save.size(),actual_pair_save[j],plevelinfo.pairinfo->ConvergenceAngle(actual_pair_save[j]),plevelinfo.pairinfo->SigmaZ(actual_pair_save[j]),plevelinfo.pairinfo->Azimuth(actual_pair_save[j]));
+        }
     }
     
     short result_pair_size = actual_pair_save_cov.size();
-    if(result_pair_size > 200)
-        result_pair_size = 200;
-    printf("original selected pair count %d\tmodified count %d\n",actual_pair_save.size(),result_pair_size);
+    
+    printf("original selected pair count %d\tmodified count %d\n",actual_pair_CA.size(),result_pair_size);
     
     if(result_pair_size > 0)
     {
@@ -11095,8 +11143,36 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         {
             //estimate Tz based on the largest matching point pair
             int count_mult = PairArray[pt_index].size();
-            if(count_mult >= 2)
+            if(count_mult >= 3)
             {
+                vector<double> saved_H_initial;
+                for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                {
+                    int t_pair = PairArray[pt_index][first];
+                    if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1)
+                    {
+                        float Height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        saved_H_initial.push_back(Height);
+                    }
+                }
+                
+                if(saved_H_initial.size() > 2)
+                {
+                    double med_H = quickselect(saved_H_initial,saved_H_initial.size(),(int)saved_H_initial.size()/2.0);
+                    
+                    for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                    {
+                        int t_pair = PairArray[pt_index][first];
+                        if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1 )
+                        {
+                            float dH = med_H - (multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair));
+                            if(fabs(dH) > 100)
+                            {
+                                multimps(pt_index, t_pair).check_matched = false;
+                            }
+                        }
+                    }
+                }
                 /*
                 for(int first = 0 ; first < PairArray[pt_index].size() - 1 ; first++)
                 {
@@ -11119,7 +11195,6 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     }
                 }
                 */
-                
                 vector<short> saved_pair;
                 vector<float> saved_H;
                 double sum_H = 0;
@@ -11154,7 +11229,11 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     for(int i = 0 ; i < saved_H.size() ; i++)
                     {
                         double min_H = H_avg - sigma*(1.65 + sigma_change);
+                        if(min_H < H_avg - 100)
+                            min_H = H_avg - 100;
                         double max_H = H_avg + sigma*(1.65 + sigma_change);
+                        if(max_H > H_avg + 100)
+                            max_H = H_avg + 100;
                         if(saved_H[i] >= min_H && saved_H[i] <= max_H)
                             sel_pairs.push_back(saved_pair[i]);
                     }
