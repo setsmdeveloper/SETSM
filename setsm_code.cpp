@@ -5246,6 +5246,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     //printf("ID %d\tmax_sigma_Z %f\t%f\n",pairs[pair_number],max_sigma_Z,sigma_Z);
                 }
                 grid_pair.grid_sigmaZ[iter_count] = (unsigned char)(sqrt(sum_MPP_single_pairs)/pairs.size());
+                
+                
                 grid_pair.grid_max_sigmaZ[iter_count] = (unsigned char)(max_sigma_Z+1);
                 
                 //printf("sigmaZ %d\t max_sigmaZ %d\n",grid_pair.grid_sigmaZ[iter_count], grid_pair.grid_max_sigmaZ[iter_count]);
@@ -5567,6 +5569,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     //printf("ID %d\tmax_sigma_Z %f\t%f\n",pairs[pair_number],max_sigma_Z,sigma_Z);
                 }
                 grid_pair.grid_sigmaZ[iter_count] = (unsigned char)(sqrt(sum_MPP_single_pairs)/pairs.size());
+                if(grid_pair.grid_sigmaZ[iter_count] < 30)
+                    grid_pair.grid_sigmaZ[iter_count] = 30;
+                
                 grid_pair.grid_max_sigmaZ[iter_count] = (unsigned char)(max_sigma_Z+1);
                 
                 if(grid_pair.grid_max_sigmaZ[iter_count] > 70 - (3-(*plevelinfo.Pyramid_step))*10)
@@ -8147,6 +8152,9 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                 
                                                 double PSigmaZ = sqrt(sum_SigmaZ)/PairArray[pt_index].size();
                                                 Grid_pair.grid_sigmaZ[pt_index] = (unsigned char)(PSigmaZ);
+                                                if(Grid_pair.grid_sigmaZ[pt_index] < 30)
+                                                    Grid_pair.grid_sigmaZ[pt_index] = 30;
+                                                
                                                 Grid_pair.grid_max_sigmaZ[pt_index] = (unsigned char)(max_sigmaZ+1);
                                                 Grid_pair.grid_mean_sigmaZ[pt_index] = (unsigned char)((sum_S/PairArray[pt_index].size()) + 1);
                                                 
@@ -11081,7 +11089,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     levelinfo.pairinfo->SetTz_var(max_countMPs_pair,1.0);
    
     
-    if(level == 0 && (*levelinfo.iteration) == 3)
+    if(level == 0/* && (*levelinfo.iteration) == 3*/)
     {
         for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
         {
@@ -11090,25 +11098,6 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             if(count_mult >= 2)
             {
                 /*
-                if(multimps(pt_index,max_countMPs_pair).check_matched)
-                {
-                    for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
-                    {
-                        int t_pair = PairArray[pt_index][first];
-                        
-                        if(t_pair != max_countMPs_pair && call_array[t_pair] == 1)
-                        {
-                            if(multimps(pt_index, t_pair).check_matched)
-                            {
-                                F2DPOINT temp;
-                                float dH = multimps(pt_index,max_countMPs_pair).peak_height - (multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair));
-                                if(dH > 30)
-                                    multimps(pt_index, t_pair).check_matched = false;
-                            }
-                        }
-                    }
-                }
-                */
                 for(int first = 0 ; first < PairArray[pt_index].size() - 1 ; first++)
                 {
                     for(int second = first + 1 ; second < PairArray[pt_index].size() ; second++)
@@ -11127,6 +11116,60 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 }
                             }
                         }
+                    }
+                }
+                */
+                
+                vector<short> saved_pair;
+                vector<float> saved_H;
+                double sum_H = 0;
+                for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                {
+                    int t_pair = PairArray[pt_index][first];
+                    if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1)
+                    {
+                        float Height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        saved_H.push_back(Height);
+                        saved_pair.push_back(t_pair);
+                        sum_H += Height;
+                    }
+                    
+                    multimps(pt_index, t_pair).check_matched = false;
+                }
+                
+                double H_avg = sum_H / (double)saved_H.size();
+                double sum_var = 0;
+                for(int i = 0 ; i < saved_H.size() ; i++)
+                    sum_var += (saved_H[i] - H_avg)*(saved_H[i] - H_avg);
+                
+                double sigma = sqrt(sum_var/saved_H.size());
+                
+                bool check = false;
+                int count = 0;
+                double sigma_change = 0.00;
+                vector<short> sel_pairs;
+                while(!check && sigma_change < 0.40)
+                {
+                    sel_pairs.clear();
+                    for(int i = 0 ; i < saved_H.size() ; i++)
+                    {
+                        double min_H = H_avg - sigma*(1.65 + sigma_change);
+                        double max_H = H_avg + sigma*(1.65 + sigma_change);
+                        if(saved_H[i] >= min_H && saved_H[i] <= max_H)
+                            sel_pairs.push_back(saved_pair[i]);
+                    }
+                    
+                    if(sel_pairs.size() > proinfo->pair_max_th)
+                        check = true;
+                    
+                    sigma_change += 0.05;
+                }
+                
+                if(sel_pairs.size() > 0)
+                {
+                    for(int i = 0 ; i < sel_pairs.size() ; i++)
+                    {
+                        multimps(pt_index, sel_pairs[i]).check_matched = true;
                     }
                 }
             }
@@ -16653,6 +16696,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                 //height_interval = rlevelinfo.MPP*pwrtwo(Pyramid_step)*5.0; //aeiral
         }
         
+        //if(height_interval < 40)
+        //    height_interval = 40;
         //printf("index %d\theight_inteval for AWNCC_MPs %f\n",iter_count, height_interval);
         
         double peak_roh_min = 0.0;
@@ -17125,8 +17170,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                         
                                         double WIDW, WBH;
                                         
-                                        //total_weight = 0.5*((exp(1.0/std_Hdiff) - 1.0)*100) + 0.5*weight_idw;
-                                        total_weight = weight_idw;
+                                        total_weight = 0.5*((exp(1.0/std_Hdiff) - 1.0)*100) + 0.5*weight_idw;
+                                        //total_weight = weight_idw;
                                         
                                         weight_height[query_pair] = wheight_idw/weight_idw;
                                         //weight_height[query_pair] = wheight_idw/weight_idw;
