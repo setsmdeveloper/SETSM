@@ -5178,7 +5178,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param, vector<vector<short>> &PairCheck)
 {
-    int maximum_pair_count = 150;
+    int maximum_pair_count = 100;
     
     int py_level = (*plevelinfo.Pyramid_step);
     
@@ -5267,7 +5267,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 count_effectivepair++;
         }
         
-        if(py_level <= 2 && count_effectivepair > maximum_pair_count)
+        if(py_level <= 1 && count_effectivepair > maximum_pair_count)
         {
             bool check_stop = false;
             int count_removed = 0;
@@ -5679,7 +5679,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     vector<short> actual_pair_save_cov;
     
-    if(actual_pair_save.size() > 250)
+    if(actual_pair_save.size() > 200)
     {
         vector<PairCA> actual_pair_CA_re;
         vector<unsigned char> actual_pair_save_ch(actual_pair_save.size(),0);
@@ -5694,12 +5694,12 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             while(!check_coverage && ca_cov >= 20)
             {
                 int count = 0;
-                while(count < actual_pair_save.size() && total_count < 250)
+                while(count < actual_pair_save.size() && total_count < 200)
                 {
                     int pair_number = actual_pair_save[count];
                     double coverage_P = (double)pair_coverage[pair_number]/(double)(*plevelinfo.Grid_length)*100.0;
                     
-                    printf("query pair_number %d\tcoverage_P %f\tCA %f\n",pair_number,coverage_P,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                    //printf("query pair_number %d\tcoverage_P %f\tCA %f\n",pair_number,coverage_P,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
                     if(coverage_P > ca_cov && plevelinfo.pairinfo->ConvergenceAngle(pair_number) > ca_th)
                     {
                         if(!actual_pair_save_ch[count])
@@ -5715,7 +5715,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         }
                     }
                     
-                    if(total_count > 250)
+                    if(total_count > 200)
                     {
                         check_ca = true;
                         check_coverage = true;
