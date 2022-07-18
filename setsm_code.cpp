@@ -5490,7 +5490,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             int selected_pairs = 0 ;
             for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
             {
-                if(plevelinfo.pairinfo->cal(pair_number) > 0)
+                if(plevelinfo.pairinfo->cal(pair_number) > 0 && pair_number < MaxNCC)
                 {
                     if(plevelinfo.pairinfo->ConvergenceAngle(pair_number) >= proinfo->CA_th && plevelinfo.pairinfo->ConvergenceAngle(pair_number) < proinfo->CA_max_th && plevelinfo.pairinfo->Azimuth(pair_number) < proinfo->pair_Azimuth_th && plevelinfo.pairinfo->DiffTime(pair_number) <= proinfo->pair_time_dif)// && plevelinfo.pairinfo->AE(pair_number) < 5)
                     {
