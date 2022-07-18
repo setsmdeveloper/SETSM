@@ -5178,7 +5178,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param, vector<vector<short>> &PairCheck)
 {
-    int maximum_pair_count = 70;
+    int maximum_pair_count = 100;
     
     int py_level = (*plevelinfo.Pyramid_step);
     
@@ -5190,6 +5190,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     vector<PairCA> actual_pair_CA;
     int input_paircount = plevelinfo.pairinfo->NumberOfPairs();
     long* pair_coverage = (long*)calloc(sizeof(long),input_paircount);
+    
+    vector<vector<short>> coverage_map((*plevelinfo.Grid_length));
     
     if(proinfo->sensor_provider != PT)
     {
@@ -5535,6 +5537,8 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                 
                                 pairs.push_back(pair_number);
                                 
+                                coverage_map[iter_count].push_back(pair_number);
+                                
                                 if(!actual_pair_save_check[pair_number])
                                 {
                                     actual_pair_save.push_back(pair_number);
@@ -5675,14 +5679,90 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     //exit(1);
     
-    printf("before coverage\n");
+    printf("before coverage selected pair %d\n",actual_pair_save.size());
     
     vector<short> actual_pair_save_cov;
     
-    int th_pair_count = 100;
+    int th_pair_count = 200;
     
     if(actual_pair_save.size() > th_pair_count)
     {
+        vector<PairCA> actual_pair_CA_re;
+        vector<unsigned char> actual_pair_save_ch(plevelinfo.pairinfo->NumberOfPairs(),0);
+        
+        int total_count = 0;
+        
+        int grid_interval = ceil(plevelinfo.Size_Grid2D->width/10.0);
+        
+        for(int grid_row = 0 ; grid_row < 10 ; grid_row ++)
+        {
+            for(int grid_col = 0 ; grid_col < 10 ; grid_col ++)
+            {
+                int c_row = grid_row*grid_interval + ceil(grid_interval/2.0);
+                int c_col = grid_col*grid_interval + ceil(grid_interval/2.0);
+                int pt_pos = c_row*plevelinfo.Size_Grid2D->width + c_col;
+                
+                if(pt_pos < (*plevelinfo.Grid_length) && c_row < plevelinfo.Size_Grid2D->height && c_col < plevelinfo.Size_Grid2D->width)
+                {
+                    if(coverage_map[pt_pos].size() > 0)
+                    {
+                        bool check_ca = 0;
+                        int ca_th = 10;
+                            
+                        while(!check_ca && ca_th >= 3)
+                        {
+                            bool check_coverage = 0;
+                            int ca_cov = 50;
+                            while(!check_coverage && ca_cov >= 5)
+                            {
+                                int grid_count = 0;
+                                int t_count = 0;
+                                
+                                while(grid_count <= 30 && t_count < coverage_map[pt_pos].size())
+                                {
+                                    int pair_number = coverage_map[pt_pos][t_count];
+                                    double coverage_P = (double)pair_coverage[pair_number]/(double)(*plevelinfo.Grid_length)*100.0;
+                                    
+                                    //printf("query pair_number %d\tcoverage_P %f\tCA %f\n",pair_number,coverage_P,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                                    if(coverage_P > ca_cov && plevelinfo.pairinfo->ConvergenceAngle(pair_number) > ca_th)
+                                    {
+                                        grid_count++;
+                                        
+                                        //printf("grid pos %d\t%d\tgrid_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\ttotal_pairs %d \n",c_row,c_col,grid_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number,coverage_map[pt_pos].size());
+                                        
+                                        if(!actual_pair_save_ch[pair_number])
+                                        {
+                                            //actual_pair_save_cov.push_back(pair_number);
+                                            actual_pair_save_ch[pair_number] = 1;
+                                            
+                                            total_count++;
+                                            
+                                            PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->MatchingP(pair_number));
+                                            actual_pair_CA_re.push_back(temp_pca);
+                                            
+                                            printf("grid pos %d\t%d\ttotal_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\n",grid_row,grid_col,total_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number);
+                                        }
+                                    }
+                                    
+                                    if(grid_count > 30)
+                                    {
+                                        check_ca = true;
+                                        check_coverage = true;
+                                    }
+                                    
+                                    t_count++;
+                                }
+                                ca_cov = ca_cov - 5;
+                            }
+                            ca_th = ca_th - 1;
+                        }
+                    }
+                }
+                
+            }
+        }
+        
+        /*
         vector<PairCA> actual_pair_CA_re;
         vector<unsigned char> actual_pair_save_ch(actual_pair_save.size(),0);
         
@@ -5728,7 +5808,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             }
             ca_th = ca_th - 1;
         }
-        
+        */
         float last = quickselect(actual_pair_CA_re,actual_pair_CA_re.size(),actual_pair_CA_re.size());
         
         for(int j = 0 ; j < actual_pair_CA_re.size() ; j++)
