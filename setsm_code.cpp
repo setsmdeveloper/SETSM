@@ -5178,7 +5178,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param, vector<vector<short>> &PairCheck)
 {
-    int maximum_pair_count = 100;
+    int maximum_pair_count = 80;
     
     int py_level = (*plevelinfo.Pyramid_step);
     
@@ -5692,11 +5692,11 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         
         int total_count = 0;
         
-        int grid_interval = ceil(plevelinfo.Size_Grid2D->width/10.0);
+        int grid_interval = ceil(plevelinfo.Size_Grid2D->width/20.0);
         
-        for(int grid_row = 0 ; grid_row < 10 ; grid_row ++)
+        for(int grid_row = 0 ; grid_row < 20 ; grid_row ++)
         {
-            for(int grid_col = 0 ; grid_col < 10 ; grid_col ++)
+            for(int grid_col = 0 ; grid_col < 20 ; grid_col ++)
             {
                 int c_row = grid_row*grid_interval + ceil(grid_interval/2.0);
                 int c_col = grid_col*grid_interval + ceil(grid_interval/2.0);
