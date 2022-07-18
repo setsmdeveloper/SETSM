@@ -5925,7 +5925,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             
             IDtable[pair_number] = count;
             
-            /*
+            
             printf("pre pair number %d\tnext pair number %d\n",pair_number,count);
             
             printf("pair id: %d imgs=(%d, %d) Center Dist=%f CA=%f BHratio=%f SigmaZ=%f\n", pair_number,

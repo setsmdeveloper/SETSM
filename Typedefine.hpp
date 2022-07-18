@@ -32,7 +32,7 @@
 #define UMToMM 0.001
 #define MMToUM 1000
 #define MaxImages 1000
-#define MaxNCC 10000
+#define MaxNCC 20000
 #define Nodata -9999
 #define Roh_min -30.0
 #define Roh_max 30.0
@@ -431,7 +431,7 @@ private:
     
 //    float height_counts;
 }UGRID;
-
+/*
 typedef struct tagVoxelinfo
 {
     //float ANCC;
@@ -440,7 +440,7 @@ typedef struct tagVoxelinfo
     short INCC[MaxNCC];
     //float *INCC_multi;
 }VOXEL;
-
+*/
 typedef struct LSFinfo{
     //unsigned char lsf_std;
     unsigned char lsf_kernel;
