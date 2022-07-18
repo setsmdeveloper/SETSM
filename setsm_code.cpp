@@ -5178,7 +5178,7 @@ void SetPairs(ProInfo *proinfo, CPairInfo &pairinfo, ImageInfo *image_info, cons
 
 void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, GridPairs &grid_pair, CPairInfo &pairinfo, const ImageInfo *image_info, const double *ori_minmaxHeight, TransParam param, vector<vector<short>> &PairCheck)
 {
-    int maximum_pair_count = 100;
+    int maximum_pair_count = 70;
     
     int py_level = (*plevelinfo.Pyramid_step);
     
@@ -5679,7 +5679,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
     
     vector<short> actual_pair_save_cov;
     
-    int th_pair_count = 200;
+    int th_pair_count = 100;
     
     if(actual_pair_save.size() > th_pair_count)
     {
