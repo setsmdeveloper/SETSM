@@ -5267,7 +5267,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 count_effectivepair++;
         }
         
-        if(py_level <= 1 && count_effectivepair > maximum_pair_count)
+        if(py_level <= 2 && count_effectivepair > maximum_pair_count)
         {
             bool check_stop = false;
             int count_removed = 0;
