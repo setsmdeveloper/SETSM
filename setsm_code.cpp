@@ -5690,19 +5690,63 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
         vector<PairCA> actual_pair_CA_re;
         vector<unsigned char> actual_pair_save_ch(plevelinfo.pairinfo->NumberOfPairs(),0);
         
+        
+        bool check_ca = 0;
+        int ca_th = 10;
         int total_count = 0;
-        
-        int grid_interval = ceil(plevelinfo.Size_Grid2D->width/20.0);
-        
-        for(int grid_row = 0 ; grid_row < 20 ; grid_row ++)
+        while(!check_ca && ca_th >= 3)
         {
-            for(int grid_col = 0 ; grid_col < 20 ; grid_col ++)
+            bool check_coverage = 0;
+            int ca_cov = 80;
+            while(!check_coverage && ca_cov >= 50)
             {
-                int c_row = grid_row*grid_interval + ceil(grid_interval/2.0);
-                int c_col = grid_col*grid_interval + ceil(grid_interval/2.0);
-                int pt_pos = c_row*plevelinfo.Size_Grid2D->width + c_col;
+                int count = 0;
+                while(count < actual_pair_save.size() && total_count < th_pair_count)
+                {
+                    int pair_number = actual_pair_save[count];
+                    double coverage_P = (double)pair_coverage[pair_number]/(double)(*plevelinfo.Grid_length)*100.0;
+                    
+                    //printf("query pair_number %d\tcoverage_P %f\tCA %f\n",pair_number,coverage_P,plevelinfo.pairinfo->ConvergenceAngle(pair_number));
+                    if(coverage_P > ca_cov && plevelinfo.pairinfo->ConvergenceAngle(pair_number) > ca_th)
+                    {
+                        if(!actual_pair_save_ch[pair_number])
+                        {
+                            //actual_pair_save_cov.push_back(pair_number);
+                            actual_pair_save_ch[pair_number] = 1;
+                            total_count++;
+                            
+                            PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->MatchingP(pair_number));
+                            actual_pair_CA_re.push_back(temp_pca);
+                            
+                            printf("more thatn 50 coverage total_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\n",total_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number);
+                        }
+                    }
+                    
+                    if(total_count > th_pair_count)
+                    {
+                        check_ca = true;
+                        check_coverage = true;
+                    }
+                    count++;
+                }
+                ca_cov = ca_cov - 5;
+            }
+            ca_th = ca_th - 1;
+        }
+        
+        
+        
+        //int grid_interval = ceil(plevelinfo.Size_Grid2D->width/20.0);
+        
+        for(int pt_pos = 0 ; pt_pos < (*plevelinfo.Grid_length) ; pt_pos ++)
+        {
+            //for(int grid_col = 0 ; grid_col < 20 ; grid_col ++)
+            {
+                //int c_row = grid_row*grid_interval + ceil(grid_interval/2.0);
+                //int c_col = grid_col*grid_interval + ceil(grid_interval/2.0);
+                //int pt_pos = c_row*plevelinfo.Size_Grid2D->width + c_col;
                 
-                if(pt_pos < (*plevelinfo.Grid_length) && c_row < plevelinfo.Size_Grid2D->height && c_col < plevelinfo.Size_Grid2D->width)
+                //if(pt_pos < (*plevelinfo.Grid_length) && c_row < plevelinfo.Size_Grid2D->height && c_col < plevelinfo.Size_Grid2D->width)
                 {
                     if(coverage_map[pt_pos].size() > 0)
                     {
@@ -5740,7 +5784,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                             PairCA temp_pca(pair_number,plevelinfo.pairinfo->ConvergenceAngle(pair_number),plevelinfo.pairinfo->MatchingP(pair_number));
                                             actual_pair_CA_re.push_back(temp_pca);
                                             
-                                            printf("grid pos %d\t%d\ttotal_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\n",grid_row,grid_col,total_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number);
+                                            printf("grid pos %d\ttotal_count %d\tselected pair CA %f\tCoverage %f\tpair number %d\n",pt_pos,total_count,plevelinfo.pairinfo->ConvergenceAngle(pair_number),coverage_P,pair_number);
                                         }
                                     }
                                     
