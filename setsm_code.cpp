@@ -5275,7 +5275,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
             bool check_stop = false;
             int count_removed = 0;
             
-            //while(!check_stop)
+            while(!check_stop)
             {
                 vector<short> actual_pair_save_t;
                 vector<unsigned char> actual_pair_save_check_t(plevelinfo.pairinfo->NumberOfPairs(),0);
@@ -5283,14 +5283,14 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                 vector<short> actual_pair_save_total;
                 vector<unsigned char> actual_pair_save_check_total(plevelinfo.pairinfo->NumberOfPairs(),0);
             
-                //vector<short> underpair;
+                vector<short> underpair;
                 vector<unsigned char> underpair_check(plevelinfo.pairinfo->NumberOfPairs(),0);
-                /*
+                
                 vector<vector<unsigned short>> Gridpair_count((*plevelinfo.Grid_length));
                 vector<vector<unsigned char>> Gridpair_order((*plevelinfo.Grid_length));
                 vector<vector<unsigned char>> Gridpair_daydiff((*plevelinfo.Grid_length));
                 vector<vector<float>> Gridpair_CA((*plevelinfo.Grid_length));
-                */
+                
                 for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
                 {
                     //printf("actual_pair %d/%d\n",iter_count,(*plevelinfo.Grid_length) );
@@ -5366,8 +5366,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     {
                         if(pairs.size() > 15)
                         {
-                            /*
-                            for(int i = 0 ; i < pairs.size() ; i++)
+                            for(int i = 15 ; i < pairs.size() ; i++)
                             {
                                 int pairnumber = pairs[i];
                                 
@@ -5382,16 +5381,15 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                 Gridpair_daydiff[pt_index].push_back(plevelinfo.pairinfo->DiffDay(pairnumber));
                                 Gridpair_CA[pt_index].push_back(plevelinfo.pairinfo->ConvergenceAngle(pairnumber));
                             }
-                             */
                         }
                         else
                         {
                             for(int i = 0 ; i < pairs.size() ; i++)
                             {
-                                //if(!underpair_check[pairs[i]])
+                                if(!underpair_check[pairs[i]])
                                 {
                                     underpair_check[pairs[i]] = 1;
-                                    //underpair.push_back(pairs[i]);
+                                    underpair.push_back(pairs[i]);
                                 }
                             }
                         }
@@ -5402,6 +5400,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     vector<short>().swap(pairs);
                 }
                 
+                printf("count_removed %d\n",count_removed);
+                
+                /*
                 int underpair_count = 0;
                 
                 for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
@@ -5423,10 +5424,9 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                             printf("reference ID %d\n",pair_number);
                     }
                 }
-                
-                //if(actual_pair_save_total.size() > maximum_pair_count)
+                */
+                if(actual_pair_save_total.size() > maximum_pair_count)
                 {
-                    /*
                     vector<double> CostofPair(plevelinfo.pairinfo->NumberOfPairs(),0);
                     for(long int iter_count = 0 ; iter_count < (*plevelinfo.Grid_length) ; iter_count++)
                     {
@@ -5440,7 +5440,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                                     double daydiff = ceil((double)Gridpair_daydiff[iter_count][i]/5.0);
                                     if(daydiff == 0)
                                         daydiff = 1;
-                                    double order = Gridpair_order[iter_count][i] - proinfo->pair_max_th + 1;
+                                    double order = Gridpair_order[iter_count][i] - 15 + 1;
                                     if(daydiff == 0 || order == 0)
                                     {
                                         printf("id %d\tinf %f\t%f\n",pairnumber,daydiff, (double)(Gridpair_order[iter_count][i]));
@@ -5460,6 +5460,7 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                     {
                         printf("underpairs index %d\tID %d\n",i,underpair[i]);
                     }
+                    
                     vector<PairCA> OutPairs;
                     for(int pair_number = 0 ; pair_number < plevelinfo.pairinfo->NumberOfPairs() ; pair_number++)
                     {
@@ -5484,22 +5485,22 @@ void actual_pair(const ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHe
                         
                         int pair_number_t = OutPairs.size() - 1;
                         int pair_ID = OutPairs[pair_number_t].pair_ID;
-                        if(actual_pair_save_check_t[pair_ID])
+                        if(actual_pair_save_check_t[pair_ID] && plevelinfo.pairinfo->MaxCountMPs_pair() != pair_ID)
                         {
                             plevelinfo.pairinfo->SetCal(pair_ID,0);
                             count_removed++;
                             printf("removed ID %d\tpair ID %d\t outcount %f\n",pair_number_t,pair_ID,OutPairs[pair_number_t].CA);
                         }
                         
-                        //if(actual_pair_save_total.size() -1  <= maximum_pair_count)
-                        //    check_stop = true;
+                        if(actual_pair_save_total.size() -1 /*- count_removed*/ <= maximum_pair_count)
+                            check_stop = true;
                     }
                     else
                         check_stop = true;
-                    */
+                    
                 }
-                //else
-                //    check_stop = true;
+                else
+                    check_stop = true;
                  
             }
         }
@@ -8187,7 +8188,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         
                                         for(int t_pair = 0 ; t_pair < Tz_delta.size(); t_pair++)
                                         {
-                                            printf("Tz_delta Index %d\tPair ID %f\tdelta %f\tTz %f\n",
+                                            printf("TzSigma %f\tTz_delta Index %d\tPair ID %f\tdelta %f\tTz %f\n",Tz_sigma,
                                                        t_pair,Tz_delta[t_pair].m_X,Tz_delta[t_pair].m_Y,Tz_delta[t_pair].m_Z);
                                         }
                                         
@@ -9998,7 +9999,7 @@ bool FindExistingPair(vector<UI2DPOINT> &obs_remove_pair,UI2DPOINT query)
         return false;
 }
 
-void VerticalCoregistration_LSA_multiinput(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray,vector<short> &reference_pairs)
+void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray,vector<short> &reference_pairs)
 {
     int level = (*levelinfo.Pyramid_step);
     double height_step = (*levelinfo.height_step);
@@ -11035,14 +11036,15 @@ void VerticalCoregistration_LSA_multiinput(const ProInfo* proinfo, LevelInfo &le
                                 double V = V_matrix->val[row][0];
                                 
                                 //outliers
-                                if( (fabs(V) > 6 || (fabs(V) > sigma*1.96 && fabs(V) > 4) ))
+                                if( (fabs(V) > 15*pwrtwo(level) || (fabs(V) > sigma*2.57 && fabs(V) > 10*pwrtwo(level)) ))
+                                //if( fabs(V) > sigma*2.57 && fabs(V) > 5*pwrtwo(level) )
                                 {
                                     obs_remove_pair.push_back(obs_pair[row]);
                                     obs_remove_pair_V.push_back(fabs(V));
                                     //printf("outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
                                     check_remove_pair = true;
                                 }
-                                else if(fabs(V) > sigma*1.645 && fabs(V) > 3)//blunders
+                                else if(fabs(V) > sigma*1.645)//blunders
                                 {
                                     obs_remove_pair_bl.push_back(obs_pair[row]);
                                     obs_remove_pair_V_bl.push_back(fabs(V));
@@ -11419,7 +11421,7 @@ void VerticalCoregistration_LSA_multiinput(const ProInfo* proinfo, LevelInfo &le
     }
 }
 
-void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray,vector<short> &reference_pairs)
+void VerticalCoregistration_LSA_singleinput(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray,vector<short> &reference_pairs)
 {
     int level = (*levelinfo.Pyramid_step);
     double height_step = (*levelinfo.height_step);
@@ -11679,7 +11681,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         
         while(CA_th >= 3)
         {
-            printf("cal CA_th %f\n",CA_th);
+            //printf("cal CA_th %f\n",CA_th);
             
             vector<short> CA_range_pair;
             for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
@@ -12620,7 +12622,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 double V = V_matrix->val[row][0];
                                 
                                 //outliers
-                                if( (fabs(V) > 6*pwrtwo(level) || (fabs(V) > sigma*1.96 && fabs(V) > 4*pwrtwo(level)) ))
+                                if( (fabs(V) > 15*pwrtwo(level) || (fabs(V) > sigma*1.96 && fabs(V) > 10*pwrtwo(level)) ))
                                 {
                                     obs_remove_pair.push_back(obs_pair[row]);
                                     obs_remove_pair_V.push_back(fabs(V));
@@ -19028,7 +19030,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc)*(1.0/rlevelinfo.pairinfo->Tz_var(pair_number));
                                                 }
                                                 else*/
-                                                w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc);//*rlevelinfo.pairinfo->Tz_var(pair_number);
+                                                double WTz = 1.0/rlevelinfo.pairinfo->Tz_var(pair_number)*100.0;
+                                                w_bhncc = Weightparam_sigmaZ(rlevelinfo.pairinfo->SigmaZ(pair_number), w_ncc, w_ortho_ncc)*0.5 + WTz*0.5;
                                             }
                                         }
                                         else
@@ -19054,7 +19057,8 @@ void AWNCC_MPs(ProInfo *proinfo, LevelInfo &rlevelinfo,CSize Size_Grid2D, UGRID 
                                                     //sum_w_bhncc += Weightparam(weight_bhratio[awncc_pair], w_ncc, w_ortho_ncc);
                                                     
                                                     //sum_w_bhncc += Weightparam_sigmaZ(rlevelinfo.MPP, w_ncc, w_ortho_ncc);
-                                                    sum_w_bhncc += Weightparam_sigmaZ(max_sigmaZ, w_ncc, w_ortho_ncc);//*rlevelinfo.pairinfo->Tz_var(awncc_pair);
+                                                    double WTz = 1.0/rlevelinfo.pairinfo->Tz_var(pair_number)*100.0;
+                                                    sum_w_bhncc += Weightparam_sigmaZ(max_sigmaZ, w_ncc, w_ortho_ncc)*0.5 + WTz*0.5;
                                                 }
                                                 
                                                 //if(max_w_bhncc < sum_w_bhncc)
