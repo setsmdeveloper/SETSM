@@ -257,8 +257,11 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
             Right_Imagecoord_p.m_X = (MPs[mps_index].m_X - Boundary_tar[0])/grid_dxy_tar.m_X + ImageAdjust[1];
             Right_Imagecoord_p.m_Y = (Boundary_tar[3] - MPs[mps_index].m_Y)/grid_dxy_tar.m_Y + ImageAdjust[0];
             
-            Left_Imagecoord = OriginalToPyramid_single(Left_Imagecoord_p,Startpos,Pyramid_step);
-            Right_Imagecoord = OriginalToPyramid_single(Right_Imagecoord_p,Startpos,Pyramid_step);
+            Left_Imagecoord.m_X      = (Left_Imagecoord_p.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+            Left_Imagecoord.m_Y      = (Left_Imagecoord_p.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
+            
+            Right_Imagecoord.m_X      = (Right_Imagecoord_p.m_X/pwrtwo(Pyramid_step)) - Startpos.m_X;
+            Right_Imagecoord.m_Y      = (Right_Imagecoord_p.m_Y/pwrtwo(Pyramid_step)) - Startpos.m_Y;
             
             if(   Left_Imagecoord.m_Y  > Half_template_size*b_factor    + 10                    && Left_Imagecoord.m_X  > Half_template_size*b_factor + 10
                && Left_Imagecoord.m_Y  < Imagesizes_ref.height - Half_template_size*b_factor - 10    && Left_Imagecoord.m_X  < Imagesizes_ref.width - Half_template_size*b_factor - 10

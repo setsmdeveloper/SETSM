@@ -2130,7 +2130,9 @@ int main(int argc,char *argv[])
                                         for(int count = 0 ; count < args.number_of_images ; count++)
                                         {
                                             if(args.sensor_provider == PT)
-                                                orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,0,DEM_divide,Imageparams);
+                                            {
+                                                //orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,0,DEM_divide,Imageparams);
+                                            }
                                             else
                                                 orthogeneration(param,args,args.Image[count], DEMFilename, Outputpath,count,DEM_divide,Imageparams);
                                         }
@@ -7175,6 +7177,13 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                         {
                             if(level == proinfo->pyramid_level)
                                 max_iteration = 1;
+                            
+                            if(level == 2)
+                                max_iteration = 1;
+                            
+                            if(level == 1)
+                                max_iteration = 4;
+                            
                         }
                         
                         double minimum_memory;
@@ -7840,35 +7849,41 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         }
                                     }
                                     
-                                    /*
-                                    //if(level == 0)
+                                    
+                                    if(level == 0 && iteration == 3)
                                     {
                                         unsigned char* PC = (unsigned char*)calloc(sizeof(unsigned char),Grid_length);
+                                        /*
                                         unsigned char** paircheck = (unsigned char**)calloc(sizeof(unsigned char*),levelinfo.pairinfo->SelectNumberOfPairs());
                                         for(int cnt = 0 ; cnt < levelinfo.pairinfo->SelectNumberOfPairs() ; cnt ++)
                                             paircheck[cnt] = (unsigned char*)calloc(sizeof(unsigned char),Grid_length);
-                                        
-                                        for(long int pt_index = 0 ; pt_index < Grid_length ; pt_index++)
+                                        */
+                                        for(long int pt_row = 0; pt_row < Size_Grid2D.height ; pt_row++)
                                         {
-                                            auto &pairs = PairArray[pt_index];
-                                            
-                                            for(int i = 0 ; i <pairs.size(); i++)
+                                            for(long int pt_col = 0 ; pt_col < Size_Grid2D.width ; pt_col++)
                                             {
-                                                short ID = pairs[i];
-                                                if(contains(pairs,ID))
-                                                    paircheck[ID][pt_index] = 1;
+                                                long pt_index = pt_row*Size_Grid2D.width + pt_col;
+                                                long pt_save = (Size_Grid2D.height -1 - pt_row)*Size_Grid2D.width + pt_col;
+                                                auto &pairs = PairArray[pt_index];
+                                                /*
+                                                for(int i = 0 ; i <pairs.size(); i++)
+                                                {
+                                                    short ID = pairs[i];
+                                                    if(contains(pairs,ID))
+                                                        paircheck[ID][pt_index] = 1;
+                                                }
+                                                */
+                                                PC[pt_save] = pairs.size();
                                             }
-                                            
-                                            PC[pt_index] = pairs.size();
                                         }
                                         
                                         char s_PC[500];
                                         //sprintf(s_PC,"%s/%d_PC_%s_%s_%d_%d_%d.tif",proinfo->save_filepath,count,image_info[ref_id].filename,image_info[tar_id].filename,row,col,level);
-                                        sprintf(s_PC,"%s/%d_PairArray_%d_%d_%d.tif",proinfo->save_filepath,levelinfo.pairinfo->SelectNumberOfPairs(),row,col,level);
+                                        sprintf(s_PC,"%s/PairArray_%d_%d_%d.tif",proinfo->save_filepath,row,col,level);
                                         WriteGeotiff(s_PC, PC, Size_Grid2D.width, Size_Grid2D.height, grid_resolution, subBoundary[0], subBoundary[3], param.projection, param.utm_zone, param.bHemisphere, 1);
                                         free(PC);
                                         
-                                        
+                                        /*
                                         for(int cnt = 0 ; cnt < levelinfo.pairinfo->SelectNumberOfPairs() ; cnt ++)
                                         {
                                             if(levelinfo.pairinfo->cal(cnt) > 0)
@@ -7882,8 +7897,9 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             free(paircheck[cnt]);
                                         }
                                         free(paircheck);
+                                        */
                                     }
-                                    */
+                                    
                                     
                                     
                                     /*
@@ -8244,11 +8260,13 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                         {
                                             if(final_Tz[t_pair].size() > 0)
                                             {
+                                                /*
                                                 if(fabs(levelinfo.pairinfo->Tz(t_pair)) > 40)
                                                 {
                                                     printf("more than 40 %d\t%f\n",t_pair,levelinfo.pairinfo->Tz(t_pair) );
                                                     levelinfo.pairinfo->SetTz(t_pair,0);
                                                 }
+                                                 */
                                                 printf("final refTz pairnumber %d\tTz %f\tTz_cov %f\tTz_res %f\n",t_pair,levelinfo.pairinfo->Tz(t_pair),levelinfo.pairinfo->Tz_var(t_pair),levelinfo.pairinfo->Tz_res(t_pair));
                                             }
                                         }
@@ -10098,6 +10116,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     vector<float> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
     vector<int> V_array_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
     
+    vector<D3DPOINT> V_array_all;
+    
     printf("start cal dh max_countMPs_pair %d\n",max_countMPs_pair);
     for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
     {
@@ -10191,6 +10211,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             if(!finished_pair[pair_number])
             {
                 long count_overlap = 0;
+                
                 if(ref_selected_pair[pair_number] && save_difheight[pair_number].size() > minimum_counts && levelinfo.pairinfo->Cloud(pair_number) < 10)
                 {
                     for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
@@ -10229,7 +10250,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             printf("coverage P %f\n",pair_coverage_counts/(double)(*levelinfo.Grid_length));
         }
         
-        if(pair_coverage_counts/(double)(*levelinfo.Grid_length) > 0.7 && max_overlap_counts/(double)(*levelinfo.Grid_length) < 0.1)
+        if(pair_coverage_counts/(double)(*levelinfo.Grid_length) > 0.9 && max_overlap_counts/(double)(*levelinfo.Grid_length) < 0.1)
             check_overlap_P = true;
         
         totoal_pair_count++;
@@ -10243,70 +10264,75 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     {
         int pair_number = reference_pairs[i];
         pair_class[pair_number] = 1;
+        
         reference_pairs_final_W[pair_number] = weight_min + WS*(reference_pairs.size() - i);
-        printf("reference pairs %d\t%f\t%d\t%f\n",pair_number,reference_pairs_final_W[pair_number],reference_pairs_overlap_count[i],reference_pairs_overlap_count[i]/(double)(*levelinfo.Grid_length));
+        double overlapratio_with_Ref = (double)save_difheight[pair_number].size()/(double)count_MPs_pair[max_countMPs_pair]*100;
+        printf("reference pairs %d\t%f\t%d\t%f\n",pair_number,overlapratio_with_Ref,reference_pairs_overlap_count[i],reference_pairs_overlap_count[i]/(double)(*levelinfo.Grid_length));
     }
     
     
     //vector<short> ref_remove_pair;
     int step_by_step = 0;
+    vector<float> pair_weight(levelinfo.pairinfo->SelectNumberOfPairs(),1.0);
     while(step_by_step < 2)
     {
-        double CA_th = 11;
-        int count_cath_while = 0;
+        double CA_th = 3;
+        //int count_cath_while = 0;
         int pre_unknown_count = 0;
         int cur_unknown_count;
         
-        while(CA_th >= 3)
+        //while(CA_th >= 3)
         {
-            printf("cal CA_th %f\n",CA_th);
+            //printf("cal CA_th %f\n",CA_th);
             
             vector<short> CA_range_pair;
             for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
             {
-                if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && pair_class[i] == 0)
+                if(levelinfo.pairinfo->ConvergenceAngle(i) >= 3 && pair_class[i] == 0)
                 {
                     CA_range_pair.push_back(i);
                     printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
                 }
+                /*
+                if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && pair_class[i] == 0)
+                {
+                    CA_range_pair.push_back(i);
+                    printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
+                }*/
             }
             
-            if(CA_range_pair.size() > 0)
-            //for(short CA_iter_pair = 0 ; CA_iter_pair < CA_range_pair.size() ; CA_iter_pair++)
+            //if(CA_range_pair.size() > 0)
+            for(short CA_iter_pair = 0 ; CA_iter_pair < CA_range_pair.size() ; CA_iter_pair++)
             {
+                bool check_added_pair = false;
+                bool check_removed_pair = false;
+                
                 bool check_reiter = false;
                 int reiter_count = 0;
                 
                 double reiter_S0 = 100000;
+                int added_pair = CA_range_pair[CA_iter_pair];
+                
                 while(!check_reiter && reiter_count < 100)
                 {
-                    printf("\n\n check_reiter %d\n",reiter_count);
+                    printf("\n\n check_reiter %d\tadded_pair %d\n",reiter_count,added_pair);
                     
                     short max_pairweight = -1;
                     double max_stdvalue = -99999;
                     short max_stdcount = 0;
-                    vector<float> pair_weight(levelinfo.pairinfo->SelectNumberOfPairs(),1.0);
+                    
+                    
+                    
                     
                     while(!check_while && while_iter < 30)
                     {
                         printf("\n\n while_iter %f\t%d\t%d\n",CA_th,reiter_count,while_iter);
                         
-                        vector<UI2DPOINT> obs_remove_pair;
-                        vector<float> obs_remove_pair_V;
-                        
-                        vector<UI2DPOINT> obs_remove_pair_bl;
-                        vector<float> obs_remove_pair_V_bl;
-                        
-                        for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
-                        {
-                            call_array[i] = 0;
-                            V_array[i] = 0;
-                            V_array_count[i] = 0;
-                        }
-                        
                         vector<short> unknown;
-                        vector<short> unknown_obs_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
                         vector<D3DPOINT> refTz_pair;
+                        
+                        vector<short> unknown_obs_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                        
                         vector<int> ref_Tz_counts;
                         vector<float> ref_Tz_std;
                         vector<float> ref_Tz_P;
@@ -10354,7 +10380,36 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 {
                                     double dif_avg = avg;
                                     double sum_dif_avg = dif_avg;
-                                    
+                                    /*
+                                    if(step_by_step == 1)
+                                    {
+                                        levelinfo.pairinfo->SetTz(t_pair,levelinfo.pairinfo->Tz(t_pair) + sum_dif_avg);
+                                        
+                                        for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
+                                        {
+                                            float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
+                                            if(fabs(dH) < th_H)
+                                            {
+                                                dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
+                                                sum_weight += save_difheight_roh[t_pair][cnt];
+                                                sel_count++;
+                                                selected_dh.push_back(dH);
+                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                            }
+                                        }
+                                        
+                                        avg = dif_sum_weight/sum_weight;
+                                        sum_var = 0;
+                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                                        {
+                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                        }
+                                        std = sqrt(sum_var/(double)selected_dh.size());
+                                        
+                                        dif_avg = avg;
+                                        sum_dif_avg = dif_avg;
+                                    }
+                                    */
                                     D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
                                     
                                     refTz_pair.push_back(val);
@@ -10366,6 +10421,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     unknown.push_back(t_pair);
                                     unknown_obs_count[t_pair]++;
                                     levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
+                                    
+                                    
                                     
                                     if(while_iter == 0 && master_flag)
                                     {
@@ -10418,7 +10475,36 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 {
                                     double dif_avg = avg;
                                     double sum_dif_avg = dif_avg;
-                                    
+                                    /*
+                                    if(step_by_step == 1)
+                                    {
+                                        levelinfo.pairinfo->SetTz(t_pair,levelinfo.pairinfo->Tz(t_pair) + sum_dif_avg);
+                                        
+                                        for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
+                                        {
+                                            float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
+                                            if(fabs(dH) < th_H)
+                                            {
+                                                dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
+                                                sum_weight += save_difheight_roh[t_pair][cnt];
+                                                sel_count++;
+                                                selected_dh.push_back(dH);
+                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                            }
+                                        }
+                                        
+                                        avg = dif_sum_weight/sum_weight;
+                                        sum_var = 0;
+                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
+                                        {
+                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                        }
+                                        std = sqrt(sum_var/(double)selected_dh.size());
+                                        
+                                        dif_avg = avg;
+                                        sum_dif_avg = dif_avg;
+                                    }
+                                    */
                                     D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
                                     
                                     refTz_pair.push_back(val);
@@ -10444,9 +10530,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         //new pair refattached pair
                         if(step_by_step == 0)
                         {
-                            for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
+                            //for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                             {
-                                //int t_pair = CA_range_pair[CA_iter_pair];
+                                int t_pair = CA_range_pair[CA_iter_pair];
                                 bool check_CA_ref = false;
                                 
                                 if(levelinfo.pairinfo->ConvergenceAngle(t_pair) >= CA_th && pair_class[t_pair] == 0)
@@ -10502,6 +10588,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                         pair_class[t_pair] = 2;
                                         unknown_obs_count[t_pair]++;
                                         levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
+                                        
+                                        check_added_pair = true;
                                         
                                         if(while_iter == 0 && master_flag)
                                         {
@@ -10602,7 +10690,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                 unknown_obs_count[(int)val.m_Y]++;
                                                 levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                                 
-                                                printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                //printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
                                             }
                                         }
                                     }
@@ -10682,13 +10770,14 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                 unknown_obs_count[(int)val.m_Y]++;
                                                 levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                                 
-                                                printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                //printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
                                                 //printf("added pair %d\n",(int)val.m_X);
                                                 
                                                 if(!contains(unknown,(int)val.m_X))
                                                 {
                                                     unknown.push_back((int)val.m_X);
                                                     pair_class[(int)val.m_X] = 3;
+                                                    check_added_pair = true;
                                                 }
                                             }
                                             if(!check_m_Y && check_m_X)// && levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y) >= CA_th)
@@ -10702,13 +10791,14 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                 unknown_obs_count[(int)val.m_Y]++;
                                                 levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                                 
-                                                printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                //printf("nonref_Tz pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
                                                 //printf("added pair %d\n",(int)val.m_Y);
                                                 
                                                 if(!contains(unknown,(int)val.m_Y))
                                                 {
                                                     unknown.push_back((int)val.m_Y);
                                                     pair_class[(int)val.m_Y] = 3;
+                                                    check_added_pair = true;
                                                 }
                                             }
                                         }
@@ -10776,32 +10866,35 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                             unknown_obs_count[(int)val.m_Y]++;
                                             levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                             
-                                            printf("nonref_Tz_33 pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                            //printf("nonref_Tz_33 pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2 %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
                                             
                                             if(!contains(unknown,(int)val.m_X))
                                             {
                                                 unknown.push_back((int)val.m_X);
+                                                check_added_pair = true;
                                             }
                                             
                                             if(!contains(unknown,(int)val.m_Y))
                                             {
                                                 unknown.push_back((int)val.m_Y);
+                                                check_added_pair = true;
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                        /*
                         printf("iteration %d\tnon end cal dh\n",while_iter);
                         
                         for(auto i = unknown.begin() ; i != unknown.end(); ++i)
                         {
                             printf("unknown %d\tunknown count %d\n",*i,unknown_obs_count[*i]);
                         }
-                        
+                        */
                         int count_unknown = unknown.size();
                         int count_observation = ref_Tz_counts.size() + nonref_Tz_counts.size();
-                        printf("unknown %d\tobj %d\n",count_unknown,count_observation);
+                        //printf("unknown %d\tobj %d\n",count_unknown,count_observation);
                         
                         bool check_unknown = false;
                         
@@ -10812,9 +10905,12 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         if(!check_reiter)
                             check_unknown = true;
                         
-                        printf("unknown count %d\t%d\n",pre_unknown_count,cur_unknown_count);
+                        //printf("unknown count %d\t%d\n",pre_unknown_count,cur_unknown_count);
                         
-                        if(count_observation >= count_unknown && ref_Tz_counts.size() > 0 && unknown.size() > 0 )
+                        if(check_removed_pair)
+                            check_added_pair = true;
+                        
+                        if(count_observation >= count_unknown && ref_Tz_counts.size() > 0 && unknown.size() > 0 && check_added_pair)
                         {
                             pre_unknown_count = cur_unknown_count;
                             //sorting pair index to unknown index
@@ -10908,10 +11004,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             GMA_double *CovX = GMA_double_create(count_unknown,count_unknown);
                             
                             vector<UI2DPOINT> obs_pair;
-                            float weight_factor = 1.0;
-                            //if(reiter_count == 1)
-                            //    weight_factor = 1000.0;
-                            
+                           
                             for(int i = 0 ; i < refTz_pair.size() ; i++)
                             {
                                 D3DPOINT ref_val = refTz_pair[i];
@@ -10920,15 +11013,28 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 
                                 double weight_factor = 1.0;
                                 
-                                if(reference_pairs_final_W[unknown[pos]] > 0)
-                                    weight_factor = reference_pairs_final_W[unknown[pos]];
-                                /*else if(count_cath_while > 0 || step_by_step > 0)
-                                {
-                                    if(check_selected_ref[unknown[pos]])
-                                        weight_factor = 1000;
-                                }*/
                                 
-                                float weight = weight_factor*( 1 + pair_weight[unknown[pos]]); //weight_factor/(ref_Tz_std[i]*ref_Tz_std[i])*
+                                //if(step_by_step == 1)
+                                //    weight_factor = 10;
+                                
+                                if(pair_class[unknown[pos]] == 1)
+                                {
+                                    weight_factor = reference_pairs_final_W[unknown[pos]];;
+                                }
+                                
+                                double Tz_std_W;
+                                /*
+                                if(ref_Tz_std[i] < 20)
+                                    Tz_std_W = 1.0;
+                                else
+                                    Tz_std_W = ref_Tz_std[i]/20.0;
+                                */
+                                
+                                //double weight = weight_factor*(1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W);
+                                float weight = weight_factor*( 1 + pair_weight[unknown[pos]]);
+                                
+                                //if(pair_weight[unknown[pos]] == 100)
+                                //    weight = 0.001;
                                 
                                 A_matrix->val[i][pos] = -1.0;
                                 W_matrix->val[i][i] = weight;
@@ -10937,7 +11043,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 UI2DPOINT pair_ID(max_countMPs_pair,unknown[pos]);
                                 obs_pair.push_back(pair_ID);
                                 
-                                printf("ref obs W row %d\tpair ID %d\tweight %f\tclass %d\tstd %f\n",i,unknown[pos],weight,pair_class[unknown[pos]],ref_Tz_std[i]);
+                                //printf("ref obs W row %d\tpair ID %d\tweight %f\tclass %d\t%f\tstd %f\tval %f\n",i,unknown[pos],weight,pair_class[unknown[pos]],pair_weight[unknown[pos]],Tz_std_W,val);
                             }
                             
                             for(int i = 0 ; i < nonref_Tz.size() ; i++)
@@ -10947,25 +11053,34 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 int pos_Y = (int)ref_val.m_Y;
                                 float val = ref_val.m_Z;
                                 
+                                double weight_factor = 1.0;
                                 double weight_factor1 = 1.0;
                                 double weight_factor2 = 1.0;
-                                double weight_factor = 1.0;
                                 
-                                if(reference_pairs_final_W[unknown[pos_X]] > 0 && reference_pairs_final_W[unknown[pos_Y]] > 0)
+                                double Tz_std_W;
+                                /*
+                                if(nonref_Tz_std[i] < 20)
+                                    Tz_std_W = 1.0;
+                                else
+                                    Tz_std_W = nonref_Tz_std[i]/20.0;
+                                /*
+                                if(step_by_step == 1 && pair_class[unknown[pos_X]] == 2 && pair_class[unknown[pos_Y]] == 2)
                                 {
-                                    weight_factor1 = reference_pairs_final_W[unknown[pos_X]];
-                                    weight_factor2 = reference_pairs_final_W[unknown[pos_Y]];
-                                }/*
-                                else if(count_cath_while > 0 || step_by_step > 0)
-                                {
-                                    if(check_selected_ref[unknown[pos_X]] && check_selected_ref[unknown[pos_Y]])
-                                    {
-                                        weight_factor1 = 1000;
-                                        weight_factor2 = 1000;
-                                    }
+                                    weight_factor1 = 10;
+                                    weight_factor2 = 10;
                                 }
                                 */
+                                if(pair_class[unknown[pos_X]] == 1 && pair_class[unknown[pos_Y]] == 1)
+                                {
+                                    weight_factor1 = reference_pairs_final_W[unknown[pos_X]];;
+                                    weight_factor2 = reference_pairs_final_W[unknown[pos_Y]];;
+                                }
+                                  
+                                
+                                //double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W) + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W );
                                 float weight = weight_factor1*pair_weight[unknown[pos_X]] + weight_factor2*pair_weight[unknown[pos_Y]];//1.0/(nonref_Tz_std[i]*nonref_Tz_std[i])*
+                                //if(pair_weight[unknown[pos_X]] == 100 && pair_weight[unknown[pos_Y]] == 100)
+                                //    weight = 0.001;
                                 
                                 A_matrix->val[i + refTz_pair.size()][pos_X] = 1.0;
                                 A_matrix->val[i + refTz_pair.size()][pos_Y] = -1.0;
@@ -10975,7 +11090,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 UI2DPOINT pair_ID(unknown[pos_X],unknown[pos_Y]);
                                 obs_pair.push_back(pair_ID);
                                 
-                                printf("nonref obs W row %d\tpair ID %d\tweight %f\tpair ID %d\tweight %f\tweight %f\tclass %d\t%d\tstd %f\n",i,unknown[pos_X],weight_factor1,unknown[pos_Y],weight_factor2,weight,pair_class[unknown[pos_X]],pair_class[unknown[pos_Y]],nonref_Tz_std[i]);
+                                //printf("nonref obs W row %d\tpair ID %d\tpair ID %d\tweight %f\tclass %d\t%d\t%f\t%f\tstd %f\tval %f\n",i,unknown[pos_X],unknown[pos_Y],weight,pair_class[unknown[pos_X]],pair_class[unknown[pos_Y]],pair_weight[unknown[pos_X]],pair_weight[unknown[pos_Y]],Tz_std_W,val);
                             }
                             
                             GMA_double_Tran(A_matrix,AT_matrix);
@@ -11017,8 +11132,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     total_maxV_pos = row;
                                 }
                                 
-                                double V = V_matrix->val[row][0];
-                                printf("V %d\t%f\tpair ID %d\t%d\n",row,V,obs_pair[row].m_X,obs_pair[row].m_Y);
+                                //double V = V_matrix->val[row][0];
+                                
+                                //printf("V %d\t%f\tpair ID %d\t%d\n",row,V,obs_pair[row].m_X,obs_pair[row].m_Y);
                             }
                             
                             GMA_double_Tran(V_matrix, VT_matrix);
@@ -11030,30 +11146,53 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 Tz_sigma = sigma;
                             }
                             
+                            for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+                            {
+                                V_array_all.clear();
+                            }
+                            
+                            vector<UI2DPOINT> obs_remove_pair;
+                            vector<float> obs_remove_pair_V;
+                            
+                            vector<UI2DPOINT> obs_remove_pair_bl;
+                            vector<float> obs_remove_pair_V_bl;
+                            
                             for(int row = 0; row < count_observation ; row++)
                             {
                                 double V = V_matrix->val[row][0];
                                 
+                                UI2DPOINT temp = obs_pair[row];
                                 //outliers
-                                if( (fabs(V) > 10*pwrtwo(level) || (fabs(V) > sigma*2.58 && fabs(V) > 5*pwrtwo(level)) ))
+                                if( (fabs(V) > 10*pwrtwo(level) || (fabs(V) > sigma*2.58 && fabs(V) > 5*pwrtwo(level)) ) )// && (pair_class[temp.m_X] != 1 || pair_class[temp.m_Y] != 1) )
                                 //if( (fabs(V) > 6*pwrtwo(level) || (fabs(V) > sigma*1.96 && fabs(V) > 4*pwrtwo(level)) ))
                                 {
                                     obs_remove_pair.push_back(obs_pair[row]);
                                     obs_remove_pair_V.push_back(fabs(V));
                                     //printf("outliers removed obs %d\t%d\t%d\t%f\n",row,obs_pair[row].m_X,obs_pair[row].m_Y,V);
-                                    check_remove_pair = true;
+                                    //check_remove_pair = true;
                                 }
-                                else if(fabs(V) > sigma*1.645 && fabs(V) > 3)//blunders
+                                else// if(fabs(V) > sigma*1.645 && fabs(V) > 3)//blunders
                                 {
                                     obs_remove_pair_bl.push_back(obs_pair[row]);
                                     obs_remove_pair_V_bl.push_back(fabs(V));
                                 }
+                                
+                                D3DPOINT temp_all;
+                                temp_all.m_X = temp.m_X;
+                                temp_all.m_Y = temp.m_Y;
+                                temp_all.m_Z = fabs(V);
+                                V_array_all.push_back(temp_all);
                             }
                             
-                            printf("sigma %f\tmax residual %d\t%f\t%d\t%d\n",sigma,total_maxV_pos,total_maxV,obs_pair[total_maxV_pos].m_X,obs_pair[total_maxV_pos].m_Y);
+                            //printf("sigma %f\tmax residual %d\t%f\t%d\t%d\n",sigma,total_maxV_pos,total_maxV,obs_pair[total_maxV_pos].m_X,obs_pair[total_maxV_pos].m_Y);
                             
                             double max_delta = -99999;
                             Tz_delta.clear();
+                            
+                            for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+                            {
+                                call_array[i] = 0;
+                            }
                             
                             for(int c = 0 ; c < count_unknown ; c++)
                             {
@@ -11067,7 +11206,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 
                                 D3DPOINT result(pos,A,levelinfo.pairinfo->Tz(pos));
                                 Tz_delta.push_back(result);
-                                printf("index %d\t pair ID %d\tdelta %f\t pair class %d\n",c,pos,A,pair_class[pos]);
+                                //printf("index %d\t pair ID %d\tdelta %f\t pair class %d\n",c,pos,A,pair_class[pos]);
                             }
                             
                             
@@ -11093,11 +11232,11 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             GMA_double_destroy(ATAIATWA);
                             GMA_double_destroy(CovX);
                             
-                            S_ratio = fabs(S0 - sigma);///S0;
+                            S_ratio = fabs(S0 - sigma)/S0;
                             //printf("iteration %d\tS0 Sigma max_delta S_ratio %f\t%f\t%f\t%f\n",while_iter,S0,sigma,max_delta,S_ratio);
                             
-                            printf("ref_pair ID %d\titeration %d\tS0 Sigma max_delta %f\t%f\t%f\n\n",max_countMPs_pair,while_iter,S0,sigma,max_delta);
-                            if((max_delta < 0.1) || (S_ratio < 0.1 && !check_remove_pair))
+                            printf("ref_pair ID %d\titeration %d\tS0 Sigma max_delta %f\t%f\t%f\tcheck_remove_pair %d\n\n",max_countMPs_pair,while_iter,S0,sigma,max_delta,check_remove_pair);
+                            if((max_delta < 0.1) || (S_ratio < 0.001))
                             {
                                 check_while = true;
                                 //while_iter = 0;
@@ -11111,30 +11250,21 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             
                             S0 = sigma;
                             
-                            
-                            //if(reiter_count == 0)
+                            /*
+                            if(step_by_step > 0) // ref outlier
                             {
-                                
-                                
                                 if(obs_remove_pair.size() > 0)
                                 {
                                     for(int index = 0 ; index < obs_remove_pair.size() ; index++)
                                     {
                                         UI2DPOINT temp = obs_remove_pair[index];
                                         
-                                        if(reference_pairs_final_W[temp.m_X] == 0)
-                                        {
-                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
-                                            V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
-                                        }
-                                        
-                                        if(reference_pairs_final_W[temp.m_Y] == 0)
-                                        {
-                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
-                                            V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
-                                        }
+                                        V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                        V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
+                     
+                                        V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                        V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
                                     }
-                                    //avg = 0 assumption
                                     
                                     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
                                     {
@@ -11169,6 +11299,16 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                 {
                                                     max_stdvalue = std_array ;
                                                     max_pairweight = index;
+                                                    
+                                                    if(V_array_count[added_pair] == max_stdcount)
+                                                    {
+                                                        double added_std_array = V_array[added_pair]/((double)V_array_count[added_pair]);
+                                                        if(max_stdvalue == added_std_array)
+                                                        {
+                                                            max_pairweight = added_pair;
+                                                            printf("same max_stdvalue added pair select %f\t%d\n",max_stdvalue,max_pairweight);
+                                                        }
+                                                    }
                                                 }
                                             }
                                             printf("std outliers index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\t%f\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index],reference_pairs_final_W[index]);
@@ -11179,7 +11319,6 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                         //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
                                         //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
                                     }
-                                    
                                 }
                                 
                                 if(obs_remove_pair_bl.size() > 0)
@@ -11188,17 +11327,11 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     {
                                         UI2DPOINT temp = obs_remove_pair_bl[index];
                                         
-                                        if(reference_pairs_final_W[temp.m_X] == 0)
-                                        {
-                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
-                                            V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
-                                        }
-                                        
-                                        if(reference_pairs_final_W[temp.m_Y] == 0)
-                                        {
-                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
-                                            V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
-                                        }
+                                        V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
+                                 
+                                        V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
                                     }
                                     
                                     //avg = 0 assumption
@@ -11209,7 +11342,159 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                             double std_array = V_array[index]/((double)V_array_count[index]);
                                             //pair_weight[index] = 1.0/std_array;
                                             
-                                            printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\t%f\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index],reference_pairs_final_W[index]);
+                                            printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\t%f\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index],pair_weight[index]);
+                                        }
+                                        else
+                                            pair_weight[index] = 1.0;
+                                      
+                                        //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
+                                        //printf("blunder pair ID %d\tpair weight %f\tmax_pair %d\n",index, pair_weight[index],max_pairweight);
+                                    }
+                                }
+                                
+                                if(obs_remove_pair.size() == 0 && obs_remove_pair_bl.size() == 0)
+                                {
+                                    for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                        levelinfo.pairinfo->SetTz_var(index,1.0);
+                                }
+                            }
+                            else // noref outlier*/
+                            {
+                                
+                                for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+                                {
+                                    V_array[i] = 0;
+                                    V_array_count[i] = 0;
+                                }
+                                
+                                if(obs_remove_pair.size() > 0)
+                                {
+                                    for(int index = 0 ; index < obs_remove_pair.size() ; index++)
+                                    {
+                                        UI2DPOINT temp = obs_remove_pair[index];
+                                        
+                                        if(pair_class[temp.m_X] != 1)
+                                        {
+                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
+                                        }
+                                        
+                                        if(pair_class[temp.m_Y] != 1)
+                                        {
+                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
+                                        }
+                                    }
+                                    
+                                    for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                    {
+                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
+                                        {
+                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            if(max_stdcount < V_array_count[index] )
+                                            {
+                                                max_stdvalue = std_array;
+                                                max_stdcount = V_array_count[index] ;
+                                                max_pairweight = index;
+                                            }
+                                            //printf("count outliers index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index]);
+                                        }
+                                      
+                                        //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
+                                        //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
+                                    }
+                                    
+                                    for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                    {
+                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
+                                        {
+                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            if(max_stdcount == V_array_count[index] )
+                                            {
+                                                if(max_stdvalue < std_array)
+                                                {
+                                                    max_stdvalue = std_array ;
+                                                    max_pairweight = index;
+                                                    
+                                                    if(V_array_count[added_pair] == max_stdcount)
+                                                    {
+                                                        double added_std_array = V_array[added_pair]/((double)V_array_count[added_pair]);
+                                                        if(max_stdvalue == added_std_array)
+                                                        {
+                                                            max_pairweight = added_pair;
+                                                            printf("same max_stdvalue added pair select %f\t%d\n",max_stdvalue,max_pairweight);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            printf("std outliers index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index]);
+                                        }
+                                        //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
+                                        //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
+                                    }
+                                }
+                                /*
+                                if(obs_remove_pair.size() > 0)
+                                {
+                                    for(int index = 0 ; index < obs_remove_pair.size() ; index++)
+                                    {
+                                        UI2DPOINT temp = obs_remove_pair[index];
+                                        
+                                        if(pair_class[temp.m_X] != 1)
+                                        {
+                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
+                                        }
+                                        
+                                        if(pair_class[temp.m_Y] != 1)
+                                        {
+                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
+                                        }
+                                    }
+                                    
+                                    for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                    {
+                                        if(V_array[index] > 0 && V_array_count[index] > 3 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
+                                        {
+                                            pair_weight[index] = 100;
+                                            printf("count outliers index %d\t95sigma\t%f\t%f\t%d\tpair_weight %f\n",index,sigma*1.96,V_array[index],V_array_count[index],pair_weight[index]);
+                                        }
+                                      
+                                        //levelinfo.pairinfo->SetTz_var(index,pair_weight[index]);
+                                        //printf("outliers pair ID %d\tpair weight %f\tmax_std %f\tmax_pair %d\n",index, pair_weight[index],max_stdvalue,max_pairweight);
+                                    }
+                                    
+                                    
+                                }
+                                */
+                                if(obs_remove_pair_bl.size() > 0)
+                                {
+                                    for(int index = 0 ; index < obs_remove_pair_bl.size() ; index++)
+                                    {
+                                        UI2DPOINT temp = obs_remove_pair_bl[index];
+                                        
+                                        V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
+                                        
+                                        V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
+                                    }
+                                    
+                                    //avg = 0 assumption
+                                    for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                    {
+                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair)
+                                        {
+                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            
+                                            if(std_array < 1.0)
+                                                std_array = 1.0;
+                                            
+                                            //if(pair_weight[index] != 100)
+                                            //    pair_weight[index] = std_array;
+                                            
+                                            //printf("WEIGHT index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\t%f\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index],pair_weight[index]);
                                         }
                                         else
                                             pair_weight[index] = 1.0;
@@ -11231,6 +11516,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             check_while = true;
                             check_reiter = true;
                             //while_iter = 0;
+                            
+                            
+                            
                         }
                         
                         while_iter++;
@@ -11241,7 +11529,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     if( (reiter_S_ratio < 0.1 || S0 < 1.5) && max_pairweight == -1)
                     {
                         check_reiter = true;
-                        
+                        check_removed_pair = false;
                     }
                     else
                     {
@@ -11252,6 +11540,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                             printf("removed pair %d\n",max_pairweight);
                             pair_class[max_pairweight] = 10;
                             pre_unknown_count =  pre_unknown_count - 2;
+                            check_removed_pair = true;
                         }
                     }
                     
@@ -11266,15 +11555,53 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                 check_reiter=false;
             }
             
-            CA_th = CA_th - 0.1;
-            count_cath_while++;
+            //CA_th = CA_th - 0.1;
+            //count_cath_while++;
         }
         step_by_step++;
         printf("SBS %d\n\n\n\n",step_by_step);
     }
     
+    /*
+    if(V_array_all.size() > 0)
+    {
+        vector<int> V_array_count_all(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+        for(int index = 0 ; index < V_array_all.size() ; index++)
+        {
+            D3DPOINT temp = V_array_all[index];
+            float V = temp.m_Z;
+            int pair1 = (int)temp.m_X;
+            int pair2 = (int)temp.m_Y;
+            if( (fabs(V) > 5*pwrtwo(level) || (fabs(V) > Tz_sigma*1.95 && fabs(V) > 3*pwrtwo(level)) ))
+            {
+                if(pair1 != max_countMPs_pair)
+                {
+                    V_array_count_all[pair1] = V_array_count_all[pair1] + 1;
+                    //printf("final outliers %d\t%f\tTz_sigma %f\n",pair1,V,Tz_sigma);
+                }
+                
+                if(pair2 != max_countMPs_pair)
+                {
+                    V_array_count_all[pair2] = V_array_count_all[pair2] + 1;
+                    //printf("final outliers %d\t%f\tTz_sigma %f\n",pair2,V,Tz_sigma);
+                }
+            }
+        }
+        for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
+        {
+            if(V_array_count_all[i] >= 5)
+            {
+                call_array[i] = 0;
+                printf("final removed outliers %d\t%d\tTz_sigma %f\n",i,V_array_count_all[i],Tz_sigma);
+            }
+        }
+    }
+    */
+    
+    
     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
     {
+        
         if(level >= 1)// || (level == 0 && (*levelinfo.iteration) == 3)
         {
             levelinfo.pairinfo->SetTz_var(index,1.0);
@@ -11284,16 +11611,19 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair )
             {
                 double std_array = V_array[index]/((double)V_array_count[index]);
+                if(std_array < 1.0)
+                    std_array = 1.0;
                 levelinfo.pairinfo->SetTz_var(index,std_array);
                 
-                printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%d\treference_pairs_final_W %f\n",index,std_array,V_array[index],V_array_count[index],reference_pairs_final_W[index]);
+                printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%d\n",index,std_array,V_array[index],V_array_count[index]);
             }
             else
                 levelinfo.pairinfo->SetTz_var(index,1.0);
             
         }
+               
         
-        printf("final weight index %d\t%f\n",index,levelinfo.pairinfo->Tz_var(index));
+        printf("final weight index %d\t%f\tTz_sigma %f\n",index,levelinfo.pairinfo->Tz_var(index),Tz_sigma);
     }
     
     call_array[max_countMPs_pair] = 1;
@@ -11307,8 +11637,37 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
         {
             //estimate Tz based on the largest matching point pair
             int count_mult = PairArray[pt_index].size();
-            if(count_mult >= 2)
+            if(count_mult >= 3)
             {
+                vector<double> saved_H_initial;
+                for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                {
+                    int t_pair = PairArray[pt_index][first];
+                    if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1)
+                    {
+                        float Height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        saved_H_initial.push_back(Height);
+                        //printf("saved H %f\n",Height);
+                    }
+                }
+                
+                if(saved_H_initial.size() > 2)
+                {
+                    double med_H = quickselect(saved_H_initial,saved_H_initial.size(),(int)saved_H_initial.size()/2.0);
+                    //printf("med_H %f\n",med_H);
+                    for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                    {
+                        int t_pair = PairArray[pt_index][first];
+                        if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1 )
+                        {
+                            float dH = med_H - (multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair));
+                            if(fabs(dH) > 100)
+                            {
+                                multimps(pt_index, t_pair).check_matched = false;
+                            }
+                        }
+                    }
+                }
                 /*
                 for(int first = 0 ; first < PairArray[pt_index].size() - 1 ; first++)
                 {
@@ -11331,7 +11690,84 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                     }
                 }
                 */
+                vector<short> saved_pair;
+                vector<float> saved_H;
+                double sum_H = 0;
+                for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
+                {
+                    int t_pair = PairArray[pt_index][first];
+                    if(multimps(pt_index,t_pair).check_matched && call_array[t_pair] == 1)
+                    {
+                        float Height = multimps(pt_index, t_pair).peak_height - levelinfo.pairinfo->Tz(t_pair);
+                        saved_H.push_back(Height);
+                        saved_pair.push_back(t_pair);
+                        sum_H += Height;
+                    }
+                    
+                    multimps(pt_index, t_pair).check_matched = false;
+                }
                 
+                double H_avg = sum_H / (double)saved_H.size();
+                double sum_var = 0;
+                for(int i = 0 ; i < saved_H.size() ; i++)
+                    sum_var += (saved_H[i] - H_avg)*(saved_H[i] - H_avg);
+                
+                double sigma = sqrt(sum_var/saved_H.size());
+                //printf("sigam %f\tavg %f\n",sigma,H_avg);
+                bool check = false;
+                int count = 0;
+                double sigma_change = 0.00;
+                vector<short> sel_pairs;
+                while(!check && sigma_change < 1.00)
+                {
+                    sel_pairs.clear();
+                    int count_sel_pairs = 0;
+                    bool check_selpair_count = 0;
+                    while(!check_selpair_count && count_sel_pairs < saved_H.size())
+                    //for(int i = 0 ; i < saved_H.size() ; i++)
+                    {
+                        double min_H = H_avg - sigma*(1.0 + sigma_change);
+                        if(min_H < H_avg - 100)
+                            min_H = H_avg - 100;
+                        double max_H = H_avg + sigma*(1.0 + sigma_change);
+                        if(max_H > H_avg + 100)
+                            max_H = H_avg + 100;
+                        if(saved_H[count_sel_pairs] >= min_H && saved_H[count_sel_pairs] <= max_H)
+                        {
+                            sel_pairs.push_back(saved_pair[count_sel_pairs]);
+                            //printf("selected id %d\t%d\n",saved_pair[count_sel_pairs],sel_pairs.size());
+                            
+                            if(sel_pairs.size() > proinfo->pair_max_th)
+                                check_selpair_count = true;
+                        }
+                        count_sel_pairs++;
+                    }
+                    
+                    sigma_change += 0.10;
+                }
+                
+                if(sel_pairs.size() > 0)
+                {
+                    for(int i = 0 ; i < sel_pairs.size() ; i++)
+                    {
+                        multimps(pt_index, sel_pairs[i]).check_matched = true;
+                        //printf("grid ID %d\tselected_pairs %d\tID %d\n",pt_index,sel_pairs.size(),sel_pairs[i]);
+                    }
+                    
+                }
+            }
+        }
+    }
+    
+    /*
+    if(level == 0)
+    {
+        for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+        {
+            //estimate Tz based on the largest matching point pair
+            int count_mult = PairArray[pt_index].size();
+            if(count_mult >= 2)
+            {
                 vector<short> saved_pair;
                 vector<float> saved_H;
                 double sum_H = 0;
@@ -11387,6 +11823,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             }
         }
     }
+     */
 }
 
 void VerticalCoregistration_LSA_singleinput(const ProInfo* proinfo, LevelInfo &levelinfo, Matrix<MultiMPs> &multimps, vector<int> &count_MPs_pair, int &max_countMPs_pair, int &max_countMPs, vector<D3DPOINT> &Tz_delta, double &Tz_sigma, vector<D2DPOINT> &ref_linked_pair, bool master_flag, vector<short>& call_array,vector<vector<short>> &PairArray,vector<short> &reference_pairs)
@@ -11633,7 +12070,7 @@ void VerticalCoregistration_LSA_singleinput(const ProInfo* proinfo, LevelInfo &l
     {
         int pair_number = reference_pairs[i];
         pair_class[pair_number] = 1;
-        reference_pairs_final_W[pair_number] = weight_min + WS*(reference_pairs.size() - i);
+        reference_pairs_final_W[pair_number] = 1.0;//weight_min + WS*(reference_pairs.size() - i);
         printf("reference pairs %d\t%f\t%d\t%f\n",pair_number,reference_pairs_final_W[pair_number],reference_pairs_overlap_count[i],reference_pairs_overlap_count[i]/(double)(*levelinfo.Grid_length));
     }
     
@@ -20414,7 +20851,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
     //float **SumCost = NULL;
     
     
-    bool check_diagonal = true;
+    bool check_diagonal = false;
     
     double im_resolution = proinfo->resolution*pwrtwo(Pyramid_step);
     
