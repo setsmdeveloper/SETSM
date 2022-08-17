@@ -1403,6 +1403,11 @@ typedef struct PairCA
     float CA;
     float cloud;
 public:
+    PairCA()
+    {
+        
+    }
+    
     PairCA(int pairid, float ca, float cl)
     {
         pair_ID = pairid;
