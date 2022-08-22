@@ -10087,13 +10087,13 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
     else
         while_count = 1;
     
-    while(mp_iter < while_count)
+    while(mp_iter < while_count && mp_iter < 10)
     {
         PairCA temp;
         temp = MPs_array[mp_iter];
         
         double MPs_coverage = temp.CA/(double)(*levelinfo.Grid_length)*100.0;
-        if(MPs_coverage > 20 && temp.cloud < 10)
+        if(MPs_coverage > 20 /*&& temp.cloud < 10*/)
         {
             if(levelinfo.pairinfo->MaxCountMPs_pair() == -1)
             {
@@ -10103,319 +10103,251 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
             else
                 printf("defined masterpair %d\n",max_countMPs_pair);
             
-            bool check_while = false;
-            int while_iter = 0;
-            double S0 = 10000;
-            double S_ratio = 10000;
-            double P_start = 90;
-            int possible_pairs = ceil((levelinfo.pairinfo->SelectNumberOfPairs()*(levelinfo.pairinfo->SelectNumberOfPairs()-1)));
-            int total_observation = possible_pairs+levelinfo.pairinfo->SelectNumberOfPairs();
-            
-            //set height difference between pairs
-            vector<vector<F2DPOINT>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
-            vector<vector<float>> save_difheight_roh(levelinfo.pairinfo->SelectNumberOfPairs());
-            
-            vector<vector<F2DPOINT>> noref_difheight(possible_pairs);
-            vector<vector<UI2DPOINT>> noref_difheight_pair(possible_pairs);
-            vector<vector<float>> noref_difheight_roh(possible_pairs);
-            
-            vector<unsigned char> ref_selected_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0); // check for dH existing pair with master pair
-            
-            //vector<float> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-            //vector<int> V_array_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-            
-            vector<D3DPOINT> V_array_all;
-            
-            printf("start cal dh max_countMPs_pair %d\tcloud %f\n",max_countMPs_pair,temp.cloud);
-            for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+            //if(pair_coverage_counts/(double)(*levelinfo.Grid_length) > 0.8)
             {
-                //estimate Tz based on the largest matching point pair
-                int count_mult = PairArray[pt_index].size();
-                if(count_mult >= 2)
-                {
-                    if(multimps(pt_index,max_countMPs_pair).check_matched)
-                    {
-                        for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
-                        {
-                            int t_pair = PairArray[pt_index][first];
-                            
-                            if(t_pair != max_countMPs_pair)
-                            {
-                                if(multimps(pt_index, t_pair).check_matched)
-                                {
-                                    F2DPOINT temp;
-                                    temp.m_X = multimps(pt_index,max_countMPs_pair).peak_height;
-                                    temp.m_Y = multimps(pt_index, t_pair).peak_height;
-                                    save_difheight[t_pair].push_back(temp);
-                                    
-                                    double weight = 1.0;//count_mult*count_mult*(multimps(pt_index,max_countMPs_pair).peak_roh + multimps(pt_index, t_pair).peak_roh) /2.0;
-                                    save_difheight_roh[t_pair].push_back( weight );
-                                     
-                                    ref_selected_pair[t_pair] = 1;
-                                }
-                            }
-                        }
-                    }
-                    
-                    for(int first = 0 ; first < PairArray[pt_index].size() - 1 ; first++)
-                    {
-                        for(int second = first + 1 ; second < PairArray[pt_index].size() ; second++)
-                        {
-                            int t_pair = PairArray[pt_index][first];
-                            int t_pair2 = PairArray[pt_index][second];
-                            if(t_pair != max_countMPs_pair && t_pair2 != max_countMPs_pair)
-                            {
-                                if(multimps(pt_index,t_pair).check_matched && multimps(pt_index,t_pair2).check_matched)
-                                {
-                                    int pair_pos = t_pair*levelinfo.pairinfo->SelectNumberOfPairs() + t_pair2;
-                                    
-                                    F2DPOINT temp;
-                                    temp.m_X = multimps(pt_index, t_pair).peak_height;
-                                    temp.m_Y = multimps(pt_index, t_pair2).peak_height;
-                                    noref_difheight[pair_pos].push_back(temp);
-                                    
-                                    UI2DPOINT temp_pair;
-                                    temp_pair.m_X = t_pair;
-                                    temp_pair.m_Y = t_pair2;
-                                    
-                                    F3DPOINT val;
-                                    val.m_X = t_pair;
-                                    val.m_Y = t_pair2;
-                                    noref_difheight_pair[pair_pos].push_back(temp_pair);
-                                    
-                                    double weight = 1.0;//count_mult*count_mult*(multimps(pt_index,t_pair).peak_roh + multimps(pt_index, t_pair2).peak_roh) /2.0;
-                                    noref_difheight_roh[pair_pos].push_back( weight );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            printf("end cal dh\n");
-            
-            
-            vector<unsigned char> pair_class(levelinfo.pairinfo->SelectNumberOfPairs(),0); // 0 for non selected pair, 1 for reference pairs, 2 for ref-attached pairs, 3 for nonref attached pairs, 10 for removed pair
-            
-            for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs();pair_number ++)
-            {
-                double overlapratio_with_Ref = (double)save_difheight[pair_number].size()/(double)temp.CA*100;
-                if(ref_selected_pair[pair_number] && save_difheight[pair_number].size() > minimum_counts && levelinfo.pairinfo->Cloud(pair_number) < 20 && overlapratio_with_Ref > 10)
-                {
-                    reference_pairs.push_back(pair_number);
-                    pair_class[pair_number] = 1;
-                }
-            }
-            
-            
-            int step_by_step = 0;
-            vector<float> pair_weight(levelinfo.pairinfo->SelectNumberOfPairs(),1.0);
-            //while(step_by_step < 2)
-            {
-                double CA_th = 3;
-                //int count_cath_while = 0;
-                int pre_unknown_count = 0;
-                int cur_unknown_count;
+                bool check_while = false;
+                int while_iter = 0;
+                double S0 = 10000;
+                double S_ratio = 10000;
+                double P_start = 90;
+                int possible_pairs = ceil((levelinfo.pairinfo->SelectNumberOfPairs()*(levelinfo.pairinfo->SelectNumberOfPairs()-1)));
+                int total_observation = possible_pairs+levelinfo.pairinfo->SelectNumberOfPairs();
                 
-                //while(CA_th >= 3)
+                //set height difference between pairs
+                vector<vector<F2DPOINT>> save_difheight(levelinfo.pairinfo->SelectNumberOfPairs());
+                vector<vector<float>> save_difheight_roh(levelinfo.pairinfo->SelectNumberOfPairs());
+                
+                vector<vector<F2DPOINT>> noref_difheight(possible_pairs);
+                vector<vector<UI2DPOINT>> noref_difheight_pair(possible_pairs);
+                vector<vector<float>> noref_difheight_roh(possible_pairs);
+                
+                vector<unsigned char> ref_selected_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0); // check for dH existing pair with master pair
+                
+                //vector<float> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                //vector<int> V_array_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                
+                vector<D3DPOINT> V_array_all;
+                
+                printf("start cal dh max_countMPs_pair %d\tcloud %f\n",max_countMPs_pair,temp.cloud);
+                for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
                 {
-                    //printf("cal CA_th %f\n",CA_th);
-                    
-                    vector<short> CA_range_pair;
-                    for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
+                    //estimate Tz based on the largest matching point pair
+                    int count_mult = PairArray[pt_index].size();
+                    if(count_mult >= 2)
                     {
-                        if(levelinfo.pairinfo->ConvergenceAngle(i) >= 3 && pair_class[i] == 0)
+                        if(multimps(pt_index,max_countMPs_pair).check_matched)
                         {
-                            CA_range_pair.push_back(i);
-                            printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
-                        }
-                        /*
-                        if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && pair_class[i] == 0)
-                        {
-                            CA_range_pair.push_back(i);
-                            printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
-                        }*/
-                    }
-                    
-                    //if(CA_range_pair.size() > 0)
-                    for(short CA_iter_pair = 0 ; CA_iter_pair < CA_range_pair.size() ; CA_iter_pair++)
-                    {
-                        bool check_added_pair = false;
-                        bool check_removed_pair = false;
-                        
-                        bool check_reiter = false;
-                        int reiter_count = 0;
-                        
-                        double reiter_S0 = 100000;
-                        int added_pair = CA_range_pair[CA_iter_pair];
-                        
-                        //while(!check_reiter && reiter_count < 100)
-                        {
-                            printf("\n\n check_reiter %d\tadded_pair %d\n",reiter_count,added_pair);
-                            
-                            short max_pairweight = -1;
-                            double max_stdvalue = -99999;
-                            short max_stdcount = 0;
-                            
-                            
-                            
-                            
-                            while(!check_while && while_iter < 30)
+                            for(int first = 0 ; first < PairArray[pt_index].size() ; first++)
                             {
-                                printf("\n\n while_iter %f\t%d\t%d\n",CA_th,reiter_count,while_iter);
+                                int t_pair = PairArray[pt_index][first];
                                 
-                                vector<short> unknown;
-                                vector<D3DPOINT> refTz_pair;
-                                
-                                vector<short> unknown_obs_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-                                
-                                vector<int> ref_Tz_counts;
-                                vector<float> ref_Tz_std;
-                                vector<float> ref_Tz_P;
-                                vector<float> ref_Tz_sigma;
-                                
-                                //seleted reference
-                                for(int ref = 0 ; ref < reference_pairs.size() ; ref++)
+                                if(t_pair != max_countMPs_pair)
                                 {
-                                    int t_pair = reference_pairs[ref];
+                                    if(multimps(pt_index, t_pair).check_matched)
+                                    {
+                                        F2DPOINT temp;
+                                        temp.m_X = multimps(pt_index,max_countMPs_pair).peak_height;
+                                        temp.m_Y = multimps(pt_index, t_pair).peak_height;
+                                        save_difheight[t_pair].push_back(temp);
+                                        
+                                        double weight = 1.0;//count_mult*count_mult*(multimps(pt_index,max_countMPs_pair).peak_roh + multimps(pt_index, t_pair).peak_roh) /2.0;
+                                        save_difheight_roh[t_pair].push_back( weight );
+                                         
+                                        ref_selected_pair[t_pair] = 1;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        for(int first = 0 ; first < PairArray[pt_index].size() - 1 ; first++)
+                        {
+                            for(int second = first + 1 ; second < PairArray[pt_index].size() ; second++)
+                            {
+                                int t_pair = PairArray[pt_index][first];
+                                int t_pair2 = PairArray[pt_index][second];
+                                if(t_pair != max_countMPs_pair && t_pair2 != max_countMPs_pair)
+                                {
+                                    if(multimps(pt_index,t_pair).check_matched && multimps(pt_index,t_pair2).check_matched)
+                                    {
+                                        int pair_pos = t_pair*levelinfo.pairinfo->SelectNumberOfPairs() + t_pair2;
+                                        
+                                        F2DPOINT temp;
+                                        temp.m_X = multimps(pt_index, t_pair).peak_height;
+                                        temp.m_Y = multimps(pt_index, t_pair2).peak_height;
+                                        noref_difheight[pair_pos].push_back(temp);
+                                        
+                                        UI2DPOINT temp_pair;
+                                        temp_pair.m_X = t_pair;
+                                        temp_pair.m_Y = t_pair2;
+                                        
+                                        F3DPOINT val;
+                                        val.m_X = t_pair;
+                                        val.m_Y = t_pair2;
+                                        noref_difheight_pair[pair_pos].push_back(temp_pair);
+                                        
+                                        double weight = 1.0;//count_mult*count_mult*(multimps(pt_index,t_pair).peak_roh + multimps(pt_index, t_pair2).peak_roh) /2.0;
+                                        noref_difheight_roh[pair_pos].push_back( weight );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                printf("end cal dh\n");
+                
+                
+                vector<unsigned char> pair_class(levelinfo.pairinfo->SelectNumberOfPairs(),0); // 0 for non selected pair, 1 for reference pairs, 2 for ref-attached pairs, 3 for nonref attached pairs, 10 for removed pair
+                
+                for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs();pair_number ++)
+                {
+                    double overlapratio_with_Ref = (double)save_difheight[pair_number].size()/(double)temp.CA*100;
+                    if(ref_selected_pair[pair_number] && save_difheight[pair_number].size() > minimum_counts && levelinfo.pairinfo->Cloud(pair_number) < 20 && overlapratio_with_Ref > 10)
+                    {
+                        reference_pairs.push_back(pair_number);
+                        pair_class[pair_number] = 1;
+                    }
+                }
+                
+                
+                int step_by_step = 0;
+                vector<float> pair_weight(levelinfo.pairinfo->SelectNumberOfPairs(),1.0);
+                //while(step_by_step < 2)
+                {
+                    double CA_th = 3;
+                    //int count_cath_while = 0;
+                    int pre_unknown_count = 0;
+                    int cur_unknown_count;
+                    
+                    //while(CA_th >= 3)
+                    {
+                        //printf("cal CA_th %f\n",CA_th);
+                        
+                        vector<short> CA_range_pair;
+                        for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
+                        {
+                            if(levelinfo.pairinfo->ConvergenceAngle(i) >= 3 && pair_class[i] == 0)
+                            {
+                                CA_range_pair.push_back(i);
+                                printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
+                            }
+                            /*
+                            if(levelinfo.pairinfo->ConvergenceAngle(i) >= CA_th && levelinfo.pairinfo->ConvergenceAngle(i) < CA_th + 0.1 && pair_class[i] == 0)
+                            {
+                                CA_range_pair.push_back(i);
+                                printf("selected ca pairs %d\t%f\n",i, levelinfo.pairinfo->ConvergenceAngle(i));
+                            }*/
+                        }
+                        
+                        //if(CA_range_pair.size() > 0)
+                        for(short CA_iter_pair = 0 ; CA_iter_pair < CA_range_pair.size() ; CA_iter_pair++)
+                        {
+                            bool check_added_pair = false;
+                            bool check_removed_pair = false;
+                            
+                            bool check_reiter = false;
+                            int reiter_count = 0;
+                            
+                            double reiter_S0 = 100000;
+                            int added_pair = CA_range_pair[CA_iter_pair];
+                            
+                            //while(!check_reiter && reiter_count < 100)
+                            {
+                                printf("\n\n check_reiter %d\tadded_pair %d\n",reiter_count,added_pair);
+                                
+                                short max_pairweight = -1;
+                                double max_stdvalue = -99999;
+                                short max_stdcount = 0;
+                                
+                                
+                                
+                                
+                                while(!check_while && while_iter < 30)
+                                {
+                                    printf("\n\n while_iter %f\t%d\t%d\n",CA_th,reiter_count,while_iter);
                                     
-                                    if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair)
+                                    vector<short> unknown;
+                                    vector<D3DPOINT> refTz_pair;
+                                    
+                                    vector<short> unknown_obs_count(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                                    
+                                    vector<int> ref_Tz_counts;
+                                    vector<float> ref_Tz_std;
+                                    vector<float> ref_Tz_P;
+                                    vector<float> ref_Tz_sigma;
+                                    
+                                    //seleted reference
+                                    for(int ref = 0 ; ref < reference_pairs.size() ; ref++)
                                     {
-                                        vector<float> selected_dh;
+                                        int t_pair = reference_pairs[ref];
                                         
-                                        double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
-                                        double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
-                                        double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
-                                        double std;
-                                        
-                                        double dif_sum_weight = 0;
-                                        double sum_weight = 0;
-                                        double sel_count = 0;
-                                        for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
+                                        if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair)
                                         {
-                                            float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
-                                            if(fabs(dH) < th_H)
+                                            vector<float> selected_dh;
+                                            
+                                            double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
+                                            double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
+                                            double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
+                                            double std;
+                                            
+                                            double dif_sum_weight = 0;
+                                            double sum_weight = 0;
+                                            double sel_count = 0;
+                                            
+                                            for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
                                             {
-                                                dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
-                                                sum_weight += save_difheight_roh[t_pair][cnt];
-                                                sel_count++;
-                                                selected_dh.push_back(dH);
-                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                                float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
+                                                if(fabs(dH) < th_H)
+                                                {
+                                                    dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
+                                                    sum_weight += save_difheight_roh[t_pair][cnt];
+                                                    sel_count++;
+                                                    selected_dh.push_back(dH);
+                                                    //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                                }
                                             }
-                                        }
-                                        
-                                        double avg = dif_sum_weight/sum_weight;
-                                        double sum_var = 0;
-                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
-                                        {
-                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
-                                        }
-                                        std = sqrt(sum_var/(double)selected_dh.size());
-                                       
-                                        if(sel_count > minimum_counts )
-                                        {
-                                            double dif_avg = avg;
-                                            double sum_dif_avg = dif_avg;
                                             
-                                            D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
-                                            
-                                            refTz_pair.push_back(val);
-                                            ref_Tz_counts.push_back(sel_count);
-                                            ref_Tz_std.push_back(std);
-                                            ref_Tz_sigma.push_back(sigma);
-                                            
-                                            //printf("selected ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
-                                            unknown.push_back(t_pair);
-                                            unknown_obs_count[t_pair]++;
-                                            levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
-                                            
-                                            
-                                            
-                                            if(while_iter == 0 && master_flag)
+                                            double avg = dif_sum_weight/sum_weight;
+                                            double sum_var = 0;
+                                            for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
                                             {
-                                                D2DPOINT temp(t_pair,count_MPs_pair[t_pair]);
-                                                ref_linked_pair.push_back(temp);
+                                                sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
                                             }
+                                            std = sqrt(sum_var/(double)selected_dh.size());
+                                           
+                                            if(sel_count > minimum_counts )
+                                            {
+                                                double dif_avg = avg;
+                                                double sum_dif_avg = dif_avg;
+                                                
+                                                D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
+                                                
+                                                refTz_pair.push_back(val);
+                                                ref_Tz_counts.push_back(sel_count);
+                                                ref_Tz_std.push_back(std);
+                                                ref_Tz_sigma.push_back(sigma);
+                                                
+                                                //printf("selected ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
+                                                unknown.push_back(t_pair);
+                                                unknown_obs_count[t_pair]++;
+                                                levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
+                                                
+                                                
+                                                
+                                                if(while_iter == 0 && master_flag)
+                                                {
+                                                    D2DPOINT temp(t_pair,count_MPs_pair[t_pair]);
+                                                    ref_linked_pair.push_back(temp);
+                                                }
+                                            }
+                                             
                                         }
-                                         
                                     }
-                                }
-                                
-                                
-                                //previous added ref pair
-                                for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
-                                {
-                                    if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && pair_class[t_pair] == 2)
+                                    
+                                    
+                                    //previous added ref pair
+                                    for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                     {
-                                        vector<float> selected_dh;
-                                        
-                                        double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
-                                        double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
-                                        double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
-                                        double std;
-                                        
-                                        double dif_sum_weight = 0;
-                                        double sum_weight = 0;
-                                        double sel_count = 0;
-                                        for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
-                                        {
-                                            float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
-                                            if(fabs(dH) < th_H)
-                                            {
-                                                dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
-                                                sum_weight += save_difheight_roh[t_pair][cnt];
-                                                sel_count++;
-                                                selected_dh.push_back(dH);
-                                                //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
-                                            }
-                                        }
-                                        
-                                        double avg = dif_sum_weight/sum_weight;
-                                        double sum_var = 0;
-                                        for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
-                                        {
-                                            sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
-                                        }
-                                        std = sqrt(sum_var/(double)selected_dh.size());
-                                       
-                                        if(sel_count > minimum_counts )
-                                        {
-                                            double dif_avg = avg;
-                                            double sum_dif_avg = dif_avg;
-                                            
-                                            D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
-                                            
-                                            refTz_pair.push_back(val);
-                                            ref_Tz_counts.push_back(sel_count);
-                                            ref_Tz_std.push_back(std);
-                                            ref_Tz_sigma.push_back(sigma);
-                                            
-                                            //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
-                                            unknown.push_back(t_pair);
-                                            unknown_obs_count[t_pair]++;
-                                            levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
-                                            
-                                            if(while_iter == 0 && master_flag)
-                                            {
-                                                D2DPOINT temp(t_pair,count_MPs_pair[t_pair]);
-                                                ref_linked_pair.push_back(temp);
-                                            }
-                                        }
-                                         
-                                    }
-                                }
-                                
-                                //new pair refattached pair
-                                if(step_by_step == 0)
-                                {
-                                    //for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
-                                    {
-                                        int t_pair = CA_range_pair[CA_iter_pair];
-                                        bool check_CA_ref = false;
-                                        
-                                        if(levelinfo.pairinfo->ConvergenceAngle(t_pair) >= CA_th && pair_class[t_pair] == 0)
-                                            check_CA_ref = true;
-                                        
-                                        if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && check_CA_ref)
+                                        if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && pair_class[t_pair] == 2)
                                         {
                                             vector<float> selected_dh;
                                             
@@ -10448,7 +10380,7 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                             }
                                             std = sqrt(sum_var/(double)selected_dh.size());
                                            
-                                            if(sel_count > minimum_counts)
+                                            if(sel_count > minimum_counts )
                                             {
                                                 double dif_avg = avg;
                                                 double sum_dif_avg = dif_avg;
@@ -10462,11 +10394,8 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                                 
                                                 //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
                                                 unknown.push_back(t_pair);
-                                                pair_class[t_pair] = 2;
                                                 unknown_obs_count[t_pair]++;
                                                 levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
-                                                
-                                                check_added_pair = true;
                                                 
                                                 if(while_iter == 0 && master_flag)
                                                 {
@@ -10477,44 +10406,37 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                              
                                         }
                                     }
-                                }
-                                
-                                vector<D3DPOINT> nonref_Tz;
-                                vector<int> nonref_Tz_counts;
-                                vector<float> nonref_Tz_std;
-                                vector<float> nonref_Tz_P;
-                                vector<float> nonref_Tz_sigma;
-                                for(int pair_pos = 0 ; pair_pos < possible_pairs ; pair_pos++)
-                                {
-                                    if(noref_difheight[pair_pos].size() > minimum_counts)
+                                    
+                                    //new pair refattached pair
+                                    if(step_by_step == 0)
                                     {
-                                        D3DPOINT val;
-                                        val.m_X = noref_difheight_pair[pair_pos][0].m_X;
-                                        val.m_Y = noref_difheight_pair[pair_pos][0].m_Y;
-                                        
-                                        bool check_class = false;
-                                        
-                                        //if(step_by_step < 2)
+                                        //for(int t_pair = 0 ; t_pair < levelinfo.pairinfo->SelectNumberOfPairs() ; t_pair++)
                                         {
-                                            if((pair_class[(int)val.m_X] == 1 || pair_class[(int)val.m_X] == 2) && (pair_class[(int)val.m_Y] == 1 || pair_class[(int)val.m_Y] == 2))
+                                            int t_pair = CA_range_pair[CA_iter_pair];
+                                            bool check_CA_ref = false;
+                                            
+                                            if(levelinfo.pairinfo->ConvergenceAngle(t_pair) >= CA_th && pair_class[t_pair] == 0)
+                                                check_CA_ref = true;
+                                            
+                                            if(save_difheight[t_pair].size() > minimum_counts && t_pair != max_countMPs_pair && check_CA_ref)
                                             {
                                                 vector<float> selected_dh;
-                                               
-                                                double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
-                                                double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                                                
+                                                double sigma_L = levelinfo.pairinfo->SigmaZ(max_countMPs_pair);
+                                                double sigma_R = levelinfo.pairinfo->SigmaZ(t_pair);
                                                 double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
+                                                double std;
                                                 
                                                 double dif_sum_weight = 0;
                                                 double sum_weight = 0;
                                                 double sel_count = 0;
-                                                
-                                                for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
+                                                for(int cnt = 0 ; cnt < save_difheight[t_pair].size() ; cnt++)
                                                 {
-                                                    float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
+                                                    float dH = save_difheight[t_pair][cnt].m_X - (save_difheight[t_pair][cnt].m_Y - levelinfo.pairinfo->Tz(t_pair));
                                                     if(fabs(dH) < th_H)
                                                     {
-                                                        dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
-                                                        sum_weight += noref_difheight_roh[pair_pos][cnt];
+                                                        dif_sum_weight += dH*save_difheight_roh[t_pair][cnt];
+                                                        sum_weight += save_difheight_roh[t_pair][cnt];
                                                         sel_count++;
                                                         selected_dh.push_back(dH);
                                                         //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
@@ -10527,478 +10449,637 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                                 {
                                                     sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
                                                 }
-                                                double std = sqrt(sum_var/(double)selected_dh.size());
-                                                
-                                                bool check_rm_pair = false;
-                                                
-                                                if(sel_count > minimum_counts && /*std < 10.0 &&*/ !check_rm_pair)
+                                                std = sqrt(sum_var/(double)selected_dh.size());
+                                               
+                                                if(sel_count > minimum_counts)
                                                 {
                                                     double dif_avg = avg;
-                                                    val.m_Z = dif_avg;
+                                                    double sum_dif_avg = dif_avg;
                                                     
+                                                    D3DPOINT val(max_countMPs_pair,t_pair,sum_dif_avg);
                                                     
-                                                    bool check_m_X = false;
-                                                    bool check_m_Y = false;
-                                                    int count_refTz_pair = 0;
-                                                    bool check_next = false;
-                                                    while(!check_next && count_refTz_pair < refTz_pair.size()) //find pair having both refTz
+                                                    refTz_pair.push_back(val);
+                                                    ref_Tz_counts.push_back(sel_count);
+                                                    ref_Tz_std.push_back(std);
+                                                    ref_Tz_sigma.push_back(sigma);
+                                                    
+                                                    //printf("ref_Tz pair_number %d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA %f\n",t_pair,sel_count,sum_dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle(t_pair));
+                                                    unknown.push_back(t_pair);
+                                                    pair_class[t_pair] = 2;
+                                                    unknown_obs_count[t_pair]++;
+                                                    levelinfo.pairinfo->SetLinked_pair(max_countMPs_pair,t_pair,1);
+                                                    
+                                                    check_added_pair = true;
+                                                    
+                                                    if(while_iter == 0 && master_flag)
                                                     {
-                                                        D3DPOINT ref_val = refTz_pair[count_refTz_pair];
-                                                        short set_pair = (int)ref_val.m_Y;
-                                                        if(set_pair == val.m_X)
-                                                            check_m_X = true;
-                                                        if(set_pair == val.m_Y)
-                                                            check_m_Y = true;
-                                                        
-                                                        if(check_m_X && check_m_Y)
-                                                            check_next = true;
-                                                        
-                                                        count_refTz_pair++;
+                                                        D2DPOINT temp(t_pair,count_MPs_pair[t_pair]);
+                                                        ref_linked_pair.push_back(temp);
+                                                    }
+                                                }
+                                                 
+                                            }
+                                        }
+                                    }
+                                    
+                                    vector<D3DPOINT> nonref_Tz;
+                                    vector<int> nonref_Tz_counts;
+                                    vector<float> nonref_Tz_std;
+                                    vector<float> nonref_Tz_P;
+                                    vector<float> nonref_Tz_sigma;
+                                    for(int pair_pos = 0 ; pair_pos < possible_pairs ; pair_pos++)
+                                    {
+                                        if(noref_difheight[pair_pos].size() > minimum_counts)
+                                        {
+                                            D3DPOINT val;
+                                            val.m_X = noref_difheight_pair[pair_pos][0].m_X;
+                                            val.m_Y = noref_difheight_pair[pair_pos][0].m_Y;
+                                            
+                                            bool check_class = false;
+                                            
+                                            //if(step_by_step < 2)
+                                            {
+                                                if((pair_class[(int)val.m_X] == 1 || pair_class[(int)val.m_X] == 2) && (pair_class[(int)val.m_Y] == 1 || pair_class[(int)val.m_Y] == 2))
+                                                {
+                                                    vector<float> selected_dh;
+                                                   
+                                                    double sigma_L = levelinfo.pairinfo->SigmaZ((int)val.m_X);
+                                                    double sigma_R = levelinfo.pairinfo->SigmaZ((int)val.m_Y);
+                                                    double sigma = sqrt(sigma_L*sigma_L + sigma_R*sigma_R);//*pow(2,level);
+                                                    
+                                                    double dif_sum_weight = 0;
+                                                    double sum_weight = 0;
+                                                    double sel_count = 0;
+                                                    
+                                                    for(int cnt = 0 ; cnt < noref_difheight[pair_pos].size() ; cnt++)
+                                                    {
+                                                        float dH = (noref_difheight[pair_pos][cnt].m_X - levelinfo.pairinfo->Tz(val.m_X)) - (noref_difheight[pair_pos][cnt].m_Y - levelinfo.pairinfo->Tz(val.m_Y));
+                                                        if(fabs(dH) < th_H)
+                                                        {
+                                                            dif_sum_weight += dH*noref_difheight_roh[pair_pos][cnt];
+                                                            sum_weight += noref_difheight_roh[pair_pos][cnt];
+                                                            sel_count++;
+                                                            selected_dh.push_back(dH);
+                                                            //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+                                                        }
                                                     }
                                                     
-                                                    if(check_next)
+                                                    double avg = dif_sum_weight/sum_weight;
+                                                    double sum_var = 0;
+                                                    for(int cnt = 0 ; cnt < selected_dh.size() ; cnt++)
                                                     {
-                                                        nonref_Tz.push_back(val);
-                                                        nonref_Tz_counts.push_back(sel_count);
-                                                        nonref_Tz_std.push_back(std);
-                                                        nonref_Tz_sigma.push_back(sigma);
+                                                        sum_var += (selected_dh[cnt] - avg)*(selected_dh[cnt] - avg);
+                                                    }
+                                                    double std = sqrt(sum_var/(double)selected_dh.size());
+                                                    
+                                                    bool check_rm_pair = false;
+                                                    
+                                                    if(sel_count > minimum_counts && /*std < 10.0 &&*/ !check_rm_pair)
+                                                    {
+                                                        double dif_avg = avg;
+                                                        val.m_Z = dif_avg;
                                                         
-                                                        unknown_obs_count[(int)val.m_X]++;
-                                                        unknown_obs_count[(int)val.m_Y]++;
-                                                        levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
                                                         
-                                                        //printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                        bool check_m_X = false;
+                                                        bool check_m_Y = false;
+                                                        int count_refTz_pair = 0;
+                                                        bool check_next = false;
+                                                        while(!check_next && count_refTz_pair < refTz_pair.size()) //find pair having both refTz
+                                                        {
+                                                            D3DPOINT ref_val = refTz_pair[count_refTz_pair];
+                                                            short set_pair = (int)ref_val.m_Y;
+                                                            if(set_pair == val.m_X)
+                                                                check_m_X = true;
+                                                            if(set_pair == val.m_Y)
+                                                                check_m_Y = true;
+                                                            
+                                                            if(check_m_X && check_m_Y)
+                                                                check_next = true;
+                                                            
+                                                            count_refTz_pair++;
+                                                        }
+                                                        
+                                                        if(check_next)
+                                                        {
+                                                            nonref_Tz.push_back(val);
+                                                            nonref_Tz_counts.push_back(sel_count);
+                                                            nonref_Tz_std.push_back(std);
+                                                            nonref_Tz_sigma.push_back(sigma);
+                                                            
+                                                            unknown_obs_count[(int)val.m_X]++;
+                                                            unknown_obs_count[(int)val.m_Y]++;
+                                                            levelinfo.pairinfo->SetLinked_pair((int)val.m_X,(int)val.m_Y,1);
+                                                            
+                                                            //printf("nonref_Tz both ref pos %d\t%d\tsel_pts %f\tdif_avg %f\tstd %f\tsigma %f\tCA1 CA2  %f\t%f\n",(int)val.m_X,(int)val.m_Y,sel_count,dif_avg,std,sigma,levelinfo.pairinfo->ConvergenceAngle((int)val.m_X),levelinfo.pairinfo->ConvergenceAngle((int)val.m_Y));
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                
-                                /*
-                                printf("iteration %d\tnon end cal dh\n",while_iter);
-                                
-                                for(auto i = unknown.begin() ; i != unknown.end(); ++i)
-                                {
-                                    printf("unknown %d\tunknown count %d\n",*i,unknown_obs_count[*i]);
-                                }
-                                */
-                                int count_unknown = unknown.size();
-                                int count_observation = ref_Tz_counts.size() + nonref_Tz_counts.size();
-                                printf("unknown %d\tobj %d\n",count_unknown,count_observation);
-                                
-                                bool check_unknown = false;
-                                
-                                cur_unknown_count = count_unknown;
-                                if(pre_unknown_count < cur_unknown_count)
-                                    check_unknown = true;
-                                
-                                if(!check_reiter)
-                                    check_unknown = true;
-                                
-                                //printf("unknown count %d\t%d\n",pre_unknown_count,cur_unknown_count);
-                                
-                                if(check_removed_pair)
-                                    check_added_pair = true;
-                                
-                                if(count_observation > count_unknown && ref_Tz_counts.size() > 0 && unknown.size() > 0 && check_added_pair)
-                                {
-                                    pre_unknown_count = cur_unknown_count;
-                                    //sorting pair index to unknown index
-                                    for(int i = 0 ; i < refTz_pair.size() ; i++)
+                                    
+                                    /*
+                                    printf("iteration %d\tnon end cal dh\n",while_iter);
+                                    
+                                    for(auto i = unknown.begin() ; i != unknown.end(); ++i)
                                     {
-                                        D3DPOINT ref_val = refTz_pair[i];
-                                        
-                                        int count_refTz_pair = 0;
-                                        bool check_next = false;
-                                        while(!check_next && count_refTz_pair < unknown.size())
-                                        {
-                                            short set_pair = (int)ref_val.m_Y;
-                                            if(set_pair == unknown[count_refTz_pair])
-                                            {
-                                                D3DPOINT new_val;
-                                                
-                                                new_val.m_X = ref_val.m_X;
-                                                new_val.m_Y = count_refTz_pair;
-                                                new_val.m_Z = ref_val.m_Z;
-                                                
-                                                refTz_pair[i] = new_val;
-                                                
-                                                check_next = true;
-                                            }
-                                            count_refTz_pair++;
-                                        }
+                                        printf("unknown %d\tunknown count %d\n",*i,unknown_obs_count[*i]);
                                     }
+                                    */
+                                    int count_unknown = unknown.size();
+                                    int count_observation = ref_Tz_counts.size() + nonref_Tz_counts.size();
+                                    printf("unknown %d\tobj %d\n",count_unknown,count_observation);
                                     
-                                    for(int i = 0 ; i < nonref_Tz.size() ; i++)
+                                    bool check_unknown = false;
+                                    
+                                    cur_unknown_count = count_unknown;
+                                    if(pre_unknown_count < cur_unknown_count)
+                                        check_unknown = true;
+                                    
+                                    if(!check_reiter)
+                                        check_unknown = true;
+                                    
+                                    //printf("unknown count %d\t%d\n",pre_unknown_count,cur_unknown_count);
+                                    
+                                    if(check_removed_pair)
+                                        check_added_pair = true;
+                                    
+                                    if(count_observation > count_unknown && ref_Tz_counts.size() > 0 && unknown.size() > 0 && check_added_pair)
                                     {
-                                        D3DPOINT ref_val = nonref_Tz[i];
-                                        D3DPOINT new_val;
-                                        
-                                        int count_refTz_pair = 0;
-                                        bool check_next = false;
-                                        bool check_mX = false;
-                                        bool check_mY = false;
-                                        
-                                        while(!check_next && count_refTz_pair < unknown.size())
+                                        pre_unknown_count = cur_unknown_count;
+                                        //sorting pair index to unknown index
+                                        for(int i = 0 ; i < refTz_pair.size() ; i++)
                                         {
-                                            short set_pair = (int)ref_val.m_X;
+                                            D3DPOINT ref_val = refTz_pair[i];
                                             
-                                            if(set_pair == unknown[count_refTz_pair] && !check_mX)
+                                            int count_refTz_pair = 0;
+                                            bool check_next = false;
+                                            while(!check_next && count_refTz_pair < unknown.size())
                                             {
-                                                new_val.m_X = count_refTz_pair;
-                                                new_val.m_Z = ref_val.m_Z;
-                                                
-                                                check_mX = true;
+                                                short set_pair = (int)ref_val.m_Y;
+                                                if(set_pair == unknown[count_refTz_pair])
+                                                {
+                                                    D3DPOINT new_val;
+                                                    
+                                                    new_val.m_X = ref_val.m_X;
+                                                    new_val.m_Y = count_refTz_pair;
+                                                    new_val.m_Z = ref_val.m_Z;
+                                                    
+                                                    refTz_pair[i] = new_val;
+                                                    
+                                                    check_next = true;
+                                                }
+                                                count_refTz_pair++;
                                             }
-                                            
-                                            set_pair = (int)ref_val.m_Y;
-                                            if(set_pair == unknown[count_refTz_pair] && !check_mY)
-                                            {
-                                                new_val.m_Y = count_refTz_pair;
-                                                new_val.m_Z = ref_val.m_Z;
-                                                
-                                                check_mY = true;
-                                            }
-                                            
-                                            if(check_mX && check_mY)
-                                            {
-                                                check_next = true;
-                                                nonref_Tz[i] = new_val;
-                                            }
-                                            
-                                            count_refTz_pair++;
                                         }
-                                    }
-                                    
-                                    GMA_double *A_matrix = GMA_double_create(count_observation, count_unknown);
-                                    GMA_double *L_matrix = GMA_double_create(count_observation, 1);
-                                    GMA_double *W_matrix = GMA_double_create(count_observation, count_observation);
-                                    
-                                    GMA_double *AT_matrix = GMA_double_create(count_unknown,count_observation);
-                                    GMA_double *ATW_matrix = GMA_double_create(count_unknown,count_observation);
-                                    GMA_double *ATWA_matrix = GMA_double_create(count_unknown,count_unknown);
+                                        
+                                        for(int i = 0 ; i < nonref_Tz.size() ; i++)
+                                        {
+                                            D3DPOINT ref_val = nonref_Tz[i];
+                                            D3DPOINT new_val;
+                                            
+                                            int count_refTz_pair = 0;
+                                            bool check_next = false;
+                                            bool check_mX = false;
+                                            bool check_mY = false;
+                                            
+                                            while(!check_next && count_refTz_pair < unknown.size())
+                                            {
+                                                short set_pair = (int)ref_val.m_X;
+                                                
+                                                if(set_pair == unknown[count_refTz_pair] && !check_mX)
+                                                {
+                                                    new_val.m_X = count_refTz_pair;
+                                                    new_val.m_Z = ref_val.m_Z;
+                                                    
+                                                    check_mX = true;
+                                                }
+                                                
+                                                set_pair = (int)ref_val.m_Y;
+                                                if(set_pair == unknown[count_refTz_pair] && !check_mY)
+                                                {
+                                                    new_val.m_Y = count_refTz_pair;
+                                                    new_val.m_Z = ref_val.m_Z;
+                                                    
+                                                    check_mY = true;
+                                                }
+                                                
+                                                if(check_mX && check_mY)
+                                                {
+                                                    check_next = true;
+                                                    nonref_Tz[i] = new_val;
+                                                }
+                                                
+                                                count_refTz_pair++;
+                                            }
+                                        }
+                                        
+                                        GMA_double *A_matrix = GMA_double_create(count_observation, count_unknown);
+                                        GMA_double *L_matrix = GMA_double_create(count_observation, 1);
+                                        GMA_double *W_matrix = GMA_double_create(count_observation, count_observation);
+                                        
+                                        GMA_double *AT_matrix = GMA_double_create(count_unknown,count_observation);
+                                        GMA_double *ATW_matrix = GMA_double_create(count_unknown,count_observation);
+                                        GMA_double *ATWA_matrix = GMA_double_create(count_unknown,count_unknown);
 
-                                    GMA_double *ATWAI_matrix = GMA_double_create(count_unknown,count_unknown);
-                                    GMA_double *ATWL_matrix = GMA_double_create(count_unknown,1);
+                                        GMA_double *ATWAI_matrix = GMA_double_create(count_unknown,count_unknown);
+                                        GMA_double *ATWL_matrix = GMA_double_create(count_unknown,1);
 
-                                    GMA_double *X_matrix = GMA_double_create(count_unknown,1);
-                                    GMA_double *AX_matrix = GMA_double_create(count_observation,1);
-                                    GMA_double *V_matrix = GMA_double_create(count_observation,1);
-                                    
-                                    GMA_double *VT_matrix = GMA_double_create(1,count_observation);
-                                    GMA_double *VTV_matrix = GMA_double_create(1,1);
-                                    
-                                    GMA_double *ATA_matrix = GMA_double_create(count_unknown,count_unknown);
-                                    GMA_double *ATAI_matrix = GMA_double_create(count_unknown,count_unknown);
-                                    GMA_double *ATAIATWA = GMA_double_create(count_unknown,count_unknown);
-                                    GMA_double *CovX = GMA_double_create(count_unknown,count_unknown);
-                                    
-                                    vector<UI2DPOINT> obs_pair;
-                                   
-                                    for(int i = 0 ; i < refTz_pair.size() ; i++)
-                                    {
-                                        D3DPOINT ref_val = refTz_pair[i];
-                                        int pos = (int)ref_val.m_Y;
-                                        float val = ref_val.m_Z;
+                                        GMA_double *X_matrix = GMA_double_create(count_unknown,1);
+                                        GMA_double *AX_matrix = GMA_double_create(count_observation,1);
+                                        GMA_double *V_matrix = GMA_double_create(count_observation,1);
                                         
-                                        double weight_factor = 1.0;
+                                        GMA_double *VT_matrix = GMA_double_create(1,count_observation);
+                                        GMA_double *VTV_matrix = GMA_double_create(1,1);
                                         
-                                        double Tz_std_W;
+                                        GMA_double *ATA_matrix = GMA_double_create(count_unknown,count_unknown);
+                                        GMA_double *ATAI_matrix = GMA_double_create(count_unknown,count_unknown);
+                                        GMA_double *ATAIATWA = GMA_double_create(count_unknown,count_unknown);
+                                        GMA_double *CovX = GMA_double_create(count_unknown,count_unknown);
                                         
-                                        if(ref_Tz_std[i] < 20)
-                                            Tz_std_W = 1.0;
-                                        else
-                                            Tz_std_W = ref_Tz_std[i]/20.0;
-                                        
-                                        
-                                        double weight = weight_factor*(1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W);
-                                        
-                                        A_matrix->val[i][pos] = -1.0;
-                                        W_matrix->val[i][i] = weight;
-                                        L_matrix->val[i][0] = val;
-                                        
-                                        UI2DPOINT pair_ID(max_countMPs_pair,unknown[pos]);
-                                        obs_pair.push_back(pair_ID);
-                                        
-                                        //printf("ref obs W row %d\tpair ID %d\tweight %f\tclass %d\t%f\tstd %f\tval %f\n",i,unknown[pos],weight,pair_class[unknown[pos]],pair_weight[unknown[pos]],Tz_std_W,val);
-                                    }
-                                    
-                                    for(int i = 0 ; i < nonref_Tz.size() ; i++)
-                                    {
-                                        D3DPOINT ref_val = nonref_Tz[i];
-                                        int pos_X = (int)ref_val.m_X;
-                                        int pos_Y = (int)ref_val.m_Y;
-                                        float val = ref_val.m_Z;
-                                        
-                                        double weight_factor = 1.0;
-                                        double weight_factor1 = 1.0;
-                                        double weight_factor2 = 1.0;
-                                        
-                                        double Tz_std_W;
-                                        
-                                        if(nonref_Tz_std[i] < 20)
-                                            Tz_std_W = 1.0;
-                                        else
-                                            Tz_std_W = nonref_Tz_std[i]/20.0;
-                                        
-                                        double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W) + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W );
-                                        
-                                        A_matrix->val[i + refTz_pair.size()][pos_X] = 1.0;
-                                        A_matrix->val[i + refTz_pair.size()][pos_Y] = -1.0;
-                                        W_matrix->val[i + refTz_pair.size()][i + refTz_pair.size()] = weight;
-                                        L_matrix->val[i + refTz_pair.size()][0] = val;
-                                        
-                                        UI2DPOINT pair_ID(unknown[pos_X],unknown[pos_Y]);
-                                        obs_pair.push_back(pair_ID);
-                                        
-                                        //printf("nonref obs W row %d\tpair ID %d\tpair ID %d\tweight %f\tclass %d\t%d\t%f\t%f\tstd %f\tval %f\n",i,unknown[pos_X],unknown[pos_Y],weight,pair_class[unknown[pos_X]],pair_class[unknown[pos_Y]],pair_weight[unknown[pos_X]],pair_weight[unknown[pos_Y]],Tz_std_W,val);
-                                    }
-                                    
-                                    GMA_double_Tran(A_matrix,AT_matrix);
-                                    GMA_double_mul(AT_matrix,W_matrix,ATW_matrix);
-                                    GMA_double_mul(ATW_matrix,A_matrix,ATWA_matrix);
-                                    GMA_double_inv(ATWA_matrix,ATWAI_matrix);
-                                    GMA_double_mul(ATW_matrix,L_matrix,ATWL_matrix);
-                                    GMA_double_mul(ATWAI_matrix,ATWL_matrix,X_matrix);
-                                    GMA_double_mul(A_matrix,X_matrix,AX_matrix);
-                                    GMA_double_sub(AX_matrix,L_matrix,V_matrix);
-                                    
-                                    GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
-                                    GMA_double_inv(ATA_matrix,ATAI_matrix);
-                                    GMA_double_mul(ATAI_matrix,ATWA_matrix,ATAIATWA);
-                                    GMA_double_mul(ATAIATWA,ATAI_matrix,CovX);
-                                    
-                                    double sum_V = 0;
-                                    double maxV = -9999999;
-                                    int maxV_pos;
-                                    double total_maxV = -999999;
-                                    int total_maxV_pos;
-                                    
-                                    double ref_maxV = -999999;
-                                    int ref_maxV_pos = -1;
-                                    bool check_remove_pair = false;
-                                    
-                                    for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
-                                    {
-                                        V_array_all.clear();
-                                    }
-                                    
-                                    for(int row = 0; row < count_observation ; row++)
-                                    {
-                                        sum_V += V_matrix->val[row][0];
-                                        if(fabs(V_matrix->val[row][0]) > maxV)
+                                        vector<UI2DPOINT> obs_pair;
+                                       
+                                        for(int i = 0 ; i < refTz_pair.size() ; i++)
                                         {
-                                            maxV = fabs(V_matrix->val[row][0]);
-                                            maxV_pos = row;
-                                        }
-                                        
-                                        if(fabs(V_matrix->val[row][0]) > total_maxV)
-                                        {
-                                            total_maxV = fabs(V_matrix->val[row][0]);
-                                            total_maxV_pos = row;
-                                        }
-                                        
-                                        double V = V_matrix->val[row][0];
-                                        
-                                        UI2DPOINT temp = obs_pair[row];
-                                        
-                                        D3DPOINT temp_all;
-                                        temp_all.m_X = temp.m_X;
-                                        temp_all.m_Y = temp.m_Y;
-                                        temp_all.m_Z = fabs(V);
-                                        V_array_all.push_back(temp_all);
-                                        
-                                        //printf("V %d\t%f\tpair ID %d\t%d\n",row,V,obs_pair[row].m_X,obs_pair[row].m_Y);
-                                    }
-                                    
-                                    GMA_double_Tran(V_matrix, VT_matrix);
-                                    GMA_double_mul(VT_matrix,V_matrix,VTV_matrix);
-                                    double sigma=0;
-                                    if(count_observation-count_unknown > 0)
-                                    {
-                                        sigma = sqrt(VTV_matrix->val[0][0]/(count_observation-count_unknown));
-                                        Tz_sigma = sigma;
-                                    }
-                                    
-                                    //printf("sigma %f\tmax residual %d\t%f\t%d\t%d\n",sigma,total_maxV_pos,total_maxV,obs_pair[total_maxV_pos].m_X,obs_pair[total_maxV_pos].m_Y);
-                                    
-                                    double max_delta = -99999;
-                                    Tz_delta.clear();
-                                    
-                                    for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
-                                    {
-                                        call_array[i] = 0;
-                                        saved_pairs[max_countMPs_pair][i] = 0;
-                                        saved_pairV[max_countMPs_pair][i] = 0;
-                                    }
-                                    
-                                    for(int c = 0 ; c < count_unknown ; c++)
-                                    {
-                                        double A = X_matrix->val[c][0];
-                                        int pos = unknown[c];
-                                        call_array[pos] = 1;
-                                        saved_pairs[max_countMPs_pair][pos] = 1;
-                                        
-                                        levelinfo.pairinfo->SetTz(pos,levelinfo.pairinfo->Tz(pos) + A);
-                                        if(max_delta < fabs(A))
-                                            max_delta = fabs(A);
-                                        //delta[pos] = A;
-                                        
-                                        D3DPOINT result(pos,A,levelinfo.pairinfo->Tz(pos));
-                                        Tz_delta.push_back(result);
-                                        //printf("index %d\t pair ID %d\tdelta %f\t pair class %d\n",c,pos,A,pair_class[pos]);
-                                    }
-                                    
-                                    
-                                    if(V_array_all.size() > 0)
-                                    {
-                                        vector<int> V_array_count_all(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-                                        vector<double> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
-                                        for(int index = 0 ; index < V_array_all.size() ; index++)
-                                        {
-                                            D3DPOINT temp = V_array_all[index];
-                                            float V = temp.m_Z;
-                                            int pair1 = (int)temp.m_X;
-                                            int pair2 = (int)temp.m_Y;
-                                            V_array[pair1] = V_array[pair1] + temp.m_Z*temp.m_Z;
-                                            V_array_count_all[pair1] = V_array_count_all[pair1] + 1;
+                                            D3DPOINT ref_val = refTz_pair[i];
+                                            int pos = (int)ref_val.m_Y;
+                                            float val = ref_val.m_Z;
                                             
-                                            V_array[pair2] = V_array[pair2] + temp.m_Z*temp.m_Z;
-                                            V_array_count_all[pair2] = V_array_count_all[pair2] + 1;
+                                            double weight_factor = 1.0;
                                             
-                                        }
-                                        
-                                        for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
-                                        {
-                                            if(V_array[index] > 0 && V_array_count_all[index] > 1)
-                                            {
-                                                double std_array = sqrt(V_array[index]/((double)(V_array_count_all[index] - 1)));
-                                                if(std_array < sigma*1.65)
-                                                    saved_pairV[max_countMPs_pair][index] = std_array;
-                                                else
-                                                    saved_pairV[max_countMPs_pair][index] = 0;
-                                                
-                                                //pair_weight[index] = std_array;
+                                            double Tz_std_W;
                                             
-                                                //printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%d\n",index,std_array,V_array[index],V_array_count_all[index]);
-                                            }
+                                            if(ref_Tz_std[i] < 20)
+                                                Tz_std_W = 1.0;
                                             else
-                                            {
-                                                pair_weight[index] = 1.0;
-                                                saved_pairV[max_countMPs_pair][index] = 0;
-                                            }
-                                               
-                                            //printf("pair weight index %d\t%f\tTz_sigma %f\n",index,pair_weight[index],Tz_sigma);
+                                                Tz_std_W = ref_Tz_std[i]/20.0;
+                                            
+                                            
+                                            double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
+                                            
+                                            A_matrix->val[i][pos] = -1.0;
+                                            W_matrix->val[i][i] = weight;
+                                            L_matrix->val[i][0] = val;
+                                            
+                                            UI2DPOINT pair_ID(max_countMPs_pair,unknown[pos]);
+                                            obs_pair.push_back(pair_ID);
+                                            
+                                            //printf("ref obs W row %d\tpair ID %d\tweight %f\tclass %d\t%f\tstd %f\tval %f\n",i,unknown[pos],weight,pair_class[unknown[pos]],pair_weight[unknown[pos]],Tz_std_W,val);
                                         }
+                                        
+                                        for(int i = 0 ; i < nonref_Tz.size() ; i++)
+                                        {
+                                            D3DPOINT ref_val = nonref_Tz[i];
+                                            int pos_X = (int)ref_val.m_X;
+                                            int pos_Y = (int)ref_val.m_Y;
+                                            float val = ref_val.m_Z;
+                                            
+                                            double weight_factor = 1.0;
+                                            double weight_factor1 = 1.0;
+                                            double weight_factor2 = 1.0;
+                                            
+                                            double Tz_std_W;
+                                            
+                                            if(nonref_Tz_std[i] < 20)
+                                                Tz_std_W = 1.0;
+                                            else
+                                                Tz_std_W = nonref_Tz_std[i]/20.0;
+                                            
+                                            double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W )/2.0;
+                                            
+                                            A_matrix->val[i + refTz_pair.size()][pos_X] = 1.0;
+                                            A_matrix->val[i + refTz_pair.size()][pos_Y] = -1.0;
+                                            W_matrix->val[i + refTz_pair.size()][i + refTz_pair.size()] = weight;
+                                            L_matrix->val[i + refTz_pair.size()][0] = val;
+                                            
+                                            UI2DPOINT pair_ID(unknown[pos_X],unknown[pos_Y]);
+                                            obs_pair.push_back(pair_ID);
+                                            
+                                            //printf("nonref obs W row %d\tpair ID %d\tpair ID %d\tweight %f\tclass %d\t%d\t%f\t%f\tstd %f\tval %f\n",i,unknown[pos_X],unknown[pos_Y],weight,pair_class[unknown[pos_X]],pair_class[unknown[pos_Y]],pair_weight[unknown[pos_X]],pair_weight[unknown[pos_Y]],Tz_std_W,val);
+                                        }
+                                        
+                                        GMA_double_Tran(A_matrix,AT_matrix);
+                                        GMA_double_mul(AT_matrix,W_matrix,ATW_matrix);
+                                        GMA_double_mul(ATW_matrix,A_matrix,ATWA_matrix);
+                                        GMA_double_inv(ATWA_matrix,ATWAI_matrix);
+                                        GMA_double_mul(ATW_matrix,L_matrix,ATWL_matrix);
+                                        GMA_double_mul(ATWAI_matrix,ATWL_matrix,X_matrix);
+                                        GMA_double_mul(A_matrix,X_matrix,AX_matrix);
+                                        GMA_double_sub(AX_matrix,L_matrix,V_matrix);
+                                        
+                                        GMA_double_mul(AT_matrix,A_matrix,ATA_matrix);
+                                        GMA_double_inv(ATA_matrix,ATAI_matrix);
+                                        GMA_double_mul(ATAI_matrix,ATWA_matrix,ATAIATWA);
+                                        GMA_double_mul(ATAIATWA,ATAI_matrix,CovX);
+                                        
+                                        double sum_V = 0;
+                                        double maxV = -9999999;
+                                        int maxV_pos;
+                                        double total_maxV = -999999;
+                                        int total_maxV_pos;
+                                        
+                                        double ref_maxV = -999999;
+                                        int ref_maxV_pos = -1;
+                                        bool check_remove_pair = false;
+                                        
+                                        for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+                                        {
+                                            V_array_all.clear();
+                                        }
+                                        
+                                        for(int row = 0; row < count_observation ; row++)
+                                        {
+                                            sum_V += V_matrix->val[row][0];
+                                            if(fabs(V_matrix->val[row][0]) > maxV)
+                                            {
+                                                maxV = fabs(V_matrix->val[row][0]);
+                                                maxV_pos = row;
+                                            }
+                                            
+                                            if(fabs(V_matrix->val[row][0]) > total_maxV)
+                                            {
+                                                total_maxV = fabs(V_matrix->val[row][0]);
+                                                total_maxV_pos = row;
+                                            }
+                                            
+                                            double V = V_matrix->val[row][0];
+                                            
+                                            UI2DPOINT temp = obs_pair[row];
+                                            
+                                            D3DPOINT temp_all;
+                                            temp_all.m_X = temp.m_X;
+                                            temp_all.m_Y = temp.m_Y;
+                                            temp_all.m_Z = fabs(V);
+                                            V_array_all.push_back(temp_all);
+                                            
+                                            //printf("V %d\t%f\tpair ID %d\t%d\n",row,V,obs_pair[row].m_X,obs_pair[row].m_Y);
+                                        }
+                                        
+                                        GMA_double_Tran(V_matrix, VT_matrix);
+                                        GMA_double_mul(VT_matrix,V_matrix,VTV_matrix);
+                                        double sigma=0;
+                                        if(count_observation-count_unknown > 0)
+                                        {
+                                            sigma = sqrt(VTV_matrix->val[0][0]/(count_observation-count_unknown));
+                                            Tz_sigma = sigma;
+                                        }
+                                        
+                                        //printf("sigma %f\tmax residual %d\t%f\t%d\t%d\n",sigma,total_maxV_pos,total_maxV,obs_pair[total_maxV_pos].m_X,obs_pair[total_maxV_pos].m_Y);
+                                        
+                                        double max_delta = -99999;
+                                        Tz_delta.clear();
+                                        
+                                        for(int i=0;i<levelinfo.pairinfo->SelectNumberOfPairs();i++)
+                                        {
+                                            call_array[i] = 0;
+                                            saved_pairs[max_countMPs_pair][i] = 0;
+                                            saved_pairV[max_countMPs_pair][i] = 0;
+                                        }
+                                        
+                                        for(int c = 0 ; c < count_unknown ; c++)
+                                        {
+                                            double A = X_matrix->val[c][0];
+                                            int pos = unknown[c];
+                                            call_array[pos] = 1;
+                                            saved_pairs[max_countMPs_pair][pos] = 1;
+                                            
+                                            levelinfo.pairinfo->SetTz(pos,levelinfo.pairinfo->Tz(pos) + A);
+                                            if(max_delta < fabs(A))
+                                                max_delta = fabs(A);
+                                            //delta[pos] = A;
+                                            
+                                            D3DPOINT result(pos,A,levelinfo.pairinfo->Tz(pos));
+                                            Tz_delta.push_back(result);
+                                            //printf("index %d\t pair ID %d\tdelta %f\t pair class %d\n",c,pos,A,pair_class[pos]);
+                                        }
+                                        
+                                        
+                                        if(V_array_all.size() > 0)
+                                        {
+                                            vector<int> V_array_count_all(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                                            vector<double> V_array(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+                                            for(int index = 0 ; index < V_array_all.size() ; index++)
+                                            {
+                                                D3DPOINT temp = V_array_all[index];
+                                                float V = temp.m_Z;
+                                                int pair1 = (int)temp.m_X;
+                                                int pair2 = (int)temp.m_Y;
+                                                V_array[pair1] = V_array[pair1] + temp.m_Z*temp.m_Z;
+                                                V_array_count_all[pair1] = V_array_count_all[pair1] + 1;
+                                                
+                                                V_array[pair2] = V_array[pair2] + temp.m_Z*temp.m_Z;
+                                                V_array_count_all[pair2] = V_array_count_all[pair2] + 1;
+                                                
+                                            }
+                                            
+                                            for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
+                                            {
+                                                if(V_array[index] > 0 && V_array_count_all[index] > 1)
+                                                {
+                                                    double std_array = sqrt(V_array[index]/((double)(V_array_count_all[index] - 1)));
+                                                    if(std_array < sigma*1.65)
+                                                        saved_pairV[max_countMPs_pair][index] = std_array;
+                                                    else
+                                                        saved_pairV[max_countMPs_pair][index] = 0;
+                                                    
+                                                    if(std_array < 1.0)
+                                                        std_array = 1.0;
+                                                    
+                                                    pair_weight[index] = std_array;
+                                                
+                                                    //printf("blunder index %d\tstd_array 95sigma\t%f\t%f\t%d\n",index,std_array,V_array[index],V_array_count_all[index]);
+                                                }
+                                                else
+                                                {
+                                                    pair_weight[index] = 1.0;
+                                                    saved_pairV[max_countMPs_pair][index] = 0;
+                                                }
+                                                   
+                                                //printf("pair weight index %d\t%f\tTz_sigma %f\n",index,pair_weight[index],Tz_sigma);
+                                            }
+                                        }
+                                        
+                                        
+                                        
+                                        GMA_double_destroy(A_matrix);
+                                        GMA_double_destroy(L_matrix);
+                                        GMA_double_destroy(W_matrix);
+                                        
+                                        GMA_double_destroy(AT_matrix);
+                                        GMA_double_destroy(ATW_matrix);
+                                        GMA_double_destroy(ATWA_matrix);
+                                        
+                                        GMA_double_destroy(ATWAI_matrix);
+                                        GMA_double_destroy(ATWL_matrix);
+                                        GMA_double_destroy(X_matrix);
+                                        GMA_double_destroy(AX_matrix);
+                                        GMA_double_destroy(V_matrix);
+                                        
+                                        GMA_double_destroy(VT_matrix);
+                                        GMA_double_destroy(VTV_matrix);
+                                        
+                                        GMA_double_destroy(ATA_matrix);
+                                        GMA_double_destroy(ATAI_matrix);
+                                        GMA_double_destroy(ATAIATWA);
+                                        GMA_double_destroy(CovX);
+                                        
+                                        S_ratio = fabs(S0 - sigma)/S0;
+                                        //printf("iteration %d\tS0 Sigma max_delta S_ratio %f\t%f\t%f\t%f\n",while_iter,S0,sigma,max_delta,S_ratio);
+                                        
+                                        printf("ref_pair ID %d\titeration %d\tS0 Sigma max_delta %f\t%f\t%f\tcheck_remove_pair %d\n\n",max_countMPs_pair,while_iter,S0,sigma,max_delta,check_remove_pair);
+                                        if((max_delta < 0.1) || (S_ratio < 0.001))
+                                        {
+                                            check_while = true;
+                                            saved_sigma[max_countMPs_pair] = S0;
+                                            //while_iter = 0;
+                                        }
+                                        else if(count_observation <= count_unknown)
+                                        {
+                                            check_while = true;
+                                            //while_iter = 0;
+                                            Tz_sigma = 1.0;
+                                        }
+                                        
+                                        S0 = sigma;
                                     }
-                                    
-                                    
-                                    
-                                    GMA_double_destroy(A_matrix);
-                                    GMA_double_destroy(L_matrix);
-                                    GMA_double_destroy(W_matrix);
-                                    
-                                    GMA_double_destroy(AT_matrix);
-                                    GMA_double_destroy(ATW_matrix);
-                                    GMA_double_destroy(ATWA_matrix);
-                                    
-                                    GMA_double_destroy(ATWAI_matrix);
-                                    GMA_double_destroy(ATWL_matrix);
-                                    GMA_double_destroy(X_matrix);
-                                    GMA_double_destroy(AX_matrix);
-                                    GMA_double_destroy(V_matrix);
-                                    
-                                    GMA_double_destroy(VT_matrix);
-                                    GMA_double_destroy(VTV_matrix);
-                                    
-                                    GMA_double_destroy(ATA_matrix);
-                                    GMA_double_destroy(ATAI_matrix);
-                                    GMA_double_destroy(ATAIATWA);
-                                    GMA_double_destroy(CovX);
-                                    
-                                    S_ratio = fabs(S0 - sigma)/S0;
-                                    //printf("iteration %d\tS0 Sigma max_delta S_ratio %f\t%f\t%f\t%f\n",while_iter,S0,sigma,max_delta,S_ratio);
-                                    
-                                    printf("ref_pair ID %d\titeration %d\tS0 Sigma max_delta %f\t%f\t%f\tcheck_remove_pair %d\n\n",max_countMPs_pair,while_iter,S0,sigma,max_delta,check_remove_pair);
-                                    if((max_delta < 0.1) || (S_ratio < 0.001))
+                                    else
                                     {
                                         check_while = true;
-                                        saved_sigma[max_countMPs_pair] = S0;
-                                        //while_iter = 0;
-                                    }
-                                    else if(count_observation <= count_unknown)
-                                    {
-                                        check_while = true;
-                                        //while_iter = 0;
-                                        Tz_sigma = 1.0;
+                                        check_reiter = true;
                                     }
                                     
-                                    S0 = sigma;
+                                    while_iter++;
                                 }
-                                else
+                            
+                                double reiter_S_ratio = fabs(reiter_S0 - S0);///reiter_S0;
+                                
+                                if( (reiter_S_ratio < 0.1 || S0 < 1.5))
                                 {
-                                    check_while = true;
                                     check_reiter = true;
+                                    check_removed_pair = false;
+                                    //saved_sigma[mp_iter] = S0;
                                 }
                                 
-                                while_iter++;
+                                reiter_S0 = S0;
+                                
+                                reiter_count++;
+                                check_while = false;
+                                while_iter = 0;
+                            
                             }
-                        
-                            double reiter_S_ratio = fabs(reiter_S0 - S0);///reiter_S0;
-                            
-                            if( (reiter_S_ratio < 0.1 || S0 < 1.5))
-                            {
-                                check_reiter = true;
-                                check_removed_pair = false;
-                                //saved_sigma[mp_iter] = S0;
-                            }
-                            
-                            reiter_S0 = S0;
-                            
-                            reiter_count++;
-                            check_while = false;
-                            while_iter = 0;
-                        
+                            reiter_count=0;
+                            check_reiter=false;
                         }
-                        reiter_count=0;
-                        check_reiter=false;
+                        
+                        //CA_th = CA_th - 0.1;
+                        //count_cath_while++;
+                    }
+                    step_by_step++;
+                    printf("SBS %d\tsigma %f\n\n\n\n",mp_iter,saved_sigma[max_countMPs_pair]);
+                    //for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
+                    {
+                        for(int j = 0 ; j < levelinfo.pairinfo->SelectNumberOfPairs() ; j++)
+                        {
+                            printf("max_countMPs_pair %d\tpair_ID %d\tsaved_pairs %d\tsaved_pairV %f\n",max_countMPs_pair,j,saved_pairs[max_countMPs_pair][j],saved_pairV[max_countMPs_pair][j]);
+                            //saved_pairs
+                        }
                     }
                     
-                    //CA_th = CA_th - 0.1;
-                    //count_cath_while++;
                 }
-                step_by_step++;
-                printf("SBS %d\tsigma %f\n\n\n\n",mp_iter,saved_sigma[max_countMPs_pair]);
-                //for(int i = 0 ; i < levelinfo.pairinfo->SelectNumberOfPairs() ; i++)
+                reference_pairs.clear();
+            }
+            
+            
+            
+            vector<long> reference_pairs_overlap_count;
+            vector<unsigned char> pair_coverage(*levelinfo.Grid_length,0);
+            long pair_coverage_counts = 0;
+            for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+            {
+                if(multimps(pt_index, max_countMPs_pair).check_matched)
                 {
-                    for(int j = 0 ; j < levelinfo.pairinfo->SelectNumberOfPairs() ; j++)
+                    pair_coverage[pt_index] = 1;
+                    pair_coverage_counts++;
+                }
+            }
+            
+            short totoal_pair_count = 0;
+            vector<short> finished_pair(levelinfo.pairinfo->SelectNumberOfPairs(),0);
+            bool check_overlap_P = false;
+            while(!check_overlap_P && totoal_pair_count < levelinfo.pairinfo->SelectNumberOfPairs())
+            {
+                long max_overlap_counts = 0;
+                short max_overlap_pair = -1;
+                for(int pair_number = 0 ; pair_number < levelinfo.pairinfo->SelectNumberOfPairs() ; pair_number++)
+                {
+                    if(!finished_pair[pair_number])
                     {
-                        printf("max_countMPs_pair %d\tpair_ID %d\tsaved_pairs %d\tsaved_pairV %f\n",max_countMPs_pair,j,saved_pairs[max_countMPs_pair][j],saved_pairV[max_countMPs_pair][j]);
-                        //saved_pairs
+                        long count_overlap = 0;
+                        
+                        if(saved_pairV[max_countMPs_pair][pair_number] > 0)
+                        {
+                            for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+                            {
+                                if(!pair_coverage[pt_index] && multimps(pt_index, pair_number).check_matched)
+                                {
+                                    count_overlap++;
+                                }
+                            }
+                        }
+                        
+                        if(max_overlap_counts < count_overlap)
+                        {
+                            max_overlap_counts = count_overlap;
+                            max_overlap_pair = pair_number;
+                        }
                     }
                 }
                 
+                if(max_overlap_pair > -1 && max_overlap_counts/(double)(*levelinfo.Grid_length) > 0.01)
+                {
+                    //update pair_coverage
+                    for(long int pt_index = 0 ; pt_index < (*levelinfo.Grid_length) ; pt_index++)
+                    {
+                        if(!pair_coverage[pt_index] && multimps(pt_index, max_overlap_pair).check_matched)
+                        {
+                            pair_coverage[pt_index] = 1;
+                            pair_coverage_counts++;
+                        }
+                    }
+                    
+                    finished_pair[max_overlap_pair] = 1;
+                    
+                    printf("coverage P %f\n",pair_coverage_counts/(double)(*levelinfo.Grid_length));
+                }
+                
+                if(pair_coverage_counts/(double)(*levelinfo.Grid_length) > 0.8 && max_overlap_counts/(double)(*levelinfo.Grid_length) < 0.1)
+                    check_overlap_P = true;
+                
+                totoal_pair_count++;
             }
-            reference_pairs.clear();
+            
+            if(pair_coverage_counts/(double)(*levelinfo.Grid_length) < 0.8)
+            {
+                saved_sigma[max_countMPs_pair] = 99999;
+            }
         }
-        
             
         mp_iter++;
     }
     
     double min_sigam = 999999;
     int minS_pos = -1;
-    for(int mp_iter = 0 ; mp_iter < levelinfo.pairinfo->SelectNumberOfPairs() ; mp_iter++)
+    for(int mp_iter = 0 ; mp_iter < 10 ; mp_iter++)
     {
-        if(saved_sigma[mp_iter] < min_sigam && saved_sigma[mp_iter] > 0)
+        printf("mp_iter %d\tpair_ID %d\tmin_sigma %f\n",mp_iter,MPs_array[mp_iter].pair_ID,saved_sigma[MPs_array[mp_iter].pair_ID]);
+        
+        if(saved_sigma[MPs_array[mp_iter].pair_ID] < min_sigam && saved_sigma[MPs_array[mp_iter].pair_ID] > 0)
         {
-            minS_pos = mp_iter;
-            min_sigam = saved_sigma[mp_iter];
-            printf("mp_iter %d\tmin_sigma %f\n",mp_iter,saved_sigma[mp_iter]);
+            minS_pos = MPs_array[mp_iter].pair_ID;
+            min_sigam = saved_sigma[MPs_array[mp_iter].pair_ID];
+            printf("max_countMPs_pair %d\tmin_sigma %f\n",minS_pos,saved_sigma[MPs_array[mp_iter].pair_ID]);
         }
     }
-    
     
     if(minS_pos >= 0)
     {
@@ -11960,7 +12041,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                         */
                         int count_unknown = unknown.size();
                         int count_observation = ref_Tz_counts.size() + nonref_Tz_counts.size();
-                        //printf("unknown %d\tobj %d\n",count_unknown,count_observation);
+                        printf("unknown %d\tobj %d\n",count_unknown,count_observation);
                         
                         bool check_unknown = false;
                         
@@ -12089,15 +12170,15 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 }
                                 
                                 double Tz_std_W;
-                                /*
+                                
                                 if(ref_Tz_std[i] < 20)
                                     Tz_std_W = 1.0;
                                 else
                                     Tz_std_W = ref_Tz_std[i]/20.0;
-                                */
                                 
-                                //double weight = weight_factor*(1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W);
-                                float weight = weight_factor*( 1 + pair_weight[unknown[pos]]);
+                                
+                                double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
+                                //float weight = weight_factor*( 1 + pair_weight[unknown[pos]]);
                                 
                                 //if(pair_weight[unknown[pos]] == 100)
                                 //    weight = 0.001;
@@ -12124,7 +12205,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 double weight_factor2 = 1.0;
                                 
                                 double Tz_std_W;
-                                /*
+                                
                                 if(nonref_Tz_std[i] < 20)
                                     Tz_std_W = 1.0;
                                 else
@@ -12143,8 +12224,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 }
                                   
                                 
-                                //double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W) + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W );
-                                float weight = weight_factor1*pair_weight[unknown[pos_X]] + weight_factor2*pair_weight[unknown[pos_Y]];//1.0/(nonref_Tz_std[i]*nonref_Tz_std[i])*
+                                double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W)/2.0;
+                                //float weight = weight_factor1*pair_weight[unknown[pos_X]] + weight_factor2*pair_weight[unknown[pos_Y]];//1.0/(nonref_Tz_std[i]*nonref_Tz_std[i])*
                                 //if(pair_weight[unknown[pos_X]] == 100 && pair_weight[unknown[pos_Y]] == 100)
                                 //    weight = 0.001;
                                 
@@ -12441,22 +12522,22 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                         
                                         if(pair_class[temp.m_X] != 1)
                                         {
-                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V[index]*obs_remove_pair_V[index];
                                             V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
                                         }
                                         
                                         if(pair_class[temp.m_Y] != 1)
                                         {
-                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index];//*obs_remove_pair_V[index];
+                                            V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V[index]*obs_remove_pair_V[index];
                                             V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
                                         }
                                     }
                                     
                                     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
                                     {
-                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
+                                        if(V_array[index] > 0 && V_array_count[index] > 1 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
                                         {
-                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            double std_array = sqrt(V_array[index]/((double)(V_array_count[index]-1)));
                                             if(max_stdcount < V_array_count[index] )
                                             {
                                                 max_stdvalue = std_array;
@@ -12472,9 +12553,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     
                                     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
                                     {
-                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
+                                        if(V_array[index] > 0 && V_array_count[index] > 1 && index != max_countMPs_pair && pair_class[index] != 1)// && !check_selected_ref[index])
                                         {
-                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            double std_array = sqrt(V_array[index]/((double)(V_array_count[index]-1)));
                                             if(max_stdcount == V_array_count[index] )
                                             {
                                                 if(max_stdvalue < std_array)
@@ -12484,7 +12565,7 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                                     
                                                     if(V_array_count[added_pair] == max_stdcount)
                                                     {
-                                                        double added_std_array = V_array[added_pair]/((double)V_array_count[added_pair]);
+                                                        double added_std_array = sqrt(V_array[added_pair]/((double)(V_array_count[added_pair]-1)));
                                                         if(max_stdvalue == added_std_array)
                                                         {
                                                             max_pairweight = added_pair;
@@ -12540,25 +12621,25 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     {
                                         UI2DPOINT temp = obs_remove_pair_bl[index];
                                         
-                                        V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array[temp.m_X] = V_array[temp.m_X] + obs_remove_pair_V_bl[index]*obs_remove_pair_V_bl[index];
                                         V_array_count[temp.m_X] = V_array_count[temp.m_X] + 1;
                                         
-                                        V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V_bl[index];//*obs_remove_pair_V_bl[index];
+                                        V_array[temp.m_Y] = V_array[temp.m_Y] + obs_remove_pair_V_bl[index]*obs_remove_pair_V_bl[index];
                                         V_array_count[temp.m_Y] = V_array_count[temp.m_Y] + 1;
                                     }
                                     
                                     //avg = 0 assumption
                                     for(int index = 0 ; index < levelinfo.pairinfo->SelectNumberOfPairs() ; index++)
                                     {
-                                        if(V_array[index] > 0 && V_array_count[index] > 0 && index != max_countMPs_pair)
+                                        if(V_array[index] > 0 && V_array_count[index] > 1 && index != max_countMPs_pair)
                                         {
-                                            double std_array = V_array[index]/((double)V_array_count[index]);
+                                            double std_array = sqrt(V_array[index]/((double)(V_array_count[index]-1)));
                                             
                                             if(std_array < 1.0)
                                                 std_array = 1.0;
                                             
                                             //if(pair_weight[index] != 100)
-                                            //    pair_weight[index] = std_array;
+                                                pair_weight[index] = std_array;
                                             
                                             //printf("WEIGHT index %d\tstd_array 95sigma\t%f\t%f\t%f\t%d\t%f\n",index,std_array,sigma*1.96,V_array[index],V_array_count[index],pair_weight[index]);
                                         }
