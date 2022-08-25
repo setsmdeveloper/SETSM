@@ -29,7 +29,7 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
         if(!check_conver)
         {
             EO pp_eo = eo;
-            CAMERA_INFO pp_camera;
+            CAMERA_INFO pp_camera = camera;
             pp_camera.m_focalLength = camera.m_focalLength;
             pp_camera.m_ppx = 0;
             pp_camera.m_ppy = 0;
@@ -320,12 +320,14 @@ void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, 
     GMA_double_destroy(AI_matrix);
     GMA_double_destroy(AIL_matrix);
     
-    printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+    printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
     printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
            camera.m_focalLength,camera.m_ppx,camera.m_ppy,
            camera.k1,camera.k2,camera.k3,
            camera.p1,camera.p2,
            camera.a1,camera.a2);
+    //if(std::isnan(eo.m_Xl))
+    //    exit(1);
 }
 
 void EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
@@ -1022,7 +1024,8 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     printf("input camera %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy,
            camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
     
-    while(iteration < max_iter && !check_conver)
+    bool check_nan = false;
+    while(iteration < max_iter && !check_conver && !check_nan)
     {
         iteration++;
         
@@ -1159,6 +1162,9 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         if(max_correct <= 0.0000001)
             check_conver = true;
             
+        if(std::isnan(max_correct))
+            check_nan = true;
+        
         printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
         //exit(1);

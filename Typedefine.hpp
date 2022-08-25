@@ -1319,6 +1319,8 @@ typedef struct tagImageInfo
     char Ofilename[500];
     char imagetime[500];
     char SatID[500];
+    
+    bool check_EO;
 } ImageInfo;
 
 typedef struct

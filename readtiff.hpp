@@ -121,33 +121,12 @@ T *_read_scanline_tiff(TIFF *tif, CSize *Imagesize, long int *cols, long int *ro
     T nodata_val = 0;
     bool req_nodata_conversion;
     std::tie(req_nodata_conversion, nodata_val) = get_nodata_value(tif, type);
-
-    // check random access support
-    // Random access is supported if no compression is used
-    // or if there is one row per strip
-    uint16 compression;
-    uint32 rows_per_strip;
-
-    bool supports_random_access = false;
-
-    if((       1 == TIFFGetField(tif, TIFFTAG_COMPRESSION,  &compression))
-            && 1 == TIFFGetField(tif, TIFFTAG_ROWSPERSTRIP, &rows_per_strip))
-    {
-        supports_random_access = (
-                   (compression    == COMPRESSION_NONE)
-                || (rows_per_strip == 1));
-    }
     
     //TODO this needs to be updated to read in multi-sample images correctly.
     for(s =0;s< nsamples;s++)
     {
-        if(!supports_random_access)
-        {
-            for (row=0;row<rows[0];row++)
-            {
-                TIFFReadScanline(tif,buf,row,s);
-            }
-        }
+        for (row=0;row<rows[0];row++)
+            TIFFReadScanline(tif,buf,row,s);
         for (row=rows[0];row<rows[1];row++)
         {
             T* t_data;

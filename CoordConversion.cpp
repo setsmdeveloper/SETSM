@@ -2117,7 +2117,7 @@ void GetPairAnglesFromRays(const double A1, const double A2, const double E1, co
     double a2 = 180 - acos((ray_vector2.m_X*base_vector.m_X + ray_vector2.m_Y*base_vector.m_Y + ray_vector2.m_Z*base_vector.m_Z)/(mag*mag2))*RadToDeg;
     //printf("a1 a2 CA %f\t%f\t%f\n",a1,a2,180-a1-a2);
     
-    CA = 180-a1-a2;
+    CA = fabs(180-a1-a2);
     AE = fabs((a1 - a2)/2.0);
     double BIE_num = sin(E1*DegToRad) + sin(E2*DegToRad);
     double BIE_den = sqrt(2.0)*sqrt( 1.0 + cos((A1-A2)*DegToRad) * cos(E1*DegToRad)*cos(E2*DegToRad) + sin(E1*DegToRad)*sin(E2*DegToRad) );
@@ -2192,6 +2192,7 @@ D2DPOINT GetObjectToImageRPC_single_mpp(const double * const *_rpc, const uint8 
     deltaP      = _imageparam[0];
     deltaR      = _imageparam[1];
 
+    //printf("deltaP R %f\t%f\n",deltaP,deltaR);
     D2DPOINT IP;
     IP.m_Y      = deltaP + Line;
     IP.m_X      = deltaR + Samp;

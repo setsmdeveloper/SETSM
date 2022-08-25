@@ -930,8 +930,8 @@ double LocalSurfaceFitting_Kernel(vector<double> K_height, vector<int> X_array, 
                 double angle = acos(fabs(N.m_Z)/norm)*RadToDeg;
                 SetAngle(angle);
 
-                int max_H = 25;
-                long hist[25] = {0};
+                int max_H = 30;
+                long hist[30] = {0};
                 for(int row = 0; row < XY_save.size() ; row++)
                 {
                     int hist_index = (int)(std::abs(V_matrix->val[row][0]));
