@@ -7202,13 +7202,13 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                         {
                             if(level == proinfo->pyramid_level)
                                 max_iteration = 1;
-                            /*
+                            
                             if(level == 2)
                                 max_iteration = 1;
                             
                             if(level == 1)
                                 max_iteration = 4;
-                            */
+                            
                         }
                         
                         double minimum_memory;
@@ -8155,8 +8155,8 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                             temp.m_Y = weight_min + WS*(reference_pairs.size() - i);
                                             
                                             levelinfo.pairinfo->Setreferencepairs(pair_number,temp);
-                                            reference_pairs_W.push_back(1000000);
-                                            //reference_pairs_W.push_back(levelinfo.pairinfo->referencepairs(pair_number).m_Y);
+                                            
+                                            reference_pairs_W.push_back(levelinfo.pairinfo->referencepairs(pair_number).m_Y);
                                             
                                             if(levelinfo.pairinfo->referencepairs(pair_number).m_X == 1)
                                                 printf("Setreferencepairs defined reference_pair %d\t%f\t%f\n",pair_number,levelinfo.pairinfo->referencepairs(pair_number).m_Y,reference_pairs_W[i]);
@@ -10194,7 +10194,7 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
         select_MPs_array[0] = 1;
     }
     
-    while(mp_iter < while_count)
+    while(mp_iter < while_count && mp_iter < 10)
     {
         PairCA temp;
         temp = MPs_array[mp_iter];
@@ -10822,8 +10822,7 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                                 Tz_std_W = ref_Tz_std[i]/20.0;
                                             
                                             
-                                            //double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
-                                            double weight = 1.0;
+                                            double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
                                             
                                             A_matrix->val[i][pos] = -1.0;
                                             W_matrix->val[i][i] = weight;
@@ -10853,8 +10852,7 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
                                             else
                                                 Tz_std_W = nonref_Tz_std[i]/20.0;
                                             
-                                            //double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W )/2.0;
-                                            double weight = 1.0;
+                                            double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W )/2.0;
                                             
                                             A_matrix->val[i + refTz_pair.size()][pos_X] = 1.0;
                                             A_matrix->val[i + refTz_pair.size()][pos_Y] = -1.0;
@@ -11180,7 +11178,7 @@ void VerticalCoregistration_LSA_select_ref(const ProInfo* proinfo, LevelInfo &le
     int minS_pos = -1;
     if(levelinfo.pairinfo->MaxCountMPs_pair() == -1)
     {
-        for(int mp_iter = 0 ; mp_iter < levelinfo.pairinfo->SelectNumberOfPairs() ; mp_iter++)
+        for(int mp_iter = 0 ; mp_iter < 10 ; mp_iter++)
         {
             printf("mp_iter %d\tpair_ID %d\tmin_sigma %f\n",mp_iter,MPs_array[mp_iter].pair_ID,saved_sigma[MPs_array[mp_iter].pair_ID]);
             
@@ -11511,8 +11509,8 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
             int pair_number = reference_pairs[i];
             pair_class[pair_number] = 1;
             
-            //reference_pairs_final_W[pair_number] = weight_min + WS*(reference_pairs.size() - i);
-            reference_pairs_final_W[pair_number] = weight_min;
+            reference_pairs_final_W[pair_number] = weight_min + WS*(reference_pairs.size() - i);
+            
             D2DPOINT temp;
             temp.m_X = 1;
             temp.m_Y = reference_pairs_final_W[pair_number];
@@ -11525,9 +11523,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
     }
     else
     {
-        //double weight_dis = 1000000;
-        //double weight_min = 1000000;
-        //double WS = weight_dis/(double)reference_pairs.size();
+        double weight_dis = 1000000;
+        double weight_min = 1000000;
+        double WS = weight_dis/(double)reference_pairs.size();
         for(int i = 0 ; i < reference_pairs.size() ; i++)
         {
             int pair_number = reference_pairs[i];
@@ -12300,9 +12298,9 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                     Tz_std_W = ref_Tz_std[i]/20.0;
                                 
                                 
-                                //double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
+                                double weight = weight_factor*(2.0 + 1.0/pair_weight[unknown[pos]] + 1.0/Tz_std_W)/2.0;
                                 //float weight = weight_factor*( 1 + pair_weight[unknown[pos]]);
-                                double weight = weight_factor;
+                                
                                 //if(pair_weight[unknown[pos]] == 100)
                                 //    weight = 0.001;
                                 
@@ -12347,11 +12345,10 @@ void VerticalCoregistration_LSA(const ProInfo* proinfo, LevelInfo &levelinfo, Ma
                                 }
                                   
                                 
-                                //double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W)/2.0;
+                                double weight = weight_factor1*(1.0/pair_weight[unknown[pos_X]] + 1.0/Tz_std_W)/2.0 + weight_factor2*(1.0/pair_weight[unknown[pos_Y]] + 1.0/Tz_std_W)/2.0;
                                 //float weight = weight_factor1*pair_weight[unknown[pos_X]] + weight_factor2*pair_weight[unknown[pos_Y]];//1.0/(nonref_Tz_std[i]*nonref_Tz_std[i])*
                                 //if(pair_weight[unknown[pos_X]] == 100 && pair_weight[unknown[pos_Y]] == 100)
                                 //    weight = 0.001;
-                                double weight = (weight_factor1 + weight_factor2)/2.0;
                                 
                                 A_matrix->val[i + refTz_pair.size()][pos_X] = 1.0;
                                 A_matrix->val[i + refTz_pair.size()][pos_Y] = -1.0;
