@@ -25,7 +25,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "4.3.12";
+const char setsm_version[] = "4.3.14";
 
 int main(int argc,char *argv[])
 {
@@ -7297,7 +7297,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 }
              
 #pragma omp for
-                for(ref_iter = start_col[direction_iter] ; ref_iter < end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
+                for(ref_iter = start_col[direction_iter] ; ref_iter >= end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
                 {
                     pts_col = ref_iter;
                     // bool check_free_LHcost_pre = false;
@@ -7339,7 +7339,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 //printf("bottom left to right\n");
                 direction_iter = 6;
 #pragma omp for
-                for(ref_iter = start_row[direction_iter] ; ref_iter < end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
+                for(ref_iter = start_row[direction_iter] ; ref_iter >= end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
                 {
                     pts_row = ref_iter;
                     // bool check_free_LHcost_pre = false;
@@ -7421,7 +7421,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 //printf("bottom right to left\n");
                 direction_iter = 7;
 #pragma omp for
-                for(ref_iter = start_row[direction_iter] ; ref_iter < end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
+                for(ref_iter = start_row[direction_iter] ; ref_iter >= end_row[direction_iter] ; ref_iter = ref_iter + row_iter[direction_iter]) //left wall row direction
                 {
                     pts_row = ref_iter;
                     // bool check_free_LHcost_pre = false;
@@ -7461,7 +7461,7 @@ void AWNCC(ProInfo *proinfo, VOXEL **grid_voxel,CSize Size_Grid2D, UGRID *GridPT
                 }
              
 #pragma omp for
-                for(ref_iter = start_col[direction_iter] ; ref_iter < end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
+                for(ref_iter = start_col[direction_iter] ; ref_iter >= end_col[direction_iter] ; ref_iter = ref_iter + col_iter[direction_iter]) //top wall col direction
                 {
                     pts_col = ref_iter;
                     // bool check_free_LHcost_pre = false;
