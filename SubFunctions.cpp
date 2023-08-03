@@ -1934,7 +1934,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         while(!feof(pFile) && (!check_br || !check_d))
         {
             fscanf(pFile,"%s",temp_str);
-            if(strcmp(temp_str,"<BAND_P>") == 0 && !check_br)
+            if((strcmp(temp_str,"<BAND_P>") == 0 || strcmp(temp_str,"<BAND_R>") == 0) && !check_br)
             {
                 check_br = true;
                 

@@ -18,7 +18,7 @@ PROJLIB?=-L/home/noh.56/software/proj-5.1.0/lib
 MPIFLAGS = -DBUILDMPI
 
 INCS = $(TIFFINC) $(GEOTIFFINC)
-LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) $(PROJLIB)
+LDFLAGS = $(TIFFLIB) $(GEOTIFFLIB) 
 
 COMMON_OBJS = CoordConversion.o SubFunctions.o LSF.o Orthogeneration.o Coregistration.o SDM.o setsmgeo.o grid.o grid_triangulation.o edge_list.o
 MPI_OBJS = $(COMMON_OBJS) log_mpi.o
