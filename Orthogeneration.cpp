@@ -45,7 +45,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     }
     
     printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
-    
+    printf("sensor provider %d\t%d\n",args.sensor_provider,DG);
     char *tmp_chr = remove_ext(ImageFilename);
     sprintf(RPCFilename,"%s.xml",tmp_chr);
     sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
@@ -193,7 +193,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     double OrthoBoundary[4];
     // set generated orthoimage info by comparing DEM info
     if(args.sensor_type == SB)
-        check_overlap = SetOrthoBoundary_ortho(&Orthoimagesize_temp, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, _param, Ortho_resolution);
+        check_overlap = SetOrthoBoundary_ortho(proinfo, args, &Orthoimagesize_temp, OrthoBoundary, RPCs, DEM_resolution, DEM_size, DEM_minX, DEM_maxY, _param, Ortho_resolution);
     else
     {
         GetImageSize(ImageFilename,&m_frameinfo.m_Camera.m_ImageSize);
@@ -482,7 +482,7 @@ uint16 *subsetImage_ortho(const int sensor_type, const FrameInfo m_frameinfo, co
     return leftimage;
 }
 
-bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary, const double * const *RPCs, const double gridspace, const CSize DEM_size, const double minX, const double maxY, const TransParam param, const double Ortho_resolution)
+bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, double *Boundary, const double * const *RPCs, const double gridspace, const CSize DEM_size, const double minX, const double maxY, const TransParam param, const double Ortho_resolution)
 {
     const double TopLeft[2] = {minX, maxY};
     double DEMboundary[4];
@@ -493,11 +493,22 @@ bool SetOrthoBoundary_ortho(CSize *Imagesize, double *Boundary, const double * c
     
     printf("DEMBoundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
     
-    const double minLon          = -1.15*RPCs[1][2] + RPCs[0][2];
-    const double maxLon          =  1.15*RPCs[1][2] + RPCs[0][2];
-    const double minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
-    const double maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
+    double minLon          = -1.15*RPCs[1][2] + RPCs[0][2];
+    double maxLon          =  1.15*RPCs[1][2] + RPCs[0][2];
+    double minLat          = -1.15*RPCs[1][3] + RPCs[0][3];
+    double maxLat          =  1.15*RPCs[1][3] + RPCs[0][3];
     
+    if(args.sensor_provider == DG)
+    {
+        ImageInfo imageinfo;
+        
+        OpenXMLFile_orientation(proinfo->RPCfilename[0],&imageinfo);
+        
+        minLon          = imageinfo.LL[0];
+        maxLon          = imageinfo.UR[0];
+        minLat          = imageinfo.LL[1];
+        maxLat          = imageinfo.UR[1];
+    }
     printf("lon lat %f\t%f\t%f\t%f\n",minLon,maxLon,minLat,maxLat);
     
     D2DPOINT *XY = NULL;
