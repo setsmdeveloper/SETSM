@@ -32,6 +32,9 @@ using std::max;
 
 #define SUB_RATIO 4.6
 
+void statistic_dH_ref(int pair1, int pair2, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height, vector<uint32> &save_ptindex, double &sel_count, double &avg, double &std);
+void statistic_dH(int pair1, int pair2, int pair_pos, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height, uint32 count_ptindex, uint32** save_ptindex, double &sel_count, double &avg, double &std);
+void statistic_dH(int pair1, int pair2, int pair_pos, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height,  uint32 count_ptindex, uint32* save_ptindex, double &sel_count, double &avg, double &std);
 bool VerticalShift(vector<float>& input, double height_step, double &shift, double &sel_count);
 bool VerticalShift(vector<D3DPOINT>& input, double height_step, double &shift, double &sel_count);
 char* remove_ext(const char* mystr);
@@ -41,6 +44,7 @@ char* SetOutpathName(char *_path);
 int Maketmpfolders(ProInfo *info);
 double getSystemMemory();
 void printMaxMemUsage();
+double MaxMemUsage();
 
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo);
 bool GetRAinfoFromEcho(ProInfo *proinfo, const char* echofile, double **Imageparams, CPairInfo &pairinfo);
@@ -72,9 +76,13 @@ double** OpenXMLFile_Pleiades(char* _filename);
 void WriteIRPCs_Planet(char* filename, double **IRPCs);
 double** OpenXMLFile_Planet(char* _filename);
 void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo);
+void CalReflectanceParamsForBand(ImageInfo *Iinfo, BandInfo *Binfo, int band_number, double &refl_fact, double &refl_offset);
 void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo);
+void OpenXMLFile_orientation_blacksky(char* _filename, ImageInfo *Iinfo);
 void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo);
 void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_image);
+void GetFilelistsFromDir(char *ext, char *path, char *save_path, char** result, char** filenames, int &file_counts);
+bool findstringpos(char *target, char *refer, int &pos);
 void SetImageFileInfo(char* _filename, ImageInfo &Iinfo);
 void Open_planetmultiinfo_args(ARGINFO *args);
 void WriteEOs(char* filename, EO eo, CAMERA_INFO ca);
@@ -89,6 +97,7 @@ float median(int n, float* x,float min, float max);
 float binmedian(int n, float *x);
 double quickselect(double *arr, int n, int k);
 double quickselect(vector<double> &arr, int n, int k);
+double sort_decending(vector<short> &arr, int n, int k);
 float quickselect(vector<PairCA> &arr, int n, int k);
 double cal_var(vector<double> &arr);
 
@@ -156,6 +165,9 @@ void SetTinBoundary(LevelInfo &rlevelinfo, const D3DPOINT &TriP1, const D3DPOINT
 bool IsTinInside(const D3DPOINT &CurGPXY, const D3DPOINT &TriP1, const D3DPOINT &TriP2, const D3DPOINT &TriP3, float &Z);
 
 double SetNormalAngle(const D3DPOINT &pts0, const D3DPOINT &pts1, const D3DPOINT &pts2);
+
+double SetTINArea(const D3DPOINT &Ap, const D3DPOINT &Bp, const D3DPOINT &Cp);
+
 void SetAngle(double &angle);
 
 //FullTriangulation *TINCreate_float(F3DPOINT *ptslists, long numofpts, UI3DPOINT* trilists, double min_max[], long *count_tri, double resolution);

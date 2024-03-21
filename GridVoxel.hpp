@@ -9,34 +9,68 @@
 #include <stdio.h>
 #include "Typedefine.hpp"
 
-constexpr inline signed char _DoubleToSignedChar_voxel(double val)
+inline short _DoubleToSignedChar_voxel(double val, enum SensorProvider sensor_provider)
 {
-    return (signed char)(val*100.0);
+    short out = (short)(val*1000.0);
+    
+    if(sensor_provider == PT)
+        out = (short)(val*100.0);
+    
+    return out;
 }
 
-constexpr inline double _SignedCharToDouble_voxel(signed char val)
+inline double _SignedCharToDouble_voxel(short val, enum SensorProvider sensor_provider)
 {
-    return (double)(val)/100.0;
+    double out = (double)(val/1000.0);
+    
+    if(sensor_provider == PT)
+        out = (double)(val/100.0);
+    
+    return out;
 }
 
-inline signed char DoubleToSignedChar_voxel(double val)
+inline short DoubleToSignedChar_voxel(double val, enum SensorProvider sensor_provider)
 {
-    if(val > 1.20 || val < -1.20)
+    if(sensor_provider == PT)
     {
-        printf("DoubleToSignedChar_voxel overflow %f\n",val);
-        exit(1);
+        if(val > 1.20 || val < -1.20)
+        {
+            printf("DoubleToSignedChar_voxel overflow %f\n",val);
+            exit(1);
+        }
     }
-    return _DoubleToSignedChar_voxel(val);
+    else
+    {
+        if(val > 32 || val < -32)
+        {
+            printf("DoubleToSignedChar_voxel overflow %f\n",val);
+            exit(1);
+        }
+    }
+    return _DoubleToSignedChar_voxel(val, sensor_provider);
 }
 
-inline double SignedCharToDouble_voxel(signed char val)
+inline double SignedCharToDouble_voxel(short val, enum SensorProvider sensor_provider)
 {
-    if(val > 120 || val < -120)
+    if(sensor_provider == PT)
     {
-        printf("SignedCharToDouble_voxel overflow %d\n",val);
-        exit(1);
+        if(val > 120 || val < -120)
+        {
+            printf("SignedCharToDouble_voxel overflow %d\n",val);
+            exit(1);
+        }
     }
-    return _SignedCharToDouble_voxel(val);
+    else
+    {
+        if(val > 32000 || val < -32000)
+        {
+            printf("SignedCharToDouble_voxel overflow %d\n",val);
+            exit(1);
+        }
+    }
+    
+    
+    return _SignedCharToDouble_voxel(val,sensor_provider);
 }
 
 class GridVoxel {
@@ -46,11 +80,15 @@ public:
     GridVoxel()
             : incc_grid(0), Gridpairs(0) {}
 
-    GridVoxel(size_t length, const GridPairs &Gridpairs)
-            : incc_grid(length), Gridpairs(Gridpairs) {}
+    GridVoxel(size_t length, const GridPairs &Gridpairs, enum SensorProvider sensor_provider)
+            : incc_grid(length), incc_grid_uc(length), Gridpairs(Gridpairs), sensor_provider(sensor_provider) {
+                INCC_UNSET = _DoubleToSignedChar_voxel(-1,sensor_provider);
+                printf("sensor_provider %d\tINCC_UNSET %d\n",sensor_provider,INCC_UNSET);
+                //exit(1);
+            }
 
     // Const and nonconst accessors for INCC
-    signed char& INCC(size_t grid_index, size_t h_index, size_t pair_id) {
+    short& INCC(size_t grid_index, size_t h_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
         int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
@@ -60,7 +98,7 @@ public:
     }
 
     // const versions of the above
-    const signed char& INCC(size_t grid_index, size_t h_index, size_t pair_id) const {
+    const short& INCC(size_t grid_index, size_t h_index, size_t pair_id) const {
         auto &pairs = Gridpairs.get_pairs(grid_index);
         int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
@@ -69,13 +107,37 @@ public:
         return incc_grid[grid_index][h_index * num_pairs + pair_index];
     }
 
+    // Const and nonconst accessors for INCC in signed char
+    signed char& INCC_uc(size_t grid_index, size_t h_index, size_t pair_id) {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        size_t num_pairs = pairs.size();
+        return incc_grid_uc[grid_index][h_index * num_pairs + pair_index];
+    }
+
+    // const versions of the above
+    const signed char& INCC_uc(size_t grid_index, size_t h_index, size_t pair_id) const {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        size_t num_pairs = pairs.size();
+        return incc_grid_uc[grid_index][h_index * num_pairs + pair_index];
+    }
+    
     bool is_cal(size_t grid_index, size_t h_index, size_t pair_id) {
         auto &pairs = Gridpairs.get_pairs(grid_index);
         int pair_index = pair_id_to_index(pairs, pair_id);
         if(pair_index < 0)
             return false;
         size_t num_pairs = pairs.size();
-        return incc_grid[grid_index][h_index * num_pairs + pair_index] != INCC_UNSET;
+        
+        if(sensor_provider == PT)
+            return incc_grid_uc[grid_index][h_index * num_pairs + pair_index] != INCC_UNSET;
+        else
+            return incc_grid[grid_index][h_index * num_pairs + pair_index] != INCC_UNSET;
     }
 
     bool has_pair(size_t grid_index, size_t pair_id) {
@@ -85,7 +147,10 @@ public:
 
     /** Set size to zero and clear memory */
     void clear(size_t grid_index) {
-        std::vector<signed char>().swap(incc_grid[grid_index]);
+        if(sensor_provider == PT)
+            std::vector<signed char>().swap(incc_grid_uc[grid_index]);
+        else
+            std::vector<short>().swap(incc_grid[grid_index]);
     }
 
     /** Allocate n elements.
@@ -94,18 +159,23 @@ public:
      */
     void allocate(size_t grid_index, size_t n) {
         auto num_pairs = Gridpairs.get_pairs(grid_index).size();
-        incc_grid[grid_index] = std::vector<signed char>(n * num_pairs, INCC_UNSET);
+        
+        if(sensor_provider == PT)
+            incc_grid_uc[grid_index] = std::vector<signed char>(n * num_pairs, INCC_UNSET);
+        else
+            incc_grid[grid_index] = std::vector<short>(n * num_pairs, INCC_UNSET);
     }
 
     /** Remove pair_id from grid_index
      *
      * Removes the pair specified by pair_id
      */
+   /*
    void remove_pair(size_t grid_index, size_t pair_id) {
 
         // save these in case we need to update incc values
         std::vector<short> old_pairs(Gridpairs.get_pairs(grid_index));
-        std::vector<signed char> old_incc(incc_grid[grid_index]);
+        std::vector<short> old_incc(incc_grid[grid_index]);
         size_t old_num_pairs = old_pairs.size();
         size_t n = old_incc.size() / old_num_pairs; // height range
 
@@ -134,13 +204,15 @@ public:
             }
         }
    }
-
+    */
 
 private:
-    std::vector<std::vector<signed char>> incc_grid;
+    std::vector<std::vector<short>> incc_grid;
+    std::vector<std::vector<signed char>> incc_grid_uc;
+    
     GridPairs Gridpairs;
-
-    static constexpr signed char INCC_UNSET = _DoubleToSignedChar_voxel(-1);
+    enum SensorProvider sensor_provider;
+    short INCC_UNSET;
 
     int pair_id_to_index(const std::vector<short> &pairs, size_t pair_id) const {
         auto it = std::find(pairs.begin(), pairs.end(), pair_id);

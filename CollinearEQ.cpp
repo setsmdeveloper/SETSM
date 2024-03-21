@@ -25,7 +25,7 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.p1,camera.p2,
                camera.a1,camera.a2);
         */
-        bool check_conver = CalibrationBundle1(IPs, GCPs, p_eo, p_camera);
+        bool check_conver = CalibrationBundle1(IPs, GCPs, p_eo, p_camera, true);
         if(!check_conver)
         {
             EO pp_eo = eo;
@@ -41,7 +41,7 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
             pp_camera.a1 = 0;
             pp_camera.a2 = 0;
             
-            bool check_conver2 = CalibrationBundlewithoutFL(IPs, GCPs, pp_eo, pp_camera);
+            bool check_conver2 = CalibrationBundlewithoutFL(IPs, GCPs, pp_eo, pp_camera, false);
             
             if(!check_conver2)
             {
@@ -79,7 +79,7 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
     }
     else
     {
-        GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+        GetInitialPCfromDLT(IPs, GCPs, eo, camera, false);
         printf("initial eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl);
         printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
                camera.m_focalLength,camera.m_ppx,camera.m_ppy,
@@ -96,7 +96,7 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.a1,camera.a2);
         
         */
-        EOEstimatefromInitial(IPs, GCPs, eo, camera);
+        check_solution = EOEstimatefromInitial(IPs, GCPs, eo, camera);
         printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
         printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
                camera.m_focalLength,camera.m_ppx,camera.m_ppy,
@@ -104,39 +104,40 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
                camera.p1,camera.p2,
                camera.a1,camera.a2);
         
-        PPAEstimatefromEO(IPs, GCPs, eo, camera);
-        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2,camera.k3,
-               camera.p1,camera.p2,
-               camera.a1,camera.a2);
-        
-        RadialParamEstimate(IPs, GCPs, eo, camera);
-        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2,camera.k3,
-               camera.p1,camera.p2,
-               camera.a1,camera.a2);
-        
-        TangentialParamEstimate(IPs, GCPs, eo, camera);
-        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2,camera.k3,
-               camera.p1,camera.p2,
-               camera.a1,camera.a2);
-        
-        AffinityParamEstimate(IPs, GCPs, eo, camera);
-        printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
-        printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
-               camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2,camera.k3,
-               camera.p1,camera.p2,
-               camera.a1,camera.a2);
-        
-        check_solution = true;
+        if(check_solution)
+        {
+            PPAEstimatefromEO(IPs, GCPs, eo, camera);
+            printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+            printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                   camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+                   camera.k1,camera.k2,camera.k3,
+                   camera.p1,camera.p2,
+                   camera.a1,camera.a2);
+            
+            RadialParamEstimate(IPs, GCPs, eo, camera);
+            printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+            printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                   camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+                   camera.k1,camera.k2,camera.k3,
+                   camera.p1,camera.p2,
+                   camera.a1,camera.a2);
+            
+            TangentialParamEstimate(IPs, GCPs, eo, camera);
+            printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+            printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                   camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+                   camera.k1,camera.k2,camera.k3,
+                   camera.p1,camera.p2,
+                   camera.a1,camera.a2);
+            
+            AffinityParamEstimate(IPs, GCPs, eo, camera);
+            printf("Adjusted eo %f\t%f\t%f\t%f\t%f\t%f\n",eo.m_Wl*RadToDeg,eo.m_Pl*RadToDeg,eo.m_Kl*RadToDeg,eo.m_Xl,eo.m_Yl,eo.m_Zl);
+            printf("initial ca %f\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\t%5.4e\n",
+                   camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+                   camera.k1,camera.k2,camera.k3,
+                   camera.p1,camera.p2,
+                   camera.a1,camera.a2);
+        }
     }
     //exit(1);
     // */
@@ -147,12 +148,11 @@ bool CollinearCalibration(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo,
     return check_solution;
 }
 
-void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool b_changed)
 {
     int numofpts = IPs.size();
     GMA_double *A_matrix = GMA_double_create(numofpts*2,11);
     GMA_double *L_matrix = GMA_double_create(numofpts*2,1);
-    
     
     for(int i=0;i<numofpts;i++)
     {
@@ -298,17 +298,22 @@ void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, 
     
     eo.m_Xl = - AIL_matrix->val[0][0];
     eo.m_Yl = - AIL_matrix->val[1][0];
-    eo.m_Zl = - AIL_matrix->val[2][0];
     
+    if(eo.m_Zl == 0)
+        eo.m_Zl = - AIL_matrix->val[2][0];
     /*
-    eo.m_Wl = atan2(-r32,r33);
-    eo.m_Pl = asin(r31);
-    eo.m_Kl = atan2(-r21,r11);
-    
-    camera.m_focalLength = (fx + fy)/2.0;
-    camera.m_ppx = xp;
-    camera.m_ppy = yp;
-    */
+    if(b_changed)
+    {
+        eo.m_Zl = - AIL_matrix->val[2][0];
+        eo.m_Wl = atan2(-r32,r33);
+        eo.m_Pl = asin(r31);
+        eo.m_Kl = atan2(-r21,r11);
+        
+        camera.m_focalLength = (fx + fy)/2.0;
+        camera.m_ppx = xp;
+        camera.m_ppy = yp;
+    }
+    */    
     /*
     eo.m_Xl = GCPs[0].m_X;
     eo.m_Yl = GCPs[0].m_Y;
@@ -330,8 +335,10 @@ void GetInitialPCfromDLT(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, 
     //    exit(1);
 }
 
-void EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+bool EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
 {
+    bool check_conver = false;
+    
     int numofpts = IPs.size();
     int unknowns = 6;
     
@@ -441,12 +448,18 @@ void EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo
                 maxX = fabs(X_matrix->val[i][0]);
         }
         
-        if(maxX < max_correct)
+        if(maxX < max_correct && maxX != -100000)
+        {
             check_stop = true;
+            check_conver = true;
+        }
         
-        printf("iter %d\t eo %f\t%f\t%f\t%f\t%f\t%f\tsigma %f\tmax_V %f\tmaxX %f\n",iter,eo.m_Xl,eo.m_Yl,eo.m_Zl,
-               eo.m_Wl,eo.m_Pl,eo.m_Kl,sigma,max_V,maxX);
+        //printf("iter %d\t eo %f\t%f\t%f\t%f\t%f\t%f\tsigma %f\tmax_V %f\tmaxX %f\n",iter,eo.m_Xl,eo.m_Yl,eo.m_Zl,
+        //       eo.m_Wl,eo.m_Pl,eo.m_Kl,sigma,max_V,maxX);
     }
+    
+    if(iter == max_iteration)
+        check_conver = false;
     
     GMA_double_destroy(A_matrix);
     GMA_double_destroy(L_matrix);
@@ -457,6 +470,10 @@ void EOEstimatefromInitial(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo
     GMA_double_destroy(X_matrix);
     GMA_double_destroy(AX_matrix);
     GMA_double_destroy(V_matrix);
+    
+    printf("EOEstimatefromInitial Convergence %d\n",check_conver);
+    
+    return check_conver;
 }
 
 void PPAEstimatefromEO(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
@@ -994,13 +1011,13 @@ void Make_b_J_K(D3DPOINT PP, D3DPOINT GP, D2DPOINT p, EO eo, CAMERA_INFO camera,
     */
 };
 
-bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool b_changed)
 {
     bool check_conver = false;
     
     int numofpts = IPs.size();
     
-    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+    GetInitialPCfromDLT(IPs, GCPs, eo, camera, b_changed);
     
     int iteration = 0;
     int max_iter = 50;
@@ -1021,8 +1038,8 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     GMA_double *JX_matrix = GMA_double_create(numofpts*2,1);
     GMA_double *V_matrix = GMA_double_create(numofpts*2,1);
     
-    printf("input camera %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-           camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
+    //printf("input camera %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+    //       camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2);
     
     bool check_nan = false;
     while(iteration < max_iter && !check_conver && !check_nan)
@@ -1120,7 +1137,7 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         }
         
         double sigma = sqrt(var_sum/(numofpts*2 - 16));
-        printf("adjust sigma %f\n", sigma);
+        //printf("adjust sigma %f\n", sigma);
         //GMA_double_printf(X_matrix);
         
         //exit(1);
@@ -1143,29 +1160,29 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
         camera.a1 += X_matrix->val[14][0];
         camera.a2 += X_matrix->val[15][0];
         
-        printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
-        printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
-               sigma,max_V);
+        //printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
+        //printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+        //       camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
+        //       sigma,max_V);
         
-        printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
+        //printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
         
         max_correct = fabs(X_matrix->val[0][0]);
         for(int i=1;i<16;i++)
         {
             double t = X_matrix->val[i][0];
-            printf("X %f\n",t);
+            //printf("X %f\n",t);
             if(max_correct < fabs(X_matrix->val[i][0]))
                 max_correct = fabs(X_matrix->val[i][0]);
         }
         
-        if(max_correct <= 0.0000001)
+        if(max_correct <= 0.01)
             check_conver = true;
             
         if(std::isnan(max_correct))
             check_nan = true;
         
-        printf("iter %d\tMax_correct %f\n",iteration,max_correct);
+        //printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
         //exit(1);
     }
@@ -1181,18 +1198,18 @@ bool CalibrationBundle1(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
-    printf("Convergence %d\n",check_conver);
+    //printf("Convergence %d\n",check_conver);
     
     return check_conver;
 }
 
-bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool b_changed)
 {
     bool check_conver = false;
     
     int numofpts = IPs.size();
     
-    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+    GetInitialPCfromDLT(IPs, GCPs, eo, camera, b_changed);
     
     int iteration = 0;
     int max_iter = 100;
@@ -1328,10 +1345,10 @@ bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
         camera.a1 += X_matrix->val[13][0];
         camera.a2 += X_matrix->val[14][0];
         
-        printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
-        printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
-               camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
-               sigma,max_V);
+        //printf("iter %d\teo %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,eo.m_Wl,eo.m_Pl,eo.m_Kl,eo.m_Xl,eo.m_Yl,eo.m_Zl,sigma,max_V);
+        //printf("iter %d\tca %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",iteration,camera.m_focalLength,camera.m_ppx,camera.m_ppy,
+        //       camera.k1,camera.k2, camera.k3,camera.p1,camera.p2,camera.a1,camera.a2,
+        //       sigma,max_V);
                 
         //printf("camera %f\t%f\t%f\n",camera.m_focalLength,camera.m_ppx,camera.m_ppy);
         
@@ -1342,7 +1359,7 @@ bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
                 max_correct = fabs(X_matrix->val[i][0]);
         }
         
-        printf("iter %d\tMax_correct %f\n",iteration,max_correct);
+        //printf("iter %d\tMax_correct %f\n",iteration,max_correct);
         
         if( max_correct <= 0.0001)
             check_conver = true;
@@ -1359,15 +1376,15 @@ bool CalibrationBundlewithoutFL(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, E
     GMA_double_destroy(JX_matrix);
     GMA_double_destroy(V_matrix);
     
-    printf("Convergence %d\n",check_conver);
+    //printf("Convergence %d\n",check_conver);
     return check_conver;
 }
 
-void CalibrationBundle2(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+void CalibrationBundle2(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool b_changed)
 {
     int numofpts = IPs.size();
     
-    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+    GetInitialPCfromDLT(IPs, GCPs, eo, camera, b_changed);
     
     int iteration = 0;
     int max_iter = 100;
@@ -1510,11 +1527,11 @@ void CalibrationBundle2(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, C
     eo.m_Kl *= RadToDeg;
 }
 
-void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera)
+void CalibrationBundle(vector<D2DPOINT> &IPs, vector<D3DPOINT> &GCPs, EO &eo, CAMERA_INFO &camera, bool b_changed)
 {
     int numofpts = IPs.size();
     
-    GetInitialPCfromDLT(IPs, GCPs, eo, camera);
+    GetInitialPCfromDLT(IPs, GCPs, eo, camera, b_changed);
     
     int iteration = 0;
     int max_iter = 100;

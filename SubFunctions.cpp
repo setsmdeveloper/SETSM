@@ -9,6 +9,147 @@
 
 int numcols[7] = {6,5,5,5,4,3,0};
 
+void statistic_dH_ref(int pair1, int pair2, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height, vector<uint32> &save_ptindex, double &sel_count, double &avg, double &std)
+{
+    int TH_height = 100;
+    double dif_sum_weight = 0;
+    double sum_weight = 0;
+    //vector<float> selected_dh;
+    vector<float> selected_dh_ptindex(save_ptindex.size(),-1);
+    #pragma omp parallel for reduction(+:dif_sum_weight,sum_weight)
+    for(int cnt = 0 ; cnt < save_ptindex.size() ; cnt++)
+    {
+        uint32 pt_index = save_ptindex[cnt];
+        float dH = multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - (multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+        
+        double height_step = UnsignedShortToDouble(Grid_pair.grid_height_step[pt_index]);
+        double th_H = height_step*10;
+        if(th_H < TH_height)
+            th_H = TH_height;
+        
+        if(fabs(dH) < th_H)
+        {
+            dif_sum_weight += dH;//*save_difheight_roh[t_pair][cnt];
+            sum_weight += 1.0;//save_difheight_roh[t_pair][cnt];
+            selected_dh_ptindex[cnt] = pt_index;
+            //printf("difH %f\t%f\n",save_difheight[t_pair][cnt],dif_sum);
+        }
+    }
+    
+    avg = dif_sum_weight/(double)sum_weight;
+    
+    double sum_var = 0;
+    #pragma omp parallel for reduction(+:sum_var)
+    for(int cnt = 0 ; cnt < save_ptindex.size() ; cnt++)
+    {
+        if(selected_dh_ptindex[cnt] > -1)
+        {
+            uint32 pt_index = selected_dh_ptindex[cnt];
+            
+            float dH = multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - (multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+            
+            sum_var += (dH - avg)*(dH - avg);
+        }
+    }
+    
+    std = sqrt(sum_var/(double)sum_weight);
+    sel_count = sum_weight;
+    
+}
+
+void statistic_dH(int pair1, int pair2, int pair_pos, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height,  uint32 count_ptindex, uint32** save_ptindex, double &sel_count, double &avg, double &std)
+{
+    int TH_height = 100;
+    double dif_sum_weight = 0;
+    double sum_weight = 0;
+    //vector<float> selected_dh;
+    vector<float> selected_dh_ptindex(count_ptindex,-1);
+    #pragma omp parallel for reduction(+:dif_sum_weight,sum_weight)
+    for(int cnt = 0 ; cnt < count_ptindex ; cnt++)
+    {
+        uint32 pt_index = save_ptindex[pair_pos][cnt];
+        
+        float dH = (multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair1)) - ( multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+        
+        double height_step = UnsignedShortToDouble(Grid_pair.grid_height_step[pt_index]);
+        double th_H = height_step*10;
+        if(th_H < TH_height)
+            th_H = TH_height;
+        
+        if(fabs(dH) < th_H)
+        {
+            dif_sum_weight += dH;//*noref_difheight_roh[pair_pos][cnt];
+            sum_weight += 1.0;//noref_difheight_roh[pair_pos][cnt];
+            selected_dh_ptindex[cnt] = pt_index;
+        }
+    }
+    
+    avg = dif_sum_weight/sum_weight;
+    
+    double sum_var = 0;
+    #pragma omp parallel for reduction(+:sum_var)
+    for(int cnt = 0 ; cnt < count_ptindex ; cnt++)
+    {
+        if(selected_dh_ptindex[cnt] > -1)
+        {
+            uint32 pt_index = selected_dh_ptindex[cnt];
+            
+            float dH = (multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair1)) - ( multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+            
+            sum_var += (dH - avg)*(dH - avg);
+        }
+    }
+    
+    std = sqrt(sum_var/sum_weight);
+    sel_count = sum_weight;
+}
+
+void statistic_dH(int pair1, int pair2, int pair_pos, GridPairs &Grid_pair, LevelInfo &levelinfo, float* multimps_peak_height,  uint32 count_ptindex, uint32* save_ptindex, double &sel_count, double &avg, double &std)
+{
+    int TH_height = 100;
+    double dif_sum_weight = 0;
+    double sum_weight = 0;
+    //vector<float> selected_dh;
+    vector<float> selected_dh_ptindex(count_ptindex,-1);
+    #pragma omp parallel for reduction(+:dif_sum_weight,sum_weight)
+    for(int cnt = 0 ; cnt < count_ptindex ; cnt++)
+    {
+        uint32 pt_index = save_ptindex[cnt];
+        
+        float dH = (multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair1)) - ( multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+        
+        double height_step = UnsignedShortToDouble(Grid_pair.grid_height_step[pt_index]);
+        double th_H = height_step*10;
+        if(th_H < TH_height)
+            th_H = TH_height;
+        
+        if(fabs(dH) < th_H)
+        {
+            dif_sum_weight += dH;//*noref_difheight_roh[pair_pos][cnt];
+            sum_weight += 1.0;//noref_difheight_roh[pair_pos][cnt];
+            selected_dh_ptindex[cnt] = pt_index;
+        }
+    }
+    
+    avg = dif_sum_weight/sum_weight;
+    
+    double sum_var = 0;
+    #pragma omp parallel for reduction(+:sum_var)
+    for(int cnt = 0 ; cnt < count_ptindex ; cnt++)
+    {
+        if(selected_dh_ptindex[cnt] > -1)
+        {
+            uint32 pt_index = selected_dh_ptindex[cnt];
+            
+            float dH = (multimps_peak_height[pt_index + pair1*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair1)) - ( multimps_peak_height[pt_index + pair2*(*levelinfo.Grid_length)] - levelinfo.pairinfo->Tz(pair2));
+            
+            sum_var += (dH - avg)*(dH - avg);
+        }
+    }
+    
+    std = sqrt(sum_var/sum_weight);
+    sel_count = sum_weight;
+}
 
 bool VerticalShift(vector<float>& input, double height_step, double &shift, double &sel_count)
 {
@@ -226,6 +367,33 @@ char* SetOutpathName(char *_path)
     
 }
 
+bool findstringpos(char *target, char *refer, int &pos)
+{
+    int i, j, flag = 0;
+
+    printf("target %s\n",target);
+    printf("ref %s\n",refer);
+
+    for(i=0; i < strlen(refer); i++) {
+        if(refer[i] == target[0]) {
+            for(j=1; j < strlen(target); j++) {
+                if(refer[i+j] != target[j]) {
+                    break;
+                }
+            }
+            if(j == strlen(target)) {
+                flag = 1;
+                pos = i;
+                break;
+            }
+        }
+    }
+
+    printf("pos %d\n",pos);
+    return flag;
+}
+
+
 int Maketmpfolders(ProInfo *info)
 {
     int check_folder = 1;
@@ -298,6 +466,32 @@ void printMaxMemUsage() {
     printf("Maximum memory usage: %.2f %s\n", scaled, unit);
 }
 
+double MaxMemUsage() {
+    // rusage.ru_maxrss in KB
+    struct rusage ru;
+    if(getrusage(RUSAGE_SELF, &ru)) {
+        printf("WARNING: failed to get maximum memory usage\n");
+        return 0;
+    }
+
+    auto max_rss = ru.ru_maxrss;
+    double scaled = 0;
+    const char *unit = NULL;
+
+    if(max_rss < 1024) {
+        scaled = max_rss / 1.0;
+        unit = "KB";
+    } else if(max_rss < 1024 * 1024) {
+        scaled = max_rss / 1024.0;
+        unit = "MB";
+    } else {
+        scaled = max_rss / (1024.0 * 1024.0);
+        unit = "GB";
+    }
+    
+    return scaled;
+}
+
 bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPairInfo &pairinfo)
 {
     bool check_load_RA = false;
@@ -324,6 +518,7 @@ bool GetRAinfo(ProInfo *proinfo, const char* RAfile, double **Imageparams, CPair
                 printf("RAinfo %d\t%d\t%d\t%f\t%f\n",ti,temp_ref,temp_tar,Imageparams[ti][0],Imageparams[ti][1]);
                 pairinfo.SetPairs(ti, temp_ref, temp_tar);
                 pairinfo.SetBHratio(ti, bh_ratio);
+                pairinfo.Setoripairnumber(ti,ti);
             }
             ti++;
             pairinfo.SetSelectNumberOfPairs(ti);
@@ -843,7 +1038,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     
     if(args.sensor_type == AB)
         info->IsRA = 0;
-    if(args.sensor_provider == PT)
+    if(args.sensor_provider == PT || args.sensor_provider == BS || args.check_pairinfo_only)
         info->IsRA = false;
     
     if (args.check_arg == 0) // project file open
@@ -1009,6 +1204,7 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
             
         sprintf(info->tmpdir,"%s/tmp",args.Outputpath);
         
+        printf("openproject numberofimage %d\n",args.number_of_images);
         for(int ti= 0 ; ti < args.number_of_images ; ti++)
         {
             sprintf(info->Imagefilename[ti],"%s", args.Image[ti]);
@@ -1030,19 +1226,41 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 tmp_chr = remove_ext(args.Image[ti]);
                 sprintf(info->RPCfilename[ti],"%s.xml",tmp_chr);
                 
-                if(args.sensor_provider == PT)
+                if(args.sensor_provider == PT || args.sensor_provider == BS)
                 {
                     sprintf(info->RPCfilename[ti],"%s_RPC.TXT",tmp_chr);
                     
-                    int chr_size = strlen(tmp_chr);
-                    char metadata_file[500];
-                    for(int i= 0 ; i < chr_size - 4 ; i++)
-                        metadata_file[i] = tmp_chr[i];
-                    metadata_file[chr_size - 4] = '\0';
+                    FILE *pfile = fopen(info->RPCfilename[ti],"r");
+                    if(!pfile)
+                    {
+                        sprintf(info->RPCfilename[ti],"%s_rpc.txt",tmp_chr);
+                    }
                     
-                    //sprintf(info->Imagemetafile[ti],"%s_metadata.xml",metadata_file);
-                    sprintf(info->Imagemetafile[ti],"%s_metadata.xml",tmp_chr);
-                    printf("imagemetafile %s\n",info->Imagemetafile[ti]);
+                    if(args.sensor_provider == PT)
+                    {
+                        /*
+                        int chr_size = strlen(tmp_chr);
+                        char metadata_file[500];
+                        for(int i= 0 ; i < chr_size - 4 ; i++)
+                            metadata_file[i] = tmp_chr[i];
+                        metadata_file[chr_size - 4] = '\0';
+                        */
+                        //sprintf(info->Imagemetafile[ti],"%s_metadata.xml",metadata_file);
+                        sprintf(info->Imagemetafile[ti],"%s_metadata.xml",tmp_chr);
+                        printf("imagemetafile %s\n",info->Imagemetafile[ti]);
+                    }
+                    else if(args.sensor_provider == BS)
+                    {
+                        int chr_size = strlen(tmp_chr);
+                        char metadata_file[500];
+                        for(int i= 0 ; i < chr_size - 14 ; i++)
+                            metadata_file[i] = tmp_chr[i];
+                        metadata_file[chr_size - 14] = '\0';
+                        
+                        sprintf(info->Imagemetafile[ti],"%s_metadata.json",metadata_file);
+                        //sprintf(info->Imagemetafile[ti],"%s_metadata.xml",tmp_chr);
+                        printf("imagemetafile %s\n",info->Imagemetafile[ti]);
+                    }
                 }
                                                                               
                 FILE *temp_pFile;
@@ -1689,9 +1907,111 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
             while(!feof(pFile))
             {
                 fgets(linestr,sizeof(linestr),pFile);
+                
                 strcpy(linestr1,linestr);
                 token1 = strstr(linestr,"<");
                 token = strtok(token1,">");
+                
+                int band_index = 0;
+                bool check_multi_band = false;
+                if(strcmp(token,"<BAND_C") == 0)
+                {
+                    band_index = 0;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_B") == 0)
+                {
+                    band_index = 1;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_G") == 0)
+                {
+                    band_index = 2;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_Y") == 0)
+                {
+                    band_index = 3;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_R") == 0)
+                {
+                    band_index = 4;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_RE") == 0)
+                {
+                    band_index = 5;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_N") == 0)
+                {
+                    band_index = 6;
+                    check_multi_band = true;
+                }
+                else if(strcmp(token,"<BAND_N2") == 0)
+                {
+                    band_index = 7;
+                    check_multi_band = true;
+                }
+                
+                if(check_multi_band)
+                {
+                    //printf("%s\n",linestr);
+                    
+                    bool check = false;
+                    int iter = 0;
+                    while(!check && iter < 20)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        strcpy(linestr1,linestr);
+                        token1 = strstr(linestr,"<");
+                        token = strtok(token1,">");
+                        if(strcmp(token,"<ABSCALFACTOR") == 0)
+                        {
+                            pos1 = strstr(linestr1,">")+1;
+                            pos2 = strtok(pos1,"<");
+                            band->abscalfactor_multi[band_index]          = atof(pos2);
+                            //printf("abscalfactor %f\n",band->abscalfactor_multi[band_index]);
+                            check = true;
+                        }
+                        iter ++;
+                    }
+              
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->effbw_multi[band_index]         = atof(pos2);
+                        //printf("effbw %f\n",band->effbw_multi[band_index]);
+                    }
+                    
+                    fgets(linestr,sizeof(linestr),pFile);
+                    strcpy(linestr1,linestr);
+                    token1 = strstr(linestr,"<");
+                    token = strtok(token1,">");
+                    if(strcmp(token,"<TDILEVEL") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->tdi_multi[band_index]           = atof(pos2);
+                        //printf("tdi %f\n",band->tdi_multi[band_index]);
+                    }
+                    
+                    check_multi_band = false;
+                    
+                }
+                
+                //exit(1);
+                
+                /*
+                strcpy(linestr1,linestr);
+                token1 = strstr(linestr,"<");
+                token = strtok(token1,">");*/
                 if(strcmp(token,"<ABSCALFACTOR") == 0)
                 {
                     pos1 = strstr(linestr1,">")+1;
@@ -2359,7 +2679,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         while(!feof(pFile) && (!check_br || !check_d))
         {
             fscanf(pFile,"%s",temp_str);
-            if(strcmp(temp_str,"<BAND_P>") == 0 && !check_br)
+            if((strcmp(temp_str,"<BAND_P>") == 0 || strcmp(temp_str,"<BAND_R>") == 0) && !check_br)
             {
                 check_br = true;
                 
@@ -2511,6 +2831,77 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
     }
 }
 
+
+void CalReflectanceParamsForBand(ImageInfo *Iinfo, BandInfo *Binfo, int band_number, double &refl_fact, double &refl_offset)
+{
+    double units_factor = 1.0;
+    
+    //des calulation from data acqusition time
+    int year, month, day, hr, minute,sec_int;
+    double sec, sec_fract;
+    char T, Z;
+    printf("Imagetime str %s\n",Iinfo->imagetime);
+    sscanf(Iinfo->imagetime,"%d-%d-%dT%d:%d:%lfZ",&year,&month,&day,&hr,&minute,&sec);
+    //sec = sec_int + sec_fract;
+
+    printf("Year: %d\n", year);
+    printf("Month: %d\n", month);
+    printf("Day: %d\n", day);
+    printf("Hour: %d\n", hr);
+    printf("Minute: %d\n", minute);
+    printf("Second: %f\n", sec);
+
+	double ut = hr + (minute / 60.) + (sec / 3600.);
+	if(month <= 2)
+    {
+		year = year - 1;
+		month = month + 12;
+    }
+	double a = int(year / 100);
+	double b = 2 - a + int(a / 4);
+	double jd = int(365.25 * (year + 4716)) + int(30.6001 * (month + 1)) + day + (ut / 24) + b - 1524.5;
+	double g = 357.529 + 0.98560028 * (jd - 2451545.0);
+	double des = 1.00014 - 0.01671 * cos(g*DegToRad) - 0.00014 * cos((2 * g)*DegToRad);
+
+    printf("des %f\n",des);
+
+    if(strcmp(Iinfo->SatID, "WV02") == 0 || strcmp(Iinfo->SatID, "WV03") == 0)
+    {
+        EsunDictWV02 Esun;
+        GainDictWV02 gain;
+        BiasDictWV02 bias;
+        
+        double sunEl = 90 - Iinfo->Mean_sun_elevation;
+        double abscal =  Binfo->abscalfactor_multi[band_number];
+        double effbandw = Binfo->effbw_multi[band_number];
+
+        printf("sunEl %f\tabscal %f\teffbandw %f\n",sunEl,abscal,effbandw);
+        if(band_number == 4) //red band
+        {
+            printf("gain %f\tEsun %f\tbias %f\n",gain.BAND_R,Esun.BAND_R,bias.BAND_R);
+            refl_fact = units_factor *   (gain.BAND_R * abscal * des * des * PI) / 
+                                         (Esun.BAND_R * cos(sunEl*DegToRad) * effbandw); 
+            refl_offset = units_factor * (bias.BAND_R * des * des * PI) / 
+				                         (Esun.BAND_R * cos(sunEl*DegToRad));
+
+            printf("abscal %f\tdes %f\tsunEl %f\teffbandw %f\n",abscal, des,sunEl,effbandw);
+            printf("refl %f\t%f\n",refl_fact,refl_offset);
+        }
+
+        if(band_number == 6) //red band
+        {
+            printf("gain %f\tEsun %f\tbias %f\n",gain.BAND_N,Esun.BAND_N,bias.BAND_N);
+            refl_fact = units_factor *   (gain.BAND_N * abscal * des * des * PI) / 
+                                         (Esun.BAND_N * cos(sunEl*DegToRad) * effbandw); 
+            refl_offset = units_factor * (bias.BAND_N * des * des * PI) / 
+				                         (Esun.BAND_N * cos(sunEl*DegToRad));
+
+            printf("abscal %f\tdes %f\tsunEl %f\teffbandw %f\n",abscal, des,sunEl,effbandw);
+            printf("refl %f\t%f\n",refl_fact,refl_offset);
+        }
+    }
+}
+
 void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
 {
     
@@ -2555,6 +2946,7 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
         bool check_i = false;
         bool check_cen = false;
         bool check_cloud = false;
+        bool check_SatID = false;
         while(!feof(pFile) && (!check_br || !check_d || !check_i || !check_cen || !check_cloud))
         {
             fscanf(pFile,"%s",temp_str);
@@ -2773,6 +3165,32 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
                     Cloud          = atof(pos2);
                 }
             }
+            
+            if(strcmp(temp_str,"<eop:Instrument>") == 0 && !check_SatID)
+            {
+                fgets(temp_str,sizeof(temp_str),pFile);
+                //printf("temp_str %s\n",temp_str);
+                //fgets(temp_str,sizeof(temp_str),pFile);
+                //printf("temp_str %s\n",temp_str);
+                fgets(linestr,sizeof(linestr),pFile);
+                //printf("linestr %s\n",linestr);
+                
+                strcpy(linestr1,linestr);
+                token1 = strstr(linestr,"<");
+                token = strtok(token1,">");
+                
+                if(strcmp(token,"<eop:shortName") == 0)
+                {
+                    check_SatID = true;
+                    pos1 = strstr(linestr1,">")+1;
+                    pos2 = strtok(pos1,"<");
+                    sprintf(SatID,"%s",pos2);
+                    
+                    printf("SatID %s\t%s\n",pos2,SatID);
+                    
+                }
+                //exit(1);
+            }
         }
         
         fclose(pFile);
@@ -2799,6 +3217,214 @@ void OpenXMLFile_orientation_planet(char* _filename, ImageInfo *Iinfo)
     }
 }
 
+void OpenXMLFile_orientation_blacksky(char* _filename, ImageInfo *Iinfo)
+{
+    
+    FILE *pFile;
+    char temp_str[10000];
+    char linestr[1000];
+    char linestr1[1000];
+    char imagetime[1000];
+    char SatID[1000];
+    
+    int i;
+    char* pos1;
+    char* pos2;
+    char* token = NULL;
+    char* token1 = NULL;
+    char direction[100];
+    
+    double dx, dy;
+    double MSUNAz, MSUNEl, MSATAz, MSATEl, MIntrackangle, MCrosstrackangle, MOffnadirangle, Cloud;
+    double UL[3], UR[3], LR[3], LL[3];
+    double angle;
+    double temp;
+    
+    // Initializng variables that throw warnings
+    Cloud = Nodata;
+    MOffnadirangle = Nodata;
+    MCrosstrackangle = Nodata;
+    MIntrackangle = Nodata;
+    MSATEl = Nodata;
+    MSATAz = Nodata;
+    MSUNEl = Nodata;
+    MSUNAz = Nodata;
+    
+    
+    //printf("filename %s\n",_filename);
+    
+    pFile           = fopen(_filename,"r");
+    if(pFile)
+    {
+        int totalLength = 0;
+        while(!feof(pFile))
+        {
+            fscanf(pFile,"%s",temp_str);
+            totalLength += strlen(temp_str);
+        }
+        fclose(pFile);
+        // Allocate memory for the single string
+        char* singleString = (char*)malloc((totalLength + 1) * sizeof(char));
+        
+        pFile           = fopen(_filename,"r");
+        int currentIndex = 0;
+        while(!feof(pFile))
+        {
+            fscanf(pFile,"%s",temp_str);
+            strcpy(singleString + currentIndex, temp_str);
+            currentIndex += strlen(temp_str);
+        }
+        fclose(pFile);
+        
+        // Null-terminate the single string
+        singleString[currentIndex] = '\0';
+        
+        strcpy(temp_str,singleString);
+        //printf("temp_str %s\n",temp_str);
+        
+        bool check_br = false;
+        bool check_d = false;
+        bool check_i = false;
+        bool check_cen = false;
+        bool check_cloud = false;
+        bool check_SatID = false;
+        //while((!check_br || !check_d || !check_i || !check_cen || !check_cloud))
+        {
+            //fscanf(pFile,"%s",temp_str);
+            
+            //printf("temp_str %s\n",temp_str);
+            char* token;
+            char* context;
+            
+            token = strtok_r(temp_str, "{},:\"[]", &context);
+            //printf("token %s\n",token);
+            while(token != NULL && !check_d)
+            {
+                if(strcmp(token, "sensorName") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    sprintf(SatID,"%s",token);
+                    
+                    //printf("SatID %s\n",SatID);
+                    
+                }
+                else if(strcmp(token, "gsd") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->GSD.row_GSD = atof(token);
+                    Iinfo->GSD.col_GSD = Iinfo->GSD.row_GSD;
+                    
+                    //printf("gsd %f\n",Iinfo->GSD.col_GSD);
+                    
+                }
+                else if(strcmp(token, "coordinates") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->LR[0] = atof(token);
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->LR[1] = atof(token);
+                    //printf("LR %f %f \n",Iinfo->LR[0],Iinfo->LR[1]);
+                    
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->LL[0] = atof(token);
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->LL[1] = atof(token);
+                    //printf("LL %f %f \n",Iinfo->LL[0],Iinfo->LL[1]);
+                    
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->UL[0] = atof(token);
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->UL[1] = atof(token);
+                    //printf("UL %f %f \n",Iinfo->UL[0],Iinfo->UL[1]);
+                    
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->UR[0] = atof(token);
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->UR[1] = atof(token);
+                    //printf("UR %f %f \n",Iinfo->UR[0],Iinfo->UR[1]);
+                     
+                }
+                else if(strcmp(token, "cloudCoverPercent") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Cloud = atof(token);
+                    
+                    //printf("Cloud %f\n",Cloud);
+                }
+                else if(strcmp(token, "offNadirAngle") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    MOffnadirangle = atof(token);
+                    
+                    //printf("MOffnadirangle %f\n",MOffnadirangle);
+                }
+                else if(strcmp(token, "sunAzimuth") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    MSUNAz = atof(token);
+                    
+                    //printf("MSUNAz %f\n",MSUNAz);
+                }
+                else if(strcmp(token, "sunElevation") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    MSUNEl = atof(token);
+                    
+                    //printf("MSUNEl %f\n",MSUNEl);
+                }
+                else if(strcmp(token, "satelliteElevation") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    MSATEl = atof(token);
+                    
+                    //printf("MSATEl %f\n",MSATEl);
+                }
+                else if(strcmp(token, "satelliteAzimuth") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    MSATAz = atof(token);
+                    
+                    //printf("MSATAz %f\n",MSATAz);
+                    //check_d = true;
+                }
+                else if(strcmp(token, "convergenceAngle") == 0)
+                {
+                    token = strtok_r(NULL, "{},:\"[]", &context);
+                    Iinfo->convergence_angle_json = atof(token);
+                    
+                    //printf("MSATAz %f\n",MSATAz);
+                    check_d = true;
+                }
+                
+                token = strtok_r(NULL, "{},:\"[]", &context);
+                //printf("token %s\n",token);
+            }
+        }
+        
+        //fclose(pFile);
+        
+        Iinfo->Mean_sun_azimuth_angle   = MSUNAz;
+        Iinfo->Mean_sun_elevation       = MSUNEl;
+        Iinfo->Mean_sat_azimuth_angle_xml   = MSATAz;
+        Iinfo->Mean_sat_elevation       = MSATEl;
+        Iinfo->Intrack_angle            = MIntrackangle;
+        Iinfo->Crosstrack_angle         = MCrosstrackangle;
+        Iinfo->Offnadir_angle_xml           = MOffnadirangle;
+        Iinfo->Offnadir_angle           = MOffnadirangle;
+        Iinfo->cloud                    = Cloud;
+        sprintf(Iinfo->imagetime,"%s",imagetime);
+        sprintf(Iinfo->SatID,"%s",SatID);
+        
+        printf("MSUNAz MSUNEl MSATAz MSATEl MOffnadirangle %f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",MSUNAz,MSUNEl,MSATAz,MSATEl,MOffnadirangle,Iinfo->GSD.row_GSD,Iinfo->GSD.col_GSD,Iinfo->cloud);
+        
+        if(pos1)
+            pos1 = NULL;
+        if(pos2)
+            pos2 = NULL;
+        if(token)
+            token = NULL;
+    }
+}
 
 void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_image)
 {
@@ -2866,6 +3492,68 @@ void GeographicToXYforImage(ImageInfo *image_info, TransParam param, int total_i
         image_info[i].max_XY = max_XY;
     }
 }
+
+void GetFilelistsFromDir(char *ext, char *path, char *save_path, char** result, char** filenames, int &file_counts)
+{
+    DIR *di;
+    char *ptr1,*ptr2;
+    int retn;
+    struct dirent *dir;
+    di = opendir(path); //specify the directory name
+    
+    if (di)
+    {
+        while ((dir = readdir(di)) != NULL)
+        {
+            if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0)
+            {
+                //printf("%s\n", dir->d_name);
+                ptr1=strtok(dir->d_name,".");
+                ptr2=strtok(NULL,".");
+                //printf("dir->d_name %s\n",dir->d_name);
+                if(ptr2!=NULL)
+                {
+                    retn=0;//strcmp(ptr2,ext);
+                    if(retn==0)
+                    {
+                        char t_str[500];
+                        strcpy(t_str,save_path);
+                        
+                        result[file_counts] = (char*)malloc(strlen(t_str) + 2);
+                        strcpy(result[file_counts],t_str);
+                        //sprintf(result[file_counts],"%s",t_str);
+                        
+                        char tt_str[500];
+                        sprintf(tt_str,"%s",ptr1);
+                        filenames[file_counts] = (char*)malloc(strlen(tt_str) + 2);
+                        strcpy(filenames[file_counts],tt_str);
+                        //sprintf(filenames[file_counts],"%s",tt_str);
+                        //printf("file_counts assign point %d\n",file_counts);
+                        //result.push_back(t_str);
+                        //printf("count %d\t%s\t%s\n",file_counts,result[file_counts],filenames[file_counts]);
+                        file_counts++;
+                    }
+                }
+                /*else
+                {
+                    char* new_path = (char *)malloc(strlen(path) + strlen(dir->d_name) + 2);
+                    sprintf(new_path, "%s/%s", path, dir->d_name);
+                    
+                    sprintf(save_path, "%s",new_path);
+                    //printf("savepath %s\n",save_path);
+                    GetFilelistsFromDir(ext, new_path,save_path,result,filenames,file_counts);
+                    free(new_path);
+                }
+                */
+            }
+        }
+        closedir(di);
+    }
+    else{
+        printf("Directory cannot be opened!" );
+    }
+}
+
 
 void Open_planetmultiinfo(ProInfo *proinfo, char* _filename, ImageInfo *Iinfo)
 {
@@ -3838,8 +4526,27 @@ double quickselect(vector<double> &arr, int n, int k)
     }
 }
 
-double quickselect(vector<short> &arr, int n, int k)
+double sort_decending(vector<short> &arr, int n, int k)
 {
+    int i, j;
+    for (i = 0; i < n-1; i++)
+    {
+        // Last i elements are already in place
+        for (j = 0; j < n-i-1; j++)
+        {
+           if (arr[j] > arr[j+1])
+           {
+              //swap(&arr[j], &arr[j+1]);
+               
+               short temp = arr[j];
+               arr[j] = arr[j+1];
+               arr[j+1] = temp;
+           }
+        }
+    }
+    return 0;
+    
+    /*
     unsigned long i,ir,j,l,mid;
     double a,temp;
     
@@ -3879,6 +4586,7 @@ double quickselect(vector<short> &arr, int n, int k)
             if (j <= k) l=i;
         }
     }
+     */
 }
 
 double quickselect(vector<int> &arr, int n, int k)
@@ -4550,7 +5258,6 @@ void Orientation(const CSize imagesize, const uint16* Gmag, const int16* Gdir, c
 }
 
 
-
 GMA_double* GMA_double_create(uint32 size_row, uint32 size_col)
 {
     long int cnt;
@@ -5135,6 +5842,12 @@ double SetNormalAngle(const D3DPOINT &pts0, const D3DPOINT &pts1, const D3DPOINT
     SetAngle(angle);
     
     return angle;
+}
+
+double SetTINArea(const D3DPOINT &Ap, const D3DPOINT &Bp, const D3DPOINT &Cp)
+{
+    double area = fabs( Ap.m_X*(Bp.m_Y - Cp.m_Y) + Bp.m_X*(Cp.m_Y - Ap.m_Y) + Cp.m_X*(Ap.m_Y - Bp.m_Y))/2.0;
+    return area;
 }
 
 void SetAngle(double &angle)

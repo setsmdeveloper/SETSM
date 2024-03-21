@@ -346,7 +346,7 @@ bool SDM_ortho(char* _filename, ARGINFO args, double** Coreg_param)
                 }
                
                 int final_iteration = 3;
-                if(matching_number > 10)
+                if(matching_number > 100)
                 {
                     printf("Tile merging start final iteration %d!!\n",final_iteration);
                     

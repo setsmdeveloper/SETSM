@@ -832,6 +832,9 @@ double GetVCPsIPsfromFRPCc(const double * const *rpc, const uint8 numofparam, co
     double minH = (double) (-1.0 * rpc[1][4] + rpc[0][4]);
     double maxH = (double) (1.0 * rpc[1][4] + rpc[0][4]);
     
+    if(minH < 0)
+        minH = 0;
+    
     mid_H = minH + (maxH - minH)/2.0;
     
     double temp;
@@ -901,6 +904,8 @@ double GetVCPsIPsfromFRPCc_Collinear(const double * const *rpc, TransParam param
     double minH = (double) (-1.0 * rpc[1][4] + rpc[0][4]);
     double maxH = (double) (1.0 * rpc[1][4] + rpc[0][4]);
     
+    if(minH < 0)
+        minH = 0;
     mid_H = minH + (maxH - minH)/2.0;
     
     double temp;

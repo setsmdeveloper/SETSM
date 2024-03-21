@@ -25,6 +25,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
+#include "log.hpp"
+#include <stdexcept>
 
 #define PI 3.141592653589793
 #define DegToRad PI/180
@@ -52,7 +54,7 @@
 #endif
 
 enum SensorType {SB , AB};
-enum SensorProvider {DG, PL, PT};
+enum SensorProvider {DG, PL, PT, BS}; //Digital Globe, Pleiades, Planet, BlackSky
 enum PyImageSelect {OR, BD, NX};
 
 using std::vector;
@@ -98,6 +100,50 @@ typedef struct tagDLTparam
 {
     double A1,A2,A3,B1,B2,B3,C1,C2,C3,D1,D2;
 } DLTPARAM;
+
+typedef struct tagUI8_2DPoint
+{
+    uint8 m_X;
+    uint8 m_Y;
+    
+    tagUI8_2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagUI8_2DPoint(uint8 m_X, uint8 m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagUI8_2DPoint(const tagUI8_2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
+} UI8_2DPoint;
+
+typedef struct tagUI16_2DPoint
+{
+    uint16 m_X;
+    uint16 m_Y;
+    
+    tagUI16_2DPoint()
+    {
+        m_X = 0;
+        m_Y = 0;
+    }
+    tagUI16_2DPoint(uint16 m_X, uint16 m_Y):m_X(m_X),m_Y(m_Y)
+    {
+        
+    }
+    tagUI16_2DPoint(const tagUI16_2DPoint &p)
+    {
+        m_X = p.m_X;
+        m_Y = p.m_Y;
+    }
+    
+} UI16_2DPoint;
 
 typedef struct tagUI2DPoint
 {
@@ -361,7 +407,7 @@ typedef struct tagMultiMPs
 {
     short peak_roh; //first peak roh
     short ortho_roh;
-    float peak_height; //first peak height
+    //float peak_height; //first peak height
     bool check_matched;
 } MultiMPs;
 
@@ -370,10 +416,13 @@ typedef struct UpdateGrid{
         _angle(len,0), _Height(len, 0), _minHeight(len, 0), _maxHeight(len, 0), _roh(len, 0),
         /* HACK for bug TODO fixme (remove +1) */ _ortho_ncc(len * (num_pairs + 1), 0),
         _Mean_ortho_ncc(len, 0), _Matched_flag(len, 0), _anchor_flag(len, 0),
-        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0), PairCheck(len)//, PairArray(len)
+        _selected_pair(len, 0), _total_images(len, 0), _ncc_seleceted_pair(len, 0), PairCheck(len), _ndvi_pixel(len,0)//, PairArray(len)
         {}
     UpdateGrid() : UpdateGrid(0, 0) {}
 
+    unsigned char &NDVI_pixel(long i) {return _ndvi_pixel[i]; };
+    const unsigned char &NDVI_pixel(long i) const {return _ndvi_pixel[i]; };
+    
     float &Angle(long i) { return _angle[i]; }
     const float &Angle(long i) const { return _angle[i]; }
     
@@ -428,6 +477,7 @@ private:
     vector<unsigned char> _total_images;
     vector<short> _ncc_seleceted_pair; //selected peak pair
     
+    vector<unsigned char> _ndvi_pixel;
     
 //    float height_counts;
 }UGRID;
@@ -446,6 +496,304 @@ typedef struct LSFinfo{
     unsigned char lsf_kernel;
 }LSFINFO;
 
+class GridPairs {
+public:
+    vector<float> grid_sigmaZ; //NR noise variance
+    vector<float> grid_max_sigmaZ; // height step for Verticallinelocus and AWNCC_MPs,and MPP
+    vector<unsigned short> grid_height_step;
+    vector<float> grid_mean_sigmaZ; //NR noise variance weight
+    
+    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0), grid_mean_sigmaZ(length, 0), grid_height_step(length, 0) {}
+
+    GridPairs()
+    {
+    }
+    
+    void Setlength(long length)
+    {
+        for(size_t i = 0 ; i < length ; i++)
+            pair_ids.push_back(-1);
+        next_id = 0;
+        
+        //grid_sigmaZ = std::vector<float>(length);
+        //grid_max_sigmaZ = std::vector<float>(length);
+        //grid_height_step = std::vector<unsigned short>(length);
+        //grid_mean_sigmaZ = std::vector<float>(length);
+    }
+    
+    void add_pairs(long index, const vector<short> &pairs) {
+        short id = find_pair_id(pairs);
+        if(id != -1) {
+            pair_ids[index] = id;
+        } else {
+            // not in our list, so add it
+            pair_lists[next_id] = pairs;
+            pair_ids[index] = next_id;
+            next_id++;
+       }
+    }
+
+    void remove_pairs(long index, std::vector<short> pairs_to_remove) {
+        std::vector<short> current_pairs = get_pairs(index);
+        std::vector<short> new_pairs;
+
+        // build list of new pairs for index
+        for(auto pnum : current_pairs) {
+            if(std::find(pairs_to_remove.begin(), pairs_to_remove.end(), pnum) == pairs_to_remove.end()) {
+                // pair is not in removal list, so add to new list
+                new_pairs.push_back(pnum);
+            }
+        }
+        add_pairs(index, new_pairs);
+    }
+
+    void clear_pairs(long length)
+    {
+        
+        pair_ids.clear();
+        empty.clear();
+        
+        grid_sigmaZ.clear();
+        grid_max_sigmaZ.clear();
+        grid_height_step.clear();
+        grid_mean_sigmaZ.clear();
+        
+        for(size_t i = 0 ; i < length ; i++)
+        {
+            pair_lists[i].clear();
+            //pair_ids.push_back(-1);
+        }
+        next_id = 0;
+    }
+    
+    void remap_pairs(const std::map<short, short> &pair_map) {
+        for(auto &it : pair_lists) {
+            for(short &p_num : it.second) {
+                if(pair_map.find(p_num) != pair_map.end()) {
+                    p_num = pair_map.at(p_num);
+                }
+            }
+        }
+    }
+
+    const vector<short>& get_pairs(long index) const {
+        int id = pair_ids[index];
+        if(id < 0) {
+            return empty;
+        } else {
+            return pair_lists.at(id);
+        }
+    }
+
+private:
+
+    short find_pair_id(const vector<short> &pairs) {
+        for(auto &it : pair_lists) {
+            if(it.second == pairs) {
+                return it.first;
+            }
+        }
+        return -1;
+    }
+
+    std::map<int, vector<short>> pair_lists;
+    vector<int> pair_ids;
+    vector<short> empty;
+    int next_id;
+};
+
+typedef struct tagGNCCGrid
+{
+    // Constructor
+    tagGNCCGrid()
+            : gncc_grid(0), Gridpairs(0) {}
+
+    tagGNCCGrid(size_t length, const GridPairs &Gridpairs)
+            : gncc_grid(length), Gridpairs(Gridpairs)
+    {
+        for(size_t index = 0 ; index < length ; index++)
+        {
+            allocate(index);
+        }
+    }
+    
+    // Const and nonconst accessors for GNCC
+    short& GNCC(size_t grid_index, size_t pair_id) {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        //size_t num_pairs = pairs.size();
+        return gncc_grid[grid_index][pair_index];
+    }
+
+    // const versions of the above
+    const short& GNCC(size_t grid_index, size_t pair_id) const {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        //size_t num_pairs = pairs.size();
+        return gncc_grid[grid_index][pair_index];
+    }
+    
+    
+    bool has_pair(size_t grid_index, size_t pair_id) {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        return pair_id_to_index(pairs, pair_id) >= 0;
+    }
+    
+    /** Set size to zero and clear memory */
+    void clear(size_t grid_index) {
+        std::vector<short>().swap(gncc_grid[grid_index]);
+    }
+    
+    void allocate(size_t grid_index) {
+        auto num_pairs = Gridpairs.get_pairs(grid_index).size();
+        gncc_grid[grid_index] = std::vector<short>(num_pairs, INCC_UNSET);
+    }
+    
+private:
+    std::vector<std::vector<short>> gncc_grid;
+    GridPairs Gridpairs;
+    
+    static constexpr short INCC_UNSET = -1000;
+
+    int pair_id_to_index(const std::vector<short> &pairs, size_t pair_id) const {
+        auto it = std::find(pairs.begin(), pairs.end(), pair_id);
+        if(it == pairs.end()) {
+            return -1;
+        }
+        return std::distance(pairs.begin(), it);
+    }
+
+    void dbg_crash(size_t grid_index, const std::vector<short> &pairs, size_t pair_id) const {
+        LOG("GNCC Failed to find pair id %lu for grid index %lu\n", pair_id, grid_index);
+        LOG("number of pairs: %d\n", pairs.size());
+
+        LOG("pairs:\n");
+        for(int i = 0; i < pairs.size(); i++) {
+            LOG("    pair[%d] = %d\n", i, pairs[i]);
+        }
+        abort();
+    }
+}GNCCGrid;
+
+typedef struct tagGridroh
+{
+    // Constructor
+    tagGridroh()
+            : grid_rohth(0), Gridpairs(0), length(0) {}
+
+    /*
+    tagGridroh(size_t length, const GridPairs &Gridpairs)
+            : grid_rohth(length), Gridpairs(Gridpairs)
+    {
+        for(size_t index = 0 ; index < length ; index++)
+        {
+            allocate(index);
+        }
+    }
+    */
+    // Const and nonconst accessors for GNCC
+    short& Grid_roh(size_t grid_index, size_t pair_id) {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        //size_t num_pairs = pairs.size();
+        return grid_rohth[grid_index][pair_index];
+    }
+
+    // const versions of the above
+    const short& Grid_roh(size_t grid_index, size_t pair_id) const {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        int pair_index = pair_id_to_index(pairs, pair_id);
+        if(pair_index < 0)
+            dbg_crash(grid_index, pairs, pair_id);
+        //size_t num_pairs = pairs.size();
+        return grid_rohth[grid_index][pair_index];
+    }
+    
+    
+    bool has_pair(size_t grid_index, size_t pair_id) {
+        auto &pairs = Gridpairs.get_pairs(grid_index);
+        return pair_id_to_index(pairs, pair_id) >= 0;
+    }
+    
+    /** Set size to zero and clear memory */
+    void clear(size_t grid_index) {
+        std::vector<short>().swap(grid_rohth[grid_index]);
+    }
+    
+    void clear_all() {
+        if(length > 0)
+        {
+            for(int i = 0 ; i < length ; i++)
+                std::vector<short>().swap(grid_rohth[i]);
+            grid_rohth.clear();
+            
+            Gridpairs.clear_pairs(length);
+        }
+        
+        length = 0;
+    }
+    
+    
+    void allocate(long total_grid, short val, GridPairs m_Gridpairs) {
+        if(length > 0)
+        {
+            for(int i = 0 ; i < length ; i++)
+                std::vector<short>().swap(grid_rohth[i]);
+            grid_rohth.clear();
+            
+            Gridpairs.clear_pairs(length);
+        }
+        
+        length = total_grid;
+        
+        grid_rohth = std::vector<std::vector<short>>(length);
+        Gridpairs.Setlength(length);
+        
+        for(long i = 0 ; i < length ; i++)
+        {
+            auto &pairs = m_Gridpairs.get_pairs(i);
+            auto num_pairs = pairs.size();
+            if(pairs.size() > 0)
+            {
+                //printf("pairsize %d\n",pairs.size());
+                Gridpairs.add_pairs(i,pairs);
+                grid_rohth[i] = std::vector<short>(num_pairs, val);
+            }
+        }
+    }
+    
+private:
+    std::vector<std::vector<short>> grid_rohth;
+    GridPairs Gridpairs;
+    long length;
+    static constexpr short INCC_UNSET = -1000;
+
+    int pair_id_to_index(const std::vector<short> &pairs, size_t pair_id) const {
+        auto it = std::find(pairs.begin(), pairs.end(), pair_id);
+        if(it == pairs.end()) {
+            return -1;
+        }
+        return std::distance(pairs.begin(), it);
+    }
+
+    void dbg_crash(size_t grid_index, const std::vector<short> &pairs, size_t pair_id) const {
+        LOG("gridroh Failed to find pair id %lu for grid index %lu\n", pair_id, grid_index);
+        LOG("number of pairs: %d\n", pairs.size());
+
+        LOG("pairs:\n");
+        for(int i = 0; i < pairs.size(); i++) {
+            LOG("    pair[%d] = %d\n", i, pairs[i]);
+        }
+        abort();
+    }
+}Gridroh;
+
 class CPairInfo
 {
 private:
@@ -455,6 +803,7 @@ private:
     int m_MinOffImage;
     float m_HeightStep;
     int m_max_countMPs_pair;
+    int m_ref_imageID;
     
     std::vector<short> m_cal;
     std::vector<D2DPOINT> m_RBias;
@@ -465,6 +814,7 @@ private:
     std::vector<vector<unsigned char>> m_linked_pair;
     
     std::vector<D2DPOINT> m_referencepairs;
+    std::vector<uint16> m_oripairnumber;
     
     std::vector<UI2DPOINT> m_pairs;
     std::vector<float> m_BHratio;
@@ -477,6 +827,7 @@ private:
     std::vector<unsigned char> m_diff_day;
     std::vector<unsigned char> m_diff_time;
     std::vector<float> m_MPs_P;
+    std::vector<float> m_resolution;
     
     std::vector<float> m_AE;
     std::vector<float> m_BIE;
@@ -489,9 +840,13 @@ private:
     std::vector<float> m_ConvergenceAngle_EQ;
     std::vector<float> m_ConvergenceAngle_EQ_IRPC;
     
+    std::vector<unsigned char> m_Coverage;
+    std::vector<unsigned short> m_pairHeightStep;
+    
     void allocate(int numberofpairs)
     {
         m_max_countMPs_pair = -1;
+        m_ref_imageID = -1;
         
         m_cal = std::vector<short>(numberofpairs,1);
         m_RBias = std::vector<D2DPOINT>(numberofpairs);
@@ -501,6 +856,7 @@ private:
         m_Tz_res = std::vector<float>(numberofpairs,1.0);
         D2DPOINT temp(0,0);
         m_referencepairs = std::vector<D2DPOINT>(numberofpairs,temp);
+        m_oripairnumber = std::vector<uint16>(numberofpairs,0);
         
         m_linked_pair = std::vector<vector<unsigned char>>(numberofpairs);
         for(int index = 0 ; index < numberofpairs ; index++)
@@ -516,6 +872,7 @@ private:
         m_diff_day = std::vector<unsigned char>(numberofpairs);
         m_diff_time = std::vector<unsigned char>(numberofpairs);
         m_MPs_P = std::vector<float>(numberofpairs);
+        m_resolution = std::vector<float>(numberofpairs);
         
         m_AE = std::vector<float>(numberofpairs);
         m_BIE = std::vector<float>(numberofpairs);
@@ -529,13 +886,16 @@ private:
         m_ConvergenceAngle_EQ = std::vector<float>(numberofpairs);
         m_ConvergenceAngle_EQ_IRPC = std::vector<float>(numberofpairs);
         
+        m_Coverage = std::vector<unsigned char>(numberofpairs);
+        m_pairHeightStep = std::vector<unsigned short>(numberofpairs);
+        
         printf("allocate pairinfo array\n");
     }
     
     
     
 public:
-    CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0), m_max_countMPs_pair(-1)
+    CPairInfo() : m_NumberOfPairs(0), m_MinOffImage(-1), m_HeightStep(0), m_SelectNumberOfPairs(0), m_max_countMPs_pair(-1), m_ref_imageID(-1)
     {
     }
     
@@ -552,6 +912,7 @@ public:
         m_MinOffImage = -1;
         m_HeightStep = 0;
         m_max_countMPs_pair = -1;
+        m_ref_imageID = -1;
         
         m_cal.clear();
         vector<short>().swap(m_cal);
@@ -573,6 +934,9 @@ public:
         
         m_referencepairs.clear();
         vector<D2DPOINT>().swap(m_referencepairs);
+        
+        m_oripairnumber.clear();
+        vector<uint16>().swap(m_oripairnumber);
         
         m_pairs.clear();
         vector<UI2DPOINT>().swap(m_pairs);
@@ -604,6 +968,9 @@ public:
         m_MPs_P.clear();
         vector<float>().swap(m_MPs_P);
         
+        m_resolution.clear();
+        vector<float>().swap(m_resolution);
+        
         m_AE.clear();
         vector<float>().swap(m_AE);
         
@@ -630,6 +997,12 @@ public:
         
         m_ConvergenceAngle_EQ_IRPC.clear();
         vector<float>().swap(m_ConvergenceAngle_EQ_IRPC);
+        
+        m_Coverage.clear();
+        vector<unsigned char>().swap(m_Coverage);
+        
+        m_pairHeightStep.clear();
+        vector<unsigned short>().swap(m_pairHeightStep);
     }
     
     void SetNumberOfPairs(int numberofpairs)
@@ -658,6 +1031,11 @@ public:
     void SetMaxCountMPs_pair(int pairID)
     {
         m_max_countMPs_pair = pairID;
+    }
+    
+    void SetRefImageID(int pairID)
+    {
+        m_ref_imageID = pairID;
     }
     
     void SetCal(int pos, short value)
@@ -693,6 +1071,11 @@ public:
     void Setreferencepairs(int pos, D2DPOINT value)
     {
         m_referencepairs[pos] = value;
+    }
+    
+    void Setoripairnumber(int pos, uint16 value)
+    {
+        m_oripairnumber[pos] = value;
     }
     
     void SetLinked_pair(int pos, short linked_pair, unsigned char value)
@@ -751,6 +1134,15 @@ public:
         m_MPs_P[pos] = value;
     }
     
+    void SetResolution(int pos, float value)
+    {
+        float convert = (value + 0.05)*10;
+        int integer = (int)convert;
+        convert = integer/10.0;
+        
+        m_resolution[pos] = convert;
+    }
+    
     void SetAE(int pos, float value)
     {
         m_AE[pos] = value;
@@ -801,6 +1193,16 @@ public:
         m_ConvergenceAngle_EQ_IRPC[pos] = value;
     }
     
+    void SetCoverage(int pos, unsigned char value)
+    {
+        m_Coverage[pos] = value;
+    }
+    
+    void SetpairHeightStep(int pos, unsigned short value)
+    {
+        m_pairHeightStep[pos] = value;
+    }
+    
     
     int& NumberOfPairs()
     {
@@ -825,6 +1227,11 @@ public:
     int& MaxCountMPs_pair()
     {
         return m_max_countMPs_pair;
+    }
+    
+    int& RefImageID()
+    {
+        return m_ref_imageID;
     }
     
     short& cal(int pos)
@@ -860,6 +1267,11 @@ public:
     D2DPOINT& referencepairs(int pos)
     {
         return m_referencepairs[pos];
+    }
+    
+    uint16& oripairnumber(int pos)
+    {
+        return m_oripairnumber[pos];
     }
     
     unsigned char& linked_pair(int pos, short query_pair)
@@ -912,6 +1324,11 @@ public:
         return m_MPs_P[pos];
     }
     
+    float Resolution(int pos)
+    {
+        return m_resolution[pos];
+    }
+    
     float& AE(int pos)
     {
         return m_AE[pos];
@@ -961,6 +1378,16 @@ public:
     float& ConvergenceAngle_EQ_IRPC(int pos)
     {
         return m_ConvergenceAngle_EQ_IRPC[pos];
+    }
+    
+    unsigned char& Coverage(int pos)
+    {
+        return m_Coverage[pos];
+    }
+    
+    unsigned short& pairHeightStep(int pos)
+    {
+        return m_pairHeightStep[pos];
     }
 };
 
@@ -1067,9 +1494,14 @@ typedef struct ProjectInfo{
     int awnccmp;
     int merging_option;
     int NR_level;
+    int NR_kernel_size;
     bool check_awncc;;
-    bool check_Planet_RA;
+    int check_Planet_RA;
     int Planet_VC_level;
+    int NDVI_th;
+    int NDVI_pair_number;
+    double NR_noise_var;
+    
     
     enum SensorType sensor_type; // 1 is for RFM (default), 2 is for Collinear Equation (Frame)
     enum SensorProvider sensor_provider; //DG = DG, Pleiades = PL if sensor_type = 1
@@ -1108,7 +1540,10 @@ typedef struct ProjectInfo{
     bool check_Matchtag;
     bool check_selected_image[MaxImages];
     bool check_full_cal;
+    bool check_pairinfo_only;
     
+    bool check_NDVIPan;
+    bool check_NDVI_pair_nochange;
     //SGM test flag
     bool check_SNCC;
     bool check_updateheight;
@@ -1156,6 +1591,7 @@ typedef struct ArgumentInfo{
     double gamma;
     int min_S;
     int max_S;
+    int NDVI_th;
     
 	int check_arg; // 0 : no input, 1: 3 input
 	int Threads_num;
@@ -1180,6 +1616,8 @@ typedef struct ArgumentInfo{
     int DS_kernel;
     int RA_line_count;
     int RA_sample_count;
+    double NR_noise_var;
+    int NR_kernel_size;
     
     int Phi_start;
     int Phi_end;
@@ -1208,6 +1646,7 @@ typedef struct ArgumentInfo{
     bool check_gamma;
     bool check_DS_txy;
     bool check_downsample;
+    int check_NDVIPAN;
 	bool check_DEM_space;
 	bool check_Threads_num;
 	bool check_seeddem;
@@ -1239,6 +1678,7 @@ typedef struct ArgumentInfo{
     bool check_full_cal;
     bool check_simulate;
     bool check_sdm_file;
+    bool check_pairinfo_only;
     
     int check_txt_input;
     int check_coreg;
@@ -1250,7 +1690,7 @@ typedef struct ArgumentInfo{
     int merging_option;
     int NR_level;
     bool check_awncc;
-    bool check_Planet_RA;
+    int check_Planet_RA;
     int Planet_VC_level;
     
     //SGM test flag
@@ -1276,10 +1716,62 @@ typedef struct tagImageGSD
 
 typedef struct tagBandInfo
 {
-    float abscalfactor;
-    float effbw;
-    float tdi;
+    double abscalfactor;
+    double effbw;
+    double tdi;
+    
+    //multiband info
+    double abscalfactor_multi[8];
+    double effbw_multi[8];
+    double tdi_multi[8];
+
+    double calibrated_abscal_multi[8];
+    double calibrated_effbw_multi[8];
 } BandInfo;
+
+typedef struct tagEsunDictWV02
+{
+    // Spectral Irradiance in W/m2/um
+	// (from Thuillier 2003 - used by DG calibration team as of 2016)
+    float BAND_P = 1571.36;
+	float BAND_C = 1773.81;
+    float BAND_B = 2007.27;
+	float BAND_G = 1829.62;
+	float BAND_Y = 1701.85;
+	float BAND_R = 1538.85;
+	float BAND_RE = 1346.09;
+	float BAND_N = 1053.21;
+	float BAND_N2 = 856.599;
+} EsunDictWV02;
+
+typedef struct tagGainDictWV02
+{
+    // Spectral Irradiance in W/m2/um
+    float BAND_P = 0.942;
+	float BAND_C = 1.151;
+	float BAND_B = 0.988;
+	float BAND_G = 0.936;
+	float BAND_Y = 0.949;
+	float BAND_R = 0.952;
+	float BAND_RE = 0.974;
+	float BAND_N = 0.961;
+	float BAND_N2 = 1.002;
+} GainDictWV02;
+
+typedef struct tagBiasDictWV02
+{
+    // Spectral Irradiance in W/m2/um
+    float BAND_P = -2.704;
+	float BAND_C = -7.478;
+	float BAND_B = -5.736;
+	float BAND_G = -3.546;
+	float BAND_ = -3.564;
+	float BAND_R = -2.512;
+	float BAND_RE = -4.120;
+	float BAND_N = -3.300;
+	float BAND_N2 = -2.891;
+} BiasDictWV02;
+
 
 typedef struct tagImageInfo
 {
@@ -1301,6 +1793,7 @@ typedef struct tagImageInfo
     D2DPOINT max_XY;
     double Center[2];
     float convergence_angle;
+    float convergence_angle_json;
     float AZ_ray[2]; //1 for IRPC vector, 2 for EO vector
     float EL_ray[2];
     
@@ -1415,6 +1908,11 @@ typedef struct taglevelinfo
     double MPP;
     int max_covergae_pair;
     bool check_Height_update;
+    double anchor_nccth;
+    double blunder_nccth;
+    double GNCC_th;
+    
+    GNCCGrid *GNCCGrid;
 } LevelInfo;
 
 typedef struct PairCA
@@ -1554,102 +2052,9 @@ private:
     vector<T> _data;
 };
 
-typedef MixedHeight3DGrid<short> SumCostContainer;
+typedef MixedHeight3DGrid<float> SumCostContainer;
 
-class GridPairs {
-public:
-    vector<unsigned char> grid_sigmaZ;
-    vector<unsigned char> grid_max_sigmaZ;
-    vector<unsigned short> grid_height_step;
-    vector<unsigned char> grid_mean_sigmaZ;
-    
-    GridPairs(long length) : pair_ids(length, -1), next_id(0), grid_sigmaZ(length,0), grid_max_sigmaZ(length, 0), grid_mean_sigmaZ(length, 0), grid_height_step(length, 0) {}
 
-    GridPairs()
-    {
-    }
-    
-    void Setlength(long length)
-    {
-        for(size_t i = 0 ; i < length ; i++)
-            pair_ids.push_back(-1);
-        next_id = 0;
-    }
-    
-    void add_pairs(long index, const vector<short> &pairs) {
-        short id = find_pair_id(pairs);
-        if(id != -1) {
-            pair_ids[index] = id;
-        } else {
-            // not in our list, so add it
-            pair_lists[next_id] = pairs;
-            pair_ids[index] = next_id;
-            next_id++;
-       }
-    }
-
-    void remove_pairs(long index, std::vector<short> pairs_to_remove) {
-        std::vector<short> current_pairs = get_pairs(index);
-        std::vector<short> new_pairs;
-
-        // build list of new pairs for index
-        for(auto pnum : current_pairs) {
-            if(std::find(pairs_to_remove.begin(), pairs_to_remove.end(), pnum) == pairs_to_remove.end()) {
-                // pair is not in removal list, so add to new list
-                new_pairs.push_back(pnum);
-            }
-        }
-        add_pairs(index, new_pairs);
-    }
-
-    void clear_pairs(long length)
-    {
-        
-        pair_ids.clear();
-        empty.clear();
-        for(size_t i = 0 ; i < length ; i++)
-        {
-            pair_lists[i].clear();
-            pair_ids.push_back(-1);
-        }
-        next_id = 0;
-    }
-    
-    void remap_pairs(const std::map<short, short> &pair_map) {
-        for(auto &it : pair_lists) {
-            for(short &p_num : it.second) {
-                if(pair_map.find(p_num) != pair_map.end()) {
-                    p_num = pair_map.at(p_num);
-                }
-            }
-        }
-    }
-
-    const vector<short>& get_pairs(long index) const {
-        int id = pair_ids[index];
-        if(id < 0) {
-            return empty;
-        } else {
-            return pair_lists.at(id);
-        }
-    }
-
-private:
-
-    short find_pair_id(const vector<short> &pairs) {
-        for(auto &it : pair_lists) {
-            if(it.second == pairs) {
-                return it.first;
-            }
-        }
-        return -1;
-    }
-
-    std::map<int, vector<short>> pair_lists;
-    vector<int> pair_ids;
-    vector<short> empty;
-    int next_id;
-};
 
 // Used in vectors when thread safety is needed
 // just replace std::vector<bool> with std::vector<ConcurrentBool>

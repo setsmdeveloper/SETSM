@@ -443,6 +443,98 @@ T *convert_to_pan(const T *out, const CSize *data_size, const int number_samples
     return pan;
 }
 
+
+/** Convert WV multi-band image to NDVI image */
+template <typename T>
+T **convert_to_ndvi(const T *out, const CSize *data_size, const int number_samples, const T type, const BandInfo band)
+{
+    (void)type;
+    if(number_samples < 8)
+    {
+        printf("cannot convert to ndvi. Only have %d samples."
+               " Need at least 3.\n", number_samples);
+    }
+    T **ndvi = static_cast<T**>(calloc(3, sizeof(T))); //ndvi, red, nir
+    for(int count = 0 ; count < 3 ; count++)
+    {
+        ndvi[count] = static_cast<T*>(calloc(data_size->width * data_size->height, sizeof(T)));
+        if(!ndvi[count])
+        {
+            printf("failed to allocate space for ndvi tiff image! w=%d h=%d\n",
+                data_size->width, data_size->height);
+            return NULL;
+        }
+    }
+    
+    int red_band = 4;
+    int nir_band = 6;
+    
+    printf("redband abscalfactor %10.9f\n",band.calibrated_abscal_multi[red_band]);
+    printf("redband effbw %10.9f\n",band.calibrated_effbw_multi[red_band]);
+    printf("redband tdi %lf\n",band.tdi_multi[red_band]);
+    
+    printf("nirband abscalfactor %10.9f\n",band.calibrated_abscal_multi[nir_band]);
+    printf("nirband effbw %10.9f\n",band.calibrated_effbw_multi[nir_band]);
+    printf("nirband tdi %lf\n",band.tdi_multi[nir_band]);
+    
+    double minrefl = 0.000001;
+
+    // assume the sample order (8 bands) is (coastal blue, blue, green, yellow, red [4], red edge, nir1[6], nir2)
+    // TODO we should add functionality to ensure this ordering is correct
+    for(long i = 0; i < data_size->width * data_size->height; i++)
+    {
+        double red_ori = (double)(out[i * number_samples + red_band]);
+        double nir_ori = (double)(out[i * number_samples + nir_band]);
+
+        ndvi[1][i] = out[i * number_samples + red_band];
+        ndvi[2][i] = out[i * number_samples + nir_band];
+
+        if(red_ori >0 && nir_ori > 0)
+        {
+            double red = red_ori*(double)band.calibrated_abscal_multi[red_band] + (double)band.calibrated_effbw_multi[red_band];
+            double nir = nir_ori*(double)band.calibrated_abscal_multi[nir_band] + (double)band.calibrated_effbw_multi[nir_band];
+            
+            if(red < 0)
+            {
+                printf("red less than 0 %f\n",red);
+                red = minrefl;
+            }
+            if(red > 1)
+            {
+                printf("red more than 1 %f\n",red);
+                red = 1.0;
+            }
+            if(nir < 0)
+            {
+                printf("nir less than 0 %f\n",nir);
+                nir = minrefl;
+            }
+            if(nir > 1)
+            {
+                printf("nir more than 1 %f\n",nir);
+                nir = 1.0;
+            }
+            //double red = (double)out[i * number_samples + red_band];
+            //double nir = (double)out[i * number_samples + nir_band];
+            // important bit here
+            double real_ndvi = double(nir - red)/double(nir + red);
+            if(real_ndvi < -1)
+                printf("ndvi less than -1 %f\n", real_ndvi);
+            if(real_ndvi > 1)
+                printf("ndvi more than 1 %f\n", real_ndvi);
+            //ndvi[i] = round(real_ndvi*(2047/2.0) + 2049/2);
+            ndvi[0][i] = round(real_ndvi*1000.0 + 1000.0);
+
+            //printf("red_ori %f\t nir_ori %f\n",red_ori,nir_ori);
+            //printf("red %f\t nir %f\t real_ndvi %f\t ndvi[0][i] %d\n",red, nir,real_ndvi,ndvi[0][i]);
+            //exit(1);
+        }
+        else
+            ndvi[0][i] = 0;
+    }
+    return ndvi;
+}
+
 /** Read and return pointer to TIFF
  *
  * Arguments:
@@ -474,3 +566,22 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
 
     return out;
 }
+
+template <typename T>
+T **Readtiff_T_NDVI(const char *filename, CSize *Imagesize,long int *cols,long int *rows, CSize *data_size, T type, BandInfo band) {
+    int number_samples = 1;
+    T *out = Readtiff_multi(filename, Imagesize, cols, rows, data_size, &number_samples, type);
+
+    if(out != NULL && number_samples > 1) {
+        printf("Read tiff file with %d samples, converting to ndvi\n", number_samples);
+        T **pan = convert_to_ndvi(out, data_size, number_samples, type, band);
+        free(out);
+        //out = pan;
+        return pan;
+    }
+    else
+        return NULL;
+
+}
+
+

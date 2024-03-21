@@ -37,6 +37,8 @@ void orthogeneration(const TransParam _param, ARGINFO args, char *ImageFilename,
     m_frameinfo.m_Camera.m_CCDSize      = 0;
     
     char *tmp_chr = remove_ext(ImageFilename);
+    if(args.sensor_provider == BS)
+        args.sensor_provider = PT;
     if(args.sensor_provider == PT)
     {
         sprintf(PL_metafile,"%s_metadata.xml",tmp_chr);
@@ -52,8 +54,16 @@ void orthogeneration(const TransParam _param, ARGINFO args, char *ImageFilename,
             FILE *fid_XML = fopen(RPCFilename,"r");
             if(!fid_XML)
             {
-                printf("Please check Planet RPC file!! SETSM supports a format of 'txt' or 'TXT'");
-                exit(1);
+                sprintf(RPCFilename,"%s_rpc.txt",tmp_chr);
+                sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
+                FILE *fid_XML2 = fopen(RPCFilename,"r");
+                if(!fid_XML2)
+                {
+                    printf("Please check Planet RPC file!! SETSM supports a format of 'txt' or 'TXT'");
+                    exit(1);
+                }
+                else
+                    fclose(fid_XML2);
             }
             else
                 fclose(fid_XML);
@@ -216,6 +226,9 @@ void orthogeneration(const TransParam _param, ARGINFO args, char *ImageFilename,
             else if(args.sensor_provider == PT)
             {
                 Image_resolution = (image_info.GSD.row_GSD + image_info.GSD.col_GSD)/2.0;
+                
+                if(Image_resolution == 0)
+                    Image_resolution = 1;
             }
             else
                 Image_resolution = 0.5;

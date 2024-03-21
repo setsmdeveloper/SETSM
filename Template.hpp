@@ -640,41 +640,88 @@ inline double ShortToDouble_SGM(short val, double factor)
 
 inline unsigned short DoubleToUnsignedShort(double val)
 {
+    if(val > 650 || val < 0)
+    {
+        printf("DoubleToUnsignedShort overflow %f\n",val);
+        exit(1);
+    }
     return (unsigned short)round(val*100.0);
 }
 
 inline double UnsignedShortToDouble(unsigned short val)
 {
+    if(val > 65000 || val < 0)
+    {
+        printf("UnsignedShortToDouble overflow %f\n",val);
+        exit(1);
+    }
+    
     return (double)(val)/100.0;
 }
 
 inline short DoubleToSignedChar_result(double val)
 {
+    if(val > 32 || val < -32)
+    {
+        printf("DoubleToSignedChar_result overflow %f\n",val);
+        exit(1);
+    }
+    
     return (short)round(val*1000.0);
 }
 
 inline double SignedCharToDouble_result(short val)
 {
+    if(val > 32000 || val < -32000)
+    {
+        printf("SignedCharToDouble_result overflow %d\n",val);
+        exit(1);
+    }
+    
     return (double)(val)/1000.0;
 }
 
 inline short DoubleToSignedChar_grid(double val)
 {
+    if(val > 32 || val < -32)
+    {
+        printf("DoubleToSignedChar_grid overflow %f\n",val);
+        exit(1);
+    }
+    
     return (short)round(val*1000.0);
 }
 
 inline double SignedCharToDouble_grid(short val)
 {
+    if(val > 32000 || val < -32000)
+    {
+        printf("SignedCharToDouble_grid overflow %d\n",val);
+        exit(1);
+    }
+    
     return (double)(val)/1000.0;
 }
 
 inline signed char FloatToSignedChar(float val)
 {
+    if(val > 1.20 || val < -1.20)
+    {
+        printf("FloatToSignedChar overflow %f\n",val);
+        exit(1);
+    }
+    
     return (signed char)(val*100.0);
 }
 
 inline float SignedCharToFloat(signed char val)
 {
+    if(val > 120 || val < -120)
+    {
+        printf("SignedCharToFloat overflow %d\n",val);
+        exit(1);
+    }
+    
     return (float)(val/100.0);
 }
 
