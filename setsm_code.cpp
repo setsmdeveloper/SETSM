@@ -26,7 +26,7 @@
 #include "mpi_helpers.hpp"
 #endif
 
-const char setsm_version[] = "5.3.2";
+const char setsm_version[] = "5.3.3";
 
 int main(int argc,char *argv[])
 {
@@ -7445,6 +7445,10 @@ void actual_pair(ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, 
             if(proinfo->sensor_provider == PT)
             {
                 temp_pairs.SetpairHeightStep(count, DoubleToUnsignedShort(GetHeightStep_Planet_MPP(proinfo,plevelinfo,plevelinfo.pairinfo->SigmaZ(pair_number))));
+                
+                double numberofstep = (minmaxHeight[1] - minmaxHeight[0]) / GetHeightStep_Planet_MPP(proinfo,plevelinfo,plevelinfo.pairinfo->SigmaZ(pair_number));
+                if(numberofstep < 4)
+                    temp_pairs.SetpairHeightStep(count,DoubleToUnsignedShort((minmaxHeight[1] - minmaxHeight[0])/4.0));
             }
             else if(proinfo->sensor_provider == BS)
             {
@@ -7576,7 +7580,17 @@ void actual_pair(ProInfo *proinfo, LevelInfo &plevelinfo, double *minmaxHeight, 
                     if(grid_pair.grid_max_sigmaZ[pt_index] > 70 - (3-(*plevelinfo.Pyramid_step))*10)
                         grid_pair.grid_max_sigmaZ[pt_index] = 70 - (3-(*plevelinfo.Pyramid_step))*10;
                     
-                    grid_pair.grid_height_step[pt_index] = DoubleToUnsignedShort(GetHeightStep_Planet_MPP(proinfo,plevelinfo,max_sigma_Z));
+                    grid_pair.grid_height_step[pt_index] = DoubleToUnsignedShort(GetHeightStep_Planet_MPP(proinfo,plevelinfo,min_sigma_Z));
+                    
+                    //printf("min_sigma_Z %f\tgrid_pair.grid_height_step[pt_index] %d\n",min_sigma_Z,grid_pair.grid_height_step[pt_index]);
+                    double numberofstep = (minmaxHeight[1] - minmaxHeight[0]) / UnsignedShortToDouble(grid_pair.grid_height_step[pt_index]);
+                    if(numberofstep < 4)
+                    {
+                        //printf("before grid_pair.grid_height_step[pt_index] %d\n",grid_pair.grid_height_step[pt_index]);
+                        grid_pair.grid_height_step[pt_index] = DoubleToUnsignedShort((minmaxHeight[1] - minmaxHeight[0])/4.0);
+                        //printf("after grid_pair.grid_height_step[pt_index] %d\n",grid_pair.grid_height_step[pt_index]);
+                        //exit(1);    
+                    }
                 }
                 else if(proinfo->sensor_provider == BS)
                 {
@@ -9619,7 +9633,10 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                         
                                                         Grid_pair_pair.grid_sigmaZ[index] = Grid_pair.grid_sigmaZ[index];
                                                         Grid_pair_pair.grid_max_sigmaZ[index] = Grid_pair.grid_max_sigmaZ[index];
-                                                        Grid_pair_pair.grid_height_step[index] = levelinfo.pairinfo->pairHeightStep(pair_number);
+                                                        if(proinfo->sensor_provider == PT)
+                                                            /*Grid_pair_pair.grid_height_step[index] = Grid_pair.grid_height_step[index];
+                                                        else*/
+                                                            Grid_pair_pair.grid_height_step[index] = levelinfo.pairinfo->pairHeightStep(pair_number);
                                                         Grid_pair_pair.grid_mean_sigmaZ[index] = Grid_pair.grid_mean_sigmaZ[index];
                                                         
                                                         /*
@@ -9675,17 +9692,20 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                             
                                                             //printf("NumofHeight %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",nccresult[pt_index].NumOfHeight,nccresult_pair[pt_index].NumOfHeight,grid_voxel_hindex,grid_voxel_pair_hindex,Grid_pair.grid_height_step[pt_index],Grid_pair_pair.grid_height_step[pt_index],nccresult[pt_index].minHeight,nccresult_pair[pt_index].minHeight);
                                                             //exit(1);
-                                                            if(proinfo->sensor_provider == PT)
+                                                            if(grid_voxel_pair_hindex >= 0 && grid_voxel_pair_hindex < nccresult_pair[pt_index].NumOfHeight)
                                                             {
-                                                                //signed char INCC = grid_voxel_pair.INCC_uc(pt_index, grid_voxel_pair_hindex, pair_number);
-                                                                if(grid_voxel_pair.is_cal(pt_index, grid_voxel_pair_hindex, pair_number))
-                                                                    grid_voxel.INCC_uc(pt_index, grid_voxel_hindex, pair_number) = grid_voxel_pair.INCC_uc(pt_index, grid_voxel_pair_hindex, pair_number);
-                                                            }
-                                                            else
-                                                            {
-                                                                //signed char INCC = grid_voxel_pair.INCC(pt_index, grid_voxel_pair_hindex, pair_number);
-                                                                if(grid_voxel_pair.is_cal(pt_index, grid_voxel_pair_hindex, pair_number))
-                                                                    grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number) = grid_voxel_pair.INCC(pt_index, grid_voxel_pair_hindex, pair_number);
+                                                                if(proinfo->sensor_provider == PT)
+                                                                {
+                                                                    //signed char INCC = grid_voxel_pair.INCC_uc(pt_index, grid_voxel_pair_hindex, pair_number);
+                                                                    if(grid_voxel_pair.is_cal(pt_index, grid_voxel_pair_hindex, pair_number))
+                                                                        grid_voxel.INCC_uc(pt_index, grid_voxel_hindex, pair_number) = grid_voxel_pair.INCC_uc(pt_index, grid_voxel_pair_hindex, pair_number);
+                                                                }
+                                                                else
+                                                                {
+                                                                    //signed char INCC = grid_voxel_pair.INCC(pt_index, grid_voxel_pair_hindex, pair_number);
+                                                                    if(grid_voxel_pair.is_cal(pt_index, grid_voxel_pair_hindex, pair_number))
+                                                                        grid_voxel.INCC(pt_index, grid_voxel_hindex, pair_number) = grid_voxel_pair.INCC(pt_index, grid_voxel_pair_hindex, pair_number);
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -11900,7 +11920,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     double min_after   = (double)(minH_mps - pwrtwo(level)*10*MPP);
                                     double max_after   = (double)(maxH_mps + pwrtwo(level)*10*MPP);
                                     
-                                    if(proinfo->sensor_provider == PT)
+                                    if(proinfo->sensor_provider == PT && MPP > 0)
                                     {
                                         if(MPP > 30)
                                         {
@@ -11917,7 +11937,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                     if(min_after < -100)
                                         min_after = -100;
                                     
-                                    if(level <= 2)
+                                    if(level <= 2 && MPP > 0)
                                     {
                                         if(minmaxHeight[0] < min_after)
                                             minmaxHeight[0]     = (double)(floor(min_after));
@@ -18204,7 +18224,9 @@ double GetHeightStep_Planet_MPP(const ProInfo *proinfo, LevelInfo &rlevelinfo, d
         
         if(HS < 2.0)
             HS = 2.0;
-        if(*rlevelinfo.Pyramid_step == 0)
+        if(*rlevelinfo.Pyramid_step == 1 && HS > 2.0)
+            HS = 2.0;
+        else if(*rlevelinfo.Pyramid_step == 0 && HS > 2.0)
             HS = 2.0;
     }
     return HS;
@@ -18510,20 +18532,43 @@ void InitializeVoxel_pair(const ProInfo *proinfo, GridVoxel &grid_voxel,LevelInf
             //if(check_image_boundary_each(proinfo,plevelinfo,plevelinfo.GridPts[t_i],plevelinfo.Grid_wgs[t_i],GridPT3.minHeight(t_i),GridPT3.maxHeight(t_i),7,selected_images))
             //    GridPT3.total_images(t_i) = selected_images;
             
-            nccresult[t_i].minHeight = nccresult_all[t_i].minHeight;
-            nccresult[t_i].maxHeight = nccresult_all[t_i].maxHeight;
-            nccresult[t_i].check_height_change = true;
-            nccresult[t_i].NumOfHeight = nccresult_all[t_i].NumOfHeight;
             
-            //if(!check_blunder_cell)
+            nccresult[t_i].check_height_change = false;
+            nccresult[t_i].NumOfHeight = 0;
+            
+            bool check_blunder_cell = true;
+            
+            if ( pyramid_step >= 2 )
+                check_blunder_cell = false;
+            else if( GridPT3.Matched_flag(t_i) != 0)
+            {
+                if(GridPT3.maxHeight(t_i) - GridPT3.minHeight(t_i) > 0)
+                {
+                    if((abs(GridPT3.maxHeight(t_i) - GridPT3.minHeight(t_i)) < th_height))
+                        check_blunder_cell = false;
+                    else
+                        check_blunder_cell = true;
+                }
+            }
+            
+            if(!check_blunder_cell)
             {
                 {
-                    const int NumberofHeightVoxel = (int)((float)(nccresult[t_i].maxHeight - nccresult[t_i].minHeight)/height_step);
+                    const int NumberofHeightVoxel = (int)((float)(GridPT3.maxHeight(t_i) - GridPT3.minHeight(t_i))/height_step);
                     
                     if(NumberofHeightVoxel > 0 )
                     {
-                        nccresult[t_i].NumOfHeight = NumberofHeightVoxel;
+                        nccresult[t_i].minHeight = GridPT3.minHeight(t_i);
+                        nccresult[t_i].maxHeight = GridPT3.maxHeight(t_i);
+                        
                         grid_voxel.allocate(t_i, NumberofHeightVoxel);
+                        nccresult[t_i].check_height_change = true;
+                        nccresult[t_i].NumOfHeight = NumberofHeightVoxel;
+                        
+                        /*
+                        if(nccresult[t_i].NumOfHeight > 2000)
+                            printf("gridsize %d\t%d\tpos %ld\tnumofheight %d\t%d\t%d\t%f\n",plevelinfo.Size_Grid2D->width,plevelinfo.Size_Grid2D->height,t_i,nccresult[t_i].NumOfHeight,nccresult[t_i].maxHeight,nccresult[t_i].minHeight,height_step);
+                         */
                     }
                 }
             }
@@ -24088,7 +24133,7 @@ void AWNCC_SGM(ProInfo *proinfo, GridVoxel &grid_voxel,LevelInfo &rlevelinfo,CSi
         for(long j=0;j<Size_Grid2D.width;j++)
         {
             long t_index = i*(long)Size_Grid2D.width + j;
-            if(Pyramid_step == 0 && iteration == 3 && nccresult[t_index].NumOfHeight > 2000)
+            if(/*Pyramid_step == 0 && iteration == 3 &&*/ nccresult[t_index].NumOfHeight > 2000)
                 printf("gridsize %d\t%d\t pos %ld\t%ld\t numofheight %d\t%d\t%d\n",Size_Grid2D.width,Size_Grid2D.height,j,i,nccresult[t_index].NumOfHeight,nccresult[t_index].maxHeight,nccresult[t_index].minHeight);
             if(nccresult[t_index].NumOfHeight > 0)
             {
@@ -31438,12 +31483,22 @@ UGRID SetHeightRange_vector(ProInfo *proinfo, LevelInfo &rlevelinfo, const long 
                 result.maxHeight(matlab_index) = ori_minmaxHeight[1];
              
             
-            if(result.maxHeight(matlab_index) == result.minHeight(matlab_index) && result.maxHeight(matlab_index) > -100 && result.minHeight(matlab_index) > -100)
+            if(pyramid_step >= 2 && result.maxHeight(matlab_index) == result.minHeight(matlab_index) && result.maxHeight(matlab_index) > -100 && result.minHeight(matlab_index) > -100)
             {
                 result.minHeight(matlab_index) = ori_minmaxHeight[0];
                 result.maxHeight(matlab_index) = ori_minmaxHeight[1];
             }
-            
+            /*
+            if(proinfo->sensor_provider == PT)
+            {
+                double height_step = UnsignedShortToDouble(Grid_pair.grid_height_step[matlab_index]);
+                double step_to_minH = floor((double)result.minHeight(matlab_index)/height_step);
+                double step_to_maxH = ceil((double)result.maxHeight(matlab_index)/height_step);
+                
+                result.minHeight(matlab_index) = step_to_minH*floor(height_step);
+                result.maxHeight(matlab_index) = step_to_maxH*ceil(height_step);
+            }
+             */
         }
     }
     
