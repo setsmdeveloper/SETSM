@@ -9633,10 +9633,7 @@ int Matching_SETSM(ProInfo *proinfo, ImageInfo *image_info, const uint8 pyramid_
                                                         
                                                         Grid_pair_pair.grid_sigmaZ[index] = Grid_pair.grid_sigmaZ[index];
                                                         Grid_pair_pair.grid_max_sigmaZ[index] = Grid_pair.grid_max_sigmaZ[index];
-                                                        if(proinfo->sensor_provider == PT)
-                                                            /*Grid_pair_pair.grid_height_step[index] = Grid_pair.grid_height_step[index];
-                                                        else*/
-                                                            Grid_pair_pair.grid_height_step[index] = levelinfo.pairinfo->pairHeightStep(pair_number);
+                                                        Grid_pair_pair.grid_height_step[index] = levelinfo.pairinfo->pairHeightStep(pair_number);
                                                         Grid_pair_pair.grid_mean_sigmaZ[index] = Grid_pair.grid_mean_sigmaZ[index];
                                                         
                                                         /*
