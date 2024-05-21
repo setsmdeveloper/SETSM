@@ -63,13 +63,23 @@ make
 
 You may need to edit the Makefile to set the 
 correct path to the TIFF and GeoTIFF libraries.
-
+for example, 
+```
+TIFFPATH?=/directory-to-install-in/tiff-version
+GEOTIFFPATH?=/directory-to-install-in/libgeotiff-version
+PROJLIB?=-L/directory-to-install-in/proj-version/lib
+```
 You can also set the OPTFLAGS variable to override the default optimization flags,
 for example,
 ```
 COMPILER=intel OPTFLAGS='-O3 -fp-model precise' make
 ```
-
+In case that your system could not find the libraires from Makefile, you may need to explicitly set the library path by LD_LIBRARY_PATH
+```
+export LD_LIBRARY_PATH=/directory-to-install-in/tiff-version/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/directory-to-install-in/libgeotiff-version/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/directory-to-install-in/proj-version/lib:$LD_LIBRARY_PATH
+```
 
 #### Parallel SETSM with MPI (Message-Passing Interface)
 To build SETSM for parallel computing with MPI, follow the above steps then use:

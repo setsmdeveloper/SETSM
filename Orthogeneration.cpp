@@ -537,7 +537,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
     ImageBoundary[2]    = ceil(t_maxX)+1;
     ImageBoundary[3]    = ceil(t_maxY)+1;
     
-    if(param.projection != 1)
+    //if(param.projection != 1)
     {
         ImageBoundary[0]    = DEMboundary[0];
         ImageBoundary[1]    = DEMboundary[1];
