@@ -1299,9 +1299,38 @@ void RPCsFree(double **rpcs) {
     free(rpcs);
 }
 
+char* normalize_tag(char* tag)
+{
+    if (!tag)
+        return NULL;
+
+    if (tag[0] != '<')
+        return NULL;
+
+    tag++;
+
+    if (tag[0] == '/')
+        return NULL;
+
+    while (*tag == ' ' || *tag == '\t')
+        tag++;
+
+    char* p = strchr(tag, ':');
+    if (p)
+        tag = p + 1;
+
+    char* end = strpbrk(tag, " >");
+    if (end)
+        *end = '\0';
+
+    return tag;
+}
+
+
 double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c, double* gsd, BandInfo* band)
 {
     double** out = NULL;
+    //printf("OpenXML start\n");
     
     FILE *pFile;
     //char temp_str[1000];
@@ -1333,241 +1362,335 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 strcpy(linestr1,linestr);
                 token1 = strstr(linestr,"<");
                 token = strtok(token1,">");
-                if(strcmp(token,"<ABSCALFACTOR") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    band->abscalfactor          = atof(pos2);
-                    printf("abscalfactor %f\n",band->abscalfactor);
-                }
                 
-                if(strcmp(token,"<EFFECTIVEBANDWIDTH") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    band->effbw         = atof(pos2);
-                    printf("effbw %f\n",band->effbw);
-                }
+                char* tag = normalize_tag(token);
                 
-                if(strcmp(token,"<TDILEVEL") == 0)
+                if(tag)
                 {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    band->tdi           = atof(pos2);
-                    printf("tdi %f\n",band->tdi);
-                }
-                
-                if(strcmp(token,"<MEANCOLLECTEDROWGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd_r          = atof(pos2);
-                    printf("collect row %f\n",*gsd_r);
-                }
-                if(strcmp(token,"<MEANCOLLECTEDCOLGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd_c          = atof(pos2);
-                    printf("collect col %f\n",*gsd_c);
-                }
-                if(strcmp(token,"<MEANCOLLECTEDGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd            = atof(pos2);
-                    printf("collect gsd %f\n",*gsd);
-                }
-                
-                if(strcmp(token,"<MEANPRODUCTROWGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd_r          = atof(pos2);
-                    printf("product row %f\n",*gsd_r);
-                }
-                if(strcmp(token,"<MEANPRODUCTCOLGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd_c          = atof(pos2);
-                    printf("product col %f\n",*gsd_c);
-                }
-                if(strcmp(token,"<MEANPRODUCTGSD") == 0)
-                {
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    *gsd            = atof(pos2);
-                    printf("product gsd %f\n",*gsd);
-                }
-                
-                
-                if(strcmp(token,"<ERRBIAS") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[6][0]           = atof(pos2);
-                    printf("ERRBIAS %f\n",out[6][0]);
-                }
-                if(strcmp(token,"<ERRRAND") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[6][1]           = atof(pos2);
-                }
-                if(strcmp(token,"<LINEOFFSET") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][0]           = atof(pos2);
-                }
-                if(strcmp(token,"<SAMPOFFSET") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][1]           = atof(pos2);
-                }
-                if(strcmp(token,"<LATOFFSET") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][2]           = atof(pos2);
-                }
-                if(strcmp(token,"<LONGOFFSET") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][3]           = atof(pos2);
-                }
-                if(strcmp(token,"<HEIGHTOFFSET") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[0][4]           = atof(pos2);
-                }
-                
-                
-                if(strcmp(token,"<LINESCALE") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][0]           = atof(pos2);
-                }
-                if(strcmp(token,"<SAMPSCALE") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][1]           = atof(pos2);
-                }
-                if(strcmp(token,"<LATSCALE") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][2]           = atof(pos2);
-                }
-                if(strcmp(token,"<LONGSCALE") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][3]           = atof(pos2);
-                }
-                if(strcmp(token,"<HEIGHTSCALE") == 0)
-                {
-                    //fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr1,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    out[1][4]           = atof(pos2);
-                }
-             
-                
-                if(strcmp(token,"<LINENUMCOEFList") == 0)
-                {
-                    out[2] = (double*)calloc(20, sizeof(double));
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    token2 = strtok(pos2," ");
-                    
-                    
-                    i=0;
-                    while(token2 != NULL && i<20)
+                    if(strcmp(tag,"ABSCALFACTOR") == 0)
                     {
-                        out[2][i]           = atof(token2);
-                        token2 = strtok(NULL," ");
-                        
-                        //printf("out[2][i] %f\n",out[2][i]);
-                        
-                        i++;
-                        
-                        
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->abscalfactor          = atof(pos2);
+                        //printf("abscalfactor %f\n",band->abscalfactor);
                     }
-                }
-                if(strcmp(token,"<LINEDENCOEFList") == 0)
-                {
-                    out[3] = (double*)calloc(20, sizeof(double));
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    token2 = strtok(pos2," ");
-                    i=0;
-                    while(token != NULL && i<20)
-                    {
-                        out[3][i]           = atof(token2);
-                        token2 = strtok(NULL," ");
-                        
-                        //printf("out[3][i] %f\n",out[3][i]);
-                        
-                        i++;
-                    }
-                }
-                if(strcmp(token,"<SAMPNUMCOEFList") == 0)
-                {
-                    out[4] = (double*)calloc(20, sizeof(double));
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    token2 = strtok(pos2," ");
                     
-                    printf("token2 %s\n",token2);
-                    
-                    i=0;
-                    while(token != NULL && i<20)
+                    if(strcmp(tag,"EFFECTIVEBANDWIDTH") == 0)
                     {
-                        out[4][i]           = atof(token2);
-                        token2 = strtok(NULL," ");
-                        
-                        //printf("out[4][i] %f\n",out[4][i]);
-                        
-                        i++;
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->effbw         = atof(pos2);
+                        //printf("effbw %f\n",band->effbw);
                     }
-                }
-                if(strcmp(token,"<SAMPDENCOEFList") == 0)
-                {
-                    out[5] = (double*)calloc(20, sizeof(double));
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    token2 = strtok(pos2," ");
-                    i=0;
-                    while(token != NULL && i<20)
+                    
+                    if(strcmp(tag,"TDILEVEL") == 0)
                     {
-                        out[5][i]           = atof(token2);
-                        token2 = strtok(NULL," ");
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        band->tdi           = atof(pos2);
+                        //printf("tdi %f\n",band->tdi);
+                    }
+                    
+                    if(strcmp(tag,"MEANCOLLECTEDROWGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_r          = atof(pos2);
+                        //printf("collect row %f\n",*gsd_r);
+                    }
+                    if(strcmp(tag,"MEANCOLLECTEDCOLGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_c          = atof(pos2);
+                        //printf("collect col %f\n",*gsd_c);
+                    }
+                    if(strcmp(tag,"MEANCOLLECTEDGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd            = atof(pos2);
+                        //printf("collect gsd %f\n",*gsd);
+                    }
+                    
+                    if(strcmp(tag,"MEANPRODUCTROWGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_r          = atof(pos2);
+                        //printf("product row %f\n",*gsd_r);
+                    }
+                    if(strcmp(tag,"MEANPRODUCTCOLGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd_c          = atof(pos2);
+                        //printf("product col %f\n",*gsd_c);
+                    }
+                    if(strcmp(tag,"MEANPRODUCTGSD") == 0)
+                    {
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        *gsd            = atof(pos2);
+                        //printf("product gsd %f\n",*gsd);
+                    }
+                    
+                    
+                    if(strcmp(tag,"ERRBIAS") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[6][0]           = atof(pos2);
+                        //printf("ERRBIAS %f\n",out[6][0]);
+                    }
+                    if(strcmp(tag,"ERRRAND") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[6][1]           = atof(pos2);
                         
-                        //printf("out[5][i] %f\n",out[5][i]);
+                        //printf("ERRRAND %f\n",out[6][1] );
+                    }
+                    if(strcmp(tag,"LINEOFFSET") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[0][0]           = atof(pos2);
                         
-                        i++;
+                        //printf("LINEOFFSET %f\n",out[0][0] );
+                    }
+                    if(strcmp(tag,"SAMPOFFSET") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[0][1]           = atof(pos2);
+                        
+                        //printf("SAMPOFFSET %f\n",out[0][1] );
+                    }
+                    if(strcmp(tag,"LATOFFSET") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[0][2]           = atof(pos2);
+                        
+                        //printf("LATOFFSET %f\n",out[0][2] );
+                    }
+                    if(strcmp(tag,"LONGOFFSET") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[0][3]           = atof(pos2);
+                        
+                        //printf("LONGOFFSET %f\n",out[0][3] );
+                    }
+                    if(strcmp(tag,"HEIGHTOFFSET") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[0][4]           = atof(pos2);
+                        
+                        //printf("HEIGHTOFFSET %f\n",out[0][4] );
+                    }
+                    
+                    
+                    if(strcmp(tag,"LINESCALE") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[1][0]           = atof(pos2);
+                        
+                        //printf("LINESCALE %f\n",out[1][0] );
+                    }
+                    if(strcmp(tag,"SAMPSCALE") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[1][1]           = atof(pos2);
+                        
+                        //printf("SAMPSCALE %f\n",out[1][1] );
+                    }
+                    if(strcmp(tag,"LATSCALE") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[1][2]           = atof(pos2);
+                        
+                        //printf("LATSCALE %f\n",out[1][2] );
+                    }
+                    if(strcmp(tag,"LONGSCALE") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[1][3]           = atof(pos2);
+                        
+                        //printf("LATSCALE %f\n",out[1][3] );
+                    }
+                    if(strcmp(tag,"HEIGHTSCALE") == 0)
+                    {
+                        //fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr1,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        out[1][4]           = atof(pos2);
+                        
+                        //printf("HEIGHTSCALE %f\n",out[1][4] );
+                    }
+                    
+                    
+                    if(strcmp(tag,"LINENUMCOEFList") == 0)
+                    {
+                        //printf("LINENUMCOEFList \n");
+                        
+                        out[2] = (double*)calloc(20, sizeof(double));
+                        while(fgets(linestr,sizeof(linestr),pFile))
+                        {
+                            char tmp[1000];
+                            strcpy(tmp, linestr);
+                            
+                            char* t = strstr(tmp, "<");
+                            if (!t) continue;
+                            
+                            char* t2 = strtok(t, ">");
+                            char* inner_tag = normalize_tag(t2);
+                            
+                            if(inner_tag && strcmp(inner_tag, "LINENUMCOEF") == 0)
+                            {
+                                pos1 = strstr(linestr,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                token2 = strtok(pos2," ");
+                                i=0;
+                                while(token2 != NULL && i<20)
+                                {
+                                    out[2][i]           = atof(token2);
+                                    token2 = strtok(NULL," ");
+                                    
+                                    //printf("out[2][i] %f\n",out[2][i]);
+                                    
+                                    i++;
+                                    
+                                    
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if(strcmp(tag,"LINEDENCOEFList") == 0)
+                    {
+                        //printf("LINEDENCOEFList \n");
+                        
+                        out[3] = (double*)calloc(20, sizeof(double));
+                        while(fgets(linestr,sizeof(linestr),pFile))
+                        {
+                            char tmp[1000];
+                            strcpy(tmp, linestr);
+                            
+                            char* t = strstr(tmp, "<");
+                            if (!t) continue;
+                            
+                            char* t2 = strtok(t, ">");
+                            char* inner_tag = normalize_tag(t2);
+                            
+                            if(inner_tag && strcmp(inner_tag, "LINEDENCOEF") == 0)
+                            {
+                                pos1 = strstr(linestr,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                token2 = strtok(pos2," ");
+                                i=0;
+                                while(token2 != NULL && i<20)
+                                {
+                                    out[3][i]           = atof(token2);
+                                    token2 = strtok(NULL," ");
+                                    
+                                    //printf("out[3][i] %f\n",out[3][i]);
+                                    
+                                    i++;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if(strcmp(tag,"SAMPNUMCOEFList") == 0)
+                    {
+                        //printf("SAMPNUMCOEFList \n");
+                        
+                        out[4] = (double*)calloc(20, sizeof(double));
+                        while(fgets(linestr,sizeof(linestr),pFile))
+                        {
+                            char tmp[1000];
+                            strcpy(tmp, linestr);
+                            
+                            char* t = strstr(tmp, "<");
+                            if (!t) continue;
+                            
+                            char* t2 = strtok(t, ">");
+                            char* inner_tag = normalize_tag(t2);
+                            
+                            if(inner_tag && strcmp(inner_tag, "SAMPNUMCOEF") == 0)
+                            {
+                                pos1 = strstr(linestr,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                token2 = strtok(pos2," ");
+                                
+                                //printf("token2 %s\n",token2);
+                                
+                                i=0;
+                                while(token2 != NULL && i<20)
+                                {
+                                    out[4][i]           = atof(token2);
+                                    token2 = strtok(NULL," ");
+                                    
+                                    //printf("out[4][i] %f\n",out[4][i]);
+                                    
+                                    i++;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if(strcmp(tag,"SAMPDENCOEFList") == 0)
+                    {
+                        //printf("SAMPDENCOEFList \n");
+                        
+                        out[5] = (double*)calloc(20, sizeof(double));
+                        while(fgets(linestr,sizeof(linestr),pFile))
+                        {
+                            char tmp[1000];
+                            strcpy(tmp, linestr);
+                            
+                            char* t = strstr(tmp, "<");
+                            if (!t) continue;
+                            
+                            char* t2 = strtok(t, ">");
+                            char* inner_tag = normalize_tag(t2);
+                            
+                            if(inner_tag && strcmp(inner_tag, "SAMPDENCOEF") == 0)
+                            {
+                                pos1 = strstr(linestr,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                token2 = strtok(pos2," ");
+                                i=0;
+                                while(token2 != NULL && i<20)
+                                {
+                                    out[5][i]           = atof(token2);
+                                    token2 = strtok(NULL," ");
+                                    
+                                    //printf("out[5][i] %f\n",out[5][i]);
+                                    
+                                    i++;
+                                }
+                                break;
+                            }
+                        }
                     }
                 }
                 
@@ -1589,6 +1712,8 @@ double** OpenXMLFile(ProInfo *proinfo, int ImageID, double* gsd_r, double* gsd_c
                 pos2 = NULL;
             if(token)
                 token = NULL;
+            
+            //exit(1);
         }
         else //Exterior orientation
         {
@@ -1934,131 +2059,163 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         while(!feof(pFile) && (!check_br || !check_d))
         {
             fscanf(pFile,"%s",temp_str);
-            if((strcmp(temp_str,"<BAND_P>") == 0 || strcmp(temp_str,"<BAND_R>") == 0) && !check_br)
-            {
-                check_br = true;
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                for(i=0;i<3;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    UL[i]           = atof(pos2);
-                    Iinfo->UL[i]    = UL[i];
-                    
-                }
-                //printf("UL %f %f \n",UL[0],UL[1]);
-                
-                for(i=0;i<3;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    UR[i]           = atof(pos2);
-                    Iinfo->UR[i]    = UR[i];
-                }
-                //printf("UR %f %f \n",UR[0],UR[1]);
-                
-                for(i=0;i<3;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    LR[i]           = atof(pos2);
-                    Iinfo->LR[i]    = LR[i];
-                }
-                //printf("LR %f %f \n",LR[0],LR[1]);
-                
-                for(i=0;i<3;i++)
-                {
-                    fgets(linestr,sizeof(linestr),pFile);
-                    pos1 = strstr(linestr,">")+1;
-                    pos2 = strtok(pos1,"<");
-                    LL[i]           = atof(pos2);
-                    Iinfo->LL[i]    = LL[i];
-                }
-                //printf("LL %f %f \n",LL[0],LL[1]);
-            }
             
-            if(strcmp(temp_str,"<IMAGE>") == 0 && !check_d)
+            char* tag = normalize_tag(temp_str);
+            
+            if(tag)
             {
-                check_d = true;
-                
-                fgets(temp_str,sizeof(temp_str),pFile);
-                bool check_end = false;
-                int t_count = 0;
-                while(!check_end && t_count < 60)
+                if((strcmp(tag,"BAND_P") == 0 || strcmp(tag,"BAND_R") == 0) && !check_br)
                 {
-                    t_count++;
-                    fgets(linestr,sizeof(linestr),pFile);
-                    strcpy(linestr1,linestr);
-                    token1 = strstr(linestr,"<");
-                    token = strtok(token1,">");
+                    check_br = true;
                     
-                    if(strcmp(token,"<SATID") == 0)
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                    for(i=0;i<3;i++)
                     {
-                        pos1 = strstr(linestr1,">")+1;
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr,">")+1;
                         pos2 = strtok(pos1,"<");
-                        sprintf(SatID,"%s",pos2);
-                    }
-                    if(strcmp(token,"<FIRSTLINETIME") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        sprintf(imagetime,"%s",pos2);
-                    }
-                    if(strcmp(token,"<MEANSUNAZ") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MSUNAz          = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANSUNEL") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MSUNEl          = atof(pos2);
-                    }
-                    
-                    if(strcmp(token,"<MEANSATAZ") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MSATAz          = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANSATEL") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MSATEl          = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANINTRACKVIEWANGLE") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MIntrackangle           = atof(pos2);
-                    }
-                    
-                    if(strcmp(token,"<MEANCROSSTRACKVIEWANGLE") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MCrosstrackangle            = atof(pos2);
-                    }
-                    if(strcmp(token,"<MEANOFFNADIRVIEWANGLE") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        MOffnadirangle          = atof(pos2);
-                    }
-                    if(strcmp(token,"<CLOUDCOVER") == 0)
-                    {
-                        pos1 = strstr(linestr1,">")+1;
-                        pos2 = strtok(pos1,"<");
-                        Cloud           = atof(pos2);
+                        UL[i]           = atof(pos2);
+                        Iinfo->UL[i]    = UL[i];
                         
-                        check_end = true;
+                    }
+                    //printf("UL %f %f \n",UL[0],UL[1]);
+                    
+                    for(i=0;i<3;i++)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        UR[i]           = atof(pos2);
+                        Iinfo->UR[i]    = UR[i];
+                    }
+                    //printf("UR %f %f \n",UR[0],UR[1]);
+                    
+                    for(i=0;i<3;i++)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        LR[i]           = atof(pos2);
+                        Iinfo->LR[i]    = LR[i];
+                    }
+                    //printf("LR %f %f \n",LR[0],LR[1]);
+                    
+                    for(i=0;i<3;i++)
+                    {
+                        fgets(linestr,sizeof(linestr),pFile);
+                        pos1 = strstr(linestr,">")+1;
+                        pos2 = strtok(pos1,"<");
+                        LL[i]           = atof(pos2);
+                        Iinfo->LL[i]    = LL[i];
+                    }
+                    //printf("LL %f %f \n",LL[0],LL[1]);
+                }
+                
+                if(strcmp(tag,"IMAGE") == 0 && !check_d)
+                {
+                    //printf("IMAGE \n");
+                    check_d = true;
+                    
+                    fgets(temp_str,sizeof(temp_str),pFile);
+                    bool check_end = false;
+                    int t_count = 0;
+                    while(!check_end && t_count < 60)
+                    {
+                        t_count++;
+                        fgets(linestr,sizeof(linestr),pFile);
+                        strcpy(linestr1,linestr);
+                        token1 = strstr(linestr,"<");
+                        token = strtok(token1,">");
+                        
+                        char* tag2 = normalize_tag(token);
+                        
+                        if(tag2)
+                        {
+                            if(strcmp(tag2,"SATID") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                sprintf(SatID,"%s",pos2);
+                                
+                                //printf("SatID %s \n",SatID);
+                            }
+                            if(strcmp(tag2,"FIRSTLINETIME") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                sprintf(imagetime,"%s",pos2);
+                                
+                                //printf("imagetime %s \n",imagetime);
+                            }
+                            if(strcmp(tag2,"MEANSUNAZ") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MSUNAz          = atof(pos2);
+                                
+                                //printf("MSUNAz %f \n",MSUNAz);
+                            }
+                            if(strcmp(tag2,"MEANSUNEL") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MSUNEl          = atof(pos2);
+                                
+                                //printf("MSUNEl %f \n",MSUNEl);
+                            }
+                            
+                            if(strcmp(tag2,"MEANSATAZ") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MSATAz          = atof(pos2);
+                                
+                                //printf("MSATAz %f \n",MSATAz);
+                            }
+                            if(strcmp(tag2,"MEANSATEL") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MSATEl          = atof(pos2);
+                                
+                                //printf("MSATEl %f \n",MSATEl);
+                            }
+                            if(strcmp(tag2,"MEANINTRACKVIEWANGLE") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MIntrackangle           = atof(pos2);
+                                
+                                //printf("MIntrackangle %f \n",MIntrackangle);
+                            }
+                            
+                            if(strcmp(tag2,"MEANCROSSTRACKVIEWANGLE") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MCrosstrackangle            = atof(pos2);
+                                
+                                //printf("MCrosstrackangle %f \n",MCrosstrackangle);
+                            }
+                            if(strcmp(tag2,"MEANOFFNADIRVIEWANGLE") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                MOffnadirangle          = atof(pos2);
+                                
+                                //printf("MOffnadirangle %f \n",MOffnadirangle);
+                            }
+                            if(strcmp(tag2,"CLOUDCOVER") == 0)
+                            {
+                                pos1 = strstr(linestr1,">")+1;
+                                pos2 = strtok(pos1,"<");
+                                Cloud           = atof(pos2);
+                                
+                                //printf("Cloud %f \n",Cloud);
+                                
+                                check_end = true;
+                            }
+                        }
                     }
                 }
             }
@@ -2084,6 +2241,7 @@ void OpenXMLFile_orientation(char* _filename, ImageInfo *Iinfo)
         if(token)
             token = NULL;
     }
+    //exit(1);
 }
 
 
