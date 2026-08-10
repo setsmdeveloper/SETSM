@@ -49,7 +49,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         sprintf(str_matchfile_tif,"%s/%s_%d_matchtag.tif",savepath,outputpath,divide);
         sprintf(result_file,"%s/%s_%d_smooth_result.txt",savepath,outputpath,divide);
     }
-    
+    /*
     printf("dem file %s\n",str_DEMfile);
     printf("metafilename %s\n",metafilename);
     printf("matchfile %s\n",str_matchfile);
@@ -58,13 +58,13 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
     printf("DEM_header %s\n",DEM_header);
     printf("DEM_GEOTIFF %s\n", DEM_GEOTIFF_filename);
     printf("result file %s\n",result_file);
-    
+    */
     FILE *pFile_DEM = fopen(str_DEMfile,"r");
-    printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
+    //printf("check exist %s %d\n",str_DEMfile,!!pFile_DEM);
     
     if(pFile_DEM)
     {
-        printf("MPP_stereo_angle %f\n",MPP);
+        //printf("MPP_stereo_angle %f\n",MPP);
         
         double minX, maxY;
         double grid_size;
@@ -73,17 +73,18 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         param.bHemisphere = 3; //no assigned
         
         DEM_size = GetDEMsize(str_DEMfile,metafilename,&param,&grid_size,&minX,&maxY);
-        printf("DEM_size %d\t%d\n",DEM_size.width,DEM_size.height);
+        //printf("DEM_size %d\t%d\n",DEM_size.width,DEM_size.height);
         
         float *seeddem = GetDEMValue(str_DEMfile,DEM_size);
-        printf("Done seeddem\n");
+        //printf("Done seeddem\n");
         
         long DEM_length = (long)(DEM_size.height)*(long)(DEM_size.width);
+        /*
         printf("Done matchtag memory allocation %ld\n",DEM_length);
         printf("%d\n",DEM_size.width);
         printf("%d\n",DEM_size.height);
         printf("%f\n",grid_size);
-        
+        */
         LSFINFO *Grid_info = (LSFINFO*)calloc(sizeof(LSFINFO),DEM_length);
         
         for(long count_index = 0 ; count_index < DEM_length; count_index++)
@@ -104,12 +105,12 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         
         while(check_smooth_iter && s_iter < max_iter_count)
         {
-            printf("start LSF\n");
+            //printf("start LSF\n");
             if((sigma_avg < 0.5 && sigma_std < 1) || s_iter == max_iter_count-1)
             {
                 if(s_iter > 2)
                 {
-                    printf("final local suface fitting\n");
+                    //printf("final local suface fitting\n");
                     check_smooth_iter = false;
                 }
             }
@@ -128,7 +129,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
                 min_std_iter = s_iter;
             }
             
-            printf("End LSF %d\tsigma avg std %f\t%f\n",s_iter,sigma_avg,sigma_std);
+            //printf("End LSF %d\tsigma avg std %f\t%f\n",s_iter,sigma_avg,sigma_std);
             memcpy(seeddem,smooth_DEM,sizeof(float)*DEM_length);
             
             s_iter++;
@@ -145,7 +146,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
         fprintf(presult,"%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         fclose(presult);
         
-        printf("%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
+        //printf("%d\t%f\t%d\t%f\n",max_std_iter,max_std,min_std_iter,min_std);
         
         free(seeddem);
         
@@ -155,7 +156,7 @@ void LSFSmoothing_DEM(const char *savepath, const char* outputpath, const double
     total_ET = time(0);
     
     total_gap = difftime(total_ET,total_ST);
-    printf("LSF processing time[min] = %5.2f\n",total_gap/60.0);
+    //printf("LSF processing time[min] = %5.2f\n",total_gap/60.0);
 }
 
 CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *grid_size, double* _minX, double* _maxY)
@@ -171,8 +172,8 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         check_ftype = 2;
     
     FILE *pFile_meta  = fopen(metafilename,"r");
-    printf("meta file = %s\n",metafilename);
-    printf("DEM file = %s\n",GIMP_path);
+    //printf("meta file = %s\n",metafilename);
+    //printf("DEM file = %s\n",GIMP_path);
     bool check_open_header = false;
     
     double minX, maxX, minY,maxY;
@@ -187,14 +188,14 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         {
             char dir[500];
             
-            printf("tfw path %s \n",hdr_path);
+            //printf("tfw path %s \n",hdr_path);
             
             TFW_reader_LSFDEM(hdr_path, &minX, &maxY, grid_size, &param->utm_zone, dir);
             
             if(param->projection == 2)
             {
                 sprintf(param->direction,"%s",dir);
-                printf("projection %d\t%d\t%s\n",param->projection,param->utm_zone,param->direction);
+                //printf("projection %d\t%d\t%s\n",param->projection,param->utm_zone,param->direction);
             }
             
             GetImageSize(GIMP_path,&seeddem_size);
@@ -203,7 +204,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         }
         else
         {
-            printf("geotiff info %s\n",GIMP_path);
+            //printf("geotiff info %s\n",GIMP_path);
             seeddem_size = ReadGeotiff_info(GIMP_path, &minX, &maxY, grid_size);
             SetTranParam_fromGeoTiff(param,GIMP_path);
             
@@ -219,7 +220,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
         char *hdr_path = (char*)calloc(strlen(tmp_str) + 1 + 4, 1); //null term + extlen
         sprintf(hdr_path,"%s.hdr",tmp_str);
         
-        printf("hdr path %s\n",hdr_path);
+        //printf("hdr path %s\n",hdr_path);
         FILE *phdr = fopen(hdr_path,"r");
         if(phdr)
         {
@@ -235,18 +236,18 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
     if(pFile_meta && !check_open_header)
     {
         char bufstr[500];
-        printf("open Boundary\n");
+        //printf("open Boundary\n");
         while(!feof(pFile_meta))
         {
             fgets(bufstr,500,pFile_meta);
             if (strstr(bufstr,"Output Resolution=")!=NULL)
             {
-                printf("%s\n",bufstr);
+                //printf("%s\n",bufstr);
                 sscanf(bufstr,"Output Resolution=%lf\n",grid_size);
             }
             else if (strstr(bufstr,"Output Projection=")!=NULL)
             {
-                printf("%s\n",bufstr);
+                //printf("%s\n",bufstr);
                 char projection[500];
                 sscanf(bufstr,"Output Projection='+proj=%s",projection);
                 if(!strcmp(projection,"stere"))
@@ -260,7 +261,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
                     else
                         param->bHemisphere = false;
                     
-                    printf("projection %d\tlat %f\themisphere %d\n",param->projection,lat,param->bHemisphere);
+                    //printf("projection %d\tlat %f\themisphere %d\n",param->projection,lat,param->bHemisphere);
                 }
                 else
                 {
@@ -278,17 +279,17 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
                     else
                         param->bHemisphere = false;
                     
-                    printf("projection %d\themisphere %d\tzone %d\n",param->projection,param->bHemisphere,param->utm_zone);
+                    //printf("projection %d\themisphere %d\tzone %d\n",param->projection,param->bHemisphere,param->utm_zone);
                 }
             }
             else if (strstr(bufstr,"Output dimensions=")!=NULL)
             {
-                printf("%s\n",bufstr);
+                //printf("%s\n",bufstr);
                 sscanf(bufstr,"Output dimensions=%d\t%d\n",&seeddem_size.width,&seeddem_size.height);
             }
             else if (strstr(bufstr,"Upper left coordinates=")!=NULL)
             {
-                printf("%s\n",bufstr);
+                //printf("%s\n",bufstr);
                 sscanf(bufstr,"Upper left coordinates=%lf\t%lf\n",&minX,&maxY);
             }
         }
@@ -305,6 +306,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
     maxX    = minX + (*grid_size)*((double)seeddem_size.width);
     minY    = maxY - (*grid_size)*((double)seeddem_size.height);
     
+    /*
     printf("%d\n",seeddem_size.width);
     printf("%d\n",seeddem_size.height);
     printf("%f\n",minX);
@@ -312,7 +314,7 @@ CSize GetDEMsize(char *GIMP_path, char* metafilename,TransParam* param, double *
     printf("%f\n",maxX);
     printf("%f\n",maxY);
     printf("%f\n",*grid_size);
-    
+    */
     *_minX = minX;
     *_maxY = maxY;
     
@@ -355,11 +357,11 @@ void DEM_STDKenel_LSF(LSFINFO *Grid_info, double* sigma_average,double* sigma_st
                 smooth_DEM[iter_count] = seeddem[iter_count];
         }
     }
-    printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
+    //printf("sigma %f\t%ld\n",sigma_sum,total_selected_points);
     
     *sigma_average = sigma_sum/(double)total_selected_points;
     *sigma_std = sqrt( sigma2_sum/(double)total_selected_points - (*sigma_average)*(*sigma_average) );
-    printf("avg sigma %f\tstd sigma %f\ttotal_pts %ld\n",*sigma_average,*sigma_std,total_selected_points);
+    //printf("avg sigma %f\tstd sigma %f\ttotal_pts %ld\n",*sigma_average,*sigma_std,total_selected_points);
 }
 
 double LocalSurfaceFitting_DEM(LSFINFO *Grid_info, float *input, long &numpts, double *fitted_Z, const double MPP, const int smooth_iter, const long row_size, const long col_size, const double grid, const long X, const long Y)

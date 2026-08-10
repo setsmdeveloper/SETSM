@@ -243,7 +243,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         int ret = TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tileW);
         if(ret != 1) // TIFFGetField returns 1 on success
         {
-            printf("NO TILE\n");
+            //printf("NO TILE\n");
             tsize_t scanline;
             tdata_t buf;
             uint16 s,nsamples;
@@ -283,7 +283,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
         }
         else
         {
-            printf("tile\n");
+            //printf("tile\n");
             int count_W, count_L;
             uint32_t starttileL,starttileW;
             unsigned long start_row,start_col,end_row,end_col;
@@ -297,18 +297,18 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             starttileL      = (uint32_t)(rows[0]/tileL);
             start_row       = starttileL*tileL;
             end_row         = ((int)(rows[1]/tileL)+1)*tileL;
-            printf("rows %ld\t%ld\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
+            //printf("rows %ld\t%ld\ttileL %d\theight %d\n",rows[0],rows[1],tileL,Imagesize->height);
             if(end_row > Imagesize->height)
                 end_row = Imagesize->height;
             
             starttileW      = (uint32_t)(cols[0]/tileW);
             start_col       = starttileW*tileW;
             end_col         = ((int)(cols[1]/tileW)+1)*tileW;
-            printf("cols %ld\t%ld\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
+            //printf("cols %ld\t%ld\ttileW %d\theight %d\n",cols[0],cols[1],tileW,Imagesize->width);
             if(end_col > Imagesize->width)
                 end_col = Imagesize->width;
             
-            printf("start %lu\t%lu\t end %lu\t%lu\n",start_col,start_row,end_col,end_row);
+            //printf("start %lu\t%lu\t end %lu\t%lu\n",start_col,start_row,end_col,end_row);
             cols[0]         = start_col;
             cols[1]         = end_col;
             rows[0]         = start_row;
@@ -335,7 +335,7 @@ T *Readtiff_T(const char *filename, CSize *Imagesize,long int *cols,long int *ro
             if(count_W*tileW > data_size->width)
                 f_col_end = tileW + data_size->width - (count_W*tileW);
             
-            printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
+            //printf("tile info %d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",data_size->height,data_size->width,starttileW,starttileL,count_W,count_L,tileW,tileL,f_col_end,f_row_end);
             
             for (row = 0; row < count_L; row ++)
             {
@@ -535,7 +535,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     double GridSize_width = over_Boundary[2] - over_Boundary[0];
     double GridSize_height = over_Boundary[3] - over_Boundary[1];
     CSize grid_size(floor(GridSize_width/grid_space), floor(GridSize_height/grid_space));
-    printf("Grid_size %d\t%d\n",grid_size.width,grid_size.height);
+    //printf("Grid_size %d\t%d\n",grid_size.width,grid_size.height);
     
     char temp_path[500];
     //vector<D2DPOINT> MPs;
@@ -557,7 +557,7 @@ void CoregParam_Image(ProInfo *proinfo, int ti, uint8 Pyramid_step, double *Imag
     
     long total_grid_counts = MPs.size();
     
-    printf("total pts %ld\n",total_grid_counts);
+    //printf("total pts %ld\n",total_grid_counts);
     
     sprintf(temp_path,"%s/txt/GCPs_Image_ID_%d_level_%d.txt",proinfo->save_filepath,ti,Pyramid_step);
     FILE *fid_pts = fopen(temp_path,"w");

@@ -49,7 +49,7 @@ int WriteGeotiff_real(char *filename, void *buffer, size_t width, size_t height,
 
     long int int_mem = (long)(bytes*height*width);
     double tif_mem = (double)(int_mem/1024.0/1024.0/1024.0);
-    printf("tif mem %f\n",tif_mem);
+    //printf("tif mem %f\n",tif_mem);
 
     tif = XTIFFOpen(filename, "w8");
     if (!tif)

@@ -54,7 +54,7 @@ char* GetFileDir(char file_path[],int *size)
         else
         {
             file_name = file_path+1;
-            printf("str %s\n",file_name);
+            //printf("str %s\n",file_name);
         }
         
         file_path++;
@@ -68,13 +68,13 @@ char* SetOutpathName(char *_path)
     char *t_name;
     char lastSlash[500];
     strcpy(lastSlash, _path);
-    printf("path %s\n",lastSlash);
+    //printf("path %s\n",lastSlash);
     char *fullseeddir = dirname(lastSlash);
-    printf("path %s\n",lastSlash);
+    //printf("path %s\n",lastSlash);
     int dir_size = strlen(fullseeddir);
     int full_size = strlen(_path);
-    printf("fullseeddir %s\tdir_size %d\n", fullseeddir, dir_size);
-    printf("lastSlash %s\tfull_size %d\n", lastSlash, full_size);
+    //printf("fullseeddir %s\tdir_size %d\n", fullseeddir, dir_size);
+    //printf("lastSlash %s\tfull_size %d\n", lastSlash, full_size);
     
     if(dir_size > 1)
     {
@@ -262,7 +262,7 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
     t_pts[6].m_Z    = minmaxHeight[1];
     t_pts[7].m_Z    = minmaxHeight[1];
     
-    printf("subBoundary %f\t%f\t%f\t%f\n%d\t%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],transparam.pm,transparam.sa,transparam.sb,transparam.e2,transparam.c);
+    //printf("subBoundary %f\t%f\t%f\t%f\n%d\t%f\t%f\t%f\t%f\n",subBoundary[0],subBoundary[1],subBoundary[2],subBoundary[3],transparam.pm,transparam.sa,transparam.sb,transparam.e2,transparam.c);
     
     D2DPOINT *ImageCoord = NULL;
     if(sensor_type == SB)
@@ -322,7 +322,7 @@ bool GetsubareaImage(const int sensor_type, const FrameInfo m_frameinfo, const i
     if(rows[1]          > Imagesize.height - null_buffer)
         rows[1]         = Imagesize.height - null_buffer;
     
-    printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
+    //printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
     
     free(ImageCoord);
     
@@ -352,7 +352,7 @@ bool GetImageSize(char *filename, CSize *Imagesize)
         ret = true;
         
     }
-    printf("filename %s\nsize %d\t%d\n",filename,Imagesize->width,Imagesize->height);
+    //printf("filename %s\nsize %d\t%d\n",filename,Imagesize->width,Imagesize->height);
     return ret;
 }
 
@@ -424,7 +424,7 @@ bool GetsubareaImage_GeoTiff(ProInfo proinfo, char *ImageFilename, CSize Imagesi
     if(rows[1]            > Imagesize.height - null_buffer)
         rows[1]            = Imagesize.height - null_buffer;
     
-    printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
+    //printf("cols rows %ld\t%ld\t%ld\t%ld\n",cols[0],cols[1],rows[0],rows[1]);
     
     free(ImageCoord);
     
@@ -458,7 +458,7 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
     }
     
     //float *seeddem = NULL;
-    printf("DEM file = %s\n",GIMP_path);
+    //printf("DEM file = %s\n",GIMP_path);
     if(check_ftype == 2)
     {
         long int data_length = (long)seeddem_size.width*(long)seeddem_size.height;
@@ -485,7 +485,7 @@ float* GetDEMValue(char *GIMP_path,CSize seeddem_size)
         
         float type(0);
         seeddem = Readtiff_T(GIMP_path,LImagesize,cols,rows,&data_size,type);
-        printf("tif open\n");
+        //printf("tif open\n");
 
         free(LImagesize);
     }
@@ -610,7 +610,9 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                         
                         char *Outputpath_name  = SetOutpathName(info->save_filepath);
                         sprintf(info->Outputpath_name,"%s",Outputpath_name);
-                        printf("after pathname %s\n",info->Outputpath_name);
+                        
+                        if(info->check_debugmode)
+                            printf("after pathname %s\n",info->Outputpath_name);
                         
                         sprintf(info->tmpdir, "%s/tmp", info->save_filepath);
 
@@ -623,43 +625,57 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                         {
                             sscanf(bufstr,"seeddempath %hhd %s %lf\n",&info->pre_DEMtif,info->priori_DEM_tif,&info->seedDEMsigma);
                         }
-                        printf("seeddempath %d %s %lf\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
+                        
+                        if(info->check_debugmode)
+                            printf("seeddempath %d %s %lf\n",info->pre_DEMtif,info->priori_DEM_tif,info->seedDEMsigma);
                     }
                     else if (args.check_tiles_SR == 0 && strstr(bufstr,"tile_SR")!=NULL)
                     {
                         sscanf(bufstr,"tile_SR %d\n",&info->start_row);
                         info->check_tiles_SR = true;
-                        printf("%d\n",info->start_row);
+                        
+                        if(info->check_debugmode)
+                            printf("%d\n",info->start_row);
                     }
                     else if (args.check_tiles_ER == 0 && strstr(bufstr,"tile_ER")!=NULL)
                     {
                         sscanf(bufstr,"tile_ER %d\n",&info->end_row);
                         info->check_tiles_ER = true;
-                        printf("%d\n",info->end_row);
+                        
+                        if(info->check_debugmode)
+                            printf("%d\n",info->end_row);
                     }
                     else if (args.check_tiles_SC == 0 && strstr(bufstr,"tile_SC")!=NULL)
                     {
                         sscanf(bufstr,"tile_SC %d\n",&info->start_col);
                         info->check_tiles_SC = true;
-                        printf("%d\n",info->start_col);
+                        
+                        if(info->check_debugmode)
+                            printf("%d\n",info->start_col);
                     }
                     else if (args.check_tiles_EC == 0 && strstr(bufstr,"tile_EC")!=NULL)
                     {
                         sscanf(bufstr,"tile_EC %d\n",&info->end_col);
                         info->check_tiles_EC = true;
-                        printf("%d\n",info->end_col);
+                        
+                        if(info->check_debugmode)
+                            printf("%d\n",info->end_col);
                     }
                     else if (args.check_minH == 0 && strstr(bufstr,"minH")!=NULL)
                     {
                         sscanf(bufstr,"minH %lf\n",&info->minHeight);
                         info->check_minH = true;
-                        printf("%f\n",info->minHeight);
+                        
+                        if(info->check_debugmode)
+                            printf("%f\n",info->minHeight);
                     }
                     else if (args.check_maxH == 0 && strstr(bufstr,"maxH")!=NULL)
                     {
                         sscanf(bufstr,"maxH %lf\n",&info->maxHeight);
                         info->check_maxH = true;
-                        printf("%f\n",info->maxHeight);
+                        
+                        if(info->check_debugmode)
+                            printf("%f\n",info->maxHeight);
                     }
                 }
                 
@@ -712,7 +728,10 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 
                 FILE *temp_pFile;
                 temp_pFile           = fopen(info->RPCfilename[ti],"r");
-                printf("xml file %s\n",info->RPCfilename[ti]);
+                
+                if(info->check_debugmode)
+                    printf("xml file %s\n",info->RPCfilename[ti]);
+                
                 if(temp_pFile)
                 {
                     printf("image%d xml load completed!\n",ti);
@@ -721,11 +740,15 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
                 else
                 {
                     sprintf(info->RPCfilename[ti],"%s.XML",tmp_chr);
-                    printf("xml file %s\n",info->RPCfilename[ti]);
+                    
+                    if(info->check_debugmode)
+                        printf("xml file %s\n",info->RPCfilename[ti]);
+                    
                     temp_pFile           = fopen(info->RPCfilename[ti],"r");
                     if(temp_pFile)
                     {
                         printf("image%d XML load completed!\n",ti);
+                        
                         fclose(temp_pFile);
                     }
                     else
@@ -784,9 +807,9 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
     }
     
     printf("save = %s\n",info->save_filepath);
-    printf("save_name = %s\n", info->Outputpath_name);
+    //printf("save_name = %s\n", info->Outputpath_name);
     printf("DEM space = %f\n",info->DEM_resolution);
-    printf("Threads = %d\n",info->threads_num);
+    //printf("Threads = %d\n",info->threads_num);
     printf("seeddem flag = %d\n",info->pre_DEMtif);
     if(info->pre_DEMtif)
     {
@@ -795,7 +818,9 @@ bool OpenProject(char* _filename, ProInfo *info, ARGINFO args)
         
     }
  
-    printf("%d\t%d\t%d\n",args.sensor_type,args.check_fl,args.check_ccd);
+    if(info->check_debugmode)
+        printf("%d\t%d\t%d\n",args.sensor_type,args.check_fl,args.check_ccd);
+    
     if(args.sensor_type == AB) // Collinear Equation, Frame sensor
     {
         if(args.check_fl && args.check_ccd)
@@ -871,12 +896,14 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
                 proinfo->frameinfo.m_Camera.m_ppx = 0.0;
                 proinfo->frameinfo.m_Camera.m_ppy = 0.0;
                 
-                printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
-                       proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
+                if(proinfo->check_debugmode)
+                    printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
                 
                 fscanf(fp, "%s\n", garbage);
                 fscanf(fp, "%s\t%d\t%d\t%d\t%d\n", garbage,&proinfo->frameinfo.NumberofStip,&proinfo->frameinfo.NumberofPhotos,&proinfo->frameinfo.start_stripID,&proinfo->frameinfo.end_stripID);
-                printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
+                
+                if(proinfo->check_debugmode)
+                    printf("%d\t%d\t%d\t%d\n",proinfo->frameinfo.NumberofStip,proinfo->frameinfo.NumberofPhotos,proinfo->frameinfo.start_stripID,proinfo->frameinfo.end_stripID);
                 
                 fscanf(fp, "%s\n", garbage);
                 
@@ -902,11 +929,15 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
                                &proinfo->frameinfo.Photoinfo[total_photos].m_Xl,&proinfo->frameinfo.Photoinfo[total_photos].m_Yl,&proinfo->frameinfo.Photoinfo[total_photos].m_Zl,
                                &proinfo->frameinfo.Photoinfo[total_photos].m_Wl,&proinfo->frameinfo.Photoinfo[total_photos].m_Pl,&proinfo->frameinfo.Photoinfo[total_photos].m_Kl);
                         
-                        printf("%d\t%d\t%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
-                               proinfo->frameinfo.Photoinfo[total_photos].strip_ID,proinfo->frameinfo.Photoinfo[total_photos].photo_ID,
-                               proinfo->frameinfo.Photoinfo[total_photos].path,
-                               proinfo->frameinfo.Photoinfo[total_photos].m_Xl,proinfo->frameinfo.Photoinfo[total_photos].m_Yl,proinfo->frameinfo.Photoinfo[total_photos].m_Zl,
-                               proinfo->frameinfo.Photoinfo[total_photos].m_Wl,proinfo->frameinfo.Photoinfo[total_photos].m_Pl,proinfo->frameinfo.Photoinfo[total_photos].m_Kl);
+                        if(proinfo->check_debugmode)
+                        {
+                            printf("%d\t%d\t%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
+                                   proinfo->frameinfo.Photoinfo[total_photos].strip_ID,proinfo->frameinfo.Photoinfo[total_photos].photo_ID,
+                                   proinfo->frameinfo.Photoinfo[total_photos].path,
+                                   proinfo->frameinfo.Photoinfo[total_photos].m_Xl,proinfo->frameinfo.Photoinfo[total_photos].m_Yl,proinfo->frameinfo.Photoinfo[total_photos].m_Zl,
+                                   proinfo->frameinfo.Photoinfo[total_photos].m_Wl,proinfo->frameinfo.Photoinfo[total_photos].m_Pl,proinfo->frameinfo.Photoinfo[total_photos].m_Kl);
+                        }
+                        
                         double o = proinfo->frameinfo.Photoinfo[total_photos].m_Wl;
                         double p = proinfo->frameinfo.Photoinfo[total_photos].m_Pl;
                         double k = proinfo->frameinfo.Photoinfo[total_photos].m_Kl;
@@ -933,16 +964,23 @@ bool OpenDMCproject(char* project_path, ProInfo *proinfo, ARGINFO args)
             proinfo->frameinfo.m_Camera.m_ppx = 0.0;
             proinfo->frameinfo.m_Camera.m_ppy = 0.0;
             
-            printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
-                   proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
+            if(proinfo->check_debugmode)
+            {
+                printf("%f\t%d\t%d\t%f\n",proinfo->frameinfo.m_Camera.m_focalLength,proinfo->frameinfo.m_Camera.m_ImageSize.width,
+                       proinfo->frameinfo.m_Camera.m_ImageSize.height,proinfo->frameinfo.m_Camera.m_CCDSize);
+            }
             
             proinfo->frameinfo.Photoinfo = (EO*)calloc(sizeof(EO),proinfo->number_of_images);
             
             for(int ti = 0 ; ti < proinfo->number_of_images ; ti++)
             {
                 sprintf(proinfo->frameinfo.Photoinfo[ti].path,"%s",proinfo->Imagefilename[ti]);
-                printf("%s\n",proinfo->Imagefilename[ti]);
-                printf("%s\n",proinfo->frameinfo.Photoinfo[ti].path);
+                
+                if(proinfo->check_debugmode)
+                {
+                    printf("%s\n",proinfo->Imagefilename[ti]);
+                    printf("%s\n",proinfo->frameinfo.Photoinfo[ti].path);
+                }
             }
             
             ret = true;
@@ -1087,14 +1125,14 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
         citation = (char*)malloc(sizeof(char)*cit_length );
         GTIFKeyGet(gtif, GTCitationGeoKey, citation, 0, cit_length);
         
-        printf("1 Citation:%s\n",citation);
+        //printf("1 Citation:%s\n",citation);
         sscanf(citation,"%s %s %d, %s %s",ttt,ttt,&param->utm_zone,hem,ttt);
         if(strcmp(hem,"Northern") && strcmp(hem,"Southern"))
         {
             //char hemzone[500];
-            printf("11 Citation:%s\n",citation);
+            //printf("11 Citation:%s\n",citation);
             sscanf(citation,"%s %s / %s %s %d%s",ttt,ttt,ttt,ttt,&param->utm_zone,hem);
-            printf("hemzone %s %d\n",hem,param->utm_zone);
+            //printf("hemzone %s %d\n",hem,param->utm_zone);
         }
     }
     
@@ -1147,7 +1185,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
             
             GTIFKeyGet(gtif, ProjNatOriginLatGeoKey, &projNatOriginLat, 0, cit_length);
             
-            printf("2 Citation:%lf\n",projNatOriginLat);
+            //printf("2 Citation:%lf\n",projNatOriginLat);
             
             if(projNatOriginLat > 0)
                 param->bHemisphere = true;
@@ -1177,7 +1215,7 @@ void SetTranParam_fromGeoTiff(TransParam *param, char* inputfile)
     //printf("coord %f\t%f\n",wgs_coord.m_X,wgs_coord.m_Y);
     SetTransParam((double)(wgs_coord.m_Y),(double)(wgs_coord.m_X),param);
     
-    printf("param %d\t%d\t%d\t%lf\t%d\t%s\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat,param->utm_zone,param->direction);
+    //printf("param %d\t%d\t%d\t%lf\t%d\t%s\n",param->projection,param->bHemisphere,projCoordTransfCode,projNatOriginLat,param->utm_zone,param->direction);
     //exit(1);
 }
 
@@ -1232,7 +1270,7 @@ void SetTransParam(double minLat, double minLon, TransParam *param)
     
     SetTransParam_param(param,param->bHemisphere);
  
-    printf("%f %f %f %f %f %f %f\n",param->sa,param->sb,param->e2,param->e2cuadrada,param->c, minLat, minLon);
+    //printf("%f %f %f %f %f %f %f\n",param->sa,param->sb,param->e2,param->e2cuadrada,param->c, minLat, minLon);
     double Lat = minLat;
     char direction[2];
     
@@ -1767,7 +1805,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
             {
                 fgets(linestr,sizeof(linestr),pFile);
                 
-                printf("sample num\n");
+                //printf("sample num\n");
                 out[4] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
@@ -1776,10 +1814,10 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     pos2 = strtok(pos1,"<");
                     out[4][i]           = atof(pos2);
                     
-                    printf("%f\n",out[4][i]);
+                    //printf("%f\n",out[4][i]);
                 }
                 
-                printf("sample den\n");
+                //printf("sample den\n");
                 out[5] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
@@ -1788,10 +1826,10 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     pos2 = strtok(pos1,"<");
                     out[5][i]           = atof(pos2);
                     
-                    printf("%f\n",out[5][i]);
+                    //printf("%f\n",out[5][i]);
                 }
                 
-                printf("line num\n");
+                //printf("line num\n");
                 out[2] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
@@ -1800,10 +1838,10 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     pos2 = strtok(pos1,"<");
                     out[2][i]           = atof(pos2);
                     
-                    printf("%f\n",out[2][i]);
+                    //printf("%f\n",out[2][i]);
                 }
                 
-                printf("line den\n");
+                //printf("line den\n");
                 out[3] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
@@ -1812,7 +1850,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     pos2 = strtok(pos1,"<");
                     out[3][i]           = atof(pos2);
                     
-                    printf("%f\n",out[3][i]);
+                    //printf("%f\n",out[3][i]);
                 }
                 
                 out[6] = (double*)calloc(2, sizeof(double));
@@ -1824,7 +1862,7 @@ double** OpenXMLFile_Pleiades(char* _filename)
                     pos2 = strtok(pos1,"<");
                     out[6][i]           = atof(pos2);
                     
-                    printf("%f\n",out[6][i]);
+                    //printf("%f\n",out[6][i]);
                 }
                 
                 for(i=0;i<14;i++)
@@ -1883,11 +1921,13 @@ double** OpenXMLFile_Pleiades(char* _filename)
                 pos2 = strtok(pos1,"<");
                 out[0][0]           = atof(pos2);
                 
+                /*
                 for(i=0;i<2;i++)
                 {
                     for(int j=0;j<5;j++)
                         printf("%f\n",out[i][j]);
                 }
+                 */
             }
         }
         fclose(pFile);
@@ -1915,7 +1955,7 @@ double** OpenXMLFile_Planet(char* _filename)
     double aa;
     
     pFile           = fopen(_filename,"r");
-    printf("RPC filename %s\n",_filename);
+    //printf("RPC filename %s\n",_filename);
     if(pFile)
     {
         out = (double**)calloc(7, sizeof(double*));
@@ -1954,54 +1994,55 @@ double** OpenXMLFile_Planet(char* _filename)
             fgets(linestr,sizeof(linestr),pFile);
             sscanf(linestr,"%s %lf\n",temp_str,&out[1][4]);
             
+            /*
             for(i=0;i<2;i++)
             {
                 for(int j=0;j<5;j++)
                     printf("%lf\n",out[i][j]);
             }
-            
+            */
             //exit(1);
             
             //fscanf(pFile,"%s",temp_str);
             //if(strcmp(temp_str,"<Inverse_Model>") == 0)
             {
-                printf("line num\n");
+                //printf("line num\n");
                 out[2] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[2][i]);
-                    printf("%lf\n",out[2][i]);
+                    //printf("%lf\n",out[2][i]);
                 }
                 
-                printf("line den\n");
+                //printf("line den\n");
                 out[3] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[3][i]);
                     
-                    printf("%lf\n",out[3][i]);
+                    //printf("%lf\n",out[3][i]);
                 }
                 
-                printf("sample num\n");
+                //printf("sample num\n");
                 out[4] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[4][i]);
                     
-                    printf("%lf\n",out[4][i]);
+                    //printf("%lf\n",out[4][i]);
                 }
                 
-                printf("sample den\n");
+                //printf("sample den\n");
                 out[5] = (double*)calloc(20, sizeof(double));
                 for(i=0;i<20;i++)
                 {
                     fgets(linestr,sizeof(linestr),pFile);
                     sscanf(linestr,"%s %lf\n",temp_str,&out[5][i]);
                     
-                    printf("%lf\n",out[5][i]);
+                    //printf("%lf\n",out[5][i]);
                 }
                 
                 
@@ -2010,7 +2051,7 @@ double** OpenXMLFile_Planet(char* _filename)
                 //exit(1);
             }
             
-            printf("end read\n");
+            //printf("end read\n");
             
             aa                      = out[0][2];
             out[0][2]               = out[0][3];
@@ -3660,7 +3701,7 @@ uint8 *SubsetImageFrombitsToUint8(const int image_bits, char *imagefile, long *c
                     if(out[index] == 1)
                         count++;
                 }
-                printf("count %d\ttotal count %ld\n",count,data_size);
+                //printf("count %d\ttotal count %ld\n",count,data_size);
                 free(t_datafloat);
             }
             break;
@@ -3972,7 +4013,7 @@ bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_
 {
     FILE* fid;
     //double garbage;
-    printf("%s\n",filename);
+    //printf("%s\n",filename);
     fid = fopen(filename,"r");
     int count_line = 0;
     char bufstr[500];
@@ -4014,7 +4055,7 @@ bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_
     *minX = (*minX) - (*grid_size)/2.0;
     *maxY = (*maxY) + (*grid_size)/2.0;
     
-    
+    /*
     printf("%f\n",*minX);
     printf("%f\n",*maxY);
     printf("%f\n",*grid_size);
@@ -4023,7 +4064,7 @@ bool TFW_reader_LSFDEM(char *filename, double *minX, double *maxY, double *grid_
         printf("%d\n",*zone);
         printf("%s\n",dir);
     }
-    
+    */
     fclose(fid);
     
     return true;

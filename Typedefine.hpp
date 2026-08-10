@@ -401,6 +401,7 @@ typedef struct ProjectInfo{
     bool check_selected_image[MaxImages];
     bool check_full_cal;
     bool check_tif_rounding;
+    bool check_debugmode;
     
     //SGM test flag
     bool check_SNCC;
@@ -492,6 +493,7 @@ typedef struct ArgumentInfo{
     bool check_LSF;
     bool check_LSF_DEM;
     bool check_LSFDEMpath;
+    bool check_debugmode;
     bool check_tif_rounding;
     int check_LSF2;
     bool check_Matchtag;

@@ -44,8 +44,8 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         sprintf(m_frameinfo.Photoinfo[0].path,"%s",ImageFilename);
     }
     
-    printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
-    printf("sensor provider %d\t%d\n",args.sensor_provider,DG);
+    //printf("sensor %f\t%f\n",m_frameinfo.m_Camera.m_focalLength,m_frameinfo.m_Camera.m_CCDSize);
+    //printf("sensor provider %d\t%d\n",args.sensor_provider,DG);
     char *tmp_chr = remove_ext(ImageFilename);
     sprintf(RPCFilename,"%s.xml",tmp_chr);
     sprintf(proinfo->RPCfilename[0],"%s",RPCFilename);
@@ -121,20 +121,22 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         fscanf(pFile, "%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
                &m_frameinfo.Photoinfo[0].m_Xl,&m_frameinfo.Photoinfo[0].m_Yl,&m_frameinfo.Photoinfo[0].m_Zl,
                &m_frameinfo.Photoinfo[0].m_Wl,&m_frameinfo.Photoinfo[0].m_Pl,&m_frameinfo.Photoinfo[0].m_Kl);
-        
+        /*
         printf("%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",
                m_frameinfo.Photoinfo[0].path,
                m_frameinfo.Photoinfo[0].m_Xl,m_frameinfo.Photoinfo[0].m_Yl,m_frameinfo.Photoinfo[0].m_Zl,
                m_frameinfo.Photoinfo[0].m_Wl,m_frameinfo.Photoinfo[0].m_Pl,m_frameinfo.Photoinfo[0].m_Kl);
+         */
         double o = m_frameinfo.Photoinfo[0].m_Wl;
         double p = m_frameinfo.Photoinfo[0].m_Pl;
         double k = m_frameinfo.Photoinfo[0].m_Kl;
         
         m_frameinfo.Photoinfo[0].m_Rm = MakeRotationMatrix(o, p, k);
-        
+        /*
         printf("%f\t%f\t%f\n%f\t%f\t%f\n%f\t%f\t%f\n",m_frameinfo.Photoinfo[0].m_Rm.m11,m_frameinfo.Photoinfo[0].m_Rm.m12,
                m_frameinfo.Photoinfo[0].m_Rm.m13,m_frameinfo.Photoinfo[0].m_Rm.m21,m_frameinfo.Photoinfo[0].m_Rm.m22,m_frameinfo.Photoinfo[0].m_Rm.m23,
                m_frameinfo.Photoinfo[0].m_Rm.m31,m_frameinfo.Photoinfo[0].m_Rm.m32,m_frameinfo.Photoinfo[0].m_Rm.m33);
+         */
         Image_resolution = m_frameinfo.m_Camera.m_CCDSize*UMToMM/(m_frameinfo.m_Camera.m_focalLength/m_frameinfo.Photoinfo[0].m_Zl);
         
         Image_resolution = (int)((Image_resolution)*10 + 0.5)/10.0;
@@ -165,10 +167,11 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         }
     }
 
+    /*
     printf("Image resolution %f\n",Image_resolution);
     printf("Hemis projection %d %d\n",_param.bHemisphere, _param.projection);
     printf("param %s %d %d\n", _param.direction,_param.utm_zone,_param.projection);
-    
+    */
     // load DEM infor from geotiff file.
     double Ortho_resolution, DEM_resolution, DEM_minX, DEM_maxY;
     CSize DEM_size = ReadGeotiff_info(DEMFilename, &DEM_minX, &DEM_maxY, &DEM_resolution);
@@ -186,7 +189,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
     const double OrthoGridFactor = resolution[2]/resolution[0];
     
     int impyramid_step  = ceil(log(resolution[2]/resolution[1])/log(2));
-    printf("impyramid_step %d\n ortho_Resolution %f\n",impyramid_step,Ortho_resolution);
+    //printf("impyramid_step %d\n ortho_Resolution %f\n",impyramid_step,Ortho_resolution);
     
     bool check_overlap = false;
     CSize Orthoimagesize_temp;
@@ -213,14 +216,14 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         
         // load DEM value;
         float *DEM_value = GetDEMValue(DEMFilename, DEM_size);
-        
+        /*
         printf("%d\n",DEM_size.width);
         printf("%d\n",DEM_size.height);
         printf("%f\n",DEM_minX);
         printf("%f\n",DEM_maxY);
         printf("%f\n",DEM_resolution);
         printf("%f\n",Ortho_resolution);
-        
+        */
         double minmaxHeight[2] = {99999.0, -99999.0};
         for(long i=0;i<DEM_size.height;i++)
         {
@@ -257,9 +260,9 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
             imageparam[0] = Imageparams[1][0];
             imageparam[1] = Imageparams[1][1];
         }
-        printf("Image ID %d\tRPCs bias %f\t%f\n",pair,imageparam[0],imageparam[1]);
+        //printf("Image ID %d\tRPCs bias %f\t%f\n",pair,imageparam[0],imageparam[1]);
         
-        printf("Orthoimage info size %d\t%d\tBR %f\t%f\t%f\t%f\n",Orthoimagesize.width,Orthoimagesize.height,OrthoBoundary[0],OrthoBoundary[1],OrthoBoundary[2],OrthoBoundary[3]);
+        //printf("Orthoimage info size %d\t%d\tBR %f\t%f\t%f\t%f\n",Orthoimagesize.width,Orthoimagesize.height,OrthoBoundary[0],OrthoBoundary[1],OrthoBoundary[2],OrthoBoundary[3]);
         
         long data_length_ortho = (long)Orthoimagesize.width*(long)Orthoimagesize.height;
         for(long i=0; i < subfactor;i++)
@@ -268,7 +271,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
             {
                 char MEG[500];
                 sprintf(MEG,"Tile %ld %ld, processing:%6.1f\n",j+1,i+1,((i)*subfactor+j+1)/subfactor/subfactor*100);
-                printf("%s",MEG);
+                //printf("%s",MEG);
 
                 double Y_size[2];
                 Y_size[0]        = OrthoBoundary[3] - (i+1)*height_interval;
@@ -437,7 +440,7 @@ void orthogeneration(const TransParam _param, const ARGINFO args, char *ImageFil
         ET = time(0);
         
         gap = difftime(ET,ST);
-        printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
+        //printf("ortho finish(time[m] = %5.2f)!!\n",gap/60.0);
     }
     else
     {
@@ -491,7 +494,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
     DEMboundary[2]  = TopLeft[0]+DEM_size.width*gridspace;
     DEMboundary[3]  = TopLeft[1];
     
-    printf("DEMBoundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
+    //printf("DEMBoundary %f\t%f\t%f\t%f\n",DEMboundary[0],DEMboundary[1],DEMboundary[2],DEMboundary[3]);
     
     double minLon          = -1.15*RPCs[1][2] + RPCs[0][2];
     double maxLon          =  1.15*RPCs[1][2] + RPCs[0][2];
@@ -509,7 +512,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
         minLat          = imageinfo.LL[1];
         maxLat          = imageinfo.UR[1];
     }
-    printf("lon lat %f\t%f\t%f\t%f\n",minLon,maxLon,minLat,maxLat);
+    //printf("lon lat %f\t%f\t%f\t%f\n",minLon,maxLon,minLat,maxLat);
     
     D2DPOINT *XY = NULL;
     D2DPOINT LonLat[4];
@@ -523,7 +526,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
     LonLat[3].m_X = maxLon;
     LonLat[3].m_Y = minLat;
     
-    printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
+    //printf("param %s %d %d\n", param.direction,param.utm_zone,param.projection);
     XY          = wgs2ps(param,4, LonLat);
     
     const double t_minX      = min(min(min(XY[0].m_X,XY[1].m_X),XY[2].m_X),XY[3].m_X);
@@ -545,7 +548,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
         ImageBoundary[3]    = DEMboundary[3];
     }
     
-    printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
+    //printf("ImageBoundary %f\t%f\t%f\t%f\n",ImageBoundary[0],ImageBoundary[1],ImageBoundary[2],ImageBoundary[3]);
     
     D2DPOINT DEM_lt,DEM_rb,Image_lt,Image_rb;
     DEM_lt.m_X = DEMboundary[0];
@@ -570,7 +573,7 @@ bool SetOrthoBoundary_ortho(ProInfo *proinfo, ARGINFO args, CSize *Imagesize, do
 
     free(XY);
 
-    printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
+    //printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
     return check_overlap;
 }
 
@@ -647,7 +650,7 @@ bool SetDEMBoundary_ortho_photo(CSize *Imagesize, double *Boundary, const double
     Imagesize->width     = ceil(fabs(Boundary[2] - Boundary[0])/Ortho_resolution);
     
     
-    printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
+    //printf("orthoimage height width %d \t%d\t %f\t%f\n",Imagesize->height,Imagesize->width,fabs(DEMboundary[3] - DEMboundary[1])/Ortho_resolution,fabs(DEMboundary[2] - DEMboundary[0])/Ortho_resolution);
     
     return true;
 }
